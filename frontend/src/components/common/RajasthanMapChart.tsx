@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import api from "../../services/api";
+import { getFacilitiesForDistrict, ASSETS_INVENTORY_DISTRICT_FACILITIES } from "../../utils/assetsInventoryMaster";
 import { 
   MapPin, 
   Users, 
@@ -159,6 +161,19 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [dynamicFacilitiesMap, setDynamicFacilitiesMap] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    api.get("/api/reports/district-facilities-summary")
+      .then(res => {
+        if (res.data && res.data.success && res.data.facilities_by_district) {
+          setDynamicFacilitiesMap(res.data.facilities_by_district);
+        }
+      })
+      .catch(err => {
+        console.warn("Could not fetch live district facilities summary from backend:", err);
+      });
+  }, []);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -321,12 +336,14 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       }
     > = {};
 
-    expenses.forEach((e, idx) => {
-      const rawDist = e.district || e.submitter_district || e.home_district || "Ganganagar";
+    expenses.forEach((e) => {
+      const rawDist = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city;
+      if (!rawDist) return;
       const dist = normalizeDistrict(rawDist);
       if (!dist) return;
 
       if (!stats[dist]) {
+        const liveBackendFacs = dynamicFacilitiesMap[dist] || dynamicFacilitiesMap[normalizeDistrict(dist)] || getFacilitiesForDistrict(dist);
         stats[dist] = {
           totalAmount: 0,
           approvedAmount: 0,
@@ -338,7 +355,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
           callsCompleted: 0,
           pmsCount: 0,
           calibrationCount: 0,
-          facilities: new Set(),
+          facilities: new Set(liveBackendFacs),
           engineers: new Set(),
           managers: new Set(),
           engineerAmounts: {},
@@ -352,8 +369,6 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       const userRole = String(e.submitter_role || e.role || e.designation || e.submitter_designation || "").toLowerCase();
       const mgrName = e.manager_name || e.manager || e.coordinator_name || e.coordinator || e.submitter_coordinator;
 
-      const facName = e.facility || e.facility_name || e.hospital || e.site || e.work_location || e.location || e.destination || e.itinerary || `Facility #${idx + 1}`;
-
       stats[dist].totalAmount += amt;
       stats[dist].claimCount += 1;
       stats[dist].callsAssigned += Number(e.calls_assigned || 0);
@@ -361,7 +376,74 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       stats[dist].pmsCount += Number(e.pms_count || 0);
       stats[dist].calibrationCount += Number(e.calibration_count || 0);
 
-      if (facName && facName !== "—") stats[dist].facilities.add(facName);
+      // Authentic Comprehensive Database Facility Extraction
+      const addFacIfValid = (str: any) => {
+        if (typeof str !== "string") return;
+        const clean = str.trim();
+        if (!clean) return;
+        const lower = clean.toLowerCase();
+        if (
+          lower === "—" ||
+          lower === "-" ||
+          lower === "n/a" ||
+          lower === "na" ||
+          lower === "none" ||
+          lower === "null" ||
+          lower === "undefined" ||
+          lower === dist.toLowerCase() ||
+          lower === "all" ||
+          lower === "unassigned" ||
+          lower === "base"
+        ) {
+          return;
+        }
+        stats[dist].facilities.add(clean);
+      };
+
+      // 1. Direct Facility / Hospital / Destination Fields
+      addFacIfValid(e.facility);
+      addFacIfValid(e.facility_name);
+      addFacIfValid(e.hospital_name);
+      addFacIfValid(e.hospital);
+      addFacIfValid(e.location_visited);
+      addFacIfValid(e.site);
+      addFacIfValid(e.place);
+      addFacIfValid(e.destination);
+      addFacIfValid(e.to);
+      addFacIfValid(e.work_location);
+
+      // 2. Travel Legs / Itinerary Details Sub-Arrays
+      const legs = Array.isArray(e.itinerary_details) ? e.itinerary_details : (Array.isArray(e.travel_legs) ? e.travel_legs : (Array.isArray(e.legs) ? e.legs : []));
+      legs.forEach((leg: any) => {
+        if (!leg) return;
+        addFacIfValid(leg.destination);
+        addFacIfValid(leg.to);
+        addFacIfValid(leg.hospital);
+        addFacIfValid(leg.hospital_name);
+        addFacIfValid(leg.facility);
+        addFacIfValid(leg.facility_name);
+        addFacIfValid(leg.location);
+      });
+
+      // 3. Asset Tagging & Call Asset Sub-Arrays
+      if (Array.isArray(e.tagging_details)) {
+        e.tagging_details.forEach((td: any) => {
+          if (!td) return;
+          addFacIfValid(td.hospital);
+          addFacIfValid(td.hospital_name);
+          addFacIfValid(td.facility);
+          addFacIfValid(td.facility_name);
+          addFacIfValid(td.site);
+        });
+      }
+      if (Array.isArray(e.calls_details)) {
+        e.calls_details.forEach((cd: any) => {
+          if (!cd) return;
+          addFacIfValid(cd.hospital_name);
+          addFacIfValid(cd.hospital);
+          addFacIfValid(cd.facility);
+        });
+      }
 
       // Classify user as Manager vs Engineer
       const isManager = userRole.includes("manager") || userRole.includes("lead") || userRole.includes("head") || userRole.includes("vp") || userRole.includes("director") || userRole.includes("coordinator");
@@ -393,7 +475,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     return stats;
   }, [expenses]);
 
-  // Overall Statewide / Zone Aggregates for Top KPI Bar
+  // Overall Statewide / Zone / District Aggregates for Top KPI Bar
   const summaryStats = useMemo(() => {
     let totalExpense = 0;
     let totalCallsAssigned = 0;
@@ -404,9 +486,25 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     const allEngineers = new Set<string>();
     const allManagers = new Set<string>();
 
+    // 1. Add all master inventory facilities according to active zone & district filters
+    const masterSource = Object.keys(dynamicFacilitiesMap).length > 0 ? dynamicFacilitiesMap : ASSETS_INVENTORY_DISTRICT_FACILITIES;
+    Object.entries(masterSource).forEach(([distName, facs]) => {
+      if (selectedZoneFilter && selectedZoneFilter !== "all") {
+        if (!isDistrictInZone(distName, selectedZoneFilter)) return;
+      }
+      if (selectedDistrictFilter && selectedDistrictFilter !== "all") {
+        if (normalizeDistrict(distName) !== normalizeDistrict(selectedDistrictFilter)) return;
+      }
+      facs.forEach(f => allFacilities.add(f));
+    });
+
+    // 2. Add live district stats & expense facilities
     Object.entries(districtStats).forEach(([distName, s]) => {
       if (selectedZoneFilter && selectedZoneFilter !== "all") {
         if (!isDistrictInZone(distName, selectedZoneFilter)) return;
+      }
+      if (selectedDistrictFilter && selectedDistrictFilter !== "all") {
+        if (normalizeDistrict(distName) !== normalizeDistrict(selectedDistrictFilter)) return;
       }
       totalExpense += s.totalAmount;
       totalCallsAssigned += s.callsAssigned;
@@ -434,7 +532,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       totalExpense,
       avgExpensePerEngineer
     };
-  }, [districtStats, selectedZoneFilter]);
+  }, [districtStats, dynamicFacilitiesMap, selectedZoneFilter, selectedDistrictFilter]);
 
   // Compute max expense amount for district color choropleth
   const maxExpense = useMemo(() => {
@@ -445,25 +543,26 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     return maxAmt || 1;
   }, [districtStats]);
 
-  // Color generator for Choropleth Map (Lighter/Softer Cyrix Blue Heatmap Scale)
+  // Color generator for Choropleth Map (Premium gradient blue heatmap)
   const getDistrictColor = (districtName: string, isSelected: boolean, isHovered: boolean, isTargetZone: boolean) => {
     const norm = normalizeDistrict(districtName);
     const stat = districtStats[norm];
 
-    if (isSelected) return "#2563eb"; // Rich Cyrix Primary Blue highlight
-    if (isHovered) return "#4f46e5"; // Deep Indigo highlight on hover
+    if (isSelected) return "#1d4ed8"; // Strong royal blue for selected
+    if (isHovered) return "#3b82f6"; // Bright sky blue on hover
 
-    if (!isTargetZone) return "#f1f5f9"; // Dimmed out for non-zone districts
+    if (!isTargetZone) return "#e2e8f0"; // Subtle grey for out-of-zone
 
     if (!stat || stat.totalAmount === 0) {
-      return "#f8fafc"; // Soft light slate for empty districts
+      return "#f0f9ff"; // Very light azure for zero districts
     }
 
     const ratio = Math.min(1, stat.totalAmount / maxExpense);
-    if (ratio < 0.25) return "#e0f2fe"; // Soft sky blue (Lightest Cyrix Blue)
-    if (ratio < 0.5) return "#bae6fd";  // Soft cyan/sky blue
-    if (ratio < 0.75) return "#7dd3fc"; // Light Cyrix blue
-    return "#38bdf8";                   // Vibrant light Cyrix blue
+    if (ratio < 0.2)  return "#dbeafe"; // Pale indigo-blue
+    if (ratio < 0.4)  return "#bfdbfe"; // Soft blue
+    if (ratio < 0.6)  return "#93c5fd"; // Medium blue
+    if (ratio < 0.8)  return "#60a5fa"; // Sky blue
+    return "#2563eb";                   // Deep primary blue – max spend
   };
 
   // Projection helper: Lng/Lat -> SVG (x, y)
@@ -717,144 +816,151 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
 
   return (
     <Card
-      className="border border-gray-200 bg-white text-gray-800 shadow-sm rounded-xl overflow-hidden mt-6"
+      className="border-0 bg-white text-gray-800 shadow-lg rounded-none overflow-hidden"
+      style={{ boxShadow: "0 4px 32px 0 rgba(30,64,175,0.08), 0 1px 4px 0 rgba(0,0,0,0.06)" }}
       bodyStyle={{ padding: 0 }}
     >
-      {/* Header Bar */}
-      <div className="p-4 md:p-6 bg-slate-50 border-b border-gray-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-emerald-600 animate-pulse" />
-            <h2 className="text-base md:text-lg font-bold tracking-tight text-gray-800 uppercase m-0">
-              Rajasthan District GeoJSON Analytics Map
-            </h2>
-            <Badge count="LIVE DATA" style={{ backgroundColor: "#10b981", fontWeight: "bold" }} />
+      {/* Premium Header Bar */}
+      <div
+        style={{
+          background: "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 45%, #0ea5e9 100%)",
+          padding: "14px 20px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-none bg-white/20 flex items-center justify-center">
+            <Globe className="w-4.5 h-4.5 text-white" />
           </div>
-          <p className="text-xs text-gray-500 mt-1 m-0">
-            {selectedZoneFilter && selectedZoneFilter !== "all" ? `${selectedZoneFilter} Zone View` : "All Rajasthan Districts"} • Synchronized with active page filters
-          </p>
+          <div>
+            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest m-0">Rajasthan State</p>
+            <h2 className="text-base font-extrabold text-white m-0 leading-tight">District Analytics Map</h2>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-blue-100 bg-white/15 px-2.5 py-1 rounded-none border border-white/20">
+            {Object.keys(districtStats).length} Active Districts
+          </span>
+          <span className="text-[11px] font-semibold text-white bg-emerald-500/80 px-2.5 py-1 rounded-none">
+            Live Data
+          </span>
         </div>
       </div>
 
+
       {/* Statewide / Zone KPI Summary Bar (8 Live Metrics) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 p-3 bg-slate-100/60 border-b border-gray-200">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 bg-slate-50/90 border-b border-slate-200">
         {/* 1. Total Facilities */}
-        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 shrink-0">
-            <Building2 className="w-4 h-4" />
+        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
+          <div className="w-10 h-10 rounded-none bg-teal-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <Building2 className="w-5 h-5" />
           </div>
-          <div>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              Facilities
-            </span>
-            <span className="text-sm font-black text-teal-700 font-mono">
-              {summaryStats.totalFacilities}
-            </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Facilities</span>
+              <span className="text-[8.5px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Locations</span>
+            </div>
+            <span className="text-lg font-mono font-extrabold text-slate-900 leading-none block">{summaryStats.totalFacilities}</span>
           </div>
         </div>
 
         {/* 2. Total Calls */}
-        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
-            <PhoneCall className="w-4 h-4" />
+        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
+          <div className="w-10 h-10 rounded-none bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <PhoneCall className="w-5 h-5" />
           </div>
-          <div>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              Total Calls
-            </span>
-            <span className="text-sm font-black text-blue-700 font-mono">
-              {summaryStats.totalCallsAssigned}
-            </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Calls</span>
+              <span className="text-[8.5px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Assigned</span>
+            </div>
+            <span className="text-lg font-mono font-extrabold text-slate-900 leading-none block">{summaryStats.totalCallsAssigned}</span>
           </div>
         </div>
 
         {/* 3. Closed Calls */}
-        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
-            <CheckCircle2 className="w-4 h-4" />
+        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
+          <div className="w-10 h-10 rounded-none bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <CheckCircle2 className="w-5 h-5" />
           </div>
-          <div>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              Closed Calls
-            </span>
-            <span className="text-sm font-black text-emerald-700 font-mono">
-              {summaryStats.totalCallsCompleted}
-            </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Closed Calls</span>
+              <span className="text-[8.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Completed</span>
+            </div>
+            <span className="text-lg font-mono font-extrabold text-emerald-700 leading-none block">{summaryStats.totalCallsCompleted}</span>
           </div>
         </div>
 
         {/* 4. PMS Count */}
-        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0">
-            <Wrench className="w-4 h-4" />
+        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
+          <div className="w-10 h-10 rounded-none bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <Wrench className="w-5 h-5" />
           </div>
-          <div>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              PMS Done
-            </span>
-            <span className="text-sm font-black text-indigo-700 font-mono">
-              {summaryStats.totalPms}
-            </span>
-          </div>
-        </div>
-
-        {/* 5. Calibration Count */}
-        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-600 shrink-0">
-            <Gauge className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              Calibration
-            </span>
-            <span className="text-sm font-black text-purple-700 font-mono">
-              {summaryStats.totalCalibration}
-            </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PMS Done</span>
+              <span className="text-[8.5px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">PMS Calls</span>
+            </div>
+            <span className="text-lg font-mono font-extrabold text-indigo-700 leading-none block">{summaryStats.totalPms}</span>
           </div>
         </div>
 
-        {/* 6. Total Engineers */}
-        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-cyan-50 border border-cyan-200 flex items-center justify-center text-cyan-600 shrink-0">
-            <Users className="w-4 h-4" />
+        {/* 5. Calibration */}
+        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
+          <div className="w-10 h-10 rounded-none bg-purple-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <Gauge className="w-5 h-5" />
           </div>
-          <div>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              Engineers
-            </span>
-            <span className="text-sm font-black text-cyan-700 font-mono">
-              {summaryStats.totalEngineers}
-            </span>
-          </div>
-        </div>
-
-        {/* 7. Total Managers */}
-        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-violet-50 border border-violet-200 flex items-center justify-center text-violet-600 shrink-0">
-            <UserCheck className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              Managers
-            </span>
-            <span className="text-sm font-black text-violet-700 font-mono">
-              {summaryStats.totalManagers}
-            </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Calibration</span>
+              <span className="text-[8.5px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Calibrations</span>
+            </div>
+            <span className="text-lg font-mono font-extrabold text-purple-700 leading-none block">{summaryStats.totalCalibration}</span>
           </div>
         </div>
 
-        {/* 8. Per Staff Avg Expense */}
-        <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-            <Calculator className="w-4 h-4" />
+        {/* 6. Engineers */}
+        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
+          <div className="w-10 h-10 rounded-none bg-cyan-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <Users className="w-5 h-5" />
           </div>
-          <div>
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wide block">
-              Avg / Staff
-            </span>
-            <span className="text-xs font-black text-amber-700 font-mono">
-              ₹{summaryStats.avgExpensePerEngineer.toLocaleString()}
-            </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Engineers</span>
+              <span className="text-[8.5px] font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Field Staff</span>
+            </div>
+            <span className="text-lg font-mono font-extrabold text-slate-900 leading-none block">{summaryStats.totalEngineers}</span>
+          </div>
+        </div>
+
+        {/* 7. Managers */}
+        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
+          <div className="w-10 h-10 rounded-none bg-violet-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <UserCheck className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Managers</span>
+              <span className="text-[8.5px] font-bold text-violet-700 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Team Leads</span>
+            </div>
+            <span className="text-lg font-mono font-extrabold text-slate-900 leading-none block">{summaryStats.totalManagers}</span>
+          </div>
+        </div>
+
+        {/* 8. Avg / Staff */}
+        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
+          <div className="w-10 h-10 rounded-none bg-amber-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <Calculator className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Avg / Staff</span>
+              <span className="text-[8.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Per Staff</span>
+            </div>
+            <span className="text-[15px] font-mono font-extrabold text-amber-700 leading-none block">₹{summaryStats.avgExpensePerEngineer.toLocaleString('en-IN')}</span>
           </div>
         </div>
       </div>
@@ -862,22 +968,25 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       {/* Map Content Body */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 relative">
         {/* Main Map Viewer Canvas */}
-        <div className="lg:col-span-8 p-4 md:p-6 bg-white min-h-[550px] flex flex-col justify-between relative overflow-hidden">
+        <div
+          className="lg:col-span-8 flex flex-col relative overflow-hidden"
+          style={{ background: "linear-gradient(160deg, #f0f6ff 0%, #f8fafc 60%, #eef2ff 100%)" }}
+        >
           {/* Top Floating Tools: Search + Zoom */}
-          <div className="flex justify-between items-center z-10 mb-2 gap-2">
-            <div className="relative w-48 md:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+          <div className="flex justify-between items-center px-4 pt-4 pb-2 gap-2">
+            <div className="relative w-52 md:w-72">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-blue-400" />
               <input
                 type="text"
-                placeholder="Search district on map..."
+                placeholder="Search district..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition shadow-2xs"
+                className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-blue-200 rounded-none text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 transition shadow-sm"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -885,21 +994,23 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
             </div>
 
             {/* Map Controls */}
-            <div className="flex items-center gap-1 bg-white border border-gray-200 p-1 rounded-xl shadow-2xs">
+            <div className="flex items-center gap-0.5 bg-white border border-blue-200 shadow-sm">
               <button
                 onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.25))}
-                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-slate-100 rounded-lg transition"
+                className="p-2 text-blue-600 hover:bg-blue-50 transition"
                 title="Zoom In"
               >
                 <ZoomIn className="w-4 h-4" />
               </button>
+              <div className="w-px h-5 bg-blue-100" />
               <button
                 onClick={() => setZoomLevel((z) => Math.max(0.8, z - 0.25))}
-                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-slate-100 rounded-lg transition"
+                className="p-2 text-blue-600 hover:bg-blue-50 transition"
                 title="Zoom Out"
               >
                 <ZoomOut className="w-4 h-4" />
               </button>
+              <div className="w-px h-5 bg-blue-100" />
               <button
                 onClick={() => {
                   setZoomLevel(1);
@@ -907,7 +1018,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                   setSelectedDistrict(null);
                   if (onSelectDistrict) onSelectDistrict(null);
                 }}
-                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-slate-100 rounded-lg transition"
+                className="p-2 text-slate-500 hover:bg-slate-50 transition"
                 title="Reset View"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -917,27 +1028,51 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
 
           {/* SVG Map Render */}
           {loadingMap ? (
-            <div className="flex flex-col items-center justify-center h-[460px] text-gray-400 space-y-3">
-              <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-600 rounded-full animate-spin" />
-              <p className="text-xs font-semibold">Loading Rajasthan GeoJSON Map Data...</p>
+            <div className="flex flex-col items-center justify-center" style={{ height: 540 }}>
+              <div
+                className="w-12 h-12 mb-4"
+                style={{
+                  border: "4px solid #dbeafe",
+                  borderTopColor: "#1d4ed8",
+                  borderRadius: "0",
+                  animation: "spin 0.8s linear infinite"
+                }}
+              />
+              <p className="text-sm font-semibold text-blue-700">Loading Rajasthan Map...</p>
+              <p className="text-xs text-gray-400 mt-1">Fetching GeoJSON District Boundaries</p>
             </div>
           ) : errorMap ? (
-            <div className="flex flex-col items-center justify-center h-[460px] text-rose-500 space-y-2">
-              <AlertTriangle className="w-8 h-8" />
-              <p className="text-xs font-bold">{errorMap}</p>
+            <div className="flex flex-col items-center justify-center" style={{ height: 540 }}>
+              <AlertTriangle className="w-10 h-10 text-rose-500 mb-2" />
+              <p className="text-sm font-bold text-rose-600">{errorMap}</p>
             </div>
           ) : (
-            <div className="relative w-full h-[480px] flex items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-slate-50/60">
+            <div
+              className="relative mx-4 mb-2 overflow-hidden"
+              style={{
+                height: 540,
+                border: "1px solid #dbeafe",
+                background: "linear-gradient(135deg, #eff6ff 0%, #f8fafc 50%, #f0fdf4 100%)"
+              }}
+            >
               <svg
                 ref={svgRef}
-                viewBox="0 0 760 660"
-                className="w-full h-full cursor-grab active:cursor-grabbing transition-transform duration-300"
+                viewBox="0 0 760 520"
+                className="w-full h-full cursor-grab active:cursor-grabbing"
                 style={{
-                  transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`
+                  transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                  transition: "transform 0.25s cubic-bezier(0.4,0,0.2,1)"
                 }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setHoveredDistrict(null)}
               >
+                {/* Subtle grid / watermark */}
+                <defs>
+                  <filter id="districtShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#1e40af" floodOpacity="0.15" />
+                  </filter>
+                </defs>
+
                 {/* Map Paths */}
                 <g>
                   {geoData?.features.map((feature, idx) => {
@@ -950,31 +1085,43 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                       searchQuery.trim().length > 0 &&
                       distName.toLowerCase().includes(searchQuery.toLowerCase());
 
-                    const pathD = renderPath(feature, 760, 660, 30);
-                    const center = getFeatureCenter(feature, 760, 660, 30);
+                    const pathD = renderPath(feature, 760, 520, 20);
+                    const center = getFeatureCenter(feature, 760, 520, 20);
                     const fillColor = getDistrictColor(distName, isSelected, isHovered, isTargetZone);
 
                     return (
-                      <g 
-                        key={idx} 
-                        className="transition-all duration-200"
-                        style={{ opacity: !isTargetZone ? 0.35 : 1 }}
+                      <g
+                        key={idx}
+                        style={{
+                          opacity: !isTargetZone ? 0.3 : 1,
+                          transition: "opacity 0.2s ease"
+                        }}
                       >
                         <path
                           d={pathD}
                           fill={fillColor}
                           stroke={
                             isMatchingSearch
-                              ? "#d97706"
+                              ? "#f59e0b"
+                              : isSelected
+                              ? "#1e40af"
+                              : isHovered
+                              ? "#3b82f6"
                               : isTargetZone
-                              ? "#94a3b8"
+                              ? "#93c5fd"
                               : "#cbd5e1"
                           }
-                          strokeWidth={1}
+                          strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 0.8}
                           strokeLinejoin="round"
                           className="cursor-pointer"
                           style={{
-                            pointerEvents: "visiblePainted"
+                            pointerEvents: "visiblePainted",
+                            transition: "fill 0.18s ease, stroke-width 0.15s ease",
+                            filter: isSelected
+                              ? "drop-shadow(0 3px 10px rgba(29,78,216,0.35))"
+                              : isHovered
+                              ? "drop-shadow(0 2px 7px rgba(59,130,246,0.3))"
+                              : "none"
                           }}
                           onMouseEnter={() => setHoveredDistrict(norm)}
                           onClick={(e) => {
@@ -984,23 +1131,6 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                           }}
                         />
 
-                        {/* Non-interactive Overlay for Hover / Selection Highlight (Prevents Border Stroke Oscillation Flicker) */}
-                        {(isSelected || isHovered) && (
-                          <path
-                            d={pathD}
-                            fill="none"
-                            stroke={isSelected ? "#1d4ed8" : "#312e81"}
-                            strokeWidth={isSelected ? 3 : 2.5}
-                            strokeLinejoin="round"
-                            style={{
-                              pointerEvents: "none",
-                              filter: isSelected
-                                ? "drop-shadow(0 2px 8px rgba(37, 99, 235, 0.4))"
-                                : "drop-shadow(0 2px 6px rgba(99, 102, 241, 0.3))"
-                            }}
-                          />
-                        )}
-
                         {/* District Labels */}
                         {zoomLevel >= 0.8 && isTargetZone && center.x > 0 && (
                           <text
@@ -1008,12 +1138,22 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                             y={center.y}
                             textAnchor="middle"
                             dominantBaseline="central"
-                            className="pointer-events-none text-[9px] font-black uppercase tracking-tighter select-none"
+                            fontSize={isSelected || isHovered ? 9.5 : 8.5}
+                            fontWeight={isSelected || isHovered ? "900" : "700"}
+                            letterSpacing="0.3"
+                            className="pointer-events-none select-none"
                             style={{
-                              fill: isSelected || isHovered ? "#ffffff" : "#0f172a",
-                              textShadow: isSelected || isHovered
-                                ? "0 1px 4px rgba(0, 0, 0, 0.85)"
-                                : "0 1px 3px rgba(255, 255, 255, 0.95)"
+                              fill: isSelected
+                                ? "#ffffff"
+                                : isHovered
+                                ? "#1e3a8a"
+                                : districtStats[norm]?.totalAmount > 0
+                                ? "#1e3a8a"
+                                : "#64748b",
+                              textShadow: isSelected
+                                ? "0 1px 5px rgba(0,0,0,0.8)"
+                                : "0 1px 2px rgba(255,255,255,0.9)",
+                              transition: "font-size 0.1s ease"
                             }}
                           >
                             {distName}
@@ -1029,334 +1169,320 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
               {hoveredDistrict && (
                 <div
                   ref={tooltipRef}
-                  className="absolute pointer-events-none select-none z-50 bg-white/95 backdrop-blur-md border border-gray-300 p-3 rounded-xl shadow-xl text-xs text-gray-800 max-w-xs transition-all duration-75"
+                  className="absolute pointer-events-none select-none z-50 text-xs"
                   style={{
                     pointerEvents: "none",
-                    left: "15px",
-                    top: "15px"
+                    left: "16px",
+                    top: "16px",
+                    background: "rgba(255,255,255,0.97)",
+                    backdropFilter: "blur(12px)",
+                    border: "1px solid #bfdbfe",
+                    boxShadow: "0 8px 32px rgba(29,78,216,0.15)",
+                    minWidth: 180,
+                    maxWidth: 230,
+                    padding: "10px 12px"
                   }}
                 >
-                  <div className="flex items-center justify-between gap-3 border-b border-gray-200 pb-1.5 mb-1.5">
-                    <span className="font-bold text-sm text-gray-900 flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
-                      {hoveredDistrict}
-                    </span>
+                  <div
+                    style={{
+                      background: "linear-gradient(90deg, #1d4ed8, #3b82f6)",
+                      margin: "-10px -12px 8px -12px",
+                      padding: "6px 12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6
+                    }}
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-white" />
+                    <span className="font-bold text-white text-[11px] tracking-wide">{hoveredDistrict}</span>
                   </div>
 
                   {districtStats[hoveredDistrict] ? (
-                    <div className="space-y-1 font-sans text-[11px]">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Facilities:</span>
-                        <span className="font-mono font-bold text-teal-700">{districtStats[hoveredDistrict].facilities.size}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Total Calls:</span>
-                        <span className="font-mono font-bold text-blue-700">{districtStats[hoveredDistrict].callsAssigned}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Closed Calls:</span>
-                        <span className="font-mono font-bold text-emerald-700">{districtStats[hoveredDistrict].callsCompleted}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">PMS / Calibration:</span>
-                        <span className="font-mono font-bold text-indigo-700">{districtStats[hoveredDistrict].pmsCount} / {districtStats[hoveredDistrict].calibrationCount}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Engineers:</span>
-                        <span className="font-mono font-bold text-cyan-700">{districtStats[hoveredDistrict].engineers.size}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">Managers:</span>
-                        <span className="font-mono font-bold text-violet-700">{districtStats[hoveredDistrict].managers.size}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-1 border-t border-slate-100">
-                        <span className="text-gray-600">Total Expense:</span>
+                    <div className="space-y-1 text-[10.5px]">
+                      {[
+                        { label: "Facilities", val: districtStats[hoveredDistrict].facilities.size, color: "text-teal-700" },
+                        { label: "Total Calls", val: districtStats[hoveredDistrict].callsAssigned, color: "text-blue-700" },
+                        { label: "Closed Calls", val: districtStats[hoveredDistrict].callsCompleted, color: "text-emerald-700" },
+                        { label: "PMS / Calibration", val: `${districtStats[hoveredDistrict].pmsCount} / ${districtStats[hoveredDistrict].calibrationCount}`, color: "text-indigo-700" },
+                        { label: "Engineers", val: districtStats[hoveredDistrict].engineers.size, color: "text-cyan-700" },
+                        { label: "Managers", val: districtStats[hoveredDistrict].managers.size, color: "text-violet-700" },
+                      ].map((row, ri) => (
+                        <div key={ri} className="flex justify-between items-center">
+                          <span className="text-gray-500">{row.label}:</span>
+                          <span className={`font-mono font-bold ${row.color}`}>{row.val}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between items-center pt-1 mt-1" style={{ borderTop: "1px solid #e2e8f0" }}>
+                        <span className="text-gray-500">Total Expense:</span>
                         <span className="font-mono font-bold text-amber-700">₹{districtStats[hoveredDistrict].totalAmount.toLocaleString()}</span>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-[11px] m-0">No records found for active filters.</p>
+                    <p className="text-gray-400 text-[10px] m-0">No records for active filters.</p>
                   )}
                 </div>
               )}
+
+              {/* Zoom Level Badge */}
+              <div
+                className="absolute bottom-3 right-3 text-[10px] font-mono font-bold text-blue-600 bg-white border border-blue-200 px-2 py-0.5 select-none"
+                style={{ boxShadow: "0 1px 4px rgba(29,78,216,0.12)" }}
+              >
+                {Math.round(zoomLevel * 100)}%
+              </div>
             </div>
           )}
 
-          {/* Bottom Choropleth Color Legend */}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 bg-slate-50 p-3 rounded-xl border border-gray-200 text-xs">
+          {/* Choropleth Legend */}
+          <div
+            className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-2 px-4 py-2.5"
+            style={{
+              background: "linear-gradient(to right, #f8fafc, #f0f6ff)",
+              border: "1px solid #dbeafe"
+            }}
+          >
+            <span className="text-[10px] font-bold text-slate-600 flex items-center gap-1.5 uppercase tracking-wider">
+              <Layers className="w-3 h-3 text-blue-500" />
+              Expense Heatmap
+            </span>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-700 flex items-center gap-1 text-[11px]">
-                <Layers className="w-3.5 h-3.5 text-emerald-600" />
-                Heatmap Scale (EXPENSE):
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-gray-500 font-mono">Min</span>
-              <div className="w-32 h-2.5 rounded-full overflow-hidden flex border border-gray-300">
-                <div className="w-1/4 h-full bg-[#e0f2fe]" />
-                <div className="w-1/4 h-full bg-[#bae6fd]" />
-                <div className="w-1/4 h-full bg-[#7dd3fc]" />
-                <div className="w-1/4 h-full bg-[#38bdf8]" />
+              <span className="text-[9px] text-gray-400 font-mono">Low</span>
+              <div className="flex overflow-hidden border border-blue-200" style={{ width: 120, height: 10 }}>
+                <div style={{ flex: 1, background: "#dbeafe" }} />
+                <div style={{ flex: 1, background: "#bfdbfe" }} />
+                <div style={{ flex: 1, background: "#93c5fd" }} />
+                <div style={{ flex: 1, background: "#60a5fa" }} />
+                <div style={{ flex: 1, background: "#2563eb" }} />
               </div>
-              <span className="text-[10px] text-gray-500 font-mono">Max</span>
+              <span className="text-[9px] text-gray-400 font-mono">High</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <div style={{ width: 10, height: 10, background: "#e2e8f0", border: "1px solid #cbd5e1" }} />
+                <span className="text-[9px] text-gray-400">No Activity</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div style={{ width: 10, height: 10, background: "#1d4ed8", border: "1px solid #1e40af" }} />
+                <span className="text-[9px] text-gray-400">Selected</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div style={{ width: 10, height: 10, background: "#f59e0b", border: "1px solid #d97706" }} />
+                <span className="text-[9px] text-gray-400">Search Match</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Right Side District Deep-Dive & Leaderboard Panel */}
-        <div className="lg:col-span-4 p-4 md:p-6 bg-slate-50/50 border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col justify-between">
-          <div>
+        <div
+          className="lg:col-span-4 flex flex-col"
+          style={{ background: "#f8faff", borderLeft: "1px solid #dbeafe" }}
+        >
+          {/* Panel Header */}
+          <div
+            style={{
+              background: "linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 100%)",
+              padding: "12px 16px"
+            }}
+          >
             {activeDistrictDetails ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b border-gray-200 pb-3">
-                  <div>
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                      {selectedDistrict ? "Selected District Metrics" : "Hovered District Insights"}
-                    </span>
-                    <h3 className="text-lg font-bold text-gray-800 m-0 flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-blue-600" />
-                      {activeDistrictDetails.name}
-                    </h3>
-                  </div>
-                  {selectedDistrict && (
-                    <button
-                      onClick={() => handleDistrictClick(selectedDistrict)}
-                      className="p-1.5 text-gray-400 hover:text-gray-700 bg-white border border-gray-200 rounded-lg text-xs"
-                      title="Clear selection"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {/* Detailed Stat Cards */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <Building2 className="w-3 h-3 text-teal-600" />
-                        Facilities
-                      </span>
-                      <span className="text-sm font-bold text-teal-700 font-mono">
-                        {activeDistrictDetails.facilitiesCount}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <PhoneCall className="w-3 h-3 text-blue-600" />
-                        Total Calls
-                      </span>
-                      <span className="text-sm font-bold text-blue-700 font-mono">
-                        {activeDistrictDetails.callsAssigned}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                        Closed Calls
-                      </span>
-                      <span className="text-sm font-bold text-emerald-700 font-mono">
-                        {activeDistrictDetails.callsCompleted}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <Wrench className="w-3 h-3 text-indigo-600" />
-                        PMS / Calibration
-                      </span>
-                      <span className="text-xs font-bold text-indigo-700 font-mono">
-                        {activeDistrictDetails.pmsCount} / {activeDistrictDetails.calibrationCount}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <Users className="w-3 h-3 text-cyan-600" />
-                        Engineers
-                      </span>
-                      <span className="text-sm font-bold text-cyan-700 font-mono">
-                        {activeDistrictDetails.engineersCount}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <UserCheck className="w-3 h-3 text-violet-600" />
-                        Managers
-                      </span>
-                      <span className="text-sm font-bold text-violet-700 font-mono">
-                        {activeDistrictDetails.managersCount}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-amber-600" />
-                        Total Expense
-                      </span>
-                      <span className="text-sm font-bold text-amber-700 font-mono">
-                        ₹{activeDistrictDetails.totalAmount.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2.5 rounded-xl border border-gray-200 shadow-2xs">
-                      <span className="text-[9px] font-bold text-gray-500 block uppercase flex items-center gap-1">
-                        <Calculator className="w-3 h-3 text-amber-600" />
-                        Avg / Staff
-                      </span>
-                      <span className="text-xs font-bold text-amber-700 font-mono">
-                        ₹{activeDistrictDetails.avgExpensePerStaff.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Engineers in District */}
-                  <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs space-y-2">
-                    <span className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-cyan-700">
-                        <Users className="w-3.5 h-3.5" />
-                        Engineers ({activeDistrictDetails.engineersCount})
-                      </span>
-                    </span>
-                    {activeDistrictDetails.topEngineers.length > 0 ? (
-                      <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
-                        {activeDistrictDetails.topEngineers.map((eng, idx) => (
-                          <div key={idx} className="flex justify-between items-center text-xs">
-                            <span className="text-gray-700 font-medium truncate max-w-[140px]">
-                              {eng.name}
-                            </span>
-                            <span className="font-mono font-bold text-emerald-600">
-                              ₹{eng.amount.toLocaleString()}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-400 m-0">No engineers assigned for active filters</p>
-                    )}
-                  </div>
-
-                  {/* Managers in District */}
-                  <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-2xs space-y-2">
-                    <span className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-violet-700">
-                        <UserCheck className="w-3.5 h-3.5" />
-                        Managers / Coordinators ({activeDistrictDetails.managersCount})
-                      </span>
-                    </span>
-                    {activeDistrictDetails.topManagers.length > 0 ? (
-                      <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
-                        {activeDistrictDetails.topManagers.map((mgr, idx) => (
-                          <div key={idx} className="flex justify-between items-center text-xs">
-                            <span className="text-gray-700 font-medium truncate max-w-[140px]">
-                              {mgr.name}
-                            </span>
-                            <span className="font-mono font-bold text-violet-600">
-                              {mgr.amount > 0 ? `₹${mgr.amount.toLocaleString()}` : "Assigned"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-400 m-0">No managers listed for active filters</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Overview Leaderboard showing all metrics simultaneously */
-              <div className="space-y-4">
-                <div className="border-b border-gray-200 pb-3">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    District Highlights
-                  </span>
-                  <h3 className="text-base font-bold text-gray-800 m-0 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-600" />
-                    Districts Live Metrics Breakdown
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-bold text-blue-200 uppercase tracking-widest m-0">
+                    {selectedDistrict ? "Selected District" : "Hovered District"}
+                  </p>
+                  <h3 className="text-sm font-extrabold text-white m-0 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-300" />
+                    {activeDistrictDetails.name}
                   </h3>
                 </div>
-
-                <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
-                  {Object.entries(districtStats)
-                    .filter(([name]) => {
-                      if (selectedZoneFilter && selectedZoneFilter !== "all") {
-                        return isDistrictInZone(name, selectedZoneFilter);
-                      }
-                      return true;
-                    })
-                    .map(([name, s]) => {
-                      const engCount = s.engineers.size;
-                      const mgrCount = s.managers.size;
-                      const totalStaff = engCount + mgrCount;
-                      const avgExp = totalStaff > 0 ? Math.round(s.totalAmount / totalStaff) : 0;
-                      return {
-                        name,
-                        amount: s.totalAmount,
-                        claimCount: s.claimCount,
-                        facilitiesCount: s.facilities.size,
-                        engineersCount: engCount,
-                        managersCount: mgrCount,
-                        callsAssigned: s.callsAssigned,
-                        callsCompleted: s.callsCompleted,
-                        pmsCount: s.pmsCount,
-                        calibrationCount: s.calibrationCount,
-                        avgExpensePerStaff: avgExp
-                      };
-                    })
-                    .sort((a, b) => b.amount - a.amount)
-                    .map((item, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => handleDistrictClick(item.name)}
-                        className="bg-white hover:bg-slate-50 p-2.5 rounded-xl border border-gray-200 shadow-2xs cursor-pointer transition flex items-center justify-between group"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-extrabold text-emerald-600 flex items-center justify-center font-mono shrink-0">
-                            #{idx + 1}
-                          </span>
-                          <div>
-                            <span className="text-xs font-bold text-gray-800 group-hover:text-blue-600 transition block">
-                              {item.name}
-                            </span>
-                            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-mono mt-0.5">
-                              <span className="text-teal-600">🏢 {item.facilitiesCount} Fac</span>
-                              <span>•</span>
-                              <span className="text-cyan-600">👥 {item.engineersCount} Eng</span>
-                              <span>•</span>
-                              <span className="text-violet-600">👔 {item.managersCount} Mgr</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-right">
-                          <div>
-                            <span className="text-xs font-mono font-bold text-emerald-600 block">
-                              ₹{item.amount.toLocaleString()}
-                            </span>
-                            <span className="text-[9px] font-mono text-amber-600 block">
-                              Avg ₹{item.avgExpensePerStaff.toLocaleString()}/staff
-                            </span>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition ml-1" />
-                        </div>
-                      </div>
-                    ))}
+                {selectedDistrict && (
+                  <button
+                    onClick={() => handleDistrictClick(selectedDistrict)}
+                    className="p-1 text-blue-200 hover:text-white hover:bg-white/10 transition"
+                    title="Clear selection"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-blue-300" />
+                <div>
+                  <p className="text-[9px] font-bold text-blue-200 uppercase tracking-widest m-0">District Intelligence</p>
+                  <h3 className="text-sm font-extrabold text-white m-0">Live Metrics Leaderboard</h3>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Footer Info */}
-          <div className="mt-4 pt-3 border-t border-gray-200 text-[11px] text-gray-500 flex items-center justify-between">
-            <span className="flex items-center gap-1">
-              <Globe className="w-3.5 h-3.5 text-emerald-600" />
-              Synced with Active Page Filters
+          {/* Panel Scroll Body */}
+          <div className="flex-1 overflow-y-auto p-4" style={{ maxHeight: "calc(540px + 68px)" }}>
+            {activeDistrictDetails ? (
+              <div className="space-y-3">
+                {/* Stat Grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Facilities", val: activeDistrictDetails.facilitiesCount, icon: <Building2 className="w-3 h-3" />, color: "teal" },
+                    { label: "Total Calls", val: activeDistrictDetails.callsAssigned, icon: <PhoneCall className="w-3 h-3" />, color: "blue" },
+                    { label: "Closed Calls", val: activeDistrictDetails.callsCompleted, icon: <CheckCircle2 className="w-3 h-3" />, color: "emerald" },
+                    { label: "PMS / Cal", val: `${activeDistrictDetails.pmsCount}/${activeDistrictDetails.calibrationCount}`, icon: <Wrench className="w-3 h-3" />, color: "indigo" },
+                    { label: "Engineers", val: activeDistrictDetails.engineersCount, icon: <Users className="w-3 h-3" />, color: "cyan" },
+                    { label: "Managers", val: activeDistrictDetails.managersCount, icon: <UserCheck className="w-3 h-3" />, color: "violet" },
+                    { label: "Total Expense", val: `₹${activeDistrictDetails.totalAmount.toLocaleString()}`, icon: <DollarSign className="w-3 h-3" />, color: "amber" },
+                    { label: "Avg / Staff", val: `₹${activeDistrictDetails.avgExpensePerStaff.toLocaleString()}`, icon: <Calculator className="w-3 h-3" />, color: "orange" },
+                  ].map((stat, si) => (
+                    <div
+                      key={si}
+                      className="bg-white p-2.5 border border-blue-100 hover:border-blue-300 transition-all duration-150"
+                      style={{ boxShadow: "0 1px 3px rgba(29,78,216,0.06)" }}
+                    >
+                      <span className={`text-[9px] font-bold text-${stat.color}-600 flex items-center gap-1 uppercase tracking-wider mb-1`}>
+                        {stat.icon}{stat.label}
+                      </span>
+                      <span className={`text-sm font-extrabold font-mono text-${stat.color}-700 leading-none block`}>
+                        {stat.val}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Engineers */}
+                <div className="bg-white border border-blue-100 p-3">
+                  <p className="text-[10px] font-bold text-cyan-700 flex items-center gap-1 uppercase tracking-wider mb-2 m-0">
+                    <Users className="w-3 h-3" /> Engineers ({activeDistrictDetails.engineersCount})
+                  </p>
+                  {activeDistrictDetails.topEngineers.length > 0 ? (
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {activeDistrictDetails.topEngineers.map((eng, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-[11px]">
+                          <span className="text-gray-700 font-medium truncate max-w-[130px]">{eng.name}</span>
+                          <span className="font-mono font-bold text-emerald-600 shrink-0">₹{eng.amount.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-gray-400 m-0">No engineers for active filters</p>
+                  )}
+                </div>
+
+                {/* Managers */}
+                <div className="bg-white border border-blue-100 p-3">
+                  <p className="text-[10px] font-bold text-violet-700 flex items-center gap-1 uppercase tracking-wider mb-2 m-0">
+                    <UserCheck className="w-3 h-3" /> Managers ({activeDistrictDetails.managersCount})
+                  </p>
+                  {activeDistrictDetails.topManagers.length > 0 ? (
+                    <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                      {activeDistrictDetails.topManagers.map((mgr, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-[11px]">
+                          <span className="text-gray-700 font-medium truncate max-w-[130px]">{mgr.name}</span>
+                          <span className="font-mono font-bold text-violet-600 shrink-0">
+                            {mgr.amount > 0 ? `₹${mgr.amount.toLocaleString()}` : "Assigned"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-gray-400 m-0">No managers for active filters</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* District Leaderboard */
+              <div className="space-y-2">
+                {Object.entries(districtStats)
+                  .filter(([name]) => {
+                    if (selectedZoneFilter && selectedZoneFilter !== "all") {
+                      return isDistrictInZone(name, selectedZoneFilter);
+                    }
+                    return true;
+                  })
+                  .map(([name, s]) => {
+                    const engCount = s.engineers.size;
+                    const mgrCount = s.managers.size;
+                    const totalStaff = engCount + mgrCount;
+                    const avgExp = totalStaff > 0 ? Math.round(s.totalAmount / totalStaff) : 0;
+                    return {
+                      name,
+                      amount: s.totalAmount,
+                      facilitiesCount: s.facilities.size,
+                      engineersCount: engCount,
+                      managersCount: mgrCount,
+                      callsAssigned: s.callsAssigned,
+                      callsCompleted: s.callsCompleted,
+                      avgExpensePerStaff: avgExp
+                    };
+                  })
+                  .sort((a, b) => b.amount - a.amount)
+                  .map((item, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => handleDistrictClick(item.name)}
+                      className="bg-white cursor-pointer group transition-all duration-150"
+                      style={{
+                        border: "1px solid #dbeafe",
+                        padding: "10px 12px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        boxShadow: "0 1px 3px rgba(29,78,216,0.05)"
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#93c5fd"; e.currentTarget.style.background = "#f0f6ff"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#dbeafe"; e.currentTarget.style.background = "#ffffff"; }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="text-[10px] font-extrabold font-mono text-white flex items-center justify-center shrink-0"
+                          style={{
+                            width: 20, height: 20,
+                            background: idx < 3
+                              ? ["#1d4ed8", "#2563eb", "#3b82f6"][idx]
+                              : "#94a3b8"
+                          }}
+                        >
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <span className="text-[11px] font-bold text-slate-800 group-hover:text-blue-700 transition block">
+                            {item.name}
+                          </span>
+                          <div className="flex items-center gap-1 text-[9px] text-gray-500 font-mono mt-0.5">
+                            <span className="text-teal-600">{item.facilitiesCount}F</span>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-cyan-600">{item.engineersCount}E</span>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-violet-600">{item.managersCount}M</span>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-emerald-600">{item.callsCompleted}/{item.callsAssigned} Calls</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[11px] font-mono font-bold text-blue-700 block">
+                          ₹{item.amount.toLocaleString()}
+                        </span>
+                        <span className="text-[9px] font-mono text-amber-600">
+                          ₹{item.avgExpensePerStaff.toLocaleString()}/staff
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Panel Footer */}
+          <div
+            className="px-4 py-2.5 text-[10px] flex items-center justify-between"
+            style={{ borderTop: "1px solid #dbeafe", background: "#f0f6ff" }}
+          >
+            <span className="flex items-center gap-1 text-blue-600 font-semibold">
+              <Globe className="w-3 h-3" />
+              Synced with Page Filters
             </span>
-            <span className="font-mono text-emerald-600 font-bold">
-              {Object.keys(districtStats).length} Active Districts
+            <span className="font-mono font-bold text-blue-700">
+              {Object.keys(districtStats).length} Districts
             </span>
           </div>
         </div>

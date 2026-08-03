@@ -1,8 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import * as XLSX from "xlsx";
-import { ResponsiveBar } from "@nivo/bar";
-import { ResponsivePie } from "@nivo/pie";
-import { ResponsiveLine } from "@nivo/line";
+import { SaaSLineChart, SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart, SaaS3DHybridTrendChart } from "../components/common/SaaSCharts";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import { adminService } from "../services/adminService";
@@ -19,7 +17,8 @@ import {
   Segmented,
   Modal,
   Table,
-  Input
+  Input,
+  Select
 } from "antd";
 import {
   FilterOutlined,
@@ -32,7 +31,22 @@ import {
   TagOutlined,
   AimOutlined,
   RocketOutlined,
-  SearchOutlined
+  SearchOutlined,
+  BarChartOutlined,
+  PieChartOutlined,
+  LineChartOutlined,
+  RiseOutlined,
+  TrophyOutlined,
+  CompassOutlined,
+  DollarOutlined,
+  WalletOutlined,
+  CalendarOutlined,
+  UserOutlined,
+  GlobalOutlined,
+  ThunderboltOutlined,
+  AreaChartOutlined,
+  TeamOutlined,
+  BulbOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
 
@@ -135,6 +149,9 @@ export default function AnalysisPage() {
   const [selectedEngineer, setSelectedEngineer] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedEngineer") || "all";
   });
+  const [districtChartType, setDistrictChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
+  const [employeeChartType, setEmployeeChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
+  const [engineerSearchQuery, setEngineerSearchQuery] = useState<string>("");
   const [selectedZone, setSelectedZone] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedZone") || "all";
   });
@@ -150,6 +167,8 @@ export default function AnalysisPage() {
   const [endDate, setEndDate] = useState<string>(() => {
     return localStorage.getItem("analysis_endDate") || "";
   });
+  const [activeTab, setActiveTab] = useState<"overview" | "map" | "field" | "financial">("overview");
+  const [isFilterExpanded, setIsFilterExpanded] = useState(true);
 
   useEffect(() => {
     localStorage.setItem("analysis_viewMode", viewMode);
@@ -291,7 +310,7 @@ export default function AnalysisPage() {
     // 1. Filter engineers based on selectedDistrict and selectedZone
     const engineers = new Set<string>();
     monthlyList.forEach(e => {
-      const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const dist = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
       const name = e.submitter_name || "Self";
       const zone = e.zone || "";
       if (selectedDistrict === "all" || dist.toLowerCase() === selectedDistrict.toLowerCase()) {
@@ -304,7 +323,7 @@ export default function AnalysisPage() {
     // 2. Filter districts based on selectedEngineer and selectedZone
     const districts = new Set<string>();
     monthlyList.forEach(e => {
-      const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const dist = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
       const name = e.submitter_name || "Self";
       const zone = e.zone || "";
       if (selectedEngineer === "all" || name.toLowerCase() === selectedEngineer.toLowerCase()) {
@@ -389,7 +408,7 @@ export default function AnalysisPage() {
       }
       if (selectedDistrict !== "all") {
         list = list.filter(e => {
-          const dist = e.district || e.submitter_district || e.home_district || "Ganganagar";
+          const dist = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
           return dist.toLowerCase() === selectedDistrict.toLowerCase();
         });
       }
@@ -397,6 +416,11 @@ export default function AnalysisPage() {
         list = list.filter(e => {
           const name = e.submitter_name || "Self";
           return name.toLowerCase() === selectedEngineer.toLowerCase();
+        });
+      } else if (engineerSearchQuery.trim()) {
+        list = list.filter(e => {
+          const name = e.submitter_name || "Self";
+          return name.toLowerCase().includes(engineerSearchQuery.trim().toLowerCase());
         });
       }
       if (selectedCoordinator !== "all") {
@@ -408,7 +432,7 @@ export default function AnalysisPage() {
     }
 
     return list;
-  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, selectedCoordinator, selectedStatus, startDate, endDate, selectedZone]);
+  }, [viewMode, myExpenses, teamExpenses, selectedMonth, selectedYear, selectedDistrict, selectedEngineer, engineerSearchQuery, selectedCoordinator, selectedStatus, startDate, endDate, selectedZone]);
 
   // Expenses filtered by all criteria EXCEPT single district filter (so map can calculate all districts)
   const mapExpenses = useMemo(() => {
@@ -585,27 +609,45 @@ export default function AnalysisPage() {
       .slice(0, 5);
   }, [activeExpenses]);
 
+  // Status-wise Stats (Approved, Pending, Rejected amounts & counts)
+  const statusStats = useMemo(() => {
+    let appAmt = 0, appCnt = 0;
+    let pendAmt = 0, pendCnt = 0;
+    let rejAmt = 0, rejCnt = 0;
+    activeExpenses.forEach(e => {
+      const s = (e.status || "pending").toLowerCase();
+      const amt = Number(e.amount || 0);
+      if (s === "approved" || s === "auto_approved") {
+        appAmt += amt; appCnt++;
+      } else if (s === "rejected") {
+        rejAmt += amt; rejCnt++;
+      } else {
+        pendAmt += amt; pendCnt++;
+      }
+    });
+    return { appAmt, appCnt, pendAmt, pendCnt, rejAmt, rejCnt };
+  }, [activeExpenses]);
+
   // B. Status-wise
   const statusWiseData = useMemo(() => {
-    const map: Record<string, number> = {};
-    activeExpenses.forEach(e => {
-      const s = (e.status || "Pending").toLowerCase();
-      const label = s === "approved" ? "Approved" : s === "rejected" ? "Rejected" : "Pending";
-      map[label] = (map[label] || 0) + (e.amount || 0);
-    });
+    const map: Record<string, { value: number; count: number }> = {
+      Approved: { value: statusStats.appAmt, count: statusStats.appCnt },
+      Pending: { value: statusStats.pendAmt, count: statusStats.pendCnt },
+      Rejected: { value: statusStats.rejAmt, count: statusStats.rejCnt }
+    };
     return Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
-      .filter(d => d.value > 0);
-  }, [activeExpenses]);
+      .map(([name, { value, count }]) => ({ name, value, count }))
+      .filter(d => d.value > 0 || d.count > 0);
+  }, [statusStats]);
 
   // C. District-wise (Top 5)
   const districtWiseData = useMemo(() => {
     const map: Record<string, number> = {};
     activeExpenses.forEach(e => {
       // Robust mapping: check e.district first (live backend serialized field), then submitter_district, home_district, or logged-in user district
-      let dist = e.district || e.submitter_district || e.home_district || user?.district || "Ganganagar";
-      if (dist.toLowerCase() === "all" || !dist) {
-        dist = "Ganganagar";
+      let dist = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || user?.district || "Unassigned District";
+      if (!dist || dist.toLowerCase() === "all") {
+        dist = "Unassigned District";
       }
       map[dist] = (map[dist] || 0) + (e.amount || 0);
     });
@@ -678,6 +720,29 @@ export default function AnalysisPage() {
 
     return result;
   }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
+
+  const spendBurnMetrics = useMemo(() => {
+    if (!fullMonthTrendData || fullMonthTrendData.length === 0) {
+      return { peakDay: null, avgDaily: 0, lowestDay: null };
+    }
+    let peak = fullMonthTrendData[0];
+    let lowest = fullMonthTrendData[0];
+    let total = 0;
+
+    fullMonthTrendData.forEach(d => {
+      total += d.amount;
+      if (d.amount > peak.amount) peak = d;
+      if (d.amount > 0 && d.amount < lowest.amount) lowest = d;
+    });
+
+    const avgDaily = total / fullMonthTrendData.length;
+    return { peakDay: peak, avgDaily, lowestDay: lowest };
+  }, [fullMonthTrendData]);
+
+  const totalMonthBurn = useMemo(() => {
+    if (!fullMonthTrendData) return 0;
+    return fullMonthTrendData.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+  }, [fullMonthTrendData]);
 
   // E. Date-wise Tagged Asset Value Trend (₹)
   const dayWiseAssetTaggingValueData = useMemo(() => {
@@ -823,7 +888,7 @@ export default function AnalysisPage() {
     activeExpenses.forEach(e => {
       if (!e) return;
       const engineerName = e.submitter_name || "Self";
-      const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const districtName = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
       const zoneName = e.zone || "Unassigned";
       const mainDate = String(e.date || e.itinerary || "").trim();
       const fallbackHospital = e.hospital_name || e.destination || e.to || e.purpose || "Base Hospital / Site";
@@ -1028,7 +1093,7 @@ export default function AnalysisPage() {
       if (pmsCount <= 0) return;
 
       const engineerName = e.submitter_name || "Self";
-      const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const districtName = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
       const zoneName = e.zone || "Unassigned";
       const mainDate = String(e.date || e.itinerary || "").trim();
       const hospitalName = e.hospital_name || e.destination || e.to || e.purpose || "District Hospital / Site";
@@ -1154,7 +1219,7 @@ export default function AnalysisPage() {
       if (assigned <= 0 && completed <= 0) return;
 
       const engineerName = e.submitter_name || "Self";
-      const districtName = e.district || e.submitter_district || e.home_district || "Ganganagar";
+      const districtName = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
       const zoneName = e.zone || "Unassigned";
       const mainDate = String(e.date || e.itinerary || "").trim();
       const hospitalName = e.hospital_name || e.destination || e.to || e.purpose || "District Hospital / Site";
@@ -1463,7 +1528,7 @@ export default function AnalysisPage() {
       </div>
     );
   }  return (
-    <div className="space-y-3 p-1.5 md:p-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="w-full space-y-2 p-1 sm:p-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         /* Polish filters style and fix conflicting global styling */
         .ant-select {
@@ -1601,922 +1666,533 @@ export default function AnalysisPage() {
         }
       `}</style>
       
-      {/* Page Header Card */}
-      <div className="bg-gradient-to-r from-primary-50/70 to-blue-50/40 border border-primary-100/70 rounded-xl p-3 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-              <DashboardOutlined className="text-white text-base" />
+      {/* Ultra-Compact #4A6A8A Signature Header Bar */}
+      <div className="bg-[#4A6A8A] text-white rounded-t-lg px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+              <FundOutlined className="text-white text-sm" />
             </div>
-            <div>
-              <h1 className="text-xs sm:text-base font-bold text-gray-800 uppercase tracking-wider leading-none m-0">
-                Expense Analysis
-              </h1>
-              <p className="text-gray-500 text-[10px] font-medium mt-1 leading-none hidden sm:block">
-                Real-time expense data visualization & insights
-              </p>
+            <span className="text-sm font-bold text-white tracking-normal">
+              Deep Analytics <span className="text-white/70 font-normal text-xs">({months[selectedMonth]} {selectedYear})</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Controls & Mode Switcher */}
+        <div className="flex items-center gap-2">
+          {isReviewer && (
+            <div className="flex items-center bg-white/15 p-0.5 rounded-md text-xs font-bold">
+              <button
+                onClick={() => setViewMode("my")}
+                className={`px-2.5 py-1 rounded transition-all flex items-center gap-1 cursor-pointer ${
+                  viewMode === "my" ? "bg-white text-[#4A6A8A] shadow-xs" : "text-white/80 hover:text-white"
+                }`}
+              >
+                <UserOutlined style={{ fontSize: 10 }} />
+                My Data
+              </button>
+              <button
+                onClick={() => setViewMode("team")}
+                className={`px-2.5 py-1 rounded transition-all flex items-center gap-1 cursor-pointer ${
+                  viewMode === "team" ? "bg-white text-[#4A6A8A] shadow-xs" : "text-white/80 hover:text-white"
+                }`}
+              >
+                <TeamOutlined style={{ fontSize: 10 }} />
+                Team Data
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+            className="px-2.5 py-1 bg-white/15 hover:bg-white/25 text-white rounded-md text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <FilterOutlined style={{ fontSize: 11 }} />
+            {isFilterExpanded ? "Hide Filters" : "Filters"}
+          </button>
+
+          <Button
+            type="primary"
+            size="small"
+            icon={<FileExcelOutlined style={{ fontSize: 11 }} />}
+            style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+            onClick={downloadCSV}
+            disabled={activeExpenses.length === 0}
+            className="font-bold text-xs uppercase flex items-center justify-center shrink-0 h-7 px-3 cursor-pointer shadow-2xs"
+          >
+            Export CSV
+          </Button>
+
+          <span className="text-xs font-mono font-bold text-white/90 bg-white/20 px-2.5 py-1 rounded shrink-0">
+            {activeExpenses.length} Records
+          </span>
+        </div>
+      </div>
+
+      {/* Ultra-Compact 100% Single-Line Filter Toolbar (No Wrapping, Minimal Space) */}
+      {isFilterExpanded && (
+        <div className="bg-white border-x border-b border-slate-200/80 px-2 py-1.5 shadow-2xs">
+          <div className="flex flex-nowrap items-center gap-1.5 w-full overflow-x-auto no-scrollbar">
+            {viewMode === "team" && isReviewer && (
+              <>
+                <div className="shrink-0 w-22 sm:w-24">
+                  <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Zone</span>
+                  <select
+                    value={selectedZone}
+                    onChange={(e) => setSelectedZone(e.target.value)}
+                    className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none"
+                  >
+                    <option value="all">All Zones</option>
+                    {uniqueZones.map(z => (
+                      <option key={z} value={z}>{z}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="shrink-0 w-24 sm:w-28">
+                  <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">District</span>
+                  <select
+                    value={selectedDistrict}
+                    onChange={(e) => setSelectedDistrict(e.target.value)}
+                    className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none"
+                  >
+                    <option value="all">All Districts</option>
+                    {filterOptions.districts.map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="shrink-0 w-26 sm:w-32">
+                  <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5 flex items-center gap-0.5">
+                    <SearchOutlined style={{ fontSize: 8 }} /> Engineer
+                  </span>
+                  <Select
+                    showSearch
+                    size="small"
+                    value={selectedEngineer}
+                    onChange={(val) => setSelectedEngineer(val)}
+                    className="w-full text-[10.5px] font-semibold"
+                    style={{ minHeight: "24px", height: "24px" }}
+                    placeholder="Search"
+                    optionFilterProp="label"
+                    filterOption={(input, option) =>
+                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                    }
+                    options={[
+                      { value: "all", label: `All Engineers (${filterOptions.engineers.length})` },
+                      ...filterOptions.engineers.map((name) => ({
+                        value: name,
+                        label: name,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                <div className="shrink-0 w-22 sm:w-26">
+                  <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Coordinator</span>
+                  <select
+                    value={selectedCoordinator}
+                    onChange={(e) => setSelectedCoordinator(e.target.value)}
+                    className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none"
+                  >
+                    <option value="all">All Coordinators</option>
+                    {coordinatorsList.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+
+            <div className="shrink-0 w-20 sm:w-22">
+              <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Status</span>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="analysis-select-input w-full text-[10.5px] font-bold text-slate-700 px-1 py-0 h-6 leading-none"
+              >
+                <option value="all">All Status</option>
+                <option value="approved">Approved</option>
+                <option value="pending">Pending</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+
+            <div className="shrink-0 w-16 sm:w-18">
+              <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Month</span>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                disabled={!!startDate || !!endDate}
+                className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none disabled:opacity-50"
+              >
+                {months.map((m, i) => (
+                  <option key={i} value={i}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="shrink-0 w-14 sm:w-16">
+              <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Year</span>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                disabled={!!startDate || !!endDate}
+                className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none disabled:opacity-50"
+              >
+                {availableYears.map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="shrink-0">
+              <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Custom Date Range</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="date"
+                  value={startDate}
+                  min={minDateStr}
+                  max={maxDateStr}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="analysis-date-input text-[10px] w-24 px-1 py-0 h-6 leading-none"
+                />
+                <span className="text-slate-400 text-[9px]">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={minDateStr}
+                  max={maxDateStr}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="analysis-date-input text-[10px] w-24 px-1 py-0 h-6 leading-none"
+                />
+                {(startDate || endDate) && (
+                  <Button
+                    type="text"
+                    danger
+                    size="small"
+                    icon={<CloseOutlined style={{ fontSize: 9 }} />}
+                    onClick={() => { setStartDate(""); setEndDate(""); }}
+                  />
+                )}
+              </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Actions Toolbar */}
-          <div className="flex items-center gap-2 justify-between sm:justify-end w-full sm:w-auto mt-1 sm:mt-0">
-            {isReviewer && (
-              <Radio.Group
-                value={viewMode}
-                onChange={(e) => setViewMode(e.target.value as "my" | "team")}
-                optionType="button"
-                buttonStyle="solid"
-                size="small"
-                className="shadow-2xs shrink-0"
-              >
-                <Radio.Button value="my" className="font-bold text-[10px] uppercase">
-                  My Data
-                </Radio.Button>
-                <Radio.Button value="team" className="font-bold text-[10px] uppercase">
-                  Team Data
-                </Radio.Button>
-              </Radio.Group>
-            )}
-            <Button
-              type="primary"
-              size="small"
-              icon={<FileExcelOutlined />}
-              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-              onClick={downloadCSV}
-              disabled={activeExpenses.length === 0}
-              className="font-bold text-[10px] uppercase flex items-center justify-center shrink-0 h-6 px-3"
-            >
-              Export CSV
-            </Button>
+      {/* Stat Card Design System */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 my-2.5">
+        {/* Card 1: Total Claimed */}
+        <div
+          className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md hover:border-blue-400 transition-all cursor-pointer"
+          onClick={() => setSelectedStatus("all")}
+        >
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <FileExcelOutlined style={{ fontSize: 16 }} />
+          </div>
+          <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">TOTAL CLAIMED</span>
+            <span className="text-[13px] font-mono font-extrabold text-slate-900 leading-none">{(totalAmount || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">{count} Claims</span>
+          </div>
+        </div>
+
+        {/* Card 2: Approved */}
+        <div
+          className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md hover:border-emerald-400 transition-all cursor-pointer"
+          onClick={() => setSelectedStatus("approved")}
+        >
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <CheckOutlined style={{ fontSize: 16 }} />
+          </div>
+          <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">APPROVED</span>
+            <span className="text-[13px] font-mono font-extrabold text-emerald-800 leading-none">{(statusStats.appAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">{statusStats.appCnt} Claims</span>
+          </div>
+        </div>
+
+        {/* Card 3: Pending */}
+        <div
+          className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md hover:border-amber-400 transition-all cursor-pointer"
+          onClick={() => setSelectedStatus("pending")}
+        >
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <InfoCircleOutlined style={{ fontSize: 16 }} />
+          </div>
+          <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">PENDING</span>
+            <span className="text-[13px] font-mono font-extrabold text-amber-800 leading-none">{(statusStats.pendAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">{statusStats.pendCnt} Claims</span>
+          </div>
+        </div>
+
+        {/* Card 4: Rejected */}
+        <div
+          className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md hover:border-rose-400 transition-all cursor-pointer"
+          onClick={() => setSelectedStatus("rejected")}
+        >
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <CloseOutlined style={{ fontSize: 16 }} />
+          </div>
+          <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">REJECTED</span>
+            <span className="text-[13px] font-mono font-extrabold text-rose-800 leading-none">{(statusStats.rejAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">{statusStats.rejCnt} Claims</span>
+          </div>
+        </div>
+
+        {/* Card 5: Avg Claim */}
+        <div className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md transition-all">
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <RiseOutlined style={{ fontSize: 16 }} />
+          </div>
+          <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">AVG CLAIM</span>
+            <span className="text-[13px] font-mono font-extrabold text-indigo-900 leading-none">{(avgValue || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">Per Claim</span>
+          </div>
+        </div>
+
+        {/* Card 6: Calls Done */}
+        <div className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md transition-all">
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
+            <RocketOutlined style={{ fontSize: 16 }} />
+          </div>
+          <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">CALLS DONE</span>
+            <span className="text-[13px] font-mono font-extrabold text-cyan-900 leading-none">{activityStats.callsCompleted}/{activityStats.callsAssigned}</span>
+            <span className="text-[8px] font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">Completed</span>
           </div>
         </div>
       </div>
 
-      {/* Filters Panel Card */}
-      <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-2xs">
-        <Row gutter={[8, 8]} align="middle">
-          {/* Header */}
-          <Col xs={24} className="flex items-center gap-1.5 text-gray-400 font-bold mb-0.5">
-            <FilterOutlined style={{ fontSize: 11 }} />
-            <span className="text-[9px] uppercase tracking-wider">Filters</span>
-          </Col>
 
-          {/* Dynamic selectors */}
-          {viewMode === "team" && isReviewer && (
-            <>
-              {/* Zone Filter */}
-              <Col xs={12} sm={8} md={6} lg={4}>
-                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Zone</span>
-                <select
-                  value={selectedZone}
-                  onChange={(e) => setSelectedZone(e.target.value)}
-                  className="analysis-select-input"
-                >
-                  <option value="all">All Zones</option>
-                  {uniqueZones.map(z => (
-                    <option key={z} value={z}>{z}</option>
-                  ))}
-                </select>
-              </Col>
 
-              {/* District Filter */}
-              <Col xs={12} sm={8} md={6} lg={4}>
-                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">District</span>
-                <select
-                  value={selectedDistrict}
-                  onChange={(e) => setSelectedDistrict(e.target.value)}
-                  className="analysis-select-input"
-                >
-                  <option value="all">All Districts</option>
-                  {filterOptions.districts.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </Col>
-
-              {/* Engineer Filter */}
-              <Col xs={12} sm={8} md={6} lg={3}>
-                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Engineer</span>
-                <select
-                  value={selectedEngineer}
-                  onChange={(e) => setSelectedEngineer(e.target.value)}
-                  className="analysis-select-input"
-                >
-                  <option value="all">All Engineers</option>
-                  {filterOptions.engineers.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </Col>
-
-              {/* Coordinator Filter */}
-              <Col xs={12} sm={8} md={6} lg={3}>
-                <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Coordinator</span>
-                <select
-                  value={selectedCoordinator}
-                  onChange={(e) => setSelectedCoordinator(e.target.value)}
-                  className="analysis-select-input"
-                >
-                  <option value="all">All Coordinators</option>
-                  {coordinatorsList.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </Col>
-            </>
-          )}
-
-          {/* Month Filter */}
-          <Col xs={12} sm={8} md={6} lg={3}>
-            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Month</span>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              disabled={!!startDate || !!endDate}
-              className="analysis-select-input disabled:opacity-50"
-            >
-              {months.map((m, i) => (
-                <option key={i} value={i}>{m}</option>
-              ))}
-            </select>
-          </Col>
-
-          {/* Year Filter */}
-          <Col xs={12} sm={8} md={6} lg={3}>
-            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Year</span>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              disabled={!!startDate || !!endDate}
-              className="analysis-select-input disabled:opacity-50"
-            >
-              {availableYears.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </Col>
-
-          {/* Status Filter */}
-          <Col xs={24} md={12} lg={6}>
-            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Status</span>
-            <Segmented
-              block
-              size="small"
-              value={selectedStatus}
-              onChange={(val) => setSelectedStatus(val as any)}
-              options={[
-                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">All</span>, value: 'all' },
-                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Pending</span>, value: 'pending' },
-                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Approved</span>, value: 'approved' },
-                { label: <span className="text-[9px] xs:text-[10px] tracking-tight">Rejected</span>, value: 'rejected' }
-              ]}
-              className={`font-bold text-[10px] uppercase tracking-wider ${getSegmentedClass(selectedStatus)}`}
-            />
-          </Col>
-
-          {/* Date Range Filters */}
-          <Col xs={24} md={12} lg={6}>
-            <span className="text-[9px] font-bold text-gray-400 uppercase block mb-0.5">Custom Date Range</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                min={minDateStr}
-                max={maxDateStr}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="analysis-date-input"
-              />
-              <span className="text-gray-400 text-xs">to</span>
-              <input
-                type="date"
-                value={endDate}
-                min={minDateStr}
-                max={maxDateStr}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="analysis-date-input"
-              />
-              {(startDate || endDate) && (
-                <Button
-                  type="text"
-                  danger
-                  icon={<CloseOutlined />}
-                  onClick={() => { setStartDate(""); setEndDate(""); }}
+      {/* Dashboard Full-Bleed Grid */}
+      {count === 0 ? (
+        <div className="bg-white border border-slate-200/80 rounded-none p-8 text-center shadow-2xs my-4">
+          <InfoCircleOutlined style={{ fontSize: 36, color: "#94a3b8", marginBottom: 12 }} />
+          <h3 className="text-sm font-bold text-slate-800">No Expense Claims Recorded</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+            No data matched your active filters for {months[selectedMonth]} {selectedYear}. Try adjusting the zone, district, or month selection.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Main Grid: Row 1 - Spend Burn Line & Status Pie */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            {/* Daily Spend Burn Line Chart (col-span-8) */}
+            <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <LineChartOutlined style={{ fontSize: 13 }} />
+                  DAILY SPEND BURN
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 300 }}>
+                <SaaS3DHybridTrendChart
+                  data={fullMonthTrendData.map(d => ({ x: d.date, y: d.amount }))}
+                  height={275}
+                  mode="expense"
+                  showPeakLimit={false}
+                  valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
                 />
-              )}
+              </div>
             </div>
-          </Col>
-        </Row>
-      </div>
 
-      {/* Key Stats Grid */}
-      <Row gutter={[12, 12]}>
-        {/* Card 1: Total Claims */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Total Claims</span>}
-              value={count}
-              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<FileExcelOutlined className="text-blue-500 mr-1.5" />}
-            />
-          </Card>
-        </Col>
-
-        {/* Card 2: Total Amount */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Total Spend</span>}
-              value={totalAmount}
-              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<span className="text-emerald-500 font-bold mr-1">₹</span>}
-              formatter={(val) => Number(val).toLocaleString()}
-            />
-          </Card>
-        </Col>
-
-        {/* Card 3: Average Claim */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Avg Claim</span>}
-              value={avgValue}
-              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<span className="text-amber-500 font-bold mr-1">₹</span>}
-              formatter={(val) => Number(val).toLocaleString()}
-            />
-          </Card>
-        </Col>
-
-        {/* Card 4: Calls Completed / Assigned */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
-          <Card 
-            size="small" 
-            bordered={false} 
-            className="shadow-xs border border-gray-150 rounded-xl transition-all group"
-          >
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Calls Done</span>}
-              value={`${activityStats.callsCompleted} / ${activityStats.callsAssigned}`}
-              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<FundOutlined className="text-indigo-500 mr-1.5" />}
-            />
-          </Card>
-        </Col>
-
-        {/* Card 5: PMS Completed */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3.4}>
-          <Card 
-            size="small" 
-            bordered={false} 
-            className="shadow-xs border border-gray-150 rounded-xl transition-all group"
-          >
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">PMS Done</span>}
-              value={activityStats.pmsCount}
-              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<CheckOutlined className="text-teal-500 mr-1.5" />}
-            />
-          </Card>
-        </Col>
-
-        {/* Card 6: Asset Tagging */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3}>
-          <Card 
-            size="small" 
-            bordered={false} 
-            className="shadow-xs border border-gray-150 rounded-xl transition-all group"
-          >
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-500">Asset Tagging</span>}
-              value={activityStats.assetTaggingCount.toLocaleString('en-IN')}
-              valueStyle={{ fontSize: "15px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<TagOutlined className="text-cyan-500 mr-1.5" />}
-              suffix={
-                <div className="text-[10px] font-extrabold text-emerald-600 mt-0.5 tracking-tight font-mono">
-                  Val: ₹{activityStats.assetTaggingValue.toLocaleString('en-IN')}
-                </div>
-              }
-            />
-          </Card>
-        </Col>
-
-        {/* Card 7: Calibration */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Calibration</span>}
-              value={activityStats.calibrationCount}
-              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<AimOutlined className="text-amber-500 mr-1.5" />}
-            />
-          </Card>
-        </Col>
-
-        {/* Card 8: Asset Mobilised */}
-        <Col xs={12} sm={8} md={6} lg={4} xl={3}>
-          <Card size="small" bordered={false} className="shadow-xs border border-gray-150 rounded-xl">
-            <Statistic
-              title={<span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Asset Mobilised</span>}
-              value={activityStats.mobiliseCount}
-              valueStyle={{ fontSize: "16px", fontWeight: 800, color: "#1F2937", fontFamily: "monospace" }}
-              prefix={<RocketOutlined className="text-purple-500 mr-1.5" />}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* No Data State */}
-      {count === 0 && (
-        <Card className="text-center p-8 border border-gray-200 rounded-xl shadow-xs">
-          <InfoCircleOutlined style={{ fontSize: 32, color: "#bfbfbf", marginBottom: 12 }} />
-          <p style={{ margin: 0, fontWeight: "bold", fontSize: 13, color: "#595959" }}>No expense data found for {months[selectedMonth]} {selectedYear}</p>
-          <p style={{ margin: "4px 0 0 0", fontSize: 11, color: "#8c8c8c" }}>Try selecting a different month or year from the filters panel above</p>
-        </Card>
-      )}
-
-      {count > 0 && (
-        <Row gutter={[16, 16]}>
-          {/* Mobile Breakdown Progress Lists (Visible only on mobile/tablet) */}
-          <Col xs={24} md={0}>
-            <div className="space-y-3">
-              {/* Top Districts */}
-              <Card 
-                size="small"
-                title={<span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700">Top Districts</span>}
-                className="border border-gray-200 rounded-xl shadow-xs"
-              >
-                <div className="space-y-3">
-                  {districtWiseData.map((d, i) => {
-                    const pct = totalAmount > 0 ? Math.round((d.amount / totalAmount) * 100) : 0;
-                    return (
-                      <div key={i} className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px] font-bold">
-                          <span className="text-gray-700">{d.name}</span>
-                          <span className="font-mono text-gray-955">₹{d.amount.toLocaleString()} ({pct}%)</span>
-                        </div>
-                        <Progress percent={pct} strokeColor="#10b981" size="small" showInfo={false} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-
-              {/* Top Spenders (only in Team mode) */}
-              {viewMode === "team" && userWiseData.length > 0 && (
-                <Card 
-                  size="small"
-                  title={<span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-700">Top Spenders (Highest Engineers)</span>}
-                  className="border border-gray-200 rounded-xl shadow-xs"
-                >
-                  <div className="space-y-3">
-                    {userWiseData.map((usr, i) => {
-                      const pct = totalAmount > 0 ? Math.round((usr.amount / totalAmount) * 100) : 0;
-                      return (
-                        <div key={i} className="space-y-1">
-                          <div className="flex justify-between items-center text-[10px] font-bold">
-                            <span className="text-gray-700 truncate max-w-[120px]">{usr.name}</span>
-                            <span className="font-mono text-gray-955">₹{usr.amount.toLocaleString()} ({pct}%)</span>
-                          </div>
-                          <Progress percent={pct} strokeColor="#8b5cf6" size="small" showInfo={false} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </Card>
-              )}
+            {/* Status & Approval Ratios 3D Chart (col-span-4) */}
+            <div className="lg:col-span-4 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-1.5 truncate">
+                  <PieChartOutlined style={{ fontSize: 13 }} />
+                  CLAIM STATUS RATIOS
+                </span>
+              </div>
+              <div className="p-2 flex flex-col justify-between" style={{ minHeight: 330 }}>
+                <SaaSDonutChart
+                  data={statusWiseData.map(d => ({
+                    name: d.name,
+                    value: d.value,
+                    count: d.count,
+                    color: d.name === "Approved" ? "#10b981" : d.name === "Rejected" ? "#ef4444" : "#f59e0b"
+                  }))}
+                  height={330}
+                  centerTitle="Claims"
+                  valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
+                />
+              </div>
             </div>
-          </Col>
+          </div>
 
-          {/* Desktop/Tablet Nivo Charts (Visible only on md and larger) */}
-          <Col xs={0} md={24}>
-            <Row gutter={[16, 16]}>
-              {/* Chart 1: District-wise Expenditure (Now District Wise is first!) */}
-              <Col xs={24} lg={12}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">District Wise Expenditure</span>}
-                  extra={<span className="text-[10px] text-gray-400">Expense distribution across districts</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 280 }}>
-                    {districtWiseData.length > 0 ? (
-                      <ResponsiveBar
-                        data={districtWiseData}
-                        keys={["amount"]}
-                        indexBy="name"
-                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
-                        padding={0.35}
-                        colors={GALLERY_COLORS}
-                        colorBy="indexValue"
-                        borderRadius={6}
-                        borderWidth={0}
-                        enableLabel={false}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
-                        axisLeft={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                        }}
-                        theme={{
-                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                        }}
-                        tooltip={({ value, color, indexValue }) => (
-                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-slate-300">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                                Amount:
-                              </span>
-                              <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No district data</div>
-                    )}
+
+
+          {/* Row 3: District Expenditure & Top Spenders Leaderboard */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            {/* District Expenditure Combined 3D Bar + Line Chart (col-span-6) */}
+            <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <BarChartOutlined style={{ fontSize: 13 }} />
+                  DISTRICT EXPENDITURE
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 290 }}>
+                <SaaSBarChart
+                  data={districtWiseData}
+                  valueKey="amount"
+                  nameKey="name"
+                  height={270}
+                  isCurrency={true}
+                  showLineOverlay={true}
+                  valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
+                />
+              </div>
+            </div>
+
+            {/* Top Employee Expenses Financial Chart (col-span-6) */}
+            <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <WalletOutlined style={{ fontSize: 13 }} />
+                  EMPLOYEE EXPENSES
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 290 }}>
+                {userWiseData.length > 0 ? (
+                  <SaaSHorizontalBarChart
+                    data={userWiseData.slice(0, 6)}
+                    valueKey="amount"
+                    nameKey="name"
+                    height={270}
+                    isCurrency={true}
+                    valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No employee expense data
                   </div>
-                </Card>
-              </Col>
+                )}
+              </div>
+            </div>
+          </div>
 
-              {/* Chart 2: Top Spenders / Highest Engineers (Now second!) */}
-              {viewMode === "team" && (
-                <Col xs={24} lg={12}>
-                  <Card 
-                    size="small"
-                    title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Top Spenders — User Wise Breakdown</span>}
-                    extra={<span className="text-[10px] text-gray-400">Highest claim amounts by employee</span>}
-                    className="shadow-sm border border-gray-200 rounded-xl"
-                  >
-                    <div style={{ height: 280 }}>
-                      {userWiseData.length > 0 ? (
-                        <ResponsiveBar
-                          data={userWiseData}
-                          keys={["amount"]}
-                          indexBy="name"
-                          layout="horizontal"
-                          margin={{ top: 15, right: 15, bottom: 35, left: 90 }}
-                          padding={0.35}
-                          colors={GALLERY_COLORS}
-                          colorBy="indexValue"
-                          borderRadius={6}
-                          borderWidth={0}
-                          enableLabel={false}
-                          axisTop={null}
-                          axisRight={null}
-                          axisBottom={{
-                            tickSize: 0,
-                            tickPadding: 8,
-                            tickRotation: 0,
-                            format: (v) => `₹${(v / 1000).toFixed(0)}k`
-                          }}
-                          axisLeft={{
-                            tickSize: 0,
-                            tickPadding: 8,
-                            tickRotation: 0
-                          }}
-                          theme={{
-                            grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                            axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                          }}
-                          tooltip={({ value, color, indexValue }) => (
-                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                              <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                              <div className="flex items-center justify-between gap-4">
-                                <span className="flex items-center gap-1.5 text-slate-300">
-                                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                                  Amount:
-                                </span>
-                                <span className="font-mono font-bold text-white">₹{value.toLocaleString()}</span>
-                              </div>
-                            </div>
-                          )}
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400 text-xs">No user data</div>
-                      )}
-                    </div>
-                  </Card>
-                </Col>
-              )}
+          {/* Row 4: Operations Activity & Zone/Coordinator Split */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            {/* Operations Activity (col-span-7) */}
+            <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <RocketOutlined style={{ fontSize: 13 }} />
+                  FIELD OPERATIONS
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 290 }}>
+                <SaaSBarChart
+                  data={activityChartData}
+                  valueKey="count"
+                  nameKey="name"
+                  height={270}
+                  isCurrency={false}
+                  valueFormatter={(v) => `${v.toLocaleString('en-IN')}`}
+                />
+              </div>
+            </div>
 
-              {/* Chart 3: Full Month Date-wise Expense Trend */}
-              <Col xs={24} lg={viewMode === "team" ? 12 : 24}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Wise Expense Trend</span>}
-                  extra={<span className="text-[10px] text-gray-400">Full month daily spending trend ({months[selectedMonth]} {selectedYear})</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 280 }}>
-                    {fullMonthTrendData.length > 0 ? (
-                      <ResponsiveLine
-                        data={[
-                          {
-                            id: "Amount",
-                            color: "#4f46e5",
-                            data: fullMonthTrendData.map(d => ({ x: d.date, y: d.amount }))
-                          }
-                        ]}
-                        margin={{ top: 15, right: 15, bottom: 35, left: 45 }}
-                        xScale={{ type: 'point' }}
-                        yScale={{ type: 'linear', min: 0, max: 'auto' }}
-                        curve="monotoneX"
-                        colors={d => d.color}
-                        lineWidth={2}
-                        enableArea={true}
-                        areaOpacity={0.12}
-                        enablePoints={fullMonthTrendData.length <= 15}
-                        pointSize={5}
-                        useMesh={true}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (val) => {
-                            const str = String(val);
-                            const dayNum = parseInt(str);
-                            if (isNaN(dayNum)) return str;
-                            // Display tick label for day 1, multiples of 5, or final day
-                            if (dayNum === 1 || dayNum % 5 === 0 || dayNum >= fullMonthTrendData.length - 1) {
-                              return str;
-                            }
-                            return "";
-                          }
-                        }}
-                        axisLeft={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (v) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`
-                        }}
-                        theme={{
-                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                        }}
-                        tooltip={({ point }) => (
-                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-slate-300">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
-                                Amount:
-                              </span>
-                              <span className="font-mono font-bold text-white">₹{(point.data.y as number).toLocaleString()}</span>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No date data</div>
-                    )}
+            {/* Zone Distribution (col-span-5) */}
+            <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <GlobalOutlined style={{ fontSize: 13 }} />
+                  ZONE DISTRIBUTION
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 290 }}>
+                <SaaSDonutChart
+                  data={zoneWiseData.map((z, idx) => ({
+                    name: z.name,
+                    value: z.value,
+                    color: [
+                      "#4f46e5", // Vibrant Royal Indigo
+                      "#059669", // Emerald Green
+                      "#d97706", // Amber
+                      "#e11d48", // Rose Red
+                      "#0891b2", // Cyan
+                      "#7c3aed"  // Violet
+                    ][idx % 6]
+                  }))}
+                  height={270}
+                  centerTitle="Zones"
+                  valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Row 5: Coordinator Expenses Pie & Day-wise Asset Value Tagging Trend */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            {/* Coordinator Expenses Pie Chart (col-span-5) */}
+            <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <PieChartOutlined style={{ fontSize: 13 }} />
+                  COORDINATOR EXPENSES
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 310 }}>
+                {coordinatorWiseData.length > 0 ? (
+                  <SaaSDonutChart
+                    data={coordinatorWiseData.map(c => ({
+                      name: c.name,
+                      value: c.value,
+                      count: c.count
+                    }))}
+                    height={290}
+                    centerTitle="Coordinators"
+                    valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No coordinator expense data
                   </div>
-                </Card>
-              </Col>
+                )}
+              </div>
+            </div>
 
-              {/* Chart 4: Claim Status Distribution */}
-              <Col xs={24} lg={12}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Claim Status Distribution</span>}
-                  extra={<span className="text-[10px] text-gray-400">Approved vs Pending vs Rejected amounts</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 280 }}>
-                    {statusWiseData.length > 0 ? (
-                      <>
-                        <div className="relative flex justify-center items-center h-[210px]">
-                          <ResponsivePie
-                            data={statusWiseData.map(d => ({
-                              id: d.name,
-                              label: d.name,
-                              value: d.value,
-                              color: d.name === "Approved" ? "#10b981" : d.name === "Rejected" ? "#ef4444" : "#f97316"
-                            }))}
-                            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                            innerRadius={0.7}
-                            padAngle={3}
-                            colors={{ datum: 'data.color' }}
-                            borderWidth={2}
-                            borderColor="#ffffff"
-                            enableArcLinkLabels={false}
-                            enableArcLabels={false}
-                            tooltip={({ datum }) => (
-                              <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                                <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                                <div className="flex items-center justify-between gap-4">
-                                  <span className="flex items-center gap-1.5 text-slate-300">
-                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                                    Amount:
-                                  </span>
-                                  <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                                </div>
-                              </div>
-                            )}
-                          />
-                          <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                            <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Claims</span>
-                            <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                              ₹{statusWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                          {statusWiseData.map((item, i) => (
-                            <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.name === "Approved" ? "#2e7d32" : item.name === "Rejected" ? "#d32f2f" : "#f57c00" }} />
-                              <span>{item.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No status data</div>
-                    )}
+            {/* Asset Value Tagging Day-wise Trend Chart (col-span-7) */}
+            <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <TagOutlined style={{ fontSize: 13 }} />
+                  ASSET VALUE TAGGING (DAY-WISE)
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 310 }}>
+                {dayWiseAssetTaggingValueData.filter(d => (d.value || 0) > 0).length > 0 ? (
+                  <SaaS3DHybridTrendChart
+                    data={dayWiseAssetTaggingValueData
+                      .filter(d => (d.value || 0) > 0)
+                      .map(d => ({
+                        x: d.date,
+                        y: d.value
+                      }))}
+                    height={285}
+                    mode="asset"
+                    showPeakLimit={false}
+                    valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No active asset tagging recorded
                   </div>
-                </Card>
-              </Col>
-
-              {/* Chart 5: Zone-wise Distribution */}
-              <Col xs={24} lg={12}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Zone Wise Distribution</span>}
-                  extra={<span className="text-[10px] text-gray-400">Expenses grouped by operational zone</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 280 }}>
-                    {zoneWiseData.length > 0 ? (
-                      <>
-                        <div className="relative flex justify-center items-center h-[210px]">
-                          <ResponsivePie
-                            data={zoneWiseData.map((z, i) => ({
-                              id: z.name,
-                              label: z.name,
-                              value: z.value,
-                              color: GALLERY_COLORS[i % GALLERY_COLORS.length]
-                            }))}
-                            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                            innerRadius={0.7}
-                            padAngle={3}
-                            colors={{ datum: 'data.color' }}
-                            borderWidth={2}
-                            borderColor="#ffffff"
-                            enableArcLinkLabels={false}
-                            enableArcLabels={false}
-                            tooltip={({ datum }) => (
-                              <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                                <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                                <div className="flex items-center justify-between gap-4">
-                                  <span className="flex items-center gap-1.5 text-slate-300">
-                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                                    Amount:
-                                  </span>
-                                  <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                                </div>
-                              </div>
-                            )}
-                          />
-                          <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                            <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Zone</span>
-                            <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                              ₹{zoneWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                          {zoneWiseData.map((item, i) => (
-                            <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                              <span>{item.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No zone data</div>
-                    )}
-                  </div>
-                </Card>
-              </Col>
-
-              {/* Chart 6: Coordinator-wise Distribution (Fills 4th position in 2x2 grid) */}
-              <Col xs={24} lg={12}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Coordinator Wise Distribution</span>}
-                  extra={<span className="text-[10px] text-gray-400">Expenses grouped by coordinator</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 280 }}>
-                    {coordinatorWiseData.length > 0 ? (
-                      <>
-                        <div className="relative flex justify-center items-center h-[210px]">
-                          <ResponsivePie
-                            data={coordinatorWiseData.map((c, i) => ({
-                              id: c.name,
-                              label: c.name,
-                              value: c.value,
-                              color: GALLERY_COLORS[(i + 2) % GALLERY_COLORS.length]
-                            }))}
-                            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                            innerRadius={0.7}
-                            padAngle={3}
-                            colors={{ datum: 'data.color' }}
-                            borderWidth={2}
-                            borderColor="#ffffff"
-                            enableArcLinkLabels={false}
-                            enableArcLabels={false}
-                            tooltip={({ datum }) => (
-                              <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                                <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                                <div className="flex items-center justify-between gap-4">
-                                  <span className="flex items-center gap-1.5 text-slate-300">
-                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                                    Amount:
-                                  </span>
-                                  <span className="font-mono font-bold text-white">₹{datum.value?.toLocaleString()}</span>
-                                </div>
-                              </div>
-                            )}
-                          />
-                          <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                            <span className="text-[7px] text-gray-400 font-bold uppercase tracking-wider">Total Coordinator</span>
-                            <span className="text-[11px] font-black text-slate-800 font-mono mt-0.5">
-                              ₹{coordinatorWiseData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                          {coordinatorWiseData.map((item, i) => (
-                            <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[(i + 2) % GALLERY_COLORS.length] }} />
-                              <span>{item.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs">No coordinator data</div>
-                    )}
-                  </div>
-                </Card>
-              </Col>
-
-              {/* Chart 6: Operations Activity Metrics */}
-              <Col xs={24}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Operations Activity Metrics</span>}
-                  extra={<span className="text-[10px] text-primary-700 font-bold bg-primary-50 border border-primary-200 px-2 py-0.5 rounded uppercase">Operational KPIs</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 300 }}>
-                    {activityChartData.some(d => d.count > 0) ? (
-                      <ResponsiveBar
-                        data={activityChartData}
-                        keys={["count"]}
-                        indexBy="name"
-                        margin={{ top: 20, right: 20, bottom: 40, left: 70 }}
-                        padding={0.35}
-                        colors={GALLERY_COLORS}
-                        colorBy="indexValue"
-                        borderRadius={6}
-                        borderWidth={0}
-                        enableLabel={false}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{ tickSize: 0, tickPadding: 8, tickRotation: 0 }}
-                        axisLeft={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (v) => formatFullNumber(Number(v))
-                        }}
-                        theme={{
-                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                        }}
-                        tooltip={({ value, color, indexValue }) => (
-                          <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                            <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex items-center gap-1.5 text-slate-300">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                                Count:
-                              </span>
-                              <span className="font-mono font-bold text-white">{Number(value).toLocaleString('en-IN')}</span>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
-                        No operational activities recorded in this selection
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </Col>
-
-              {/* Chart 7: Date Wise Tagged Asset Value Trend */}
-              <Col xs={24}>
-                <Card 
-                  size="small"
-                  title={<span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Wise Tagged Asset Value Trend</span>}
-                  extra={<span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded font-extrabold uppercase">Tagged Asset Value (₹)</span>}
-                  className="shadow-sm border border-gray-200 rounded-xl"
-                >
-                  <div style={{ height: 300 }}>
-                    {dayWiseAssetTaggingValueData.some(d => d.value > 0 || d.count > 0) ? (
-                      <ResponsiveLine
-                        data={[
-                          {
-                            id: "Asset Value",
-                            color: "#059669",
-                            data: dayWiseAssetTaggingValueData.map(d => ({ x: d.date, y: d.value, count: d.count }))
-                          }
-                        ]}
-                        margin={{ top: 20, right: 20, bottom: 40, left: 80 }}
-                        xScale={{ type: 'point' }}
-                        yScale={{ type: 'linear', min: 0, max: 'auto' }}
-                        curve="monotoneX"
-                        colors={d => d.color}
-                        lineWidth={2.5}
-                        enableArea={true}
-                        areaOpacity={0.15}
-                        enablePoints={dayWiseAssetTaggingValueData.length <= 15}
-                        pointSize={6}
-                        useMesh={true}
-                        axisTop={null}
-                        axisRight={null}
-                        axisBottom={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (val) => {
-                            const str = String(val);
-                            const dayNum = parseInt(str);
-                            if (isNaN(dayNum)) return str;
-                            if (dayNum === 1 || dayNum % 5 === 0 || dayNum >= dayWiseAssetTaggingValueData.length - 1) {
-                              return str;
-                            }
-                            return "";
-                          }
-                        }}
-                        axisLeft={{
-                          tickSize: 0,
-                          tickPadding: 8,
-                          tickRotation: 0,
-                          format: (v) => formatFullCurrency(Number(v))
-                        }}
-                        theme={{
-                          grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                          axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
-                        }}
-                        tooltip={({ point }) => {
-                          const dataPoint = dayWiseAssetTaggingValueData.find(d => d.date === String(point.data.x));
-                          return (
-                            <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[140px] font-sans pointer-events-none z-50">
-                              <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{String(point.data.x)}</p>
-                              <div className="space-y-1">
-                                <div className="flex items-center justify-between gap-4">
-                                  <span className="flex items-center gap-1.5 text-slate-300">
-                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: point.color }} />
-                                    Tagged Value:
-                                  </span>
-                                  <span className="font-mono font-bold text-emerald-400">₹{(point.data.y as number).toLocaleString('en-IN')}</span>
-                                </div>
-                                {dataPoint && dataPoint.count > 0 && (
-                                  <div className="flex items-center justify-between gap-4 text-slate-400 text-[10px]">
-                                    <span>Tagged Count:</span>
-                                    <span className="font-mono font-bold text-white">{dataPoint.count}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        }}
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-gray-400 text-xs font-bold">
-                        No asset tagging values recorded in this selection
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Asset Tagging Detailed Breakdown Modal */}
@@ -3104,31 +2780,29 @@ export default function AnalysisPage() {
                 showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} calls records`
               }}
               bordered
-              scroll={{ x: 750, y: 380 }}
-              className="admin-data-table text-xs"
             />
           </div>
         </div>
       </Modal>
 
-      {/* Rajasthan GeoJSON District Analytics Interactive Map Chart (Placed at the very bottom) */}
-      <div className="mt-8 mb-6">
-        <RajasthanMapChart
-          expenses={mapExpenses}
-          selectedZoneFilter={selectedZone}
-          selectedDistrictFilter={selectedDistrict === "all" ? null : selectedDistrict}
-          onSelectDistrict={(dist) => {
-            if (!dist) {
-              setSelectedDistrict("all");
-            } else {
-              setSelectedDistrict(dist);
-            }
-          }}
-        />
-      </div>
+      {/* Rajasthan GeoJSON District Analytics Interactive Map Chart */}
+      {(activeTab === "map" || activeTab === "overview") && (
+        <div className="mt-2">
+          <RajasthanMapChart
+            expenses={mapExpenses}
+            selectedZoneFilter={selectedZone}
+            selectedDistrictFilter={selectedDistrict === "all" ? null : selectedDistrict}
+            onSelectDistrict={(dist) => {
+              if (!dist) {
+                setSelectedDistrict("all");
+              } else {
+                setSelectedDistrict(dist);
+              }
+            }}
+          />
+        </div>
+      )}
 
-      {/* Extra spacer at the bottom to prevent layout elements from being cut off by the navigation bar */}
-      <div className="h-32 md:h-8" />
       <style>{`
         .ant-modal-content {
           max-height: 85vh !important;

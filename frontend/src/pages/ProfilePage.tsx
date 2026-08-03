@@ -2,19 +2,16 @@ import React, { useEffect, useState } from "react";
 import { authService } from "../services/authService";
 import api from "../services/api";
 import { adminService } from "../services/adminService";
+import { expenseService } from "../services/expenseService";
+import { getISTMonth } from "../utils/dateUtils";
 import toast from "react-hot-toast";
 import { 
-  Card, 
   Button, 
-  Tabs, 
   Input, 
-  Typography, 
-  Row, 
-  Col, 
-  Space, 
   Alert, 
-  Tag, 
-  Segmented
+  Tag,
+  Row,
+  Col
 } from "antd";
 import {
   Mail,
@@ -30,36 +27,37 @@ import {
   RefreshCw,
   User,
   Briefcase,
-  Smartphone
+  Smartphone,
+  CheckCircle2,
+  KeyRound,
+  FileText,
+  Printer,
+  ShieldCheck,
+  Zap,
+  PhoneCall,
+  Car,
+  Route,
+  Receipt
 } from "lucide-react";
 
-const { Text } = Typography;
-
-
-
-
-interface DetailRowProps {
-  label: string;
-  value: string;
-  icon?: React.ReactNode;
-}
-
-const DetailRow = ({ label, value, icon }: DetailRowProps) => (
-  <Card 
-    size="small" 
-    className="border border-slate-100 hover:border-primary-300 transition-all rounded-xl shadow-xs"
-    bodyStyle={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 12 }}
+// Reusable Apple iOS / Meta AI style soft gradient IconTile component (Matching HomePage)
+const IconTile = ({ 
+  icon: Icon, 
+  gradientFrom, 
+  gradientTo, 
+  shadowColor = "rgba(0, 0, 0, 0.12)" 
+}: { 
+  icon: React.ElementType; 
+  gradientFrom: string; 
+  gradientTo: string; 
+  shadowColor?: string;
+}) => (
+  <div 
+    className={`w-7 h-7 rounded-lg bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center text-white shrink-0`}
+    style={{ boxShadow: `0 2px 6px -1px ${shadowColor}` }}
   >
-    <div className="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100/75 flex items-center justify-center text-slate-500 shrink-0">
-      {icon}
-    </div>
-    <div className="min-w-0 flex-1">
-      <Text type="secondary" style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }} className="block leading-none">{label}</Text>
-      <Text strong style={{ fontSize: 11 }} className="text-gray-800 block mt-1 truncate" title={value}>
-        {value}
-      </Text>
-    </div>
-  </Card>
+    <Icon className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+  </div>
 );
 
 export default function ProfilePage() {
@@ -67,28 +65,23 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
 
-  // System Maintenance
+  // System Maintenance (Admin)
   const [migrationLoading, setMigrationLoading] = useState(false);
   const [migrationResult, setMigrationResult] = useState<{ success: boolean; message: string } | null>(null);
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policyResult, setPolicyResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Check screen size for mobile view
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 1024);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  // Expense Stats & Allowance init
+  const [allowanceData, setAllowanceData] = useState<any>(null);
+  const [myExpenseStats, setMyExpenseStats] = useState<{ total: number; amount: number; approved: number } | null>(null);
+  const [loadingExpenseStats, setLoadingExpenseStats] = useState(false);
 
-  const [activeMobileSection, setActiveMobileSection] = useState<string>("personal");
-  
-  // Tab control: "info" | "password" - persisted on refresh
-  const [activeTab, setActiveTab] = useState<"info" | "password">((() => {
-    return (localStorage.getItem("profile_active_tab") as "info" | "password") || "info";
+  // Tab control: "info" | "expense" | "password" - persisted on refresh
+  const [activeTab, setActiveTab] = useState<"info" | "expense" | "password">((() => {
+    return (localStorage.getItem("profile_active_tab") as any) || "info";
   })());
 
-  const handleTabChange = (tab: "info" | "password") => {
+  const handleTabChange = (tab: "info" | "expense" | "password") => {
     setActiveTab(tab);
     localStorage.setItem("profile_active_tab", tab);
   };
@@ -102,6 +95,14 @@ export default function ProfilePage() {
   const [isEditingMobile, setIsEditingMobile] = useState(false);
   const [tempMobile, setTempMobile] = useState("");
   const [mobileLoading, setMobileLoading] = useState(false);
+
+  // Inline edit state for Emergency Contact
+  const [isEditingEmergency, setIsEditingEmergency] = useState(false);
+  const [tempEmergency, setTempEmergency] = useState("");
+  const [emergencyLoading, setEmergencyLoading] = useState(false);
+  const [emergencyContact, setEmergencyContact] = useState<string>(() => {
+    return localStorage.getItem("user_emergency_contact") || "";
+  });
   
   // Notices
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -119,19 +120,52 @@ export default function ProfilePage() {
       setUser(currUser);
       setTempEmail(currUser.mail_id || "");
       setTempMobile(currUser.mobile_number || "");
+      setTempEmergency(localStorage.getItem(`emergency_contact_${currUser.user_id}`) || currUser.emergency_contact || "");
+      setEmergencyContact(localStorage.getItem(`emergency_contact_${currUser.user_id}`) || currUser.emergency_contact || "");
+      fetchExpenseAllowanceInfo(currUser.user_id);
     }
 
-    // Fetch fresh details from backend to resolve manager/zonal manager/coordinator names
     authService.getProfile()
       .then((freshUser) => {
         setUser(freshUser);
         setTempEmail(freshUser.mail_id || "");
         setTempMobile(freshUser.mobile_number || "");
+        if (freshUser.emergency_contact) {
+          setEmergencyContact(freshUser.emergency_contact);
+          setTempEmergency(freshUser.emergency_contact);
+        }
       })
       .catch((err) => {
         console.error("Failed to sync profile:", err);
       });
   }, []);
+
+  const fetchExpenseAllowanceInfo = async (userId: string) => {
+    setLoadingExpenseStats(true);
+    const curMonth = getISTMonth();
+    try {
+      const initData = await expenseService.getExpenseInit(userId, curMonth);
+      if (initData) {
+        setAllowanceData(initData.allowance);
+      }
+    } catch (e) {
+      console.warn("Could not fetch allowance stats:", e);
+    }
+
+    try {
+      const expenses = await expenseService.getExpenses(curMonth);
+      if (Array.isArray(expenses)) {
+        const total = expenses.length;
+        const amount = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const approved = expenses.filter(e => (e.status || "").toLowerCase() === "approved").length;
+        setMyExpenseStats({ total, amount, approved });
+      }
+    } catch (e) {
+      console.warn("Could not fetch expense list stats:", e);
+    } finally {
+      setLoadingExpenseStats(false);
+    }
+  };
 
   useEffect(() => {
     if (!user || !user.profile_pic_url) {
@@ -183,7 +217,6 @@ export default function ProfilePage() {
         mail_id: tempEmail.trim(),
         mobile_number: user.mobile_number || ""
       });
-      // Save to localstorage
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       setIsEditingEmail(false);
@@ -211,7 +244,6 @@ export default function ProfilePage() {
         mail_id: user.mail_id || "",
         mobile_number: tempMobile.trim()
       });
-      // Save to localstorage
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setUser(updatedUser);
       setIsEditingMobile(false);
@@ -227,6 +259,26 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveEmergency = async () => {
+    if (!tempEmergency.trim()) {
+      setNotice({ type: "error", text: "Emergency contact cannot be empty." });
+      return;
+    }
+    setEmergencyLoading(true);
+    setNotice(null);
+    try {
+      localStorage.setItem(`emergency_contact_${user.user_id}`, tempEmergency.trim());
+      setEmergencyContact(tempEmergency.trim());
+      setIsEditingEmergency(false);
+      setNotice({ type: "success", text: "Emergency contact saved successfully!" });
+      setTimeout(() => setNotice(null), 3000);
+    } catch (err: any) {
+      setNotice({ type: "error", text: "Failed to save emergency contact." });
+    } finally {
+      setEmergencyLoading(false);
+    }
+  };
+
   const handleCancelEmail = () => {
     setTempEmail(user.mail_id || "");
     setIsEditingEmail(false);
@@ -239,7 +291,16 @@ export default function ProfilePage() {
     setNotice(null);
   };
 
-  // Handler: Run DB Migrations (Admin only)
+  const handleCancelEmergency = () => {
+    setTempEmergency(emergencyContact);
+    setIsEditingEmergency(false);
+    setNotice(null);
+  };
+
+  const handlePrintProfile = () => {
+    window.print();
+  };
+
   const handleRunMigrations = async () => {
     if (!window.confirm("⚠️ Run DB Migrations?\n\nThis will update the DB schema and create/rebuild 22 performance indexes.\n\nContinue?")) return;
     setMigrationLoading(true);
@@ -257,7 +318,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Handler: Run Retroactive Base Location Policy adjustments (Admin only)
   const handleRunPolicyAdjustment = async () => {
     if (!window.confirm("⚠️ Run Base Location Policy Adjustment?\n\nThis will scan all current-month active claims for users with mapped base locations and retroactively apply commute TA deductions and DA restrictions.\n\nContinue?")) return;
     setPolicyLoading(true);
@@ -307,6 +367,10 @@ export default function ProfilePage() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: any) {
+      setPassNotice({
+        type: "error",
+        text: err?.response?.data?.detail || "Failed to update password."
+      });
     } finally {
       setPassLoading(false);
     }
@@ -314,364 +378,43 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  const renderPersonalInfo = () => (
-    <div className="space-y-4">
-      {/* Category 1: Contact & Personal Info */}
-      <Card
-        size="small"
-        title={
-          <Space>
-            <User className="w-4 h-4 text-primary-600" />
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-805">Contact & Personal Info</span>
-          </Space>
-        }
-        className="border border-slate-100 rounded-2xl shadow-xs"
-        bodyStyle={{ padding: "16px" }}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Email Address */}
-          <Card 
-            size="small" 
-            className="border border-slate-100 hover:border-primary-300 transition-all rounded-xl shadow-xs"
-            bodyStyle={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 12 }}
-          >
-            <div className="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-              <Mail className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <Text type="secondary" style={{ fontSize: 9, fontWeight: 705, textTransform: "uppercase", letterSpacing: "0.04em" }} className="block leading-none">Email Address</Text>
-                {!isEditingEmail && (
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<span className="text-[10px] text-indigo-600 font-bold hover:underline">Edit</span>}
-                    onClick={() => {
-                      setTempEmail(user.mail_id || "");
-                      setIsEditingEmail(true);
-                      setIsEditingMobile(false);
-                      setNotice(null);
-                    }}
-                    style={{ height: "auto", padding: 0 }}
-                  />
-                )}
-              </div>
-              {isEditingEmail ? (
-                <div className="flex items-center gap-1.5 w-full mt-1.5">
-                  <Input
-                    type="email"
-                    value={tempEmail}
-                    onChange={(e) => setTempEmail(e.target.value)}
-                    size="small"
-                    disabled={emailLoading}
-                    autoFocus
-                    className="flex-1"
-                    style={{ fontSize: 11 }}
-                  />
-                  <Button
-                    type="primary"
-                    size="small"
-                    onClick={handleSaveEmail}
-                    loading={emailLoading}
-                    style={{ fontSize: 10 }}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={handleCancelEmail}
-                    disabled={emailLoading}
-                    style={{ fontSize: 10 }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Text strong style={{ fontSize: 11 }} className="text-gray-800 block mt-1 truncate" title={user.mail_id || "-"}>
-                  {user.mail_id || "-"}
-                </Text>
-              )}
-            </div>
-          </Card>
-
-          {/* Mobile Number */}
-          <Card 
-            size="small" 
-            className="border border-slate-100 hover:border-primary-300 transition-all rounded-xl shadow-xs"
-            bodyStyle={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 12 }}
-          >
-            <div className="h-9 w-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-              <Phone className="w-4 h-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <Text type="secondary" style={{ fontSize: 9, fontWeight: 705, textTransform: "uppercase", letterSpacing: "0.04em" }} className="block leading-none">Mobile Number</Text>
-                {!isEditingMobile && (
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<span className="text-[10px] text-indigo-600 font-bold hover:underline">Edit</span>}
-                    onClick={() => {
-                      setTempMobile(user.mobile_number || "");
-                      setIsEditingMobile(true);
-                      setIsEditingEmail(false);
-                      setNotice(null);
-                    }}
-                    style={{ height: "auto", padding: 0 }}
-                  />
-                )}
-              </div>
-              {isEditingMobile ? (
-                <div className="flex items-center gap-1.5 w-full mt-1.5">
-                  <Input
-                    type="tel"
-                    value={tempMobile}
-                    onChange={(e) => setTempMobile(e.target.value)}
-                    size="small"
-                    disabled={mobileLoading}
-                    autoFocus
-                    className="flex-1"
-                    style={{ fontSize: 11 }}
-                  />
-                  <Button
-                    type="primary"
-                    size="small"
-                    onClick={handleSaveMobile}
-                    loading={mobileLoading}
-                    style={{ fontSize: 10 }}
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={handleCancelMobile}
-                    disabled={mobileLoading}
-                    style={{ fontSize: 10 }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Text strong style={{ fontSize: 11 }} className="text-gray-800 block mt-1 truncate" title={user.mobile_number || "-"}>
-                  {user.mobile_number || "-"}
-                </Text>
-              )}
-            </div>
-          </Card>
-
-          {/* Date of Birth */}
-          <DetailRow
-            label="Date of Birth"
-            value={user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString("en-GB") : "-"}
-            icon={<Calendar className="w-4 h-4 text-rose-500" />}
-          />
-        </div>
-      </Card>
-
-      {/* Category 2: Employment & Systems Details */}
-      <Card
-        size="small"
-        title={
-          <Space>
-            <Briefcase className="w-4 h-4 text-primary-600" />
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-805">Employment & Systems Details</span>
-          </Space>
-        }
-        className="border border-slate-100 rounded-2xl shadow-xs"
-        bodyStyle={{ padding: "16px" }}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DetailRow
-            label="Employee Code"
-            value={user.e_code || "-"}
-            icon={<CreditCard className="w-4 h-4 text-blue-500" />}
-          />
-          <DetailRow
-            label="Grade"
-            value={user.grade || "-"}
-            icon={<Award className="w-4 h-4 text-purple-500" />}
-          />
-          <DetailRow
-            label="Date of Joining"
-            value={user.date_of_joining ? new Date(user.date_of_joining).toLocaleDateString("en-GB") : "-"}
-            icon={<Calendar className="w-4 h-4 text-orange-500" />}
-          />
-          <DetailRow
-            label="Device / Upkaran ID"
-            value={user.e_upkaran_id || "-"}
-            icon={<Smartphone className="w-4 h-4 text-slate-500" />}
-          />
-        </div>
-      </Card>
-
-      {/* Category 3: Reporting Hierarchy & Region */}
-      <Card
-        size="small"
-        title={
-          <Space>
-            <Users className="w-4 h-4 text-primary-600" />
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-805">Reporting Hierarchy & Region</span>
-          </Space>
-        }
-        className="border border-slate-100 rounded-2xl shadow-xs"
-        bodyStyle={{ padding: "16px" }}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DetailRow
-            label="Reporting Manager"
-            value={user.manager || "-"}
-            icon={<User className="w-4 h-4 text-indigo-500" />}
-          />
-          <DetailRow
-            label="Zonal Manager"
-            value={user.zonal_manager || "-"}
-            icon={<Shield className="w-4 h-4 text-blue-600" />}
-          />
-          <DetailRow
-            label="Coordinator"
-            value={user.coordinator || "-"}
-            icon={<Users className="w-4 h-4 text-cyan-500" />}
-          />
-          <DetailRow
-            label="Zone"
-            value={user.zone || "-"}
-            icon={<MapPin className="w-4 h-4 text-amber-500" />}
-          />
-          <DetailRow
-            label="District"
-            value={user.district || "-"}
-            icon={<MapPin className="w-4 h-4 text-rose-500" />}
-          />
-        </div>
-      </Card>
-    </div>
-  );
-
-  const renderSecurity = () => (
-    <div className="space-y-4">
-      <Card
-        size="small"
-        title={
-          <Space>
-            <Lock className="w-4 h-4 text-primary-600" />
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-805">Update Credentials</span>
-          </Space>
-        }
-        className="border border-slate-100 rounded-2xl shadow-xs max-w-md mx-auto"
-        bodyStyle={{ padding: "20px" }}
-      >
-        <form onSubmit={handlePasswordChange} className="space-y-4">
-          {passNotice && (
-            <Alert
-              message={passNotice.text}
-              type={passNotice.type === "success" ? "success" : "error"}
-              showIcon
-              className="mb-4 text-xs"
-            />
-          )}
-
-          <div className="space-y-1 text-left">
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block">Current Password</label>
-            <Input.Password
-              placeholder="Enter current password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              className="text-xs"
-              required
-            />
-          </div>
-
-          <div className="space-y-1 text-left">
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block">New Password</label>
-            <Input.Password
-              placeholder="Enter new password (min 8 chars)"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="text-xs"
-              required
-            />
-          </div>
-
-          <div className="space-y-1 text-left">
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide block">Confirm New Password</label>
-            <Input.Password
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="text-xs"
-              required
-            />
-          </div>
-
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={passLoading}
-            block
-            className="bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold uppercase tracking-wider h-9 mt-2"
-          >
-            Update Password
-          </Button>
-        </form>
-
-        {user && user.role === "Admin" && (
-          <div className="mt-8 pt-6 border-t border-slate-100 space-y-4">
-            <div className="text-center">
-              <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider block">System Maintenance (Admin Only)</span>
-              <p className="text-[9px] text-slate-400 mt-1">Rebuild performance indexes, run DB migrations, and apply base travel policy deductions.</p>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <Button
-                  type="primary"
-                  danger
-                  block
-                  icon={<Database className="w-3.5 h-3.5" />}
-                  loading={migrationLoading}
-                  onClick={handleRunMigrations}
-                  className="text-xs font-bold uppercase tracking-wide h-9"
-                >
-                  Run DB Migrations
-                </Button>
-                {migrationResult && (
-                  <div className={`mt-1.5 p-2 rounded text-[9px] font-mono text-center border ${
-                    migrationResult.success ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"
-                  }`}>
-                    {migrationResult.message}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <Button
-                  type="primary"
-                  danger
-                  block
-                  icon={<RefreshCw className="w-3.5 h-3.5" />}
-                  loading={policyLoading}
-                  onClick={handleRunPolicyAdjustment}
-                  className="text-xs font-bold uppercase tracking-wide h-9"
-                >
-                  Run Policy Adjustments
-                </Button>
-                {policyResult && (
-                  <div className={`mt-1.5 p-2 rounded text-[9px] font-mono text-center border ${
-                    policyResult.success ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"
-                  }`}>
-                    {policyResult.message}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </Card>
-    </div>
-  );
+  const allowedModulesList = user?.allowed_windows
+    ? user.allowed_windows.split(",").map((w: string) => w.trim())
+    : ["Home", "Profile", "Help"];
 
   return (
-    <div className="space-y-6 pb-8 animate-fadeIn text-[#212529]">
+    <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
+      {/* Darker Slate-Blue Enterprise Header Bar (#4A6A8A) - HomePage Matching */}
+      <div className="bg-[#4A6A8A] text-white rounded-lg px-3 py-1.5 flex items-center justify-between shadow-2xs mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-white/15 text-white font-semibold text-xs flex items-center justify-center shrink-0">
+            {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-medium text-white tracking-normal">
+              {user?.name || "User"}'s Enterprise Profile
+            </span>
+            {user?.role && (
+              <span className="text-white/60 text-[10px] font-normal leading-none ml-1">
+                ({user.role})
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button
+            onClick={handlePrintProfile}
+            className="bg-white/15 hover:bg-white/25 text-white border-0 font-medium text-[10px] h-6 px-2 rounded shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <Printer size={12} className="text-white" />
+            Print Profile
+          </Button>
+          <span className="text-[9.5px] font-mono text-white/80 bg-white/15 px-2 py-0.5 rounded">
+            ID: {user?.user_id}
+          </span>
+        </div>
+      </div>
+
       {notice && (
         <Alert
           message={notice.text}
@@ -679,66 +422,30 @@ export default function ProfilePage() {
           showIcon
           closable
           onClose={() => setNotice(null)}
-          className="mb-4 text-xs font-semibold"
+          className="mb-2 py-1 px-3 rounded text-xs font-semibold"
         />
       )}
 
-      {isMobile ? (
-        // Mobile Layout
-        <div className="space-y-4">
-          {/* Mobile Profile Card Header Banner */}
-          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/50 rounded-2xl shadow-xl p-6 text-center relative overflow-hidden">
-            {/* Avatar Circle */}
-            <div className="relative h-24 w-24 mx-auto mb-3">
-              <div className="h-full w-full rounded-full overflow-hidden border-4 border-slate-800 shadow-md select-none bg-slate-800 text-indigo-300 flex items-center justify-center font-bold text-3xl uppercase">
-                {avatarUrl && !avatarError ? (
-                  <img 
-                    src={avatarUrl} 
-                    alt="Avatar" 
-                    className="h-full w-full object-cover"
-                    onError={() => setAvatarError(true)}
-                  />
-                ) : (
-                  user.name ? user.name.charAt(0).toUpperCase() : "U"
-                )}
-              </div>
+      {/* Main Grid Content Layout - HomePage Inspired */}
+      <Row gutter={[12, 12]}>
+        {/* Left Sidebar Column - Employee Card & Module Permissions */}
+        <Col xs={24} lg={8} className="space-y-3">
+          {/* Main Profile Info Card */}
+          <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-2xs">
+            {/* Header bar */}
+            <div className="bg-[#4A6A8A] text-white px-3 py-1.5 flex items-center justify-between">
+              <span className="text-[11px] font-medium tracking-normal text-white uppercase">
+                EMPLOYEE PROFILE
+              </span>
+              <Tag color="blue" className="m-0 border-0 uppercase font-bold text-[9px]">
+                {user.role}
+              </Tag>
             </div>
 
-            <h3 className="text-base font-extrabold text-white mt-2 leading-tight">{user.name || "Employee"}</h3>
-            <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider mt-0.5">{user.designation || "Staff"}</p>
-            
-            <Tag color="geekblue" className="mt-2.5 uppercase font-bold text-[8px] tracking-wide px-3 rounded-full border border-indigo-400/30">
-              {user.role}
-            </Tag>
-          </div>
-
-          {/* Segmented Control Selector */}
-          <Segmented
-            block
-            size="large"
-            value={activeMobileSection}
-            onChange={(val) => setActiveMobileSection(val as string)}
-            options={[
-              { label: 'Personal Info', value: 'personal' },
-              { label: 'Security & Password', value: 'security' }
-            ]}
-            className="shadow-xs border border-slate-100 p-1 bg-white rounded-xl"
-          />
-
-          {/* Mobile Tab Content */}
-          <div className="mt-2">
-            {activeMobileSection === "personal" ? renderPersonalInfo() : renderSecurity()}
-          </div>
-        </div>
-      ) : (
-        // Desktop Layout
-        <Row gutter={[24, 24]}>
-          {/* Left Column - Sidebar profile summary */}
-          <Col xs={24} lg={8}>
-            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/50 rounded-2xl p-6 text-center lg:sticky lg:top-20 shadow-xl overflow-hidden">
-              {/* Avatar Circle */}
-              <div className="relative h-28 w-28 mx-auto mb-4">
-                <div className="h-full w-full rounded-full overflow-hidden border-4 border-slate-700/30 shadow-md select-none bg-slate-800 text-indigo-300 flex items-center justify-center font-bold text-4xl uppercase">
+            {/* Avatar and Main Info */}
+            <div className="p-4 text-center border-b border-slate-200/80">
+              <div className="relative h-20 w-20 mx-auto mb-2.5">
+                <div className="h-full w-full rounded-full overflow-hidden border-2 border-[#4A6A8A] shadow-2xs select-none bg-slate-100 text-[#4A6A8A] flex items-center justify-center font-bold text-2xl uppercase">
                   {avatarUrl && !avatarError ? (
                     <img 
                       src={avatarUrl} 
@@ -751,77 +458,639 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
-
-              <h3 className="text-lg font-black text-white mt-4 leading-tight">{user.name || "Employee"}</h3>
-              <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider mt-1">{user.designation || "Staff Member"}</p>
-              
-              <Tag color="geekblue" className="mt-3 uppercase font-bold text-[8px] tracking-wide px-3 rounded-full border border-indigo-400/30">
-                {user.role}
-              </Tag>
-
-              {/* Quick Details List in sidebar */}
-              <div className="mt-6 pt-6 border-t border-slate-800 text-left space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Login ID:</span>
-                  <span className="font-mono font-bold text-slate-200">{user.user_id}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Status:</span>
-                  <Tag color="success" className="m-0 border-0 uppercase font-black text-[8px] tracking-wide">
-                    Active
-                  </Tag>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-400">Employee Type:</span>
-                  <span className="font-bold text-slate-250 uppercase text-[9px] tracking-wider">{user.type || "Staff"}</span>
-                </div>
+              <h3 className="text-sm font-bold text-slate-900 leading-tight">{user.name || "Employee"}</h3>
+              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-tight mt-0.5">{user.designation || "Staff"}</p>
+              <div className="mt-2 flex justify-center gap-1">
+                <span className="inline-block px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+                  ACTIVE
+                </span>
+                <span className="inline-block px-2 py-0.5 rounded text-[9.5px] font-bold bg-blue-50 text-blue-800 border border-blue-200/80">
+                  {user.type || "Staff"}
+                </span>
               </div>
             </div>
-          </Col>
 
-          {/* Right Column - Work Area Card with Tabs */}
-          <Col xs={24} lg={16}>
-            <Card 
-              className="border border-slate-100 rounded-3xl shadow-sm min-h-[500px] overflow-hidden"
-              bodyStyle={{ padding: "24px", display: "flex", flexDirection: "column", minHeight: "500px" }}
-            >
-              <Tabs
-                activeKey={activeTab}
-                onChange={(key) => handleTabChange(key as "info" | "password")}
-                className="flex-1 flex flex-col"
-                items={[
-                  {
-                    key: "info",
-                    label: (
-                      <Space>
-                        <User className="w-4 h-4" />
-                        <span>Personal Info</span>
-                      </Space>
-                    ),
-                    children: <div className="pt-2">{renderPersonalInfo()}</div>
-                  },
-                  {
-                    key: "password",
-                    label: (
-                      <Space>
-                        <Lock className="w-4 h-4" />
-                        <span>Security & Password</span>
-                      </Space>
-                    ),
-                    children: <div className="pt-2">{renderSecurity()}</div>
-                  }
-                ]}
-              />
-
-              {/* Footer */}
-              <div className="mt-auto pt-6 border-t border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-widest flex justify-between">
-                <span>Cyrix Healthcare Pvt. Ltd.</span>
-                <span>Designed &amp; Developed by <a href="https://sunilbishnoi.co.in/" target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">Sunil Bishnoi</a></span>
+            {/* Quick Details Micro-grid */}
+            <div className="p-3 space-y-2 bg-slate-50/50">
+              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/60">
+                <span className="text-[10.5px] font-medium text-slate-500">Login ID:</span>
+                <span className="font-mono font-bold text-slate-800 text-[11px]">{user.user_id}</span>
               </div>
-            </Card>
-          </Col>
-        </Row>
-      )}
+              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/60">
+                <span className="text-[10.5px] font-medium text-slate-500">E-Code:</span>
+                <span className="font-mono font-bold text-slate-800 text-[11px]">{user.e_code || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs py-1">
+                <span className="text-[10.5px] font-medium text-slate-500">Zone / District:</span>
+                <span className="font-bold text-slate-800 text-[10.5px]">{user.zone || "—"} / {user.district || "—"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Module Access & System Permissions Widget */}
+          <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-2xs">
+            <div className="bg-[#4A6A8A] text-white px-3 py-1.5 flex items-center justify-between">
+              <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                <ShieldCheck size={13} className="text-white" /> MODULE PERMISSIONS
+              </span>
+            </div>
+            <div className="p-3 space-y-2">
+              <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">AUTHORIZED WINDOWS</span>
+              <div className="flex flex-wrap gap-1">
+                {allowedModulesList.map((mod: string, idx: number) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200/90"
+                  >
+                    {mod}
+                  </span>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
+                <span>Account Status:</span>
+                <span className="font-bold text-emerald-700">Verified & Authenticated</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Vehicle Allowance Rates Summary */}
+          {allowanceData && (() => {
+            const rawVType = (allowanceData.vehicle_type || "Bike").trim();
+            const vTypeLower = rawVType.toLowerCase();
+            const isBikeOnly = vTypeLower.includes("bike") && !vTypeLower.includes("car") && !vTypeLower.includes("both");
+            const isCarOnly = vTypeLower.includes("car") && !vTypeLower.includes("bike") && !vTypeLower.includes("both");
+
+            const showBike = !isCarOnly;
+            const showCar = !isBikeOnly;
+
+            return (
+              <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-2xs">
+                <div className="bg-[#4A6A8A] text-white px-3 py-1.5 flex items-center justify-between">
+                  <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                    <Zap size={13} className="text-white" /> ALLOWANCE POLICY RATES
+                  </span>
+                </div>
+                <div className="p-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
+                    <span className="text-[10px] font-medium text-slate-500">Vehicle Type:</span>
+                    <span className="font-bold text-indigo-700">{rawVType}</span>
+                  </div>
+                  {showBike && (
+                    <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
+                      <span className="text-[10px] font-medium text-slate-500">Bike Rate:</span>
+                      <span className="font-bold text-slate-800">₹{allowanceData.rate_bike || 0} / KM</span>
+                    </div>
+                  )}
+                  {showCar && (
+                    <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
+                      <span className="text-[10px] font-medium text-slate-500">Car Rate:</span>
+                      <span className="font-bold text-slate-800">₹{allowanceData.rate_car || 0} / KM</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-xs py-1">
+                    <span className="text-[10px] font-medium text-slate-500">Monthly KM Limit:</span>
+                    <span className="font-mono font-bold text-amber-800">{allowanceData.max_km_per_month || 0} KM</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </Col>
+
+        {/* Right Main Column - Workspace */}
+        <Col xs={24} lg={16} className="space-y-3">
+          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 md:p-3 shadow-2xs space-y-3">
+            {/* HomePage Style Ultra-Compact Slate-Blue Tabs Header */}
+            <div className="flex items-center gap-1.5 border-b border-slate-200/80 pb-1.5">
+              <button
+                onClick={() => handleTabChange("info")}
+                className={`px-3 py-1 text-xs font-bold transition-all rounded-md cursor-pointer ${
+                  activeTab === "info"
+                    ? "bg-[#4A6A8A] text-white shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                Personal Info
+              </button>
+              <button
+                onClick={() => handleTabChange("expense")}
+                className={`px-3 py-1 text-xs font-bold transition-all rounded-md cursor-pointer ${
+                  activeTab === "expense"
+                    ? "bg-[#4A6A8A] text-white shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                Expense & Allowance
+              </button>
+              <button
+                onClick={() => handleTabChange("password")}
+                className={`px-3 py-1 text-xs font-bold transition-all rounded-md cursor-pointer ${
+                  activeTab === "password"
+                    ? "bg-[#4A6A8A] text-white shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                }`}
+              >
+                Security & Account
+              </button>
+            </div>
+
+            {/* Tab 1: Personal Info */}
+            {activeTab === "info" && (
+              <div className="space-y-3">
+                {/* Section 1: Contact Info */}
+                <div className="space-y-1">
+                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
+                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                      <User size={13} className="text-white" /> CONTACT & PERSONAL INFO
+                    </span>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-2 md:p-2.5 shadow-2xs">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {/* Email Card */}
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={Mail} gradientFrom="from-blue-500" gradientTo="to-indigo-600" shadowColor="rgba(37, 99, 235, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">EMAIL ADDRESS</span>
+                              {!isEditingEmail && (
+                                <button
+                                  onClick={() => {
+                                    setTempEmail(user.mail_id || "");
+                                    setIsEditingEmail(true);
+                                    setIsEditingMobile(false);
+                                    setIsEditingEmergency(false);
+                                    setNotice(null);
+                                  }}
+                                  className="text-[9px] text-blue-600 font-bold hover:underline leading-none cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </div>
+                            {isEditingEmail ? (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Input
+                                  type="email"
+                                  value={tempEmail}
+                                  onChange={(e) => setTempEmail(e.target.value)}
+                                  size="small"
+                                  disabled={emailLoading}
+                                  autoFocus
+                                  className="flex-1 text-xs"
+                                />
+                                <Button type="primary" size="small" onClick={handleSaveEmail} loading={emailLoading} className="text-[10px] bg-[#4A6A8A]">Save</Button>
+                                <Button size="small" onClick={handleCancelEmail} disabled={emailLoading} className="text-[10px]">Cancel</Button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate" title={user.mail_id || "—"}>
+                                {user.mail_id || "—"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Mobile Card */}
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={Phone} gradientFrom="from-emerald-500" gradientTo="to-teal-600" shadowColor="rgba(16, 185, 129, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">MOBILE NUMBER</span>
+                              {!isEditingMobile && (
+                                <button
+                                  onClick={() => {
+                                    setTempMobile(user.mobile_number || "");
+                                    setIsEditingMobile(true);
+                                    setIsEditingEmail(false);
+                                    setIsEditingEmergency(false);
+                                    setNotice(null);
+                                  }}
+                                  className="text-[9px] text-blue-600 font-bold hover:underline leading-none cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </div>
+                            {isEditingMobile ? (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Input
+                                  type="tel"
+                                  value={tempMobile}
+                                  onChange={(e) => setTempMobile(e.target.value)}
+                                  size="small"
+                                  disabled={mobileLoading}
+                                  autoFocus
+                                  className="flex-1 text-xs"
+                                />
+                                <Button type="primary" size="small" onClick={handleSaveMobile} loading={mobileLoading} className="text-[10px] bg-[#4A6A8A]">Save</Button>
+                                <Button size="small" onClick={handleCancelMobile} disabled={mobileLoading} className="text-[10px]">Cancel</Button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate" title={user.mobile_number || "—"}>
+                                {user.mobile_number || "—"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Emergency Contact Card */}
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={PhoneCall} gradientFrom="from-purple-500" gradientTo="to-indigo-600" shadowColor="rgba(147, 51, 234, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">EMERGENCY CONTACT</span>
+                              {!isEditingEmergency && (
+                                <button
+                                  onClick={() => {
+                                    setTempEmergency(emergencyContact);
+                                    setIsEditingEmergency(true);
+                                    setIsEditingEmail(false);
+                                    setIsEditingMobile(false);
+                                    setNotice(null);
+                                  }}
+                                  className="text-[9px] text-blue-600 font-bold hover:underline leading-none cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                            </div>
+                            {isEditingEmergency ? (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Input
+                                  type="text"
+                                  placeholder="Emergency Name / Number"
+                                  value={tempEmergency}
+                                  onChange={(e) => setTempEmergency(e.target.value)}
+                                  size="small"
+                                  disabled={emergencyLoading}
+                                  autoFocus
+                                  className="flex-1 text-xs"
+                                />
+                                <Button type="primary" size="small" onClick={handleSaveEmergency} loading={emergencyLoading} className="text-[10px] bg-[#4A6A8A]">Save</Button>
+                                <Button size="small" onClick={handleCancelEmergency} disabled={emergencyLoading} className="text-[10px]">Cancel</Button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate" title={emergencyContact || "Not Set"}>
+                                {emergencyContact || "Not Set"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* DOB Card */}
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={Calendar} gradientFrom="from-rose-500" gradientTo="to-red-600" shadowColor="rgba(239, 68, 68, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">DATE OF BIRTH</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">
+                              {user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString("en-GB") : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Employment Details */}
+                <div className="space-y-1">
+                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
+                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                      <Briefcase size={13} className="text-white" /> EMPLOYMENT & SYSTEMS DETAILS
+                    </span>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-2 md:p-2.5 shadow-2xs">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={CreditCard} gradientFrom="from-blue-500" gradientTo="to-indigo-600" shadowColor="rgba(37, 99, 235, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">EMPLOYEE CODE</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.e_code || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={Award} gradientFrom="from-purple-500" gradientTo="to-indigo-600" shadowColor="rgba(147, 51, 234, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">GRADE</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.grade || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={Calendar} gradientFrom="from-amber-500" gradientTo="to-amber-600" shadowColor="rgba(245, 158, 11, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">DATE OF JOINING</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">
+                              {user.date_of_joining ? new Date(user.date_of_joining).toLocaleDateString("en-GB") : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={Smartphone} gradientFrom="from-slate-600" gradientTo="to-slate-700" shadowColor="rgba(71, 85, 105, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">DEVICE / UPKARAN ID</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.e_upkaran_id || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Hierarchy */}
+                <div className="space-y-1">
+                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
+                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                      <Users size={13} className="text-white" /> REPORTING HIERARCHY & REGION
+                    </span>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-2 md:p-2.5 shadow-2xs">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={User} gradientFrom="from-indigo-500" gradientTo="to-indigo-600" shadowColor="rgba(99, 102, 241, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">REPORTING MANAGER</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.manager || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={Shield} gradientFrom="from-blue-600" gradientTo="to-indigo-700" shadowColor="rgba(37, 99, 235, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">ZONAL MANAGER</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.zonal_manager || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={Users} gradientFrom="from-cyan-500" gradientTo="to-teal-600" shadowColor="rgba(6, 182, 212, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">COORDINATOR</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.coordinator || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={MapPin} gradientFrom="from-amber-500" gradientTo="to-amber-600" shadowColor="rgba(245, 158, 11, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">ZONE</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.zone || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
+                        <div className="flex items-center gap-2 min-w-0 w-full">
+                          <IconTile icon={MapPin} gradientFrom="from-rose-500" gradientTo="to-red-600" shadowColor="rgba(239, 68, 68, 0.25)" />
+                          <div className="flex flex-col justify-center min-w-0 flex-1">
+                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">DISTRICT</span>
+                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.district || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Expense & Allowance Overview (New Feature!) */}
+            {activeTab === "expense" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
+                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                      <Receipt size={13} className="text-white" /> CURRENT MONTH EXPENSE STATS
+                    </span>
+                    <span className="text-[9.5px] font-mono text-white/80 bg-white/15 px-2 py-0.5 rounded">
+                      MONTH: {getISTMonth()}
+                    </span>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-3 shadow-2xs">
+                    {loadingExpenseStats ? (
+                      <div className="py-4 text-center text-xs text-slate-500">Loading expense summary...</div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {/* Micro-card 1 */}
+                        <div className="bg-white border border-slate-200/80 rounded-lg py-2 px-3 flex items-center gap-2.5 shadow-2xs">
+                          <IconTile icon={FileText} gradientFrom="from-blue-500" gradientTo="to-indigo-600" shadowColor="rgba(37, 99, 235, 0.25)" />
+                          <div className="flex flex-col">
+                            <span className="text-[8.5px] font-bold text-slate-400 uppercase">SUBMITTED CLAIMS</span>
+                            <span className="text-sm font-bold font-mono text-slate-900 mt-0.5">{myExpenseStats?.total || 0} Claims</span>
+                          </div>
+                        </div>
+
+                        {/* Micro-card 2 */}
+                        <div className="bg-white border border-slate-200/80 rounded-lg py-2 px-3 flex items-center gap-2.5 shadow-2xs">
+                          <IconTile icon={CheckCircle2} gradientFrom="from-emerald-500" gradientTo="to-teal-600" shadowColor="rgba(16, 185, 129, 0.25)" />
+                          <div className="flex flex-col">
+                            <span className="text-[8.5px] font-bold text-slate-400 uppercase">APPROVED CLAIMS</span>
+                            <span className="text-sm font-bold font-mono text-emerald-700 mt-0.5">{myExpenseStats?.approved || 0} Approved</span>
+                          </div>
+                        </div>
+
+                        {/* Micro-card 3 */}
+                        <div className="bg-white border border-slate-200/80 rounded-lg py-2 px-3 flex items-center gap-2.5 shadow-2xs">
+                          <IconTile icon={Receipt} gradientFrom="from-purple-500" gradientTo="to-indigo-600" shadowColor="rgba(147, 51, 234, 0.25)" />
+                          <div className="flex flex-col">
+                            <span className="text-[8.5px] font-bold text-slate-400 uppercase">TOTAL CLAIM VALUE</span>
+                            <span className="text-sm font-bold font-mono text-slate-900 mt-0.5">₹{(myExpenseStats?.amount || 0).toLocaleString("en-IN")}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Allowance Rates & Policy Summary */}
+                {allowanceData && (() => {
+                  const rawVType = (allowanceData.vehicle_type || "Bike").trim();
+                  const vTypeLower = rawVType.toLowerCase();
+                  const isBikeOnly = vTypeLower.includes("bike") && !vTypeLower.includes("car") && !vTypeLower.includes("both");
+                  const isCarOnly = vTypeLower.includes("car") && !vTypeLower.includes("bike") && !vTypeLower.includes("both");
+
+                  const showBike = !isCarOnly;
+                  const showCar = !isBikeOnly;
+
+                  return (
+                    <div className="space-y-1">
+                      <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
+                        <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                          <Car size={13} className="text-white" /> TRAVEL &amp; DAILY ALLOWANCE RATES
+                        </span>
+                      </div>
+                      <div className="bg-white border border-slate-200/80 rounded-b-lg p-3 shadow-2xs space-y-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="p-2 bg-slate-50 rounded border border-slate-200/60 text-center">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase block">IN-DISTRICT DA</span>
+                            <span className="text-xs font-extrabold text-slate-800 mt-0.5 block">₹{allowanceData.daily_in_district || 0} / Day</span>
+                          </div>
+                          <div className="p-2 bg-slate-50 rounded border border-slate-200/60 text-center">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase block">OUT-DISTRICT DA</span>
+                            <span className="text-xs font-extrabold text-slate-800 mt-0.5 block">₹{allowanceData.daily_out_district || 0} / Day</span>
+                          </div>
+                          {showBike && (
+                            <div className="p-2 bg-slate-50 rounded border border-slate-200/60 text-center">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase block">BIKE RATE</span>
+                              <span className="text-xs font-extrabold text-indigo-700 mt-0.5 block">₹{allowanceData.rate_bike || 0} / KM</span>
+                            </div>
+                          )}
+                          {showCar && (
+                            <div className="p-2 bg-slate-50 rounded border border-slate-200/60 text-center">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase block">CAR RATE</span>
+                              <span className="text-xs font-extrabold text-indigo-700 mt-0.5 block">₹{allowanceData.rate_car || 0} / KM</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Tab 3: Password & Security */}
+            {activeTab === "password" && (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
+                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                      <KeyRound size={13} className="text-white" /> UPDATE CREDENTIALS
+                    </span>
+                  </div>
+                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-3 md:p-4 shadow-2xs">
+                    <form onSubmit={handlePasswordChange} className="space-y-3 max-w-md">
+                      {passNotice && (
+                        <Alert
+                          message={passNotice.text}
+                          type={passNotice.type === "success" ? "success" : "error"}
+                          showIcon
+                          className="py-1 px-2 text-xs"
+                        />
+                      )}
+
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide block">Current Password</label>
+                        <Input.Password
+                          placeholder="Enter current password"
+                          value={oldPassword}
+                          onChange={(e) => setOldPassword(e.target.value)}
+                          className="text-xs h-8"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide block">New Password</label>
+                        <Input.Password
+                          placeholder="Enter new password (min 8 chars)"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="text-xs h-8"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide block">Confirm New Password</label>
+                        <Input.Password
+                          placeholder="Confirm new password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="text-xs h-8"
+                          required
+                        />
+                      </div>
+
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={passLoading}
+                        className="bg-[#4A6A8A] hover:bg-[#3b556f] text-white text-xs font-semibold h-7 px-4 rounded shadow-2xs flex items-center gap-1.5 cursor-pointer mt-2"
+                      >
+                        <CheckCircle2 size={13} /> Update Password
+                      </Button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* System Maintenance for Admin */}
+                {user?.role === "Admin" && (
+                  <div className="space-y-1 mt-4">
+                    <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
+                      <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
+                        <Database size={13} className="text-white" /> SYSTEM MAINTENANCE (ADMIN ONLY)
+                      </span>
+                    </div>
+                    <div className="bg-white border border-slate-200/80 rounded-b-lg p-3 shadow-2xs space-y-3">
+                      <p className="text-[10.5px] text-slate-600 font-medium leading-tight">
+                        Rebuild database performance indexes, execute structural migrations, and apply base location travel policy deductions.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          type="primary" 
+                          danger 
+                          onClick={handleRunMigrations} 
+                          loading={migrationLoading}
+                          className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium h-7 px-3 rounded shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Database size={12} /> Run DB Migrations
+                        </Button>
+                        <Button 
+                          type="primary" 
+                          onClick={handleRunPolicyAdjustment} 
+                          loading={policyLoading}
+                          className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium h-7 px-3 rounded shadow-2xs flex items-center gap-1.5 cursor-pointer border-0"
+                        >
+                          <RefreshCw size={12} /> Run Policy Adjustments
+                        </Button>
+                      </div>
+                      {migrationResult && (
+                        <div className={`p-2 rounded text-[10px] font-mono border ${migrationResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
+                          {migrationResult.message}
+                        </div>
+                      )}
+                      {policyResult && (
+                        <div className={`p-2 rounded text-[10px] font-mono border ${policyResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
+                          {policyResult.message}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </Col>
+      </Row>
+
+      {/* Footer - Matching HomePage style */}
+      <div className="mt-4 pt-3 border-t border-slate-200/80 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+        <span>Cyrix Healthcare Pvt. Ltd.</span>
+        <span>Designed &amp; Developed by <a href="https://sunilbishnoi.co.in/" target="_blank" rel="noopener noreferrer" className="text-[#4A6A8A] hover:underline">Sunil Bishnoi</a></span>
+      </div>
     </div>
   );
 }

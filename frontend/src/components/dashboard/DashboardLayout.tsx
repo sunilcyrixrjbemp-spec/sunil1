@@ -26,6 +26,7 @@ import {
   TrendingUp,
   ChevronRight,
   ChevronLeft,
+  Sparkles
 } from "lucide-react";
 import ProgressLoader from "../common/ProgressLoader";
 import Badge from "../common/Badge";
@@ -36,35 +37,58 @@ interface MenuItem {
   path: string;
   icon: React.ComponentType<any>;
   roles: string[];
+  gradientFrom: string;
+  gradientTo: string;
+  shadowColor: string;
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: "home", name: "Overview", path: "/home", icon: Home, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },
-  { id: "new_dashboard", name: "Executive Dashboard", path: "/new-dashboard", icon: TrendingUp, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "MIS", "VP", "Accountant", "Travel Desk"] },
-  { id: "admin", name: "Admin Panel", path: "/admin", icon: Settings, roles: ["Admin"] },
-  { id: "db_monitor", name: "DB Health", path: "/db-monitor", icon: Activity, roles: ["Admin"] },
-  { id: "approval", name: "Approval Center", path: "/approval-center", icon: CheckSquare, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "VP", "Travel Desk", "MIS"] },
-  { id: "expense", name: "Expense Claims", path: "/submit-expense", icon: FilePlus, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Project Head", "Travel Desk", "VP", "Accountant", "MIS"] },
-  { id: "mis_report", name: "MIS Reports", path: "/mis-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP", "Accountant", "Travel Desk"] },
-  { id: "kpi", name: "KPI Metrics", path: "/kpi-dashboard", icon: Gauge, roles: ["Admin", "Manager", "Division Manager", "Engineer", "Coordinator", "Project Head", "MIS", "VP", "Accountant", "Travel Desk"] },
-  { id: "upload_data", name: "Data Import", path: "/upload-data", icon: UploadCloud, roles: ["Admin", "Coordinator", "MIS"] },
-  { id: "asset_upload", name: "Asset Master", path: "/asset-upload", icon: Package, roles: ["Admin", "Coordinator", "MIS", "Engineer"] },
-  { id: "penalty_report", name: "Penalty Audit", path: "/penalty-report", icon: ShieldAlert, roles: ["Admin", "Manager", "Division Manager", "Accountant", "MIS", "VP", "Travel Desk"] },
-  { id: "analysis", name: "Deep Analytics", path: "/analysis", icon: BarChart3, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP", "Project Head", "Travel Desk", "Accountant", "HR"] },
-  { id: "report", name: "Month Summary", path: "/month-report", icon: Calendar, roles: ["Admin", "Manager", "Division Manager", "Accountant", "HR", "MIS", "VP", "Project Head", "Travel Desk"] },
-  { id: "consolidated_report", name: "Consolidated Reports", path: "/consolidated-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "MIS", "VP", "Project Head", "Travel Desk"] },
-  { id: "attendance", name: "Attendance Roster", path: "/attendance", icon: Calendar, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "MIS", "VP", "Project Head", "Travel Desk", "Engineer"] },
-  { id: "help", name: "Help & Support", path: "/help-center", icon: HelpCircle, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },
-  { id: "profile", name: "My Profile", path: "/profile", icon: User, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"] },
+  { id: "home", name: "Overview", path: "/home", icon: Home, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"], gradientFrom: "from-blue-500", gradientTo: "to-indigo-600", shadowColor: "rgba(37, 99, 235, 0.35)" },
+  { id: "new_dashboard", name: "Executive Dashboard", path: "/new-dashboard", icon: TrendingUp, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-violet-500", gradientTo: "to-purple-600", shadowColor: "rgba(124, 58, 237, 0.35)" },
+  { id: "admin", name: "Admin Panel", path: "/admin", icon: Settings, roles: ["Admin"], gradientFrom: "from-slate-600", gradientTo: "to-slate-800", shadowColor: "rgba(100, 116, 139, 0.35)" },
+  { id: "approval", name: "Approval Center", path: "/approval-center", icon: CheckSquare, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "VP", "Travel Desk", "MIS"], gradientFrom: "from-amber-500", gradientTo: "to-orange-600", shadowColor: "rgba(245, 158, 11, 0.35)" },
+  { id: "expense", name: "Expense Claims", path: "/submit-expense", icon: FilePlus, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Project Head", "Travel Desk", "VP", "Accountant", "MIS"], gradientFrom: "from-emerald-500", gradientTo: "to-teal-600", shadowColor: "rgba(16, 185, 129, 0.35)" },
+  { id: "mis_report", name: "MIS Reports", path: "/mis-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-cyan-500", gradientTo: "to-blue-600", shadowColor: "rgba(6, 182, 212, 0.35)" },
+  { id: "kpi", name: "KPI Metrics", path: "/kpi-dashboard", icon: Gauge, roles: ["Admin", "Manager", "Division Manager", "Engineer", "Coordinator", "Project Head", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-rose-500", gradientTo: "to-red-600", shadowColor: "rgba(244, 63, 94, 0.35)" },
+  { id: "asset_upload", name: "Asset Master", path: "/asset-upload", icon: Package, roles: ["Admin", "Coordinator", "MIS", "Engineer"], gradientFrom: "from-pink-500", gradientTo: "to-rose-600", shadowColor: "rgba(236, 72, 153, 0.35)" },
+  { id: "penalty_report", name: "Penalty Audit", path: "/penalty-report", icon: ShieldAlert, roles: ["Admin", "Manager", "Division Manager", "Accountant", "MIS", "VP", "Travel Desk"], gradientFrom: "from-red-500", gradientTo: "to-rose-700", shadowColor: "rgba(239, 68, 68, 0.35)" },
+  { id: "analysis", name: "Deep Analytics", path: "/analysis", icon: BarChart3, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP", "Project Head", "Travel Desk", "Accountant", "HR"], gradientFrom: "from-indigo-500", gradientTo: "to-blue-700", shadowColor: "rgba(99, 102, 241, 0.35)" },
+  { id: "report", name: "Month Summary", path: "/month-report", icon: Calendar, roles: ["Admin", "Manager", "Division Manager", "Accountant", "HR", "MIS", "VP", "Project Head", "Travel Desk"], gradientFrom: "from-teal-500", gradientTo: "to-emerald-600", shadowColor: "rgba(20, 184, 166, 0.35)" },
+  { id: "consolidated_report", name: "Consolidated Reports", path: "/consolidated-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "MIS", "VP", "Project Head", "Travel Desk"], gradientFrom: "from-sky-500", gradientTo: "to-blue-600", shadowColor: "rgba(14, 165, 233, 0.35)" },
+  { id: "attendance", name: "Attendance Roster", path: "/attendance", icon: Calendar, roles: ["Admin"], gradientFrom: "from-indigo-500", gradientTo: "to-cyan-600", shadowColor: "rgba(99, 102, 241, 0.35)" },
+  { id: "help", name: "Help & Support", path: "/help-center", icon: HelpCircle, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"], gradientFrom: "from-purple-500", gradientTo: "to-violet-600", shadowColor: "rgba(167, 139, 250, 0.35)" },
+  { id: "profile", name: "My Profile", path: "/profile", icon: User, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"], gradientFrom: "from-blue-500", gradientTo: "to-indigo-600", shadowColor: "rgba(96, 165, 250, 0.35)" },
 ];
 
 const SIDEBAR_SECTIONS = [
   { label: "Workspace", ids: ["home", "new_dashboard"] },
   { label: "Claims & Approvals", ids: ["expense", "approval"] },
   { label: "Reports & Analytics", ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report"] },
-  { label: "Administration", ids: ["admin", "db_monitor", "upload_data", "asset_upload"] },
+  { label: "Administration", ids: ["admin", "asset_upload"] },
   { label: "Account", ids: ["profile", "help"] },
 ];
+
+// iOS-style gradient icon tile — matches HomePage IconTile component 1:1
+const IconTile = ({
+  icon: Icon,
+  gradientFrom,
+  gradientTo,
+  shadowColor,
+  isActive,
+}: {
+  icon: React.ComponentType<any>;
+  gradientFrom: string;
+  gradientTo: string;
+  shadowColor: string;
+  isActive: boolean;
+}) => (
+  <div
+    className={`w-7 h-7 rounded-lg bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center shrink-0 transition-all duration-200 ${isActive ? "scale-105" : "opacity-80 group-hover:opacity-100 group-hover:scale-105"}`}
+    style={{ boxShadow: isActive ? `0 2px 6px -1px ${shadowColor}` : "none" }}
+  >
+    <Icon className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+  </div>
+);
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
@@ -134,7 +158,7 @@ export default function DashboardLayout() {
     });
   }
 
-  ["home", "profile", "help", "expense", "attendance"].forEach((w) => {
+  ["home", "profile", "help", "expense"].forEach((w) => {
     if (!allowedWindows.includes(w)) allowedWindows.push(w);
   });
 
@@ -163,32 +187,33 @@ export default function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex text-slate-900 font-sans antialiased">
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - Exact Ditto HomePage Background & Card Format */}
       <aside
-        className={`hidden lg:flex flex-col fixed top-0 left-0 bottom-0 z-40 bg-slate-900 text-slate-100 border-r border-slate-800 transition-all duration-300 shadow-xl ${
+        className={`hidden lg:flex flex-col fixed top-0 left-0 bottom-0 z-40 bg-slate-50 border-r border-slate-200/90 transition-all duration-300 shadow-xs ${
           isSidebarCollapsed ? "w-20" : "w-64"
         }`}
       >
-        {/* Sidebar Header */}
-        <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800 shrink-0">
-          <Link to="/home" className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-xl bg-accent-600 flex items-center justify-center shrink-0 shadow-md">
-              <img src={brandLogo} alt="Cyrix Logo" className="w-6 h-6 object-contain" />
+        {/* HomePage Exact Dark Slate-Blue Header Bar (#4A6A8A) */}
+        <div className="h-14 px-3.5 bg-[#4A6A8A] flex items-center justify-between border-b border-[#3B546F] shrink-0 text-white shadow-2xs">
+          <Link to="/home" className="flex items-center gap-2.5 overflow-hidden">
+            <div className="w-7 h-7 rounded-md bg-white/20 flex items-center justify-center shrink-0 shadow-2xs text-white">
+              {brandLogo ? (
+                <img src={brandLogo} alt="Cyrix Logo" className="w-5 h-5 object-contain" />
+              ) : (
+                <Sparkles className="w-4 h-4 text-white" />
+              )}
             </div>
             {!isSidebarCollapsed && (
               <div className="flex flex-col">
-                <span className="font-bold text-white text-base tracking-tight leading-tight">
-                  CYRIX
-                </span>
-                <span className="text-[10px] text-accent-400 font-semibold uppercase tracking-wider">
-                  Field Ops
+                <span className="font-bold text-white text-xs tracking-normal leading-tight">
+                  CYRIX <span className="text-white/80 font-normal text-[9.5px] uppercase tracking-wider block">Field Operations</span>
                 </span>
               </div>
             )}
           </Link>
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1 rounded-md text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer hidden md:flex items-center justify-center"
             title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
@@ -196,34 +221,45 @@ export default function DashboardLayout() {
         </div>
 
         {/* Sidebar Links */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4 custom-scrollbar">
           {SIDEBAR_SECTIONS.map((section) => {
             const sectionItems = allowedMenuItems.filter((item) => section.ids.includes(item.id));
             if (sectionItems.length === 0) return null;
             return (
               <div key={section.label} className="space-y-1">
                 {!isSidebarCollapsed && (
-                  <p className="px-3 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                  <p className="px-2.5 pt-1.5 pb-1 text-[9.5px] font-bold tracking-wider text-slate-500 uppercase">
                     {section.label}
                   </p>
                 )}
                 {sectionItems.map((item) => {
-                  const Icon = item.icon;
                   const isActive = currentActiveItem?.id === item.id;
                   return (
                     <Link
                       key={item.id}
                       to={item.path}
                       onMouseEnter={() => preloadRoute(item.path)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs md:text-sm font-medium transition-all group relative ${
+                      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-[11px] font-bold transition-all group relative border ${
                         isActive
-                          ? "bg-accent-600 text-white font-semibold shadow-xs"
-                          : "text-slate-300 hover:text-white hover:bg-slate-800/80"
+                          ? "bg-[#4A6A8A] text-white border-[#3B546F] shadow-2xs"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border-transparent"
                       }`}
                       title={isSidebarCollapsed ? item.name : undefined}
                     >
-                      <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-white" : "text-slate-400 group-hover:text-white"}`} />
+                      <IconTile
+                        icon={item.icon}
+                        gradientFrom={item.gradientFrom}
+                        gradientTo={item.gradientTo}
+                        shadowColor={item.shadowColor}
+                        isActive={isActive}
+                      />
                       {!isSidebarCollapsed && <span className="truncate">{item.name}</span>}
+                      {isSidebarCollapsed && isActive && (
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#4A6A8A] rounded-l-full" />
+                      )}
+                      {!isSidebarCollapsed && isActive && (
+                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shrink-0" />
+                      )}
                     </Link>
                   );
                 })}
@@ -233,21 +269,21 @@ export default function DashboardLayout() {
         </div>
 
         {/* User Footer */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/60 shrink-0">
+        <div className="p-3 border-t border-slate-200/90 bg-white shrink-0">
           {!isSidebarCollapsed ? (
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="w-8 h-8 rounded-full bg-accent-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-7 h-7 rounded-md bg-[#4A6A8A] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
                   {initials}
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-semibold text-white truncate">{user?.name || "Employee"}</span>
-                  <span className="text-[10px] text-slate-400 truncate">{userRole}</span>
+                <div className="flex flex-col min-w-0 leading-none">
+                  <span className="text-[11px] font-bold text-slate-800 truncate">{user?.name || "Employee"}</span>
+                  <span className="text-[9.5px] text-slate-500 truncate mt-0.5">{userRole}</span>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
                 title="Log Out"
               >
                 <LogOut className="w-4 h-4" />
@@ -256,10 +292,10 @@ export default function DashboardLayout() {
           ) : (
             <button
               onClick={handleLogout}
-              className="w-full flex justify-center py-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              className="w-full flex justify-center py-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
               title="Log Out"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -272,33 +308,40 @@ export default function DashboardLayout() {
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="relative w-4/5 max-w-xs bg-slate-900 text-slate-100 flex flex-col h-full z-10 shadow-2xl">
-            <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <img src={brandLogo} alt="Cyrix Logo" className="w-7 h-7 object-contain" />
-                <span className="font-bold text-white text-base">Cyrix FieldOps</span>
+          <div className="relative w-4/5 max-w-xs bg-slate-50 text-slate-800 flex flex-col h-full z-10 shadow-2xl border-r border-slate-200">
+            <div className="h-14 px-3.5 bg-[#4A6A8A] flex items-center justify-between border-b border-[#3B546F] shrink-0 text-white">
+              <div className="flex items-center gap-2.5">
+                <img src={brandLogo} alt="Cyrix Logo" className="w-6 h-6 object-contain" />
+                <span className="font-bold text-white text-xs uppercase tracking-wider">Cyrix FieldOps</span>
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg"
+                className="p-1.5 text-white/80 hover:text-white rounded-md"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
               {allowedMenuItems.map((item) => {
-                const Icon = item.icon;
                 const isActive = currentActiveItem?.id === item.id;
                 return (
                   <Link
                     key={item.id}
                     to={item.path}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
-                      isActive ? "bg-accent-600 text-white font-semibold" : "text-slate-300 hover:bg-slate-800"
+                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-bold transition-all border ${
+                      isActive
+                        ? "bg-[#4A6A8A] text-white border-[#3B546F] shadow-2xs"
+                        : "text-slate-600 hover:bg-slate-200/60 border-transparent"
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
+                    <IconTile
+                      icon={item.icon}
+                      gradientFrom={item.gradientFrom}
+                      gradientTo={item.gradientTo}
+                      shadowColor={item.shadowColor}
+                      isActive={isActive}
+                    />
                     <span>{item.name}</span>
                   </Link>
                 );
@@ -333,7 +376,7 @@ export default function DashboardLayout() {
               {userRole}
             </Badge>
             <Link to="/profile" className="flex items-center gap-2 border-l border-slate-200 pl-2">
-              <div className="w-6 h-6 rounded-full bg-accent-100 text-accent-700 font-bold text-xs flex items-center justify-center border border-accent-200">
+              <div className="w-6 h-6 rounded-full bg-[#4A6A8A] text-white font-bold text-xs flex items-center justify-center shadow-2xs">
                 {initials}
               </div>
             </Link>
@@ -341,7 +384,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 p-4 md:p-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-2 md:p-4 w-full max-w-full mx-auto">
           {!hasAccess ? (
             <div className="p-8 text-center bg-white border border-border rounded-xl shadow-xs my-8">
               <Lock className="w-12 h-12 text-red-500 mx-auto mb-3" />

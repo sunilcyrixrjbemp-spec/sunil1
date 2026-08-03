@@ -1631,20 +1631,20 @@ export async function getUserMonthlyStatsHelper(env, userDbId, month, year, excl
     calibration_count_approved: approvedCalibration,
     calibration_count_claimed: claimedCalibration,
     
-    // Legacy backward-compatible keys
-    km_used_so_far: claimedKmUsed,
-    total_da: approvedDa,
-    total_bike_km: approvedBikeKm,
-    total_auto: approvedAuto,
-    total_bus: approvedBus,
-    total_train: approvedTrain,
-    total_hotel: approvedHotel,
-    total_local_purchase: approvedLocalPurchase,
-    calls_completed: approvedCalls,
-    pms_count: approvedPms,
-    asset_tagging: approvedAsset,
-    mobilise_count: approvedMobilise,
-    calibration_count: approvedCalibration
+    // Legacy backward-compatible keys (Includes both Approved and Pending Submitted Claims up to date)
+    km_used_so_far: claimedKmUsed > 0 ? claimedKmUsed : approvedKmUsed,
+    total_da: claimedDa > 0 ? claimedDa : approvedDa,
+    total_bike_km: claimedBikeKm > 0 ? claimedBikeKm : approvedBikeKm,
+    total_auto: claimedAuto > 0 ? claimedAuto : approvedAuto,
+    total_bus: claimedBus > 0 ? claimedBus : approvedBus,
+    total_train: claimedTrain > 0 ? claimedTrain : approvedTrain,
+    total_hotel: claimedHotel > 0 ? claimedHotel : approvedHotel,
+    total_local_purchase: claimedLocalPurchase > 0 ? claimedLocalPurchase : approvedLocalPurchase,
+    calls_completed: claimedCalls > 0 ? claimedCalls : approvedCalls,
+    pms_count: claimedPms > 0 ? claimedPms : approvedPms,
+    asset_tagging: claimedAsset > 0 ? claimedAsset : approvedAsset,
+    mobilise_count: claimedMobilise > 0 ? claimedMobilise : approvedMobilise,
+    calibration_count: claimedCalibration > 0 ? claimedCalibration : approvedCalibration
   };
 }
 

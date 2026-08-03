@@ -1275,12 +1275,6 @@ export default function HomePage() {
 
           <div className="flex items-center gap-1.5">
             <Button 
-              onClick={() => navigate("/create-expense")}
-              className="bg-white/15 hover:bg-white/25 text-white border-0 font-medium text-[10px] h-6 px-2 rounded shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-            >
-              + New Claim
-            </Button>
-            <Button 
               onClick={() => refreshDashboardData()}
               className="bg-white/10 hover:bg-white/20 text-white border-0 font-medium text-[10px] h-6 px-2 rounded shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
             >
@@ -1906,6 +1900,7 @@ export default function HomePage() {
 
       {/* ================= CLAIM DETAILS POPUP MODAL ================= */}
       <ClaimDetailsModal
+        sourceMode="home"
         open={showDetailsModal}
         claimDetails={claimDetails}
         user={user}

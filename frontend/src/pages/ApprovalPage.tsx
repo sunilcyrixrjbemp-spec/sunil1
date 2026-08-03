@@ -46,9 +46,13 @@ import {
   ExternalLink,
   Loader2,
   RotateCcw,
-  ChevronUp
+  ChevronUp,
+  CheckCircle2,
+  Zap
 } from "lucide-react";
 
+import { useNavigate } from "react-router-dom";
+import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
 import api from "../services/api";
 
 const { Text, Title } = Typography;
@@ -95,6 +99,7 @@ const safeSetLocalStorage = (key: string, value: string) => {
 };
 
 export default function ApprovalPage() {
+  const navigate = useNavigate();
   const [pendingApprovals, setPendingApprovals] = useState<any[]>(() => {
     const cached = localStorage.getItem("cache_pending_approvals");
     return cached ? JSON.parse(cached) : [];
@@ -211,6 +216,7 @@ export default function ApprovalPage() {
   const [isConvertingHeic, setIsConvertingHeic] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [lbZoom, setLbZoom] = useState(1);
 
   useEffect(() => {
     const hasAnyModalOpen = !!successModal?.visible || (showDetailModal && !!selectedApproval) || (showBulkModal && !!bulkActionType) || showReturnModal || !!lightboxImage;
@@ -1087,127 +1093,54 @@ export default function ApprovalPage() {
         }
       `}</style>
 
+      {/* ================= SUCCESS / REJECTION RESULT MODAL ================= */}
       <Modal
         open={!!successModal?.visible}
         destroyOnClose={true}
         centered
         footer={null}
         closable={false}
-        width={340}
+        width={360}
         style={{ maxWidth: "92vw" }}
         onCancel={() => setSuccessModal(null)}
-        styles={{ body: { padding: 0, borderRadius: 16, overflow: "hidden" } }}
+        bodyStyle={{ padding: 0 }}
       >
         {successModal && (
-          <div className="ap-success-modal-content" style={{ borderRadius: 16, overflow: "hidden", background: "#fff", textAlign: "center" }}>
-            {/* Gradient header */}
-            <div style={{
-              background: successModal.actionType === "reject"
-                ? "linear-gradient(135deg, #be123c 0%, #fb7185 100%)"
+          <div className="bg-white border border-slate-400 rounded-none shadow-2xl overflow-hidden text-center">
+            {/* Header Banner */}
+            <div className={`px-4 py-5 text-white text-center rounded-none ${
+              successModal.actionType === "reject"
+                ? "bg-rose-700"
                 : successModal.isAuto
-                  ? "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)"
-                  : "linear-gradient(135deg, #059669 0%, #10b981 100%)",
-              padding: "32px 24px 24px",
-              position: "relative",
-              overflow: "hidden"
-            }}>
-              {/* Confetti particles */}
-              {(successModal.actionType === "reject"
-                ? [
-                    { color: "#fda4af", left: "12%", delay: "0.4s" },
-                    { color: "#fecdd3", left: "28%", delay: "0.5s" },
-                    { color: "#e2e8f0", left: "44%", delay: "0.3s" },
-                    { color: "#cbd5e1", left: "60%", delay: "0.6s" },
-                    { color: "#fecdd3", left: "76%", delay: "0.45s" },
-                    { color: "#fda4af", left: "88%", delay: "0.35s" },
-                    { color: "#e2e8f0", left: "20%", delay: "0.7s" },
-                    { color: "#fecdd3", left: "70%", delay: "0.55s" },
-                  ]
-                : [
-                    { color: "#fde68a", left: "12%", delay: "0.4s" },
-                    { color: "#a5f3fc", left: "28%", delay: "0.5s" },
-                    { color: "#fca5a5", left: "44%", delay: "0.3s" },
-                    { color: "#bbf7d0", left: "60%", delay: "0.6s" },
-                    { color: "#ddd6fe", left: "76%", delay: "0.45s" },
-                    { color: "#fde68a", left: "88%", delay: "0.35s" },
-                    { color: "#a5f3fc", left: "20%", delay: "0.7s" },
-                    { color: "#fca5a5", left: "70%", delay: "0.55s" },
-                  ]
-              ).map((p, i) => (
-                <div key={i} className="ap-particle" style={{
-                  background: p.color,
-                  left: p.left,
-                  bottom: "10px",
-                  animationDelay: p.delay,
-                  animationDuration: `${1.1 + i * 0.1}s`
-                }} />
-              ))}
-
-              {/* Animated icon ring */}
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-                <div
-                  className={
-                    successModal.actionType === "reject"
-                      ? "ap-reject-ring"
-                      : successModal.isAuto
-                        ? "ap-auto-ring"
-                        : "ap-check-ring"
-                  }
-                  style={{
-                    width: 80, height: 80,
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,0.18)",
-                    border: "3px solid rgba(255,255,255,0.6)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    backdropFilter: "blur(4px)"
-                  }}
-                >
+                  ? "bg-[#4A6A8A]"
+                  : "bg-emerald-600"
+            }`}>
+              <div className="flex justify-center mb-2">
+                <div className="w-12 h-12 rounded-none bg-white/20 border border-white/50 flex items-center justify-center">
                   {successModal.actionType === "reject" ? (
-                    <svg className="ap-cross-svg" width="44" height="44" viewBox="0 0 52 52" fill="none">
-                      <path
-                        d="M16 16 L36 36 M36 16 L16 36"
-                        stroke="white"
-                        strokeWidth="5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                    </svg>
+                    <X className="w-7 h-7 text-white" />
                   ) : successModal.isAuto ? (
-                    <span style={{ fontSize: 38, lineHeight: 1 }}>⚡</span>
-                  ) : successModal.isBulk ? (
-                    <span style={{ fontSize: 38, lineHeight: 1 }}>
-                      {successModal.actionType === "approve" ? "✅" : "❌"}
-                    </span>
+                    <Zap className="w-7 h-7 text-amber-300" />
                   ) : (
-                    <svg className="ap-check-svg" width="44" height="44" viewBox="0 0 52 52" fill="none">
-                      <path
-                        d="M14 27 L23 36 L38 18"
-                        stroke="white"
-                        strokeWidth="4.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                    </svg>
+                    <CheckCircle2 className="w-7 h-7 text-white" />
                   )}
                 </div>
               </div>
 
               {/* Title */}
-              <div style={{ color: "#fff", fontWeight: 800, fontSize: 17, letterSpacing: "0.01em", lineHeight: 1.3 }}>
+              <div className="font-black text-sm uppercase tracking-wider leading-tight text-white">
                 {successModal.isBulk
                   ? `Bulk Claims ${successModal.actionType === "approve" ? "Approved" : "Rejected"}!`
                   : successModal.actionType === "reject"
-                    ? (successModal.isLimit ? "Limit Request Rejected!" : "Claim Rejected! ❌")
+                    ? (successModal.isLimit ? "Limit Request Rejected" : "Claim Rejected")
                     : successModal.isAuto
-                      ? "Auto-Approved! ⚡"
-                      : (successModal.isLimit ? "Limit Request Approved!" : "Claim Approved! 🎉")}
+                      ? "Auto-Approved by Policy"
+                      : (successModal.isLimit ? "Limit Request Approved" : "Claim Approved")}
               </div>
               {!successModal.isBulk && (
-                <div style={{ color: "rgba(255,255,255,0.82)", fontSize: 12, marginTop: 4, fontWeight: 500 }}>
+                <div className="text-[11px] font-bold text-white/90 mt-0.5">
                   {successModal.actionType === "reject"
-                    ? "Expense claim has been rejected"
+                    ? "Expense claim decision logged"
                     : successModal.isAuto
                       ? "System policy auto-approval applied"
                       : "Reimbursement has been sanctioned"}
@@ -1216,101 +1149,54 @@ export default function ApprovalPage() {
             </div>
 
             {/* Body details */}
-            <div style={{ padding: "20px 24px" }}>
+            <div className="p-4 bg-white">
               {successModal.isBulk ? (
-                <div style={{
-                  background: successModal.actionType === "reject" ? "#fff5f5" : "#f0fdf4",
-                  border: `1px solid ${successModal.actionType === "reject" ? "#fecdd3" : "#bbf7d0"}`,
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  marginBottom: 16
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: successModal.actionType === "reject" ? "#9f1239" : "#065f46" }}>
-                    Successfully processed <span style={{ fontSize: 22, fontWeight: 900, color: successModal.actionType === "reject" ? "#e11d48" : "#059669" }}>{successModal.bulkCount}</span> claim{(successModal.bulkCount || 0) > 1 ? "s" : ""}
+                <div className={`p-3 border rounded-none mb-4 ${
+                  successModal.actionType === "reject" ? "bg-rose-50 border-rose-200" : "bg-emerald-50 border-emerald-200"
+                }`}>
+                  <div className={`text-xs font-bold ${successModal.actionType === "reject" ? "text-rose-900" : "text-emerald-900"}`}>
+                    Successfully processed <span className="font-black text-base">{successModal.bulkCount}</span> claim{(successModal.bulkCount || 0) > 1 ? "s" : ""}
                   </div>
                 </div>
               ) : (
-                <div style={{
-                  background: successModal.actionType === "reject"
-                    ? "#fff5f5"
-                    : successModal.isAuto
-                      ? "#eef2ff"
-                      : "#f0fdf4",
-                  border: `1px solid ${
-                    successModal.actionType === "reject"
-                      ? "#fecdd3"
-                      : successModal.isAuto
-                        ? "#c7d2fe"
-                        : "#bbf7d0"
-                  }`,
-                  borderRadius: 10,
-                  padding: "12px 14px",
-                  marginBottom: 16,
-                  textAlign: "left"
-                }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                      <span style={{ color: "#6b7280", fontWeight: 600 }}>Claim ID</span>
-                      <span style={{
-                        fontFamily: "monospace",
-                        fontWeight: 800,
-                        color: successModal.actionType === "reject"
-                          ? "#be123c"
-                          : successModal.isAuto
-                            ? "#4f46e5"
-                            : "#059669"
-                      }}>
-                        {successModal.claimCode}
+                <div className="bg-slate-50 border border-slate-300 rounded-none p-3.5 mb-4 text-left space-y-2.5">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 font-extrabold uppercase text-[10px] tracking-wider">Claim ID</span>
+                    <span className="font-mono font-extrabold text-xs text-[#4A6A8A] bg-white px-2 py-0.5 border border-slate-300">
+                      {successModal.claimCode}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500 font-extrabold uppercase text-[10px] tracking-wider">Employee</span>
+                    <span className="font-extrabold text-slate-900 text-xs">{successModal.empName}</span>
+                  </div>
+                  {!successModal.isAuto && (successModal.amount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-200">
+                      <span className="text-slate-500 font-extrabold uppercase text-[10px] tracking-wider">Sanctioned Amount</span>
+                      <span className={`font-mono font-black text-sm ${
+                        successModal.actionType === "reject" ? "text-rose-700" : "text-emerald-700"
+                      }`}>
+                        ₹{(successModal.amount || 0).toLocaleString()}
                       </span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                      <span style={{ color: "#6b7280", fontWeight: 600 }}>Employee</span>
-                      <span style={{ fontWeight: 700, color: "#111827" }}>{successModal.empName}</span>
+                  )}
+                  {successModal.isAuto && (
+                    <div className="text-[10px] text-indigo-700 font-bold mt-1">
+                      ⚡ Zero reimbursable amount — auto-approved by policy
                     </div>
-                    {!successModal.isAuto && (successModal.amount || 0) > 0 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                        <span style={{ color: "#6b7280", fontWeight: 600 }}>Amount</span>
-                        <span style={{
-                          fontFamily: "monospace",
-                          fontWeight: 900,
-                          color: successModal.actionType === "reject" ? "#be123c" : "#059669",
-                          fontSize: 14
-                        }}>
-                          ₹{(successModal.amount || 0).toLocaleString()}
-                        </span>
-                      </div>
-                    )}
-                    {successModal.isAuto && (
-                      <div style={{ fontSize: 11, color: "#4338ca", fontWeight: 600, marginTop: 2 }}>
-                        ℹ️ Zero reimbursable amount — auto-approved by policy
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               )}
 
               <Button
                 type="primary"
                 block
-                size="large"
                 onClick={() => setSuccessModal(null)}
-                style={{
-                  background: successModal.actionType === "reject"
-                    ? "linear-gradient(135deg, #e11d48, #fb7185)"
-                    : successModal.isAuto
-                      ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
-                      : "linear-gradient(135deg, #059669, #10b981)",
-                  border: "none",
-                  borderRadius: 10,
-                  fontWeight: 800,
-                  fontSize: 14,
-                  height: 46,
-                  boxShadow: successModal.actionType === "reject"
-                    ? "0 4px 14px rgba(225,29,72,0.35)"
-                    : successModal.isAuto
-                      ? "0 4px 14px rgba(79,70,229,0.35)"
-                      : "0 4px 14px rgba(16,185,129,0.35)"
-                }}
+                className={`font-black text-xs uppercase tracking-wider rounded-none h-9 cursor-pointer shadow-none border-0 ${
+                  successModal.actionType === "reject"
+                    ? "bg-rose-700 hover:bg-rose-800"
+                    : "bg-[#4A6A8A] hover:bg-[#3b5570]"
+                }`}
               >
                 {successModal.isBulk ? "Close" : "Done ✓"}
               </Button>
@@ -1321,54 +1207,48 @@ export default function ApprovalPage() {
 
       <div className="space-y-4 animate-fadeIn text-[#212529]">
       
-      {/* Header Info Card */}
-      <Card size="small" className="border border-gray-200 shadow-xs mb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-primary-600 font-extrabold text-[9px] uppercase tracking-widest block">Operational Review</span>
-            <Title level={4} style={{ margin: 0, fontSize: "18px", color: "#1F2937" }} className="uppercase font-bold tracking-wider flex items-center gap-2">
-              <FileText size={20} className="text-indigo-600" />
-              Approval Center
-            </Title>
-            <Text type="secondary" className="text-xs">Review operational, local purchase, and travel claims submitted by staff.</Text>
+      {/* Header Info Bar */}
+      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
+            <FileText className="w-4 h-4" />
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Tag color="processing" className="font-bold border-0 bg-indigo-50 text-indigo-700 px-3 py-1 text-xs">
-              Pending Claims: <strong>{claimRequests.length}</strong>
-            </Tag>
-            {limitRequests.length > 0 && (
-              <Tag color="cyan" className="font-bold border-0 bg-cyan-50 text-cyan-700 px-3 py-1 text-xs">
-                Limit Extensions: <strong>{limitRequests.length}</strong>
-              </Tag>
-            )}
-            {!isBulkAuthorized && (
-              <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-800 px-3 py-1 text-xs">
-                Role: {currentUser.role || "Staff"} (Individual Approvals Only)
-              </Tag>
-            )}
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 leading-none">APPROVAL CENTER</h1>
+            <p className="text-[10px] text-slate-500 mt-0.5">Review operational, local purchase, and travel claims submitted by staff.</p>
           </div>
         </div>
-      </Card>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-white bg-[#4A6A8A] px-2.5 py-1 rounded-none border border-[#4A6A8A] font-mono">
+            Pending Claims: <strong>{claimRequests.length}</strong>
+          </span>
+          {limitRequests.length > 0 && (
+            <span className="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-2.5 py-1 rounded-none border border-cyan-200 font-mono">
+              Limit Extensions: <strong>{limitRequests.length}</strong>
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Filters — hidden on mobile, desktop-only search bar */}
       <div className="hidden sm:block mb-4">
-        <Card size="small" className="border border-gray-200 shadow-xs">
+        <div className="bg-white border border-slate-300 rounded-none shadow-2xs p-3">
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
             <div style={{ flex: 1, maxWidth: 400 }}>
               <Input
-                size="large"
+                size="middle"
                 value={filterEngineer}
                 onChange={(e) => setFilterEngineer(e.target.value)}
-                placeholder="🔍  Search by Name or District..."
-                prefix={<Search size={14} className="text-gray-400" />}
-                style={{ width: "100%", borderRadius: 8 }}
+                placeholder="Search by Employee Name, Code, or District..."
+                prefix={<Search size={14} className="text-slate-400" />}
+                className="rounded-none text-xs border-slate-300 focus:border-[#4A6A8A]"
                 allowClear
               />
             </div>
             {filterEngineer && (
-              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              <span className="text-[11px] font-bold text-slate-500">
                 {filteredApprovals.length} result{filteredApprovals.length !== 1 ? "s" : ""} found
-              </Typography.Text>
+              </span>
             )}
             {/* Bulk Toolbar — Only for authorized roles */}
             {isBulkAuthorized && claimRequests.length > 0 && (
@@ -1376,46 +1256,47 @@ export default function ApprovalPage() {
                 <Checkbox
                   checked={selectedIds.length > 0 && selectedIds.length === claimRequests.length}
                   onChange={toggleSelectAll}
-                  className="text-xs font-bold text-gray-700"
+                  className="text-xs font-bold text-slate-700"
                 >
                   Select All ({selectedIds.length})
                 </Checkbox>
                 <Button
                   type="primary"
-                  size="middle"
+                  size="small"
                   style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
                   disabled={selectedIds.length === 0}
                   onClick={() => handleOpenBulkAction("approve")}
-                  icon={<Check size={14} />}
-                  className="font-bold text-xs"
+                  icon={<Check size={13} />}
+                  className="font-extrabold text-xs rounded-none shadow-2xs"
                 >
                   Bulk Approve ({selectedIds.length})
                 </Button>
                 <Button
                   type="primary"
                   danger
-                  size="middle"
+                  size="small"
                   disabled={selectedIds.length === 0}
                   onClick={() => handleOpenBulkAction("reject")}
-                  icon={<X size={14} />}
-                  className="font-bold text-xs"
+                  icon={<X size={13} />}
+                  className="font-extrabold text-xs rounded-none shadow-2xs"
                 >
                   Bulk Reject ({selectedIds.length})
                 </Button>
               </div>
             )}
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* ================= LIMIT EXTENSION REQUESTS SECTION ================= */}
       {limitRequests.length > 0 && (
-        <Card size="small" className="border border-gray-200 shadow-xs mb-4" title={
-          <span className="font-extrabold text-xs uppercase tracking-wider text-gray-700 flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse" />
-            Limit Extension Requests ({limitRequests.length})
-          </span>
-        }>
+        <div className="border border-slate-300 rounded-none shadow-2xs mb-4 bg-white overflow-hidden">
+          <div className="bg-[#4A6A8A] text-white px-3 py-2 text-xs font-extrabold uppercase tracking-wider flex items-center justify-between rounded-none">
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-none bg-blue-300 animate-pulse" />
+              Limit Extension Requests ({limitRequests.length})
+            </span>
+          </div>
           <Table
             dataSource={limitRequests}
             rowKey="id"
@@ -1428,12 +1309,12 @@ export default function ApprovalPage() {
                 key: "employeeName",
                 render: (name, req) => (
                   <div className="flex items-center gap-2">
-                    <Avatar size="small" className="bg-blue-600 font-bold text-xs">
+                    <Avatar size="small" className="bg-[#4A6A8A] font-bold text-xs rounded-none">
                       {name ? name.charAt(0).toUpperCase() : "U"}
                     </Avatar>
                     <div>
-                      <Text className="font-bold text-gray-800 block text-xs leading-tight">{name}</Text>
-                      <Text className="text-[9px] text-blue-600 font-mono font-bold block">{req.eCode}</Text>
+                      <Text className="font-bold text-slate-800 block text-xs leading-tight">{name}</Text>
+                      <Text className="text-[10px] text-[#4A6A8A] font-mono font-bold block">{req.eCode}</Text>
                     </div>
                   </div>
                 ),
@@ -1443,9 +1324,9 @@ export default function ApprovalPage() {
                 dataIndex: "purpose",
                 key: "limit_type",
                 render: (p) => (
-                  <Tag color={p?.toLowerCase().includes("km") ? "cyan" : "gold"} className="font-bold text-[10px]">
+                  <span className="font-bold text-[10px] uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded-none border border-slate-300">
                     {p?.toLowerCase().includes("km") ? "KM Limit" : "Auto Limit"}
-                  </Tag>
+                  </span>
                 ),
               },
               {
@@ -1472,9 +1353,9 @@ export default function ApprovalPage() {
                         size="small"
                         value={currentValue}
                         onChange={(e) => handleEditLimitChange(req.id, parseFloat(e.target.value))}
-                        className="w-24 font-bold text-xs"
+                        className="w-24 font-bold text-xs rounded-none border-slate-300"
                       />
-                      <Text className="font-bold text-gray-500 text-xs">
+                      <Text className="font-bold text-slate-500 text-xs">
                         {req.purpose?.toLowerCase().includes("km") ? "KM" : "₹"}
                       </Text>
                     </div>
@@ -1490,15 +1371,13 @@ export default function ApprovalPage() {
                   const currentValue = editedLimits[req.id] !== undefined ? editedLimits[req.id] : reqVal;
                   return (
                     <Space size="small" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        type="default"
-                        size="small"
-                        icon={<Eye size={12} />}
+                      <button
+                        type="button"
                         onClick={() => handleOpenDetails(req)}
-                        className="text-[10px] font-bold"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-none text-[10.5px] font-bold bg-[#4A6A8A] hover:bg-[#3b5570] text-white transition-colors cursor-pointer"
                       >
-                        Review
-                      </Button>
+                        <Eye size={11} /> Review
+                      </button>
                       <Button
                         type="primary"
                         size="small"
@@ -1506,6 +1385,7 @@ export default function ApprovalPage() {
                         style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
                         onClick={() => handleApproveLimit(req.expense_id, currentValue)}
                         loading={actionLoading && processingLimitId === req.expense_id && processingLimitType === "approve"}
+                        className="rounded-none"
                       />
                       <Button
                         type="primary"
@@ -1514,6 +1394,7 @@ export default function ApprovalPage() {
                         icon={<X size={12} />}
                         onClick={() => handleRejectLimit(req.expense_id)}
                         loading={actionLoading && processingLimitId === req.expense_id && processingLimitType === "reject"}
+                        className="rounded-none"
                       />
                     </Space>
                   );
@@ -1521,26 +1402,27 @@ export default function ApprovalPage() {
               }
             ]}
           />
-        </Card>
+        </div>
       )}
 
       {/* ================= CLAIMS AWAITING ACTIONS SECTION ================= */}
-      <Card size="small" className="border border-gray-200 shadow-xs mb-4" title={
-        <span className="font-extrabold text-xs uppercase tracking-wider text-gray-700 flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-          Claims Awaiting Actions ({claimRequests.length})
-        </span>
-      }>
+      <div className="border border-slate-300 rounded-none shadow-2xs mb-4 bg-white overflow-hidden">
+        <div className="bg-[#4A6A8A] text-white px-3 py-2 text-xs font-extrabold uppercase tracking-wider flex items-center justify-between rounded-none">
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-none bg-amber-400 animate-pulse" />
+            CLAIMS AWAITING ACTIONS ({claimRequests.length})
+          </span>
+        </div>
         {loading ? (
           <Loader message="Loading pending reviews..." />
         ) : claimRequests.length === 0 ? (
-          <div className="py-12 text-center text-gray-400 text-xs font-bold">
+          <div className="py-12 text-center text-slate-400 text-xs font-bold">
             No pending claims awaiting review.
           </div>
         ) : (
           <>
             {/* Desktop Table View */}
-            <div className="hidden md:block">
+            <div className="hidden md:block overflow-x-auto">
               <Table
                 dataSource={claimRequests}
                 rowKey="expense_id"
@@ -1560,7 +1442,7 @@ export default function ApprovalPage() {
                 } : undefined}
                 onRow={(record) => ({
                   onClick: () => handleOpenDetails(record),
-                  className: "cursor-pointer hover:bg-indigo-50/15"
+                  className: "cursor-pointer hover:bg-slate-100/70"
                 })}
                 columns={[
                   {
@@ -1569,12 +1451,12 @@ export default function ApprovalPage() {
                     key: "employeeName",
                     render: (name, req) => (
                       <div className="flex items-center gap-2">
-                        <Avatar size="small" className="bg-indigo-600 font-bold text-xs">
+                        <Avatar size="small" className="bg-[#4A6A8A] font-bold text-xs rounded-none shrink-0">
                           {name ? name.charAt(0).toUpperCase() : "U"}
                         </Avatar>
                         <div>
-                          <Text className="font-bold text-gray-800 block text-xs leading-tight">{name}</Text>
-                          <Text className="text-[9px] text-indigo-600 font-mono font-bold block">{req.eCode}</Text>
+                          <Text className="font-extrabold text-slate-900 block text-xs leading-tight">{name}</Text>
+                          <Text className="text-[10px] text-[#4A6A8A] font-mono font-bold block">{req.eCode}</Text>
                         </div>
                       </div>
                     ),
@@ -1583,27 +1465,35 @@ export default function ApprovalPage() {
                     title: "Claim ID",
                     dataIndex: "expense_code",
                     key: "expense_code",
-                    render: (code) => <Text className="font-mono font-bold text-indigo-600 text-xs">{code}</Text>,
+                    render: (code) => (
+                      <span className="font-mono font-extrabold text-xs text-[#4A6A8A] bg-slate-100 px-2 py-0.5 rounded-none border border-slate-200">
+                        {code}
+                      </span>
+                    ),
                   },
                   {
                     title: "Category",
                     dataIndex: "category",
                     key: "category",
-                    render: (cat) => <Tag color="blue" className="font-bold text-[10px]">{cat}</Tag>,
+                    render: (cat) => (
+                      <span className="font-bold text-[10px] uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded-none border border-slate-300">
+                        {cat}
+                      </span>
+                    ),
                   },
                   {
                     title: "Date / Month",
                     dataIndex: "date",
                     key: "date",
                     align: "center" as const,
-                    render: (d) => <Text className="text-gray-600 font-semibold text-xs">{d}</Text>,
+                    render: (d) => <Text className="text-slate-700 font-semibold text-xs">{d}</Text>,
                   },
                   {
                     title: "Purpose",
                     dataIndex: "purpose",
                     key: "purpose",
                     ellipsis: true,
-                    render: (p) => <Text className="text-gray-700 font-semibold text-xs">{p || "—"}</Text>,
+                    render: (p) => <Text className="text-slate-700 font-semibold text-xs">{p || "—"}</Text>,
                   },
                   {
                     title: "Attachments",
@@ -1612,7 +1502,7 @@ export default function ApprovalPage() {
                     render: (_, req) => {
                       const atts = getAttachmentsArray(req.attachments || req.attachment_urls || req.attachments_detailed);
                       if (atts.length === 0) {
-                        return <span className="text-[10px] text-gray-400 font-semibold">— No file —</span>;
+                        return <span className="text-[10px] text-slate-400 font-semibold">— No file —</span>;
                       }
                       return (
                         <div className="flex items-center justify-center gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
@@ -1624,8 +1514,8 @@ export default function ApprovalPage() {
                                 key={i}
                                 type="button"
                                 onClick={() => setLightboxImage(fullUrl)}
-                                className={`px-2 py-0.5 rounded text-[9px] font-bold border-0 cursor-pointer shadow-2xs transition-transform hover:scale-105 ${
-                                  isPdf ? "bg-red-100 text-red-700 hover:bg-red-200" : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                className={`px-2 py-0.5 rounded-none text-[9px] font-bold border cursor-pointer transition-colors ${
+                                  isPdf ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" : "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                                 }`}
                                 title={`View ${isPdf ? 'PDF Document' : 'Attachment Image'}`}
                               >
@@ -1634,7 +1524,7 @@ export default function ApprovalPage() {
                             );
                           })}
                           {atts.length > 2 && (
-                            <span className="text-[9px] text-gray-500 font-extrabold bg-gray-100 px-1.5 py-0.5 rounded">
+                            <span className="text-[9px] text-slate-600 font-extrabold bg-slate-100 px-1.5 py-0.5 rounded-none border border-slate-200">
                               +{atts.length - 2}
                             </span>
                           )}
@@ -1647,7 +1537,7 @@ export default function ApprovalPage() {
                     dataIndex: "amount",
                     key: "amount",
                     align: "right" as const,
-                    render: (amt) => <Text className="font-mono font-bold text-gray-900 text-xs">₹{(Number(amt) || 0).toLocaleString()}</Text>,
+                    render: (amt) => <Text className="font-mono font-black text-slate-900 text-xs">₹{(Number(amt) || 0).toLocaleString()}</Text>,
                   },
                   {
                     title: "Status",
@@ -1656,9 +1546,9 @@ export default function ApprovalPage() {
                     align: "center" as const,
                     render: (_, req) => {
                       if (req.is_auto_approved || req.auto_approved || req.status === "auto_approved") {
-                        return <Tag color="success" className="font-bold border-0 bg-emerald-100 text-emerald-800 text-[9px]">⚡ Auto Approved</Tag>;
+                        return <span className="font-bold border border-emerald-300 bg-emerald-100 text-emerald-800 text-[9.5px] uppercase px-2 py-0.5 rounded-none">⚡ Auto Approved</span>;
                       }
-                      return <Tag color="warning" className="font-bold border-0 bg-amber-50 text-amber-700 text-[9px]">Pending</Tag>;
+                      return <span className="font-bold border border-amber-300 bg-amber-100 text-amber-900 text-[9.5px] uppercase px-2 py-0.5 rounded-none">Pending</span>;
                     }
                   },
                   {
@@ -1667,15 +1557,13 @@ export default function ApprovalPage() {
                     align: "center" as const,
                     render: (_, req) => (
                       <Space size="small" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          type="default"
-                          size="small"
-                          icon={<Eye size={12} />}
+                        <button
+                          type="button"
                           onClick={() => handleOpenDetails(req)}
-                          className="text-[10px] font-bold"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-none text-[10.5px] font-bold bg-[#4A6A8A] hover:bg-[#3b5570] text-white transition-colors cursor-pointer"
                         >
-                          Review
-                        </Button>
+                          <Eye size={11} /> Review
+                        </button>
                       </Space>
                     ),
                   }
@@ -1683,30 +1571,24 @@ export default function ApprovalPage() {
               />
             </div>
 
-            {/* Mobile Responsive Card List View — antd Card based, one card per claim */}
+            {/* Mobile Responsive Card List View */}
             <div className={`block md:hidden space-y-3 ${selectedIds.length > 0 ? 'pb-24' : 'pb-6'}`}>
               {claimRequests.map((req) => {
                 const isChecked = selectedIds.includes(req.expense_id);
                 const isAutoApproved = req.is_auto_approved || req.auto_approved || req.status === "auto_approved";
                 return (
-                  <Card
+                  <div
                     key={req.expense_id || req.id}
-                    size="small"
                     onClick={() => handleOpenDetails(req)}
-                    style={{
-                      border: isChecked ? "1.5px solid #6366f1" : "1px solid #e5e7eb",
-                      background: isChecked ? "#f5f3ff" : "#ffffff",
-                      borderRadius: 12,
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                      cursor: "pointer"
-                    }}
-                    bodyStyle={{ padding: "12px 14px" }}
+                    className={`p-3 border rounded-none shadow-2xs transition-colors cursor-pointer ${
+                      isChecked ? "border-[#4A6A8A] bg-slate-50" : "border-slate-300 bg-white"
+                    }`}
                   >
                     {/* Top row: Avatar + Name + Status Tag */}
-                    <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2">
                       <div className="flex items-center gap-2 min-w-0">
                         {isBulkAuthorized && (
-                          <div onClick={(e) => e.stopPropagation()} style={{ flexShrink: 0 }}>
+                          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                             <Checkbox
                               checked={isChecked}
                               onChange={() => {
@@ -1720,20 +1602,20 @@ export default function ApprovalPage() {
                           </div>
                         )}
                         <Avatar
-                          size={32}
-                          style={{ backgroundColor: "#4f46e5", fontWeight: 700, fontSize: 13, flexShrink: 0 }}
+                          size={28}
+                          className="bg-[#4A6A8A] font-bold text-xs rounded-none shrink-0"
                         >
                           {req.employeeName ? req.employeeName.charAt(0).toUpperCase() : "U"}
                         </Avatar>
                         <div className="min-w-0">
-                          <div style={{ fontWeight: 700, fontSize: 12, color: "#1f2937", lineHeight: 1.3 }} className="truncate">{req.employeeName}</div>
-                          <div style={{ fontWeight: 700, fontSize: 10, color: "#4f46e5", fontFamily: "monospace" }}>{req.eCode}</div>
+                          <div className="font-extrabold text-xs text-slate-900 leading-tight truncate">{req.employeeName}</div>
+                          <div className="font-mono font-bold text-[10px] text-[#4A6A8A]">{req.eCode}</div>
                         </div>
                       </div>
                       {isAutoApproved ? (
-                        <Tag color="success" style={{ margin: 0, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>⚡ Auto</Tag>
+                        <span className="font-bold border border-emerald-300 bg-emerald-100 text-emerald-800 text-[9px] uppercase px-1.5 py-0.5 rounded-none shrink-0">⚡ Auto</span>
                       ) : (
-                        <Tag color="warning" style={{ margin: 0, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>Pending</Tag>
+                        <span className="font-bold border border-amber-300 bg-amber-100 text-amber-900 text-[9px] uppercase px-1.5 py-0.5 rounded-none shrink-0">Pending</span>
                       )}
                     </div>
 
@@ -1741,1276 +1623,182 @@ export default function ApprovalPage() {
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-3 flex-wrap">
                         <div>
-                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Claim ID</div>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#4f46e5", fontFamily: "monospace" }}>
-                            <span>{req.expense_code}</span>
+                          <div className="text-[9px] text-slate-500 font-extrabold uppercase">Claim ID</div>
+                          <div className="text-xs font-extrabold font-mono text-[#4A6A8A]">
+                            {req.expense_code}
                           </div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Date</div>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: "#374151" }}>{req.date}</div>
+                          <div className="text-[9px] text-slate-500 font-extrabold uppercase">Date</div>
+                          <div className="text-xs font-semibold text-slate-800">{req.date}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Category</div>
-                          <Tag color="blue" style={{ margin: 0, fontSize: 10, fontWeight: 700 }}>{req.category}</Tag>
+                          <div className="text-[9px] text-slate-500 font-extrabold uppercase">Category</div>
+                          <span className="text-[9.5px] font-bold uppercase bg-slate-100 text-slate-700 px-1.5 py-0.5 border border-slate-200">{req.category}</span>
                         </div>
-                        {req.calls_assigned > 0 && (
-                          <div>
-                            <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Calls</div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: "#059669" }}>{req.calls_completed || 0}/{req.calls_assigned}</div>
-                          </div>
-                        )}
                         <div>
-                          <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Amount</div>
-                          <div style={{ fontSize: 12, fontWeight: 800, color: "#111827", fontFamily: "monospace" }}>₹{(Number(req.amount) || 0).toLocaleString()}</div>
+                          <div className="text-[9px] text-slate-500 font-extrabold uppercase">Amount</div>
+                          <div className="text-xs font-black font-mono text-slate-900">₹{(Number(req.amount) || 0).toLocaleString()}</div>
                         </div>
                       </div>
-                      <Button
-                        type="default"
-                        size="middle"
-                        icon={<Eye size={14} />}
+                      <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); handleOpenDetails(req); }}
-                        style={{ fontWeight: 700, fontSize: 11, flexShrink: 0 }}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-none text-xs font-bold bg-[#4A6A8A] hover:bg-[#3b5570] text-white transition-colors cursor-pointer shrink-0"
                       >
-                        Review
-                      </Button>
+                        <Eye size={12} /> Review
+                      </button>
                     </div>
 
                     {req.purpose && (
-                      <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 8, paddingTop: 6 }}>
-                        <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>Purpose</div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{req.purpose}</div>
+                      <div className="border-t border-slate-100 mt-2 pt-1.5">
+                        <div className="text-[9px] text-slate-500 font-extrabold uppercase">Purpose</div>
+                        <div className="text-xs font-semibold text-slate-700 truncate">{req.purpose}</div>
                       </div>
                     )}
-                  </Card>
+                  </div>
                 );
               })}
             </div>
           </>
         )}
-      </Card>
+      </div>
       </div>
 
-      {/* ================= DETAIL SINGLE REVIEW AND EDIT MODAL ================= */}
-      <Modal
-        open={showDetailModal && !!selectedApproval}
-        onCancel={() => { setShowDetailModal(false); setSelectedApproval(null); }}
-        width={950}
-        style={{ maxWidth: "96vw", top: 16 }}
-        className="approval-review-modal"
-        wrapClassName="approval-review-modal-wrap"
-        destroyOnClose
-        bodyStyle={{
-          maxHeight: "70vh",
-          overflowY: "auto",
-          overflowX: "hidden",
-          padding: "16px",
-          background: "#ffffff",
-          WebkitOverflowScrolling: "touch"
+      <ClaimDetailsModal
+        sourceMode="approval"
+        open={showDetailModal}
+        claimDetails={expenseDetails || selectedApproval}
+        user={currentUser}
+        comments={comments}
+        setComments={setComments}
+        actionLoading={actionLoading}
+        handleApprove={() => handleProcessAction("approve")}
+        handleReject={() => handleProcessAction("reject")}
+        handleReturn={() => handleProcessAction("reject")}
+        handleDeleteClaim={() => {}}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedApproval(null);
+          setExpenseDetails(null);
         }}
-        title={
-          <Space>
-            <FileTextOutlined style={{ color: "#4f46e5", fontSize: 16 }} />
-            <span style={{ fontWeight: 800, fontSize: 13, textTransform: "uppercase", letterSpacing: "0.02em" }}>
-              Reviewing Claim: {selectedApproval?.expense_code}
-            </span>
-          </Space>
-        }
-        footer={
-          <div style={{ display: "flex", gap: 6, alignItems: "center", width: "100%", flexWrap: "nowrap", overflowX: "auto", touchAction: "pan-x" }}>
-            <Button
-              onClick={() => { setShowDetailModal(false); setSelectedApproval(null); }}
-              disabled={actionLoading}
-              icon={<CloseOutlined />}
-              size="small"
-              style={{ fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
-            >
-              Close
-            </Button>
-            <div style={{ flex: 1 }} />
-            <Button
-              danger
-              type="primary"
-              onClick={() => handleProcessAction("reject")}
-              disabled={actionLoading || loadingDetails}
-              loading={actionLoading && _actionType === "reject"}
-              icon={<CloseCircleOutlined />}
-              size="small"
-              style={{ fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
-            >
-              Reject
-            </Button>
-            {isCoordinator && selectedApproval && selectedApproval.category !== "Limit Request" && (
-              <Button
-                onClick={() => handleOpenReturnModal(selectedApproval.expense_id)}
-                disabled={actionLoading || loadingDetails}
-                icon={<RedoOutlined />}
-                size="small"
-                style={{ backgroundColor: "#fa8c16", borderColor: "#fa8c16", color: "#fff", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
-              >
-                Return
-              </Button>
-            )}
-            <Button
-              type="primary"
-              onClick={() => handleProcessAction("approve")}
-              disabled={actionLoading || loadingDetails}
-              loading={actionLoading && _actionType === "approve"}
-              icon={<CheckOutlined />}
-              size="small"
-              style={{ backgroundColor: "#10b981", borderColor: "#10b981", fontWeight: 700, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
-            >
-              Approve
-            </Button>
-          </div>
-        }
-      >
-        {loadingDetails ? (
-          <Loader message="Retrieving itineraries & receipts..." />
-        ) : expenseDetails ? (
-          <div className="space-y-4">
-
-            {/* ── SUBMITTER DETAILS SECTION ── */}
-            <Card
-              size="small"
-              style={{ borderColor: "#e5e7eb", borderRadius: 8, background: "#fafafa" }}
-              bodyStyle={{ padding: "12px 14px" }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <UserOutlined style={{ color: "#4f46e5" }} />
-                  <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#374151" }}>
-                    Submitter Details & Information
-                  </Typography.Text>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <Tag color="processing" style={{ fontWeight: 700, fontSize: 11, fontFamily: "monospace", margin: 0 }}>
-                    {selectedApproval?.expense_code}
-                  </Tag>
-                  <DistrictBadge districtType={expenseDetails?.districtType || selectedApproval?.districtType} />
-                </div>
-              </div>
-              <Descriptions
-                column={1}
-                size="small"
-                labelStyle={{ color: "#9ca3af", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", width: 140 }}
-                contentStyle={{ fontWeight: 700, fontSize: 12, color: "#111827" }}
-              >
-                <Descriptions.Item label={<Space size={4}><UserOutlined />Employee Name</Space>}>
-                  {expenseDetails?.submitter_name || selectedApproval?.employeeName || "—"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Employee ID">
-                  <Typography.Text code style={{ fontSize: 12, color: "#2563eb" }}>
-                    {expenseDetails?.submitter_code || selectedApproval?.eCode || "—"}
-                  </Typography.Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Claim Month / Date">
-                  {selectedApproval?.date || expenseDetails?.date || "—"}
-                </Descriptions.Item>
-                {(expenseDetails?.purpose || selectedApproval?.purpose) && (
-                  <Descriptions.Item label="Purpose / Description">
-                    {expenseDetails?.purpose || selectedApproval?.purpose}
-                  </Descriptions.Item>
-                )}
-              </Descriptions>
-            </Card>
-
-            {/* ── AUTO-APPROVED BANNER ── */}
-            {(expenseDetails.is_auto_approved || expenseDetails.auto_approved || expenseDetails.status === "auto_approved" || selectedApproval?.is_auto_approved) && (
-              <Alert
-                message={<span style={{ fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em" }}>⚡ Claim Auto-Approved by Policy</span>}
-                description="This claim satisfies automatic approval parameters (e.g. 0 reimbursable total or corporate auto-pass rules)."
-                type="success"
-                showIcon
-                style={{ borderRadius: 8 }}
-              />
-            )}
-
-                  {/* EDITABLE ITINERARY LEGS */}
-                  {selectedApproval?.category !== "Limit Request" && (
-                    <div className="space-y-3">
-                    {/* Facility Visits Card Header with antd Card + Tooltip */}
-                    <Card
-                      size="small"
-                      style={{ borderColor: "#e5e7eb", borderRadius: 8 }}
-                      bodyStyle={{ padding: 0 }}
-                      title={
-                        <Space>
-                          <EnvironmentOutlined style={{ color: "#ef4444" }} />
-                          <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                            Facility Visits & Claimed Amounts
-                          </Typography.Text>
-                          <Tooltip title="Adjust TA, Hotel and Local Purchase amounts below if needed.">
-                            <InfoCircleOutlined style={{ color: "#6366f1", cursor: "help", fontSize: 13 }} />
-                          </Tooltip>
-                        </Space>
-                      }
-                    >
-
-                    <div className="space-y-4">
-                      {editedLegs.map((leg, index) => {
-                        const originalLeg = expenseDetails.itineraries[index] || {};
-                        const travelModified = leg.travel_amount !== (originalLeg.amount || 0);
-                        const subModified = leg.sub_amount !== (originalLeg.sub_amount || 0);
-                        const hotelModified = leg.hotel_amount !== (originalLeg.hotel || 0);
-                        const lpModified = leg.local_purchase !== (originalLeg.local_purchase || 0);
-                        const otherModified = leg.other_amount !== (originalLeg.oth_amount || 0);
-
-                        const travelReceiptUrl = getLegAttachmentUrl(leg.leg, leg.mode);
-                        const subReceiptUrl = leg.sub_mode ? getLegAttachmentUrl(leg.leg, leg.sub_mode) : null;
-                        const hotelReceiptUrl = getLegAttachmentUrl(leg.leg, "Hotel");
-                        const mailReceiptUrl = getLegAttachmentUrl(leg.leg, "Communication_Mail");
-                        const lpReceiptUrl = getLegAttachmentUrl(leg.leg, "Local_Purchase");
-                        const otherReceiptUrl = getLegAttachmentUrl(leg.leg, "Other");
-
-                        let actDetails: any = null;
-                        try {
-                          if (originalLeg.activity_details) {
-                            actDetails = typeof originalLeg.activity_details === "string" ? JSON.parse(originalLeg.activity_details) : originalLeg.activity_details;
-                          }
-                        } catch (e) {
-                          console.error("Error parsing activity details", e);
-                        }
-
-                        const callsList = actDetails?.calls_list || [];
-                        const pmsList = actDetails?.pms_list || [];
-                        const assetsList = actDetails?.assets_list || [];
-                        const selectedActs = actDetails?.selected_activities || originalLeg.selected_activities || [];
-                        const mobiliseCount = parseInt(actDetails?.mobilise_asset_count || originalLeg.mobilise_asset_count || "0") || 0;
-                        const calibrationCount = parseInt(actDetails?.calibration_count || originalLeg.calibration_count || "0") || 0;
-                        const activityOtherDesc = actDetails?.activity_other_desc || originalLeg.activity_other_desc || "";
-
-                        const hasActivities = selectedActs.length > 0 || callsList.length > 0 || pmsList.length > 0 || assetsList.length > 0;
-                        
-                        return (
-                          <div key={index} className="border border-gray-250 bg-white rounded shadow-sm overflow-hidden text-xs">
-                    {/* Facility Visit Item header row */}
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#f8fafc", borderBottom: "1px solid #e5e7eb" }}>
-                              <Space size={4}>
-                                <EnvironmentOutlined style={{ color: "#ef4444", fontSize: 13 }} />
-                                <Typography.Text strong style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "#374151" }}>
-                                  Facility Visit {leg.leg}
-                                </Typography.Text>
-                              </Space>
-                              <Space size={4}>
-                                <Tag color="blue" style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", margin: 0 }}>{leg.mode} ({leg.km} KM)</Tag>
-                                {leg.sub_mode && (
-                                  <Tag color="purple" style={{ fontWeight: 700, fontSize: 10, textTransform: "uppercase", margin: 0 }}>Local: {leg.sub_mode}</Tag>
-                                )}
-                              </Space>
-                            </div>
-                            <div className="bg-slate-50 border-b border-gray-200 p-3">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                <div className="bg-white p-2.5 border border-gray-200 rounded-lg flex flex-col justify-between">
-                                  <div>
-                                    <span className="text-[8px] text-gray-400 font-extrabold uppercase block tracking-wider mb-1">From Location (District)</span>
-                                    <p className="font-extrabold text-gray-800 text-xs leading-normal">{leg.from_district || "—"}</p>
-                                  </div>
-                                  <div className="mt-1.5 pt-1.5 border-t border-gray-50">
-                                    <span className="text-[7px] text-gray-400 font-extrabold uppercase block tracking-wider">Facility / Area name</span>
-                                    <p className="text-gray-600 font-bold text-[10px] leading-normal">{leg.from || "—"}</p>
-                                  </div>
-                                </div>
-                                <div className="bg-white p-2.5 border border-gray-200 rounded-lg flex flex-col justify-between">
-                                  <div>
-                                    <span className="text-[8px] text-gray-400 font-extrabold uppercase block tracking-wider mb-1">To Location (District)</span>
-                                    <p className="font-extrabold text-gray-800 text-xs leading-normal">{leg.to_district || "—"}</p>
-                                  </div>
-                                  <div className="mt-1.5 pt-1.5 border-t border-gray-50">
-                                    <span className="text-[7px] text-gray-400 font-extrabold uppercase block tracking-wider">Facility / Area name</span>
-                                    <p className="text-gray-600 font-bold text-[10px] leading-normal">{leg.to || "—"}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Leg inputs and details */}
-                            <div className="p-4 grid grid-cols-1 lg:grid-cols-12 gap-5">
-                              <div className="lg:col-span-4 grid grid-cols-2 gap-3 bg-gray-50 p-3 border border-gray-200 rounded">
-                                <div>
-                                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">Visit Purpose</span>
-                                  <span className="font-semibold text-gray-700 leading-tight">{leg.visit_purpose || originalLeg.visit_purpose || "Field visit"}</span>
-                                </div>
-                                <div>
-                                  <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block">DA Allowance</span>
-                                  <div className="relative mt-1">
-                                      <span className="absolute left-2 top-0.5 text-gray-400 font-bold text-xs">₹</span>
-                                      <input
-                                        type="number"
-                                        value={leg.da}
-                                        onChange={(e) => handleLegAmountChange(index, "da", e.target.value)}
-                                        className="input-lte pl-5 pr-1 py-0.5 text-xs font-bold w-20 h-6 border-amber-300 bg-amber-50/10"
-                                      />
-                                    </div>
-                                </div>
-                                <div className="col-span-2 border-t border-gray-200 pt-2 grid grid-cols-4 gap-1 text-center font-bold">
-                                  <div>
-                                    <span className="text-[8px] text-gray-500 uppercase block" title="Calls Assigned">Calls</span>
-                                    <span className="text-gray-800">{leg.ws_assigned || 0}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[8px] text-gray-500 uppercase block" title="Calls Completed">Done</span>
-                                    <span className="text-green-600">{leg.ws_closed || 0}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[8px] text-gray-500 uppercase block" title="PMS Count">PMS</span>
-                                    <span className="text-gray-850">{leg.ws_pms || 0}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-[8px] text-gray-500 uppercase block" title="Asset Tagging">Asset</span>
-                                    <span className="text-gray-800">{leg.ws_asset || 0}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Middle: Editable Amounts */}
-                              <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-5 gap-3">
-                                {/* Distance KM / Travel Amount based on mode */}
-                                {["Bike", "Car"].includes(leg.mode) ? (
-                                  <div className="space-y-1">
-                                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
-                                      <span>Distance (KM)</span>
-                                      {leg.km !== (originalLeg.km || 0) && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
-                                    </label>
-                                    <div className="relative">
-                                      <input
-                                        type="number"
-                                        value={leg.km}
-                                        onChange={(e) => handleLegAmountChange(index, "km", e.target.value)}
-                                        className={`input-lte px-2 py-1.5 text-xs font-bold ${leg.km !== (originalLeg.km || 0) ? "border-amber-450 bg-amber-50/10" : ""}`}
-                                      />
-                                    </div>
-                                    <span className="text-[9px] text-gray-500 block font-semibold">Amt: ₹{leg.travel_amount} (Orig: {originalLeg.km || 0} KM)</span>
-                                    {renderAttachmentControls(travelReceiptUrl)}
-                                  </div>
-                                ) : (
-                                  <div className="space-y-1">
-                                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
-                                      <span>Travel Amount</span>
-                                      {travelModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
-                                    </label>
-                                    <div className="relative">
-                                      <span className="absolute left-2.5 top-2 text-gray-400 font-bold">₹</span>
-                                      <input
-                                        type="number"
-                                        value={leg.travel_amount}
-                                        onChange={(e) => handleLegAmountChange(index, "travel_amount", e.target.value)}
-                                        className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${travelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
-                                      />
-                                    </div>
-                                    <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.amount || 0}</span>
-                                    {renderAttachmentControls(travelReceiptUrl)}
-                                  </div>
-                                )}
-
-                                {/* Sub Amount */}
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
-                                    <span>Local Conveyance</span>
-                                    {subModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
-                                  </label>
-                                  <div className="relative">
-                                    <span className="absolute left-2.5 top-2 text-gray-400 font-bold">₹</span>
-                                    <input
-                                      type="number"
-                                      value={leg.sub_amount}
-                                      onChange={(e) => handleLegAmountChange(index, "sub_amount", e.target.value)}
-                                      className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${subModified ? "border-amber-450 bg-amber-50/10" : ""}`}
-                                      disabled={!leg.sub_mode}
-                                    />
-                                  </div>
-                                  <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.sub_amount || 0}</span>
-                                  {renderAttachmentControls(subReceiptUrl)}
-                                </div>
-
-                                {/* Hotel stay amount */}
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
-                                    <span>Hotel stay</span>
-                                    {hotelModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
-                                  </label>
-                                  <div className="relative">
-                                    <span className="absolute left-2.5 top-2 text-gray-400 font-bold">₹</span>
-                                    <input
-                                      type="number"
-                                      value={leg.hotel_amount}
-                                      onChange={(e) => handleLegAmountChange(index, "hotel_amount", e.target.value)}
-                                      className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${hotelModified ? "border-amber-450 bg-amber-50/10" : ""}`}
-                                    />
-                                  </div>
-                                  <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.hotel || 0}</span>
-                                  {renderAttachmentControls(hotelReceiptUrl, "👁 Preview Hotel Receipt")}
-                                  {renderAttachmentControls(mailReceiptUrl, "✉ Preview Approval Mail")}
-                                </div>
-
-                                {/* Local purchase */}
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
-                                    <span>Local Purchase</span>
-                                    {lpModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
-                                  </label>
-                                  <div className="relative">
-                                    <span className="absolute left-2.5 top-2 text-gray-400 font-bold">₹</span>
-                                    <input
-                                      type="number"
-                                      value={leg.local_purchase}
-                                      onChange={(e) => handleLegAmountChange(index, "local_purchase", e.target.value)}
-                                      className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${lpModified ? "border-amber-450 bg-amber-50/10" : ""}`}
-                                    />
-                                  </div>
-                                  <span className="text-[9px] text-gray-455 block font-semibold">Original: ₹{originalLeg.local_purchase || 0}</span>
-                                  {renderAttachmentControls(lpReceiptUrl)}
-                                </div>
-
-                                {/* Other / Misc amount */}
-                                <div className="space-y-1">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block flex justify-between">
-                                    <span>Other / Misc</span>
-                                    {otherModified && <span className="text-[9px] text-amber-600 font-extrabold uppercase animate-pulse">Adjusted</span>}
-                                  </label>
-                                  <div className="relative">
-                                    <span className="absolute left-2.5 top-2 text-gray-400 font-bold">₹</span>
-                                    <input
-                                      type="number"
-                                      value={leg.other_amount}
-                                      onChange={(e) => handleLegAmountChange(index, "other_amount", e.target.value)}
-                                      className={`input-lte pl-6 pr-2 py-1.5 text-xs font-bold ${otherModified ? "border-amber-450 bg-amber-50/10" : ""}`}
-                                    />
-                                  </div>
-                                  <span className="text-[9px] text-gray-455 block font-semibold truncate" title={leg.oth_desc || "No Description"}>
-                                    Orig: ₹{originalLeg.oth_amount || 0} ({leg.oth_desc || "Other"})
-                                  </span>
-                                  {renderAttachmentControls(otherReceiptUrl)}
-                                </div>
-                              </div>
-
-                            </div>
-
-                            {/* Verification / Edit remark card for modified fields in this leg */}
-                            {((leg.km !== (originalLeg.km || 0)) ||
-                              (leg.travel_amount !== (originalLeg.amount || 0)) ||
-                              (leg.sub_amount !== (originalLeg.sub_amount || 0)) ||
-                              (leg.hotel_amount !== (originalLeg.hotel || 0)) ||
-                              (leg.local_purchase !== (originalLeg.local_purchase || 0)) ||
-                              (leg.other_amount !== (originalLeg.oth_amount || 0)) ||
-                              (leg.da !== (originalLeg.da || 0))) && (
-                              <div className="mx-4 mb-4 p-3 bg-amber-50/50 border border-amber-200 rounded-lg space-y-2.5 text-left">
-                                <div className="flex items-center gap-1.5 text-amber-800 font-extrabold text-[10px] uppercase tracking-wider">
-                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                  <span>Reason(s) Required for Facility Visit {leg.leg} Modifications</span>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                                  {leg.km !== (originalLeg.km || 0) && (
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Distance KM Reason *</label>
-                                      <input
-                                        type="text"
-                                        value={leg.remarks?.distance_km || ""}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditedLegs(prev => {
-                                            const updated = [...prev];
-                                            updated[index] = {
-                                              ...updated[index],
-                                              remarks: { ...updated[index].remarks, distance_km: val }
-                                            };
-                                            return updated;
-                                          });
-                                        }}
-                                        placeholder="e.g., Shortest path taken, route mapping error"
-                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-450 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                      />
-                                    </div>
-                                  )}
-
-                                  {leg.travel_amount !== (originalLeg.amount || 0) && !["Bike", "Car"].includes(leg.mode) && (
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Travel Amount Reason *</label>
-                                      <input
-                                        type="text"
-                                        value={leg.remarks?.travel_amount || ""}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditedLegs(prev => {
-                                            const updated = [...prev];
-                                            updated[index] = {
-                                              ...updated[index],
-                                              remarks: { ...updated[index].remarks, travel_amount: val }
-                                            };
-                                            return updated;
-                                          });
-                                        }}
-                                        placeholder="e.g., Actual fare paid was higher/lower"
-                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                      />
-                                    </div>
-                                  )}
-
-                                  {leg.sub_amount !== (originalLeg.sub_amount || 0) && (
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Local Conveyance Reason *</label>
-                                      <input
-                                        type="text"
-                                        value={leg.remarks?.sub_amount || ""}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditedLegs(prev => {
-                                            const updated = [...prev];
-                                            updated[index] = {
-                                              ...updated[index],
-                                              remarks: { ...updated[index].remarks, sub_amount: val }
-                                            };
-                                            return updated;
-                                          });
-                                        }}
-                                        placeholder="e.g., Adjusted according to local rates"
-                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                      />
-                                    </div>
-                                  )}
-
-                                  {leg.hotel_amount !== (originalLeg.hotel || 0) && (
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Hotel Stay Reason *</label>
-                                      <input
-                                        type="text"
-                                        value={leg.remarks?.hotel_amount || ""}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditedLegs(prev => {
-                                            const updated = [...prev];
-                                            updated[index] = {
-                                              ...updated[index],
-                                              remarks: { ...updated[index].remarks, hotel_amount: val }
-                                            };
-                                            return updated;
-                                          });
-                                        }}
-                                        placeholder="e.g., Approved out of state limit exceeded"
-                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                      />
-                                    </div>
-                                  )}
-
-                                  {leg.local_purchase !== (originalLeg.local_purchase || 0) && (
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Local Purchase Reason *</label>
-                                      <input
-                                        type="text"
-                                        value={leg.remarks?.local_purchase || ""}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditedLegs(prev => {
-                                            const updated = [...prev];
-                                            updated[index] = {
-                                              ...updated[index],
-                                              remarks: { ...updated[index].remarks, local_purchase: val }
-                                            };
-                                            return updated;
-                                          });
-                                        }}
-                                        placeholder="e.g., Item cost validation from supplier"
-                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                      />
-                                    </div>
-                                  )}
-
-                                  {leg.other_amount !== (originalLeg.oth_amount || 0) && (
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">Other / Misc Reason *</label>
-                                      <input
-                                        type="text"
-                                        value={leg.remarks?.other_amount || ""}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditedLegs(prev => {
-                                            const updated = [...prev];
-                                            updated[index] = {
-                                              ...updated[index],
-                                              remarks: { ...updated[index].remarks, other_amount: val }
-                                            };
-                                            return updated;
-                                          });
-                                        }}
-                                        placeholder="e.g., Missing receipt penalty adjustment"
-                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                      />
-                                    </div>
-                                  )}
-
-                                  {leg.da !== (originalLeg.da || 0) && (
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] font-bold text-amber-700 uppercase block">DA Allowance Reason *</label>
-                                      <input
-                                        type="text"
-                                        value={leg.remarks?.da_amount || ""}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setEditedLegs(prev => {
-                                            const updated = [...prev];
-                                            updated[index] = {
-                                              ...updated[index],
-                                              remarks: { ...updated[index].remarks, da_amount: val }
-                                            };
-                                            return updated;
-                                          });
-                                        }}
-                                        placeholder="e.g., Company guest house stay, DA adjusted"
-                                        className="w-full text-xs px-2.5 py-1.5 border border-amber-300 bg-white rounded font-medium text-amber-900 placeholder-amber-455 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* New Detailed Activities section */}
-                            {hasActivities && (
-                              <div className="border-t border-gray-150 p-4 bg-slate-50/50 flex flex-col gap-2.5 text-left">
-                                <div className="flex flex-wrap gap-2">
-                                  <span className="text-[9px] font-bold text-gray-500 uppercase mr-2 mt-0.5">Activities / Tasks:</span>
-                                  {selectedActs.map((act: string, actIdx: number) => (
-                                    <span key={actIdx} className="px-1.5 py-0.5 rounded bg-gray-200 border border-gray-300 text-[8px] font-bold text-gray-700 uppercase">
-                                      {act}
-                                    </span>
-                                  ))}
-                                </div>
-
-                                {/* Sub-table for Calls */}
-                                {selectedActs.includes("Calls") && callsList.length > 0 && (
-                                  <div className="border border-blue-100 rounded overflow-hidden bg-white max-w-4xl">
-                                    <div className="px-2 py-1 bg-blue-50/50 border-b border-blue-100 text-[9px] font-bold text-blue-700 uppercase">Support Calls Logs</div>
-                                    
-                                    {/* Desktop View Table */}
-                                    <div className="hidden lg:block overflow-x-auto">
-                                      <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                        <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                          <tr>
-                                            <th className="py-1 px-2 text-left">District Name</th>
-                                            <th className="py-1 px-2 text-left">Hospital Name</th>
-                                            <th className="py-1 px-2 text-left">Equipment Name</th>
-                                            <th className="py-1 px-2 text-left">Model</th>
-                                            <th className="py-1 px-2 text-left font-mono">Bar Code</th>
-                                            <th className="py-1 px-2 text-left">Inventory Status</th>
-                                            <th className="py-1 px-2 text-left">Call Type</th>
-                                            <th className="py-1 px-2 text-left">Call Status</th>
-                                            <th className="py-1 px-2 text-center w-12">Photo</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                          {callsList.map((c: any, cIdx: number) => {
-                                            const callPhoto = c.photo_url || c.calls_photo_url || c.photo;
-                                            const fullPhotoUrl = callPhoto ? (callPhoto.startsWith("http") ? callPhoto : `${API_BASE}${callPhoto.startsWith('/') ? '' : '/'}${callPhoto}`) : null;
-                                            return (
-                                              <tr key={cIdx}>
-                                                <td className="py-1 px-2 text-gray-700">{c.asset_details?.district_name || "—"}</td>
-                                                <td className="py-1 px-2 text-gray-700">{c.asset_details?.hospital_name || "—"}</td>
-                                                <td className="py-1 px-2 text-gray-855 font-bold">{c.asset_details?.equipment_name || "—"}</td>
-                                                <td className="py-1 px-2 text-gray-700">{c.asset_details?.model_name || "—"}</td>
-                                                <td className="py-1 px-2 font-mono font-bold text-gray-700">{c.barcode}</td>
-                                                <td className="py-1 px-2">
-                                                  <span className={`px-1.5 py-0.5 rounded font-black text-[8px] uppercase border ${
-                                                    (c.type || c.call_type || "").toLowerCase().includes("online") ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"
-                                                  }`}>
-                                                    {c.type || c.call_type || (c.is_online ? "Online Call" : "Support Call")}
-                                                  </span>
-                                                </td>
-                                                <td className="py-1 px-2">
-                                                  <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    {c.asset_details?.inventory_status || "Active"}
-                                                  </span>
-                                                </td>
-                                                <td className="py-1 px-2">
-                                                  <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-blue-50 text-blue-700 border border-blue-100">
-                                                    {c.status || "Attend"}
-                                                  </span>
-                                                </td>
-                                                <td className="py-1 px-2 text-center">
-                                                  {fullPhotoUrl ? (
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => setLightboxImage(fullPhotoUrl)}
-                                                      className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
-                                                    >
-                                                      View
-                                                    </button>
-                                                  ) : (
-                                                    <span className="text-[10px] text-gray-400">—</span>
-                                                  )}
-                                                </td>
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                      </table>
-                                    </div>
-
-                                    {/* Mobile View Card List */}
-                                    <div className="block lg:hidden space-y-2 p-2.5 bg-gray-50/20">
-                                      {callsList.map((c: any, cIdx: number) => {
-                                        const callPhoto = c.photo_url || c.calls_photo_url || c.photo;
-                                        const fullPhotoUrl = callPhoto ? (callPhoto.startsWith("http") ? callPhoto : `${API_BASE}${callPhoto.startsWith('/') ? '' : '/'}${callPhoto}`) : null;
-                                        return (
-                                          <div key={cIdx} className="bg-white border border-gray-150 rounded-lg p-2.5 space-y-2">
-                                            <div className="flex justify-between items-start">
-                                              <div>
-                                                <span className="font-extrabold text-gray-805 block">{c.asset_details?.equipment_name || "—"}</span>
-                                                <span className="text-[9px] text-gray-500">{c.asset_details?.hospital_name || "—"}</span>
-                                              </div>
-                                              <span className="px-1.5 py-0.5 rounded font-extrabold text-[8px] uppercase bg-blue-50 text-blue-700 border border-blue-100 shrink-0">
-                                                {c.status || "Attend"}
-                                              </span>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-gray-600 font-bold border-t border-gray-100 pt-1.5">
-                                              <div>District: <span className="text-gray-800">{c.asset_details?.district_name || "—"}</span></div>
-                                              <div>Model: <span className="text-gray-800">{c.asset_details?.model_name || "—"}</span></div>
-                                              <div>Barcode: <span className="text-gray-800 font-mono">{c.barcode}</span></div>
-                                              <div>Type: <span className="text-gray-800">{c.type || "Support Call"}</span></div>
-                                            </div>
-                                            {fullPhotoUrl && (
-                                              <div className="pt-2">
-                                                <div className="relative rounded overflow-hidden border border-blue-100 bg-white">
-                                                  <img
-                                                    src={fullPhotoUrl}
-                                                    alt="Call verification"
-                                                    className="w-full h-auto object-cover max-h-48 cursor-pointer"
-                                                    onClick={() => setLightboxImage(fullPhotoUrl)}
-                                                  />
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => setLightboxImage(fullPhotoUrl)}
-                                                    className="absolute bottom-1 right-1 bg-black/60 text-white font-bold text-[8px] px-2 py-0.5 rounded cursor-pointer border-0"
-                                                  >
-                                                    Full View
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Sub-table for PMS */}
-                                {selectedActs.includes("PMS") && pmsList.length > 0 && (
-                                  <div className="border border-amber-100 rounded overflow-hidden bg-white max-w-4xl">
-                                    <div className="px-2 py-1 bg-amber-50/50 border-b border-amber-100 text-[9px] font-bold text-amber-700 uppercase">PMS Service Logs</div>
-                                    
-                                    {/* Desktop View Table */}
-                                    <div className="hidden lg:block overflow-x-auto">
-                                      <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                        <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                          <tr>
-                                            <th className="py-1 px-2 text-left">District Name</th>
-                                            <th className="py-1 px-2 text-left">Hospital Name</th>
-                                            <th className="py-1 px-2 text-left">Equipment Name</th>
-                                            <th className="py-1 px-2 text-left">Model</th>
-                                            <th className="py-1 px-2 text-left font-mono">Bar Code</th>
-                                            <th className="py-1 px-2 text-left">Inventory Status</th>
-                                            <th className="py-1 px-2 text-left">PMS Frequency Period</th>
-                                            <th className="py-1 px-2 text-center w-12">Photo</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                          {pmsList.map((p: any, pIdx: number) => (
-                                            <tr key={pIdx}>
-                                              <td className="py-1 px-2 text-gray-700">{p.asset_details?.district_name || "—"}</td>
-                                              <td className="py-1 px-2 text-gray-700">{p.asset_details?.hospital_name || "—"}</td>
-                                              <td className="py-1 px-2 text-gray-855 font-bold">{p.asset_details?.equipment_name || "—"}</td>
-                                              <td className="py-1 px-2 text-gray-700">{p.asset_details?.model_name || "—"}</td>
-                                              <td className="py-1 px-2 font-mono font-bold text-gray-700">{p.barcode}</td>
-                                              <td className="py-1 px-2">
-                                                <span className="px-1 py-0.2 rounded font-extrabold text-[7px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                                  {p.asset_details?.inventory_status || "Active"}
-                                                </span>
-                                              </td>
-                                              <td className="py-1 px-2 text-gray-650">{p.frequency || "3 month"}</td>
-                                              <td className="py-1 px-2 text-center">
-                                                {p.photo_url ? (
-                                                  <a
-                                                    href={`${API_BASE}${p.photo_url}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-xs text-blue-600 font-bold hover:underline"
-                                                  >
-                                                    View
-                                                  </a>
-                                                ) : (
-                                                  <span className="text-[10px] text-gray-400">—</span>
-                                                )}
-                                              </td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-
-                                    {/* Mobile View Card List */}
-                                     <div className="block lg:hidden space-y-3 p-3 bg-slate-50/50">
-                                       {pmsList.map((p: any, pIdx: number) => (
-                                         <div key={pIdx} className="bg-amber-50/60 rounded-xl p-3.5 space-y-2.5 text-xs text-left w-full">
-                                           <div className="flex justify-between items-start">
-                                             <div>
-                                               <span className="font-black text-slate-900 text-sm block">{p.asset_details?.equipment_name || "—"}</span>
-                                               <span className="text-xs text-slate-600 font-medium">{p.asset_details?.hospital_name || "—"}</span>
-                                             </div>
-                                             <span className="px-2.5 py-1 rounded-full font-black text-xs uppercase bg-emerald-600 text-white shadow-2xs shrink-0">
-                                               {p.frequency || "3 month"}
-                                             </span>
-                                           </div>
-                                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs border-t border-amber-100/70 font-semibold text-slate-700">
-                                             <div>
-                                               <span className="text-slate-400 text-xs block uppercase">District</span>
-                                               <span className="font-bold text-slate-900">{p.asset_details?.district_name || "—"}</span>
-                                             </div>
-                                             <div>
-                                               <span className="text-slate-400 text-xs block uppercase">Model</span>
-                                               <span className="font-bold text-slate-900">{p.asset_details?.model_name || "—"}</span>
-                                             </div>
-                                             <div>
-                                               <span className="text-slate-400 text-xs block uppercase">Barcode</span>
-                                               <span className="font-mono font-bold text-amber-800">{p.barcode || "—"}</span>
-                                             </div>
-                                             <div>
-                                               <span className="text-slate-400 text-xs block uppercase">Status</span>
-                                               <span className="font-bold text-slate-900">{p.asset_details?.inventory_status || "Active"}</span>
-                                             </div>
-                                           </div>
-                                           {p.photo_url && (
-                                             <div className="pt-2">
-                                               <span className="text-slate-500 text-xs uppercase font-bold block mb-1.5">Attachment Photo</span>
-                                               <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
-                                                 <img
-                                                   src={`${API_BASE}${p.photo_url}`}
-                                                   alt="PMS verification"
-                                                   className="w-full h-full object-contain cursor-pointer"
-                                                   onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                 />
-                                                 <button
-                                                   type="button"
-                                                   onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
-                                                   className="absolute bottom-2 right-2 bg-slate-900/80 text-white font-extrabold text-xs px-3 py-1 rounded-lg cursor-pointer border border-white/20 backdrop-blur-md"
-                                                 >
-                                                   Full View
-                                                 </button>
-                                               </div>
-                                             </div>
-                                           )}
-                                         </div>
-                                       ))}
-                                     </div>
-                                  </div>
-                                )}
-
-                                {/* Sub-table for Asset Tagging (Visible to approvers!) */}
-                                {selectedActs.includes("Asset Tagging") && assetsList.length > 0 && (
-                                  <div className="border border-emerald-100 rounded overflow-hidden bg-white max-w-4xl">
-                                    <div className="px-2 py-1 bg-emerald-50/50 border-b border-emerald-100 text-[9px] font-bold text-emerald-700 uppercase">Asset Tagging Records</div>
-                                    
-                                    {/* Desktop View Table */}
-                                    <div className="hidden lg:block overflow-x-auto">
-                                      <table className="min-w-full divide-y divide-gray-100 text-[10px] text-left">
-                                        <thead className="bg-gray-50 text-[8px] text-gray-400 font-bold uppercase">
-                                          <tr>
-                                            <th className="py-1 px-2 text-left">Equipment Name</th>
-                                            <th className="py-1 px-2 text-center w-20">Quantity</th>
-                                            <th className="py-1 px-2 text-right w-28">Tender Rate</th>
-                                            <th className="py-1 px-2 text-right w-28">Total Cost</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                          {assetsList.map((a: any, aIdx: number) => {
-                                            const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
-                                            const costPerUnit = selectedEq ? (selectedEq.asset_value || selectedEq.rmsc_tender_cost || 0) : 0;
-                                            const qty = parseInt(a.quantity || "0") || 0;
-                                            const totalCost = qty * costPerUnit;
-                                            return (
-                                              <tr key={aIdx}>
-                                                <td className="py-1 px-2 font-semibold text-gray-700">{a.equipment_name}</td>
-                                                <td className="py-1 px-2 text-center text-gray-600">{qty}</td>
-                                                <td className="py-1 px-2 text-right text-gray-500">₹{costPerUnit.toLocaleString()}</td>
-                                                <td className="py-1 px-2 text-right font-bold text-emerald-700">₹{totalCost.toLocaleString()}</td>
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                      </table>
-                                    </div>
-
-                                    {/* Mobile View Card List */}
-                                    <div className="block lg:hidden space-y-2 p-2.5 bg-gray-50/20">
-                                      {assetsList.map((a: any, aIdx: number) => {
-                                        const selectedEq = assetValueMaster.find(eq => eq.equipment_name === a.equipment_name);
-                                        const costPerUnit = selectedEq ? (selectedEq.asset_value || selectedEq.rmsc_tender_cost || 0) : 0;
-                                        const qty = parseInt(a.quantity || "0") || 0;
-                                        const totalCost = qty * costPerUnit;
-                                        return (
-                                          <div key={aIdx} className="bg-white border border-gray-150 rounded-lg p-2.5 space-y-1.5">
-                                            <div className="flex justify-between items-center">
-                                              <span className="font-extrabold text-gray-800 text-[10px]">{a.equipment_name}</span>
-                                              <span className="px-2 py-0.5 rounded bg-white border border-emerald-250 text-gray-700 font-bold font-mono">Qty: {qty}</span>
-                                            </div>
-                                            <div className="flex justify-between text-[9px] text-gray-500 font-bold border-t border-gray-100 pt-1">
-                                              <span>Tender Rate: ₹{costPerUnit.toLocaleString()}</span>
-                                              <span className="text-emerald-700 font-extrabold">Total Cost: ₹{totalCost.toLocaleString()}</span>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Quantities for Mobilise, Calibration or Other */}
-                                <div className="flex flex-wrap gap-4 text-[10px] text-gray-600 bg-white p-2 rounded border border-gray-100 max-w-4xl">
-                                  {selectedActs.includes("Mobilise Asset Update") && (
-                                    <div>
-                                      <span className="font-bold text-gray-400 uppercase text-[8px] block">Mobilise Qty</span>
-                                      <span className="font-bold text-indigo-700">{mobiliseCount} units</span>
-                                    </div>
-                                  )}
-                                  {selectedActs.includes("Calibration") && (
-                                    <div>
-                                      <span className="font-bold text-gray-400 uppercase text-[8px] block">Calibration Qty</span>
-                                      <span className="font-bold text-purple-700">{calibrationCount} units</span>
-                                    </div>
-                                  )}
-                                  {selectedActs.includes("Other") && activityOtherDesc && (
-                                    <div className="w-full mt-2 bg-amber-50 border-2 border-amber-300 rounded-lg p-2.5 shadow-xs">
-                                      <span className="font-black text-amber-900 uppercase text-[9px] block mb-1 tracking-wider flex items-center gap-1">
-                                        <span>✏️</span> OTHER ACTIVITY REMARK / PURPOSE:
-                                      </span>
-                                      <span className="font-black text-amber-950 text-xs leading-relaxed block bg-white/90 p-2 rounded border border-amber-200">
-                                        {activityOtherDesc}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                          </div>
-                        );
-                      })}
-                    </div>{/* end space-y-4 leg list */}
-                    </Card>{/* end Facility Visits Card */}
-                  </div>
-                  )}
-
-                  {/* ATTACHMENTS VIEW LIST WITH LIGHTBOX */}
-                  {getAllExpenseAttachments(expenseDetails).length > 0 && (
-                    <Card
-                      size="small"
-                      style={{ borderColor: "#e5e7eb", borderRadius: 8 }}
-                      bodyStyle={{ padding: "12px 14px" }}
-                      title={
-                        <Space>
-                          <PaperClipOutlined style={{ color: "#6366f1" }} />
-                          <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                            Uploaded Receipt Attachments ({getAllExpenseAttachments(expenseDetails).length})
-                          </Typography.Text>
-                        </Space>
-                      }
-                    >
-                      <div className="flex flex-wrap gap-3">
-                        {getAllExpenseAttachments(expenseDetails).map((att, attIdx: number) => {
-                          const { url, billType, filename, isPdf } = att;
-                          let cleanType = billType || "Receipt Bill";
-                          if (url.includes("_Bike_")) cleanType = "Bike Fuel Receipt";
-                          else if (url.includes("_Car_")) cleanType = "Car Fuel Receipt";
-                          else if (url.includes("_Auto_")) cleanType = "Auto Fare Bill";
-                          else if (url.includes("_Bus_")) cleanType = "Bus Ticket";
-                          else if (url.includes("_Train_")) cleanType = "Train Ticket";
-                          else if (url.includes("_Hotel_")) cleanType = "Hotel Stay Invoice";
-                          else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail Screenshot";
-                          else if (url.includes("_Other_Expense_") || url.includes("_Local_Purchase_")) cleanType = "Local Purchase Invoice";
-
-                          const isRemoved = removedAttachments.includes(url);
-                          if (isRemoved) {
-                            return (
-                              <div key={attIdx} className="inline-flex items-center gap-1.5 p-2 bg-red-50 border border-red-200 rounded text-xs font-bold shadow-sm">
-                                <span className="text-[9px] text-red-600 font-extrabold uppercase">Removed</span>
-                                <button
-                                  type="button"
-                                  onClick={() => setRemovedAttachments(prev => prev.filter(item => item !== url))}
-                                  className="text-[9px] text-green-700 hover:underline font-extrabold bg-transparent border-0 cursor-pointer p-0"
-                                >
-                                  Undo
-                                </button>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div key={attIdx} className="relative">
-                              <button
-                                type="button"
-                                onClick={() => setLightboxImage(url)}
-                                className={`inline-flex items-center gap-2 p-2 border rounded text-xs font-bold hover:bg-blue-50 transition-colors shadow-2xs cursor-pointer border-0 ${
-                                  isPdf ? "bg-red-50 text-red-700 border-red-200" : "bg-gray-50 text-blue-600 border-gray-200"
-                                }`}
-                              >
-                                <div className={`h-6 px-1.5 rounded flex items-center justify-center text-[9px] font-extrabold shrink-0 ${
-                                  isPdf ? "bg-red-200 text-red-800" : "bg-blue-100 text-blue-800"
-                                }`}>
-                                  {isPdf ? "PDF" : "IMG"}
-                                </div>
-                                <div className="text-left leading-tight pr-1">
-                                  <p className="text-gray-800 text-[10px] font-bold">{cleanType}</p>
-                                  <span className="text-[8px] text-gray-400 font-mono truncate block max-w-[130px]">{filename}</span>
-                                </div>
-                                <ExternalLink className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setRemovedAttachments(prev => [...prev, url])}
-                                className="absolute -top-1.5 -right-1.5 h-4.5 w-4.5 text-white rounded-full flex items-center justify-center text-[9px] font-extrabold shadow cursor-pointer border border-white"
-                                style={{ backgroundColor: "#dc2626" }}
-                                title="Remove this attachment"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </Card>
-                  )}
-
-                  {/* Dynamic Summary bar — antd Card */}
-                  <Card
-                    size="small"
-                    style={{ background: "#eff6ff", borderColor: "#bfdbfe", borderRadius: 8 }}
-                    bodyStyle={{ padding: "12px 14px" }}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      <div>
-                        <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: "#1e40af" }}>
-                          {selectedApproval?.category === "Limit Request" ? "Limit Extension Request" : "Expense Total Summary"}
-                        </Typography.Text>
-                        <Typography.Text type="secondary" style={{ fontSize: 10, display: "block", marginTop: 2 }}>
-                          {selectedApproval?.category === "Limit Request"
-                            ? "This displays the requested limit extension value."
-                            : "This reflects the sum of Travel, Local Conveyance, DA, Hotel and Local Purchases."}
-                        </Typography.Text>
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
-                        <div>
-                          <Typography.Text type="secondary" style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", display: "block" }}>Requested Value</Typography.Text>
-                          <Typography.Text strong style={{ fontSize: 16, color: "#1d4ed8", fontFamily: "monospace" }}>
-                            {selectedApproval?.category === "Limit Request"
-                              ? `${expenseDetails?.amount} ${selectedApproval?.expense_code?.includes("KM") ? "KM" : "₹"}`
-                              : `₹${(Number(expenseDetails?.amount) || 0).toLocaleString()}`}
-                          </Typography.Text>
-                        </div>
-                        {selectedApproval?.category === "Limit Request" ? (
-                          <div>
-                            <Typography.Text style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", color: "#92400e", display: "block" }}>Adjusted Limit Approved</Typography.Text>
-                            <Typography.Text strong style={{ fontSize: 16, color: "#d97706", fontFamily: "monospace" }}>
-                              {selectedApproval?.expense_code?.includes("KM")
-                                ? `${editedLegs[0]?.km || expenseDetails?.amount} KM`
-                                : `₹${(editedLegs[0]?.travel_amount || expenseDetails?.amount || 0).toLocaleString()}`}
-                            </Typography.Text>
-                          </div>
-                        ) : (
-                          <div>
-                            <Typography.Text style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", color: "#1e40af", display: "block" }}>Adjusted Approval Total</Typography.Text>
-                            <Typography.Text strong style={{ fontSize: 16, fontFamily: "monospace", color: isEdited() ? "#d97706" : "#1d4ed8" }}>
-                              ₹{(Number(calculateAdjustedTotal()) || 0).toLocaleString()}
-                            </Typography.Text>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-
-                  {isEdited() && (
-                    <div className="p-3 bg-amber-50 border border-amber-250 rounded text-amber-800 text-xs font-semibold flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>Warning: You have changed one or more visit amounts. Approving will override values with these adjusted rates.</span>
-                    </div>
-                  )}
-
-                  {/* Comments field — antd Input.TextArea */}
-                  <div className="space-y-1.5 pt-2 text-left">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <Typography.Text strong style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.04em", color: "#374151" }}>
-                        Approver Review Comments / Remarks
-                      </Typography.Text>
-                      <Typography.Text type="secondary" style={{ fontSize: 10 }}>
-                        (Mandatory for rejections, optional for approvals)
-                      </Typography.Text>
-                    </div>
-                    <Input.TextArea
-                      rows={3}
-                      placeholder="Add reviewer notes or reasons for rejection here..."
-                      value={comments}
-                      onChange={(e) => setComments(e.target.value)}
-                      style={{ fontSize: 12, borderRadius: 6 }}
-                    />
-                  </div>
-
-                  {/* Adjustment & Edit Log History — antd Card wrapper */}
-                  {expenseDetails.edit_history && expenseDetails.edit_history.length > 0 && (
-                    <Card
-                      size="small"
-                      style={{ borderColor: "#fde68a", background: "#fffbeb", borderRadius: 8 }}
-                      bodyStyle={{ padding: 0 }}
-                      title={
-                        <Space>
-                          <HistoryOutlined style={{ color: "#92400e" }} />
-                          <Typography.Text strong style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", color: "#92400e" }}>
-                            Adjustment & Edit Log History
-                          </Typography.Text>
-                        </Space>
-                      }
-                    >
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-[10px]">
-                          <thead>
-                            <tr className="border-b border-amber-200 uppercase font-bold tracking-wider text-amber-700 bg-amber-50/20">
-                              <th className="py-2 px-3 w-12">Leg</th>
-                              <th className="py-2 px-3">Field Edited</th>
-                              <th className="py-2 px-3">Original Value</th>
-                              <th className="py-2 px-3">Updated Value</th>
-                              <th className="py-2 px-3">Reason / Remark</th>
-                              <th className="py-2 px-3">Edited By</th>
-                              <th className="py-2 px-3 text-right">Date</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-amber-100 bg-white">
-                            {expenseDetails.edit_history.map((log: any, logIdx: number) => {
-                              const cleanField = log.field_name === "travel_amount" ? "Travel Amount"
-                                : log.field_name === "sub_amount" ? "Local Conveyance"
-                                : log.field_name === "hotel_amount" ? "Hotel stay"
-                                : log.field_name === "other_amount" ? "Other / Misc"
-                                : log.field_name === "distance_km" ? "Distance KM"
-                                : log.field_name === "da_amount" ? "DA Amount"
-                                : log.field_name === "local_purchase" ? "Local Purchase"
-                                : log.field_name;
-                              return (
-                                <tr key={logIdx} className="hover:bg-amber-50/10 text-slate-700">
-                                  <td className="py-2 px-3 font-mono font-bold text-gray-500">Facility Visit {log.leg_number}</td>
-                                  <td className="py-2 px-3 font-semibold text-gray-800">{cleanField}</td>
-                                  <td className="py-2 px-3 font-mono text-gray-500">{log.field_name === "distance_km" ? `${log.old_value} KM` : `₹${parseFloat(log.old_value || "0").toLocaleString()}`}</td>
-                                  <td className="py-2 px-3 font-mono font-bold text-blue-600">{log.field_name === "distance_km" ? `${log.new_value} KM` : `₹${parseFloat(log.new_value || "0").toLocaleString()}`}</td>
-                                  <td className="py-2 px-3 italic text-gray-600 whitespace-normal break-words min-w-[150px] max-w-[250px]" title={log.comment}>{log.comment || "—"}</td>
-                                  <td className="py-2 px-3 font-semibold text-slate-800">
-                                    {log.editor_name} <span className="text-[8px] text-amber-600 font-bold block">{log.editor_role}</span>
-                                  </td>
-                                  <td className="py-2 px-3 text-right text-gray-500 font-mono text-[9px]">{formatDateTime(log.created_at)}</td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </Card>
-                  )}
-                </div>
-              ) : (
-                <div className="py-20 text-center text-gray-400">
-                  <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-                  <p className="font-bold">Error: Could not retrieve claim data.</p>
-                </div>
-              )}
-            {showModalScrollTop && (
-              <button
-                type="button"
-                onClick={() => {
-                  const body = document.querySelector(".approval-review-modal-wrap .ant-modal-body");
-                  if (body) body.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                style={{
-                  position: "fixed",
-                  right: "24px",
-                  bottom: "76px",
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "50%",
-                  backgroundColor: "#4f46e5",
-                  color: "#ffffff",
-                  border: "none",
-                  boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  zIndex: 9999
-                }}
-                className="hover:scale-110 active:scale-95 transition-all"
-              >
-                <ChevronUp className="w-5 h-5 text-white" />
-              </button>
-            )}
-      </Modal>
+        navigate={navigate}
+        setLightboxImage={(url) => setLightboxImage(url)}
+        getStatusBadgeClass={(status) => {
+          if (status === "approved" || status === "auto_approved") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+          if (status === "rejected") return "bg-rose-50 text-rose-700 border-rose-200";
+          return "bg-amber-50 text-amber-700 border-amber-200";
+        }}
+        getStatusLabel={(status) => {
+          if (status === "auto_approved") return "Auto Approved";
+          if (status === "approved") return "Approved";
+          if (status === "rejected") return "Rejected";
+          return "Pending";
+        }}
+      />
 
       {/* ================= BATCH ACTION CONFIRMATION MODAL ================= */}
       <Modal
         open={showBulkModal && !!bulkActionType}
         destroyOnClose={true}
+        centered
         onCancel={() => {
           setShowBulkModal(false);
           setBulkActionType(null);
           setBulkComments("");
         }}
-        width={500}
-        title={
-          <span className="font-bold text-sm uppercase">
-            Confirm Bulk {bulkActionType === "approve" ? "Reimbursement Approval" : "Claims Rejection"}
-          </span>
-        }
-        footer={[
-          <Button
-            key="cancel"
-            onClick={() => {
-              setShowBulkModal(false);
-              setBulkActionType(null);
-              setBulkComments("");
-            }}
-            disabled={bulkActionLoading}
-          >
-            Cancel
-          </Button>,
-          <Button
-            key="submit"
-            type="primary"
-            danger={bulkActionType === "reject"}
-            style={bulkActionType === "approve" ? { backgroundColor: "#10b981", borderColor: "#10b981" } : undefined}
-            onClick={handleBulkSubmit}
-            loading={bulkActionLoading}
-            className="font-bold text-xs"
-          >
-            Confirm Bulk {bulkActionType === "approve" ? "Approval" : "Rejection"}
-          </Button>
-        ]}
+        width={480}
+        closeIcon={false}
+        styles={{ body: { padding: 0 } }}
+        footer={null}
       >
-        <div className="space-y-4 pt-2 text-left">
-          <div className="text-xs text-gray-700 bg-gray-50 p-3 border border-gray-200 rounded space-y-1.5">
-            <p>Selected claims count: <span className="font-bold text-gray-900">{selectedIds.length} Claims</span></p>
-            {bulkActionType === "approve" && (
-              <p>Accumulated Total Value: <span className="font-bold text-blue-700">₹{(Number(getSelectedTotalAmount()) || 0).toLocaleString()}</span></p>
-            )}
-            <p className="text-[10px] text-gray-400 font-semibold italic mt-1 leading-normal">
-              Note: Bulk actions will process all selected claims sequentially as-is without any visit amount modifications.
-            </p>
+        <div className="bg-white border border-slate-400 rounded-none shadow-2xl overflow-hidden text-left">
+          {/* Header Banner */}
+          <div className={`px-4 py-3 text-white flex items-center justify-between rounded-none ${
+            bulkActionType === "reject" ? "bg-rose-700" : "bg-[#4A6A8A]"
+          }`}>
+            <span className="font-extrabold text-xs uppercase tracking-wider flex items-center gap-2">
+              {bulkActionType === "reject" ? <X className="w-4 h-4 text-white" /> : <Check className="w-4 h-4 text-emerald-300" />}
+              Confirm Bulk {bulkActionType === "approve" ? "Reimbursement Approval" : "Claims Rejection"}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setShowBulkModal(false);
+                setBulkActionType(null);
+                setBulkComments("");
+              }}
+              className="text-white/80 hover:text-white transition-colors cursor-pointer bg-transparent border-0"
+            >
+              <X size={16} />
+            </button>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-gray-700 flex justify-between">
-              <span>Review Comments / Remarks</span>
-              <span className="text-[10px] text-gray-400">
-                {bulkActionType === "reject" ? "* (Mandatory)" : "(Optional)"}
-              </span>
-            </label>
-            <Input.TextArea
-              rows={3}
-              placeholder={bulkActionType === "reject" ? "State rejection reasons (mandatory)..." : "Add approval notes..."}
-              value={bulkComments}
-              onChange={(e) => setBulkComments(e.target.value)}
-            />
+          {/* Body */}
+          <div className="p-4 space-y-4">
+            <div className="bg-slate-50 border border-slate-300 rounded-none p-3.5 space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-600 font-extrabold uppercase text-[10px] tracking-wider">Selected Claims Count</span>
+                <span className="font-mono font-extrabold text-xs text-[#4A6A8A] bg-white px-2 py-0.5 border border-slate-300">
+                  {selectedIds.length} Claims
+                </span>
+              </div>
+              {bulkActionType === "approve" && (
+                <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200">
+                  <span className="text-slate-600 font-extrabold uppercase text-[10px] tracking-wider">Accumulated Total Value</span>
+                  <span className="font-mono font-black text-sm text-emerald-700">
+                    ₹{(Number(getSelectedTotalAmount()) || 0).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              <p className="text-[10.5px] text-slate-500 font-semibold italic mt-1 leading-tight border-t border-slate-200 pt-1.5">
+                Note: Bulk actions will process all selected claims sequentially as-is without any visit amount modifications.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10.5px] font-extrabold text-slate-700 flex justify-between tracking-wider uppercase">
+                <span>Review Comments / Remarks</span>
+                <span className="text-[10px] text-slate-400">
+                  {bulkActionType === "reject" ? "* (Mandatory)" : "(Optional)"}
+                </span>
+              </label>
+              <Input.TextArea
+                rows={3}
+                placeholder={bulkActionType === "reject" ? "State rejection reasons (mandatory)..." : "Add approval notes..."}
+                value={bulkComments}
+                onChange={(e) => setBulkComments(e.target.value)}
+                className="rounded-none border-slate-300 focus:border-[#4A6A8A] text-xs p-2"
+              />
+            </div>
+
+            {/* Footer buttons */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBulkModal(false);
+                  setBulkActionType(null);
+                  setBulkComments("");
+                }}
+                disabled={bulkActionLoading}
+                className="px-4 py-1.5 rounded-none text-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <Button
+                type="primary"
+                danger={bulkActionType === "reject"}
+                style={bulkActionType === "approve" ? { backgroundColor: "#10b981", borderColor: "#10b981" } : undefined}
+                onClick={handleBulkSubmit}
+                loading={bulkActionLoading}
+                className={`font-black text-xs uppercase tracking-wider rounded-none h-8 px-4 border-0 cursor-pointer shadow-2xs ${
+                  bulkActionType === "reject" ? "bg-rose-700 hover:bg-rose-800" : "bg-emerald-600 hover:bg-emerald-700"
+                }`}
+              >
+                Confirm Bulk {bulkActionType === "approve" ? "Approval" : "Rejection"}
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>
@@ -3018,71 +1806,116 @@ export default function ApprovalPage() {
       {/* ================= RECEIPT IMAGE / DOCUMENT LIGHTBOX POPUP ================= */}
       {lightboxImage && createPortal(
         <div 
-          className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 animate-fadeIn"
+          className="fixed inset-0 bg-black/85 flex items-center justify-center p-3 sm:p-6 animate-fadeIn"
           style={{ zIndex: 99999999 }}
-          onClick={() => setLightboxImage(null)}
+          onClick={() => { setLightboxImage(null); setLbZoom(1); }}
         >
-          <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-lg p-3 flex flex-col items-center justify-center select-none pointer-events-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center w-full mb-2 pb-2 border-b border-slate-700">
-              <span className="text-xs font-bold text-slate-200">Attachment Image Preview</span>
-              <div className="flex gap-2 items-center">
+          <div 
+            className="relative bg-white border border-slate-400 rounded-none p-3 flex flex-col items-center justify-center select-none pointer-events-auto shadow-2xl max-w-[92vw] max-h-[92vh] overflow-hidden" 
+            style={{ width: "fit-content" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header bar */}
+            <div className="flex flex-wrap justify-between items-center w-full gap-3 mb-2.5 pb-2 border-b border-slate-200">
+              <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider whitespace-nowrap">
+                Attachment Preview
+              </span>
+
+              {/* Zoom Controls */}
+              {!(lightboxImage?.toLowerCase().endsWith(".pdf") || lightboxImage?.toLowerCase().includes(".pdf?")) && (
+                <div className="flex items-center gap-1 bg-slate-100 p-0.5 border border-slate-300 rounded-none">
+                  <button
+                    type="button"
+                    onClick={() => setLbZoom(z => Math.max(0.2, parseFloat((z - 0.25).toFixed(2))))}
+                    className="w-6 h-6 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center rounded-none cursor-pointer border-0"
+                    title="Zoom Out"
+                  >−</button>
+                  <span className="text-[11px] font-mono font-bold text-slate-700 px-1.5 min-w-[38px] text-center select-none">
+                    {Math.round(lbZoom * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setLbZoom(z => Math.min(5, parseFloat((z + 0.25).toFixed(2))))}
+                    className="w-6 h-6 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center rounded-none cursor-pointer border-0"
+                    title="Zoom In"
+                  >+</button>
+                  <button
+                    type="button"
+                    onClick={() => setLbZoom(1)}
+                    className="px-2 h-6 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[10px] uppercase flex items-center justify-center rounded-none cursor-pointer border-0"
+                    title="Reset Zoom"
+                  >Reset</button>
+                </div>
+              )}
+
+              <div className="flex gap-1.5 items-center shrink-0">
                 <a 
                   href={displayImageUrl || lightboxImage} 
                   target="_blank"
                   rel="noopener noreferrer"
                   download="attachment_image.png"
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-bold no-underline flex items-center gap-1"
+                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-none text-[11px] font-extrabold no-underline flex items-center gap-1 cursor-pointer transition-colors"
                 >
-                  ⬇ Download Image
+                  ⬇ Download
                 </a>
                 <button
-                  onClick={() => setLightboxImage(null)}
-                  className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[11px] font-bold border-0 cursor-pointer transition-colors"
+                  onClick={() => { setLightboxImage(null); setLbZoom(1); }}
+                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-none text-[11px] font-extrabold border-0 cursor-pointer transition-colors"
                 >
                   ✕ Close
                 </button>
               </div>
             </div>
-            {isLoadingPdf ? (
-              <div className="text-white flex flex-col items-center justify-center gap-3 p-12 rounded bg-slate-900/50 select-none">
-                <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-                <span className="text-sm font-bold tracking-wide">Loading PDF Document...</span>
-              </div>
-            ) : isConvertingHeic ? (
-              <div className="text-white flex flex-col items-center justify-center gap-3 p-8 rounded bg-slate-900/50 select-none">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                <span className="text-xs font-bold tracking-wide">Converting Apple HEIC image...</span>
-              </div>
-            ) : (lightboxImage?.toLowerCase().endsWith(".pdf") || lightboxImage?.toLowerCase().includes(".pdf?")) ? (
-              <div className="w-full flex flex-col items-center">
-                <iframe 
+
+            {/* Content area fitting image tightly with full scroll support */}
+            <div className="overflow-auto max-h-[80vh] max-w-[88vw] p-2 flex items-start justify-center select-text">
+              {isLoadingPdf ? (
+                <div className="text-slate-700 flex flex-col items-center justify-center gap-3 p-12 bg-slate-50">
+                  <Loader2 className="w-10 h-10 animate-spin text-[#4A6A8A]" />
+                  <span className="text-xs font-bold tracking-wide">Loading PDF Document...</span>
+                </div>
+              ) : isConvertingHeic ? (
+                <div className="text-slate-700 flex flex-col items-center justify-center gap-3 p-8 bg-slate-50 border border-slate-200">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#4A6A8A]" />
+                  <span className="text-xs font-bold tracking-wide">Converting Apple HEIC image...</span>
+                </div>
+              ) : (lightboxImage?.toLowerCase().endsWith(".pdf") || lightboxImage?.toLowerCase().includes(".pdf?")) ? (
+                <div className="w-full flex flex-col items-center">
+                  <iframe 
+                    src={displayImageUrl || lightboxImage} 
+                    title="Document Preview"
+                    className="w-[80vw] max-w-4xl h-[70vh] border border-slate-300 rounded-none bg-white"
+                  />
+                </div>
+              ) : imageLoadError ? (
+                <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 border border-slate-300 max-w-md my-2">
+                  <span className="text-amber-500 text-3xl font-bold mb-2">⚠️</span>
+                  <p className="text-sm font-bold text-slate-800 mb-1">Image Preview Unavailable</p>
+                  <p className="text-xs text-slate-500 mb-4">Click below to open or download the attachment file directly.</p>
+                  <a
+                    href={displayImageUrl || lightboxImage}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white rounded-none text-xs font-bold no-underline"
+                  >
+                    Open File in New Tab ↗
+                  </a>
+                </div>
+              ) : (
+                <img 
                   src={displayImageUrl || lightboxImage} 
-                  title="Document Preview"
-                  className="w-full h-[70vh] border border-slate-700 rounded bg-white"
+                  alt="Receipt Invoice Lightbox" 
+                  style={{ 
+                    width: lbZoom > 1 ? `${Math.round(lbZoom * 100)}%` : "auto",
+                    maxWidth: lbZoom === 1 ? "85vw" : "none",
+                    maxHeight: lbZoom === 1 ? "75vh" : "none",
+                    transition: "all 0.2s ease"
+                  }}
+                  className="object-contain border border-slate-200 shadow-2xs block"
+                  onError={() => setImageLoadError(true)}
                 />
-              </div>
-            ) : imageLoadError ? (
-              <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-800/80 rounded border border-slate-700 max-w-md my-4 select-none">
-                <span className="text-amber-400 text-3xl font-bold mb-2">⚠️</span>
-                <p className="text-sm font-bold text-white mb-1">Image Preview Unavailable</p>
-                <p className="text-xs text-slate-300 mb-4">Click below to open or download the attachment file directly.</p>
-                <a
-                  href={displayImageUrl || lightboxImage}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold no-underline"
-                >
-                  Open File in New Tab ↗
-                </a>
-              </div>
-            ) : (
-              <img 
-                src={displayImageUrl || lightboxImage} 
-                alt="Receipt Invoice Lightbox" 
-                className="max-w-full max-h-[75vh] rounded shadow-2xl border border-white/10 object-contain select-none pointer-events-auto"
-                onError={() => setImageLoadError(true)}
-              />
-            )}
+              )}
+            </div>
           </div>
         </div>,
         document.body
@@ -3134,32 +1967,7 @@ export default function ApprovalPage() {
         </div>
       </Modal>
 
-      {showPageScrollTop && (
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          style={{
-            position: "fixed",
-            right: "24px",
-            bottom: "80px",
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            backgroundColor: "#4f46e5",
-            color: "#ffffff",
-            border: "none",
-            boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            zIndex: 999
-          }}
-          className="hover:scale-110 active:scale-95 transition-all"
-        >
-          <ChevronUp className="w-6 h-6 text-white" />
-        </button>
-      )}
+
       {/* Sticky Mobile Bulk Action Bar */}
       {isBulkAuthorized && selectedIds.length > 0 && (
         <div 

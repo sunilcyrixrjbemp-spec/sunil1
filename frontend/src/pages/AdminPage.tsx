@@ -6,8 +6,6 @@ import { authService } from "../services/authService";
 import { formatToIST } from "../utils/timezone";
 
 import { UploadCloud, Pencil, Trash2, Plus, Download } from "lucide-react";
-import { ResponsivePie } from "@nivo/pie";
-import { ResponsiveBar } from "@nivo/bar";
 import { 
   Card, 
   Table, 
@@ -23,6 +21,8 @@ import {
   Select,
   InputNumber
 } from "antd";
+import { SaaSDonutChart } from "../components/common/SaaSCharts";
+
 import { 
   PlusOutlined, 
   UploadOutlined, 
@@ -38,7 +38,9 @@ import {
   TeamOutlined,
   SettingOutlined,
   BarChartOutlined,
-  ReloadOutlined
+  PieChartOutlined,
+  ReloadOutlined,
+  FilterOutlined
 } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
@@ -202,12 +204,12 @@ const ALL_WINDOWS = [
   { id: "admin", name: "Admin Panel" },
   { id: "approval", name: "Approval Center" },
   { id: "expense", name: "Submit Expense" },
+  { id: "attendance", name: "Attendance Roster" },
   { id: "analysis", name: "Analysis" },
   { id: "report", name: "Month Report" },
   { id: "mis_report", name: "MIS Report" },
   { id: "kpi", name: "KPI Dashboard" },
   { id: "new_dashboard", name: "New Dashboard" },
-  { id: "upload_data", name: "Upload Data" },
   { id: "asset_upload", name: "Asset Inventory" },
   { id: "penalty_report", name: "Penalty Report" },
   { id: "consolidated_report", name: "Consolidated Report" },
@@ -1236,11 +1238,24 @@ export default function AdminPage() {
     return Array.from(managers).sort();
   }, [safeUsers]);
 
-  const ALL_ROLES_LIST = [
-    "Admin", "Manager", "Zonal Manager", "Coordinator", "Engineer", 
-    "Service Engineer", "Technician", "MIS", "VP", "Project Head", 
-    "Accountant", "HR", "Travel Desk"
-  ];
+  const availableUserRoles = useMemo(() => {
+    const roles = new Set<string>();
+    safeUsers.forEach(u => {
+      if (u.role && u.role.trim()) {
+        roles.add(u.role.trim());
+      }
+    });
+    return Array.from(roles).sort();
+  }, [safeUsers]);
+
+  const availableUserStatuses = useMemo(() => {
+    const statuses = new Set<string>();
+    safeUsers.forEach(u => {
+      const st = u.user_status ? u.user_status.trim().toLowerCase() : "active";
+      if (st) statuses.add(st);
+    });
+    return Array.from(statuses).sort();
+  }, [safeUsers]);
 
   const filteredUsers = useMemo(() => {
     return safeUsers.filter(u => {
@@ -1333,6 +1348,18 @@ export default function AdminPage() {
       .map(u => u.district?.trim()).filter(Boolean))
   ).sort((a, b) => a!.localeCompare(b!));
 
+  // Helper to group long distribution lists into Top N + "Others" to prevent label overlapping
+  const groupTopItems = (list: { name: string; value: number }[], topN: number = 6) => {
+    if (list.length <= topN) return list;
+    const top = list.slice(0, topN);
+    const rest = list.slice(topN);
+    const othersVal = rest.reduce((sum, item) => sum + item.value, 0);
+    if (othersVal > 0) {
+      top.push({ name: "Others", value: othersVal });
+    }
+    return top;
+  };
+
   // 1. Calculate District-wise distribution
   const getDistrictData = () => {
     const counts: Record<string, number> = {};
@@ -1340,9 +1367,10 @@ export default function AdminPage() {
       const dist = u.district?.trim() || "N/A";
       counts[dist] = (counts[dist] || 0) + 1;
     });
-    return Object.entries(counts)
+    const sorted = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
+    return groupTopItems(sorted, 6);
   };
 
   // 2. Calculate Designation-wise distribution
@@ -1352,9 +1380,10 @@ export default function AdminPage() {
       const desg = u.designation?.trim() || "N/A";
       counts[desg] = (counts[desg] || 0) + 1;
     });
-    return Object.entries(counts)
+    const sorted = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
+    return groupTopItems(sorted, 6);
   };
 
   // 3. Calculate Zone-wise distribution
@@ -1364,9 +1393,10 @@ export default function AdminPage() {
       const zone = u.zone?.trim() || "N/A";
       counts[zone] = (counts[zone] || 0) + 1;
     });
-    return Object.entries(counts)
+    const sorted = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
+    return groupTopItems(sorted, 6);
   };
 
   // 4. Calculate Manager-wise distribution
@@ -1376,9 +1406,10 @@ export default function AdminPage() {
       const mng = u.manager?.trim() || "N/A";
       counts[mng] = (counts[mng] || 0) + 1;
     });
-    return Object.entries(counts)
+    const sorted = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
+    return groupTopItems(sorted, 6);
   };
 
   const mList = getEligibleManagers();
@@ -1387,217 +1418,165 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="space-y-6 text-slate-800 animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 max-w-[1600px] mx-auto min-h-screen font-sans">
+      <div className="space-y-4 text-[#212529] animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 max-w-[1600px] mx-auto min-h-screen font-sans">
         
-        {/* ================= ULTRA-PREMIUM UNIFIED ADMIN CONTROL CENTER ================= */}
-        
-        {/* Top Executive Header Banner */}
-        <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm relative overflow-hidden">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="h-14 w-14 rounded-2xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 text-2xl font-black shadow-2xs shrink-0">
-                <ControlOutlined />
-              </div>
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <h1 className="text-2xl font-black text-slate-900 m-0 uppercase tracking-wide font-['Outfit']">
-                    Admin Governance Center
-                  </h1>
-                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/80 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-2xs">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    D1 Cloudflare Synced
-                  </span>
-                </div>
-                <p className="text-slate-500 text-xs mt-1 block font-medium max-w-2xl font-['Plus_Jakarta_Sans']">
-                  Configure enterprise user access profiles, multi-level hierarchy approval routing, screen permission matrices, and system governance parameters.
-                </p>
-              </div>
+        {/* Enterprise Header Banner */}
+        <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
+              <ControlOutlined className="text-base" />
             </div>
-
-            {/* Top Quick Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  fetchInitialData();
-                  toast.success("Refreshed Governance Data!");
-                }}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl font-bold text-xs h-10 px-4 flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <ReloadOutlined className="text-slate-500" />
-                <span>Sync Data</span>
-              </button>
+            <div>
+              <h1 className="text-sm font-extrabold text-slate-900 leading-none">ADMIN GOVERNANCE CENTER</h1>
+              <p className="text-[10px] text-slate-500 mt-0.5">Enterprise user profiles, multi-level hierarchy routing, and system parameters.</p>
             </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-none border border-emerald-200 font-mono flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Cloudflare D1 Synced
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                fetchInitialData();
+                toast.success("Refreshed Governance Data!");
+              }}
+              className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none px-3.5 py-1 border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+            >
+              <ReloadOutlined className="text-white text-xs" />
+              <span>Sync Data</span>
+            </button>
           </div>
         </div>
 
         {/* 6 Executive Summary Metric Column Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           
           {/* Card 1: Total Users */}
-          <div className="bg-white border border-purple-200/90 rounded-2xl p-4 shadow-sm relative overflow-hidden group hover:border-purple-400 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-purple-700 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Total Users</span>
-              <div className="h-8 w-8 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 text-sm font-black">
-                <UserOutlined />
-              </div>
+          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+            <div className="w-9 h-9 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0 font-bold">
+              <UserOutlined />
             </div>
-            <div className="mt-2">
-              <span className="text-3xl font-black text-slate-900 font-['Outfit'] tracking-tight">{users.length}</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold">
-              <span className="text-emerald-600">Active: {users.filter(u => u.user_status === 'active' || !u.user_status).length}</span>
-              <span className="text-rose-600">Disabled: {users.filter(u => u.user_status && u.user_status !== 'active').length}</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Users</span>
+              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{users.length}</span>
+              <span className="text-[9px] text-emerald-700 font-bold uppercase block mt-0.5">Active: {users.filter(u => u.user_status === 'active' || !u.user_status).length}</span>
             </div>
           </div>
 
           {/* Card 2: Field Engineers */}
-          <div className="bg-white border border-emerald-200/90 rounded-2xl p-4 shadow-sm relative overflow-hidden group hover:border-emerald-400 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-emerald-700 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Field Engineers</span>
-              <div className="h-8 w-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-sm font-black">
-                <TeamOutlined />
-              </div>
+          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+            <div className="w-9 h-9 rounded-none bg-emerald-600 flex items-center justify-center text-white shrink-0 font-bold">
+              <TeamOutlined />
             </div>
-            <div className="mt-2">
-              <span className="text-3xl font-black text-slate-900 font-['Outfit'] tracking-tight">{users.filter(u => u.role?.toLowerCase().includes('engineer')).length}</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500">
-              <span>Field Staff</span>
-              <span className="text-emerald-600 font-extrabold">Deployed</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Engineers</span>
+              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{users.filter(u => u.role?.toLowerCase().includes('engineer')).length}</span>
+              <span className="text-[9px] text-emerald-700 font-bold uppercase block mt-0.5">Deployed</span>
             </div>
           </div>
 
           {/* Card 3: Managers & ZMs */}
-          <div className="bg-white border border-cyan-200/90 rounded-2xl p-4 shadow-sm relative overflow-hidden group hover:border-cyan-400 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-cyan-700 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Managers & ZMs</span>
-              <div className="h-8 w-8 rounded-xl bg-cyan-50 border border-cyan-100 flex items-center justify-center text-cyan-600 text-sm font-black">
-                <ControlOutlined />
-              </div>
+          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+            <div className="w-9 h-9 rounded-none bg-cyan-600 flex items-center justify-center text-white shrink-0 font-bold">
+              <ControlOutlined />
             </div>
-            <div className="mt-2">
-              <span className="text-3xl font-black text-slate-900 font-['Outfit'] tracking-tight">{users.filter(u => u.role?.toLowerCase().includes('manager')).length}</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500">
-              <span>Approval Leaders</span>
-              <span className="text-cyan-600 font-extrabold">Escalation</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Managers</span>
+              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{users.filter(u => u.role?.toLowerCase().includes('manager')).length}</span>
+              <span className="text-[9px] text-cyan-700 font-bold uppercase block mt-0.5">Approval L2/L3</span>
             </div>
           </div>
 
           {/* Card 4: Admins & MIS */}
-          <div className="bg-white border border-amber-200/90 rounded-2xl p-4 shadow-sm relative overflow-hidden group hover:border-amber-400 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-amber-700 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Admins & MIS</span>
-              <div className="h-8 w-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 text-sm font-black">
-                <LockOutlined />
-              </div>
+          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+            <div className="w-9 h-9 rounded-none bg-amber-600 flex items-center justify-center text-white shrink-0 font-bold">
+              <LockOutlined />
             </div>
-            <div className="mt-2">
-              <span className="text-3xl font-black text-slate-900 font-['Outfit'] tracking-tight">{users.filter(u => u.role?.toLowerCase().includes('admin') || u.role?.toLowerCase().includes('mis')).length}</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500">
-              <span>Full Control</span>
-              <span className="text-amber-600 font-extrabold">Governance</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Admins / MIS</span>
+              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{users.filter(u => u.role?.toLowerCase().includes('admin') || u.role?.toLowerCase().includes('mis')).length}</span>
+              <span className="text-[9px] text-amber-700 font-bold uppercase block mt-0.5">Full Access</span>
             </div>
           </div>
 
           {/* Card 5: Hierarchy Rules */}
-          <div className="bg-white border border-rose-200/90 rounded-2xl p-4 shadow-sm relative overflow-hidden group hover:border-rose-400 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-rose-700 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Hierarchy Rules</span>
-              <div className="h-8 w-8 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 text-sm font-black">
-                <SafetyCertificateOutlined />
-              </div>
+          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+            <div className="w-9 h-9 rounded-none bg-rose-600 flex items-center justify-center text-white shrink-0 font-bold">
+              <SafetyCertificateOutlined />
             </div>
-            <div className="mt-2">
-              <span className="text-3xl font-black text-slate-900 font-['Outfit'] tracking-tight">{hierarchies.length}</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500">
-              <span>Mapped Rules</span>
-              <span className="text-rose-600 font-extrabold">Workflow</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Hierarchy</span>
+              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{hierarchies.length}</span>
+              <span className="text-[9px] text-rose-700 font-bold uppercase block mt-0.5">Mapped Rules</span>
             </div>
           </div>
 
           {/* Card 6: Screen Security */}
-          <div className="bg-white border border-blue-200/90 rounded-2xl p-4 shadow-sm relative overflow-hidden group hover:border-blue-400 hover:shadow-md transition-all">
-            <div className="flex items-center justify-between">
-              <span className="text-blue-700 text-[10px] font-black uppercase tracking-wider block font-['Outfit']">Screen Windows</span>
-              <div className="h-8 w-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 text-sm font-black">
-                <DatabaseOutlined />
-              </div>
+          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+            <div className="w-9 h-9 rounded-none bg-blue-600 flex items-center justify-center text-white shrink-0 font-bold">
+              <DatabaseOutlined />
             </div>
-            <div className="mt-2">
-              <span className="text-3xl font-black text-slate-900 font-['Outfit'] tracking-tight">{ALL_WINDOWS.length}</span>
-            </div>
-            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-bold text-slate-500">
-              <span className="text-emerald-600 font-extrabold flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                D1 Active
-              </span>
-              <span>Matrix</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Windows</span>
+              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{ALL_WINDOWS.length}</span>
+              <span className="text-[9px] text-blue-700 font-bold uppercase block mt-0.5">D1 Matrix</span>
             </div>
           </div>
 
         </div>
 
-        {/* Executive Tab Navigation Strip */}
-        <div className="bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center gap-1.5 overflow-x-auto">
+        {/* Enterprise Sharp Tab Switcher Bar */}
+        <div className="bg-white border border-slate-300 rounded-none p-1.5 shadow-2xs flex flex-wrap gap-1">
           <button
             type="button"
             onClick={() => handleTabChange("users")}
-            className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none flex items-center justify-center gap-2 ${
               activeTab === "users"
-                ? "bg-white text-primary-600 shadow-2xs font-black scale-[1.01]"
-                : "text-slate-600 hover:text-slate-900 font-bold hover:bg-slate-200/50"
+                ? "bg-[#4A6A8A] text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            <TeamOutlined className="text-base" />
-            <span>Users Directory</span>
-            <span className={`px-2 py-0.5 text-[10px] font-black rounded-md ${activeTab === 'users' ? 'bg-primary-50 text-primary-700' : 'bg-slate-200 text-slate-600'}`}>
-              {users.length}
-            </span>
+            <TeamOutlined className="text-sm" />
+            <span>Users Directory ({users.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleTabChange("approvals")}
-            className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none flex items-center justify-center gap-2 ${
               activeTab === "approvals"
-                ? "bg-white text-indigo-600 shadow-md font-black scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 font-bold"
+                ? "bg-[#4A6A8A] text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            <SafetyCertificateOutlined className="text-base" />
-            <span>Role Mappings</span>
-            <span className={`px-2 py-0.5 text-[10px] font-black rounded-md ${activeTab === 'approvals' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>
-              {hierarchies.length}
-            </span>
+            <SafetyCertificateOutlined className="text-sm" />
+            <span>Role Mappings ({hierarchies.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleTabChange("analytics")}
-            className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none flex items-center justify-center gap-2 ${
               activeTab === "analytics"
-                ? "bg-white text-indigo-600 shadow-md font-black scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 font-bold"
+                ? "bg-[#4A6A8A] text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            <BarChartOutlined className="text-base" />
+            <BarChartOutlined className="text-sm" />
             <span>Dashboard Charts</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleTabChange("settings")}
-            className={`flex items-center gap-2.5 px-6 py-2.5 text-xs font-black uppercase tracking-wider rounded-xl transition-all border-0 cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none flex items-center justify-center gap-2 ${
               activeTab === "settings"
-                ? "bg-white text-indigo-600 shadow-md font-black scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/60 font-bold"
+                ? "bg-[#4A6A8A] text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
             }`}
           >
-            <SettingOutlined className="text-base" />
+            <SettingOutlined className="text-sm" />
             <span>System Settings</span>
           </button>
         </div>
@@ -1608,142 +1587,166 @@ export default function AdminPage() {
 
         {activeTab === "users" ? (
           /* ================= USERS LIST TAB ================= */
-          <Card className="rounded-2xl border-slate-200/90 shadow-sm overflow-hidden" bodyStyle={{ padding: "0" }}>
-            {/* Filters & Actions Bar */}
-            <div className="p-4 border-b border-slate-200/80 bg-slate-50/80 space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2 flex-1">
-                  {/* Search Input */}
-                  <Input
-                    placeholder="Search Name, Code, Mobile..."
-                    prefix={<SearchOutlined className="text-slate-400" />}
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
+            {/* Enterprise Structured Filters & Actions Bar */}
+            <div className="p-3 border-b border-slate-300 bg-slate-50 space-y-3">
+              {/* Row 1: Structured Grid Filters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+                {/* Search Input */}
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Search</label>
+                  <input
+                    type="text"
+                    placeholder="Name, Code, Mobile..."
                     value={userSearchTerm}
                     onChange={(e) => setUserSearchTerm(e.target.value)}
-                    className="w-48 rounded-xl font-medium border-slate-200"
-                    allowClear
+                    className="w-full px-2.5 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8"
                   />
-                  {/* Zone Filter */}
-                  <Select
-                    value={userZoneFilter}
-                    onChange={(val) => {
-                      setUserZoneFilter(val);
-                      setUserDistrictFilter("all");
-                    }}
-                    className="w-36 rounded-xl"
-                    placeholder="All Zones"
-                  >
-                    <Select.Option value="all">All Zones</Select.Option>
-                    {availableUserZones.map((z: string) => (
-                      <Select.Option key={z} value={z}>{z}</Select.Option>
-                    ))}
-                  </Select>
-                  {/* District Filter */}
-                  <Select
-                    value={userDistrictFilter}
-                    onChange={setUserDistrictFilter}
-                    className="w-36 rounded-xl"
-                    placeholder="All Districts"
-                  >
-                    <Select.Option value="all">All Districts</Select.Option>
-                    {availableUserDistricts.map((d: string) => (
-                      <Select.Option key={d} value={d}>{d}</Select.Option>
-                    ))}
-                  </Select>
-                  {/* Manager Filter */}
-                  <Select
-                    value={userManagerFilter}
-                    onChange={setUserManagerFilter}
-                    className="w-40 rounded-xl"
-                    placeholder="All Managers"
-                  >
-                    <Select.Option value="all">All Managers</Select.Option>
-                    {availableUserManagers.map((m: string) => (
-                      <Select.Option key={m} value={m}>{m}</Select.Option>
-                    ))}
-                  </Select>
-                  {/* Role Filter */}
-                  <Select
-                    value={userRoleFilter}
-                    onChange={setUserRoleFilter}
-                    className="w-36 rounded-xl"
-                    placeholder="All Roles"
-                  >
-                    <Select.Option value="all">All Roles</Select.Option>
-                    {ALL_ROLES_LIST.map((r: string) => (
-                      <Select.Option key={r} value={r}>{r}</Select.Option>
-                    ))}
-                  </Select>
-                  {/* Status Filter */}
-                  <Select
-                    value={userStatusFilter}
-                    onChange={setUserStatusFilter}
-                    className="w-32 rounded-xl"
-                    placeholder="All Status"
-                  >
-                    <Select.Option value="all">All Status</Select.Option>
-                    <Select.Option value="active">Active</Select.Option>
-                    <Select.Option value="inactive">Inactive</Select.Option>
-                    <Select.Option value="locked">Locked</Select.Option>
-                  </Select>
                 </div>
 
-                <Button
-                  type="default"
-                  icon={<FileExcelOutlined className="text-emerald-600" />}
-                  onClick={handleExportUsersExcel}
-                  className="font-extrabold rounded-xl border-emerald-300 text-emerald-700 hover:text-emerald-800 hover:border-emerald-500 text-xs uppercase tracking-wider h-9"
-                >
-                  Export Excel
-                </Button>
+                {/* Zone Filter */}
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Zone</label>
+                  <select
+                    value={userZoneFilter}
+                    onChange={(e) => {
+                      setUserZoneFilter(e.target.value);
+                      setUserDistrictFilter("all");
+                    }}
+                    className="w-full px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                  >
+                    <option value="all">All Zones ({availableUserZones.length})</option>
+                    {availableUserZones.map((z: string) => (
+                      <option key={z} value={z}>{z}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* District Filter */}
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">District</label>
+                  <select
+                    value={userDistrictFilter}
+                    onChange={(e) => setUserDistrictFilter(e.target.value)}
+                    className="w-full px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                  >
+                    <option value="all">All Districts ({availableUserDistricts.length})</option>
+                    {availableUserDistricts.map((d: string) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Manager Filter */}
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Manager</label>
+                  <select
+                    value={userManagerFilter}
+                    onChange={(e) => setUserManagerFilter(e.target.value)}
+                    className="w-full px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                  >
+                    <option value="all">All Managers ({availableUserManagers.length})</option>
+                    {availableUserManagers.map((m: string) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Role Filter */}
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Role</label>
+                  <select
+                    value={userRoleFilter}
+                    onChange={(e) => setUserRoleFilter(e.target.value)}
+                    className="w-full px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                  >
+                    <option value="all">All Roles ({availableUserRoles.length})</option>
+                    {availableUserRoles.map((r: string) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status Filter & Reset Button */}
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Status &amp; Reset</label>
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={userStatusFilter}
+                      onChange={(e) => setUserStatusFilter(e.target.value)}
+                      className="flex-1 min-w-0 px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                    >
+                      <option value="all">All Status</option>
+                      {availableUserStatuses.map((st: string) => (
+                        <option key={st} value={st}>{st.toUpperCase()}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserSearchTerm("");
+                        setUserZoneFilter("all");
+                        setUserDistrictFilter("all");
+                        setUserManagerFilter("all");
+                        setUserRoleFilter("all");
+                        setUserStatusFilter("all");
+                      }}
+                      className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 text-[10px] font-extrabold uppercase rounded-none border border-slate-300 h-8 cursor-pointer transition-colors shrink-0"
+                      title="Reset All Filters"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Action Controls Row */}
-              <div className="flex flex-wrap gap-2 justify-end pt-1 border-t border-slate-200/60">
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    setSingleUserError(null);
-                    setShowSingleUserModal(true);
-                  }}
-                  className="bg-primary-600 hover:bg-primary-700 font-extrabold rounded-xl text-xs uppercase tracking-wider h-9"
-                >
-                  Single User
-                </Button>
-                <Button
-                  icon={<UploadOutlined />}
-                  onClick={() => {
-                    setCsvText("");
-                    setBulkResult(null);
-                    setShowBulkUploadModal(true);
-                  }}
-                  className="font-extrabold rounded-xl border-slate-200 text-xs uppercase tracking-wider h-9"
-                >
-                  Bulk CSV Import
-                </Button>
-                <Popconfirm
-                  title="Force Logout All Users?"
-                  description="This will log out all active users from their devices."
-                  onConfirm={handleForceLogoutAll}
-                  okText="Yes, Logout All"
-                  cancelText="Cancel"
-                  okButtonProps={{ danger: true }}
-                >
-                  <Button
-                    danger
-                    icon={<LogoutOutlined />}
-                    className="font-extrabold rounded-xl text-xs uppercase tracking-wider h-9"
+              {/* Row 2: Actions & Total Count Row */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200">
+                <div className="text-[11px] font-mono font-bold text-slate-600">
+                  Showing: <span className="text-[#4A6A8A] font-extrabold">{filteredUsers.length}</span> of {safeUsers.length} Employees
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={handleExportUsersExcel}
+                    className="px-3 py-1.5 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
                   >
-                    Force Logout All
-                  </Button>
-                </Popconfirm>
+                    <FileExcelOutlined className="text-white text-xs" />
+                    <span>Export Excel</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSingleUserError(null);
+                      setShowSingleUserModal(true);
+                    }}
+                    className="px-3 py-1.5 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                  >
+                    <PlusOutlined className="text-white text-xs" />
+                    <span>+ Single User</span>
+                  </button>
+                  <Popconfirm
+                    title="Force Logout All Users?"
+                    description="This will log out all active users from their devices."
+                    onConfirm={handleForceLogoutAll}
+                    okText="Yes, Logout All"
+                    cancelText="Cancel"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <button
+                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                    >
+                      <LogoutOutlined className="text-white text-xs" />
+                      <span>Force Logout All</span>
+                    </button>
+                  </Popconfirm>
+                </div>
               </div>
             </div>
 
           {/* Ant Design Table Container */}
-          <div className="p-4">
+          <div className="p-3">
             {loading ? (
-              <div className="py-16 text-center">
+              <div className="py-16 text-center bg-white border border-slate-300 rounded-none">
                 <Spin size="large" tip="Loading system employees database..." />
               </div>
             ) : (
@@ -1766,7 +1769,7 @@ export default function AdminPage() {
                     dataIndex: "e_code",
                     key: "e_code",
                     render: (code: string) => (
-                      <span className="bg-slate-900 text-white font-mono font-extrabold text-xs px-2.5 py-1 rounded-md shadow-2xs">
+                      <span className="bg-[#4A6A8A] text-white font-mono font-extrabold text-xs px-2.5 py-0.5 rounded-none shadow-2xs">
                         {code || "—"}
                       </span>
                     )
@@ -1786,21 +1789,18 @@ export default function AdminPage() {
                     title: "ROLE",
                     dataIndex: "role",
                     key: "role",
-                    render: (roleStr: string) => {
-                      const r = (roleStr || "").toLowerCase();
-                      let color = "blue";
-                      if (r.includes("admin")) color = "magenta";
-                      else if (r.includes("manager")) color = "purple";
-                      else if (r.includes("mis") || r.includes("vp") || r.includes("accountant")) color = "gold";
-                      return <Tag color={color} className="font-black uppercase text-[10px] px-2 py-0.5 rounded-md">{roleStr}</Tag>;
-                    }
+                    render: (roleStr: string) => (
+                      <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-slate-100 text-slate-800 border border-slate-300">
+                        {roleStr || "—"}
+                      </span>
+                    )
                   },
                   {
                     title: "MOBILE / EMAIL",
                     key: "contact",
                     render: (_: any, record: any) => (
                       <div className="space-y-0.5 text-xs">
-                        <div className="font-extrabold text-slate-800">{record.mobile_number || "—"}</div>
+                        <div className="font-extrabold text-slate-800 font-mono">{record.mobile_number || "—"}</div>
                         <div className="text-slate-400 font-mono text-[10px]">{record.mail_id || "—"}</div>
                       </div>
                     )
@@ -1809,9 +1809,11 @@ export default function AdminPage() {
                     title: "DISTRICT / ZONE",
                     key: "location",
                     render: (_: any, record: any) => (
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         <div className="font-extrabold text-slate-900 text-xs">{record.district || "—"}</div>
-                        <Tag color="cyan" className="font-bold text-[9px] uppercase">{record.zone || "No Zone"}</Tag>
+                        <span className="inline-block px-1.5 py-0.2 text-[9px] font-extrabold uppercase tracking-wider rounded-none bg-[#4A6A8A]/10 text-[#4A6A8A] border border-[#4A6A8A]/30">
+                          {record.zone || "NO ZONE"}
+                        </span>
                       </div>
                     )
                   },
@@ -1820,9 +1822,14 @@ export default function AdminPage() {
                     dataIndex: "user_status",
                     key: "user_status",
                     render: (status: string) => {
-                      if (status === "active") return <Tag color="success" className="font-black text-[10px] uppercase">🟢 ACTIVE</Tag>;
-                      if (status === "locked") return <Tag color="warning" className="font-black text-[10px] uppercase">🟡 LOCKED</Tag>;
-                      return <Tag color="error" className="font-black text-[10px] uppercase">🔴 INACTIVE</Tag>;
+                      const st = (status || "active").toLowerCase();
+                      if (st === "active") {
+                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-emerald-100 text-emerald-800 border border-emerald-300">● ACTIVE</span>;
+                      }
+                      if (st === "locked") {
+                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-amber-100 text-amber-800 border border-amber-300">● LOCKED</span>;
+                      }
+                      return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-rose-100 text-rose-800 border border-rose-300">● INACTIVE</span>;
                     }
                   },
                   {
@@ -1830,58 +1837,55 @@ export default function AdminPage() {
                     key: "actions",
                     align: "right",
                     render: (_: any, record: any) => (
-                      <Space size="small">
-                        <Tooltip title="Edit User Config">
-                          <Button
-                            type="default"
-                            icon={<EditOutlined className="text-indigo-600" />}
-                            onClick={() => handleOpenEditUserModal(record)}
-                            className="border-slate-200 hover:border-indigo-500 rounded-lg"
-                          />
-                        </Tooltip>
-                        <Tooltip title="Force Logout Session">
-                          <Popconfirm
-                            title="Force logout user?"
-                            description={`Log out ${record.name} from active session?`}
-                            onConfirm={() => handleForceLogoutSingle(record.user_id, record.name)}
-                            okText="Logout"
-                            cancelText="Cancel"
-                            okButtonProps={{ danger: true }}
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditUserModal(record)}
+                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-[#4A6A8A] border border-slate-300 rounded-none transition-colors cursor-pointer"
+                          title="Edit User Config"
+                        >
+                          <EditOutlined className="text-xs" />
+                        </button>
+                        <Popconfirm
+                          title="Force logout user?"
+                          description={`Log out ${record.name} from active session?`}
+                          onConfirm={() => handleForceLogoutSingle(record.user_id, record.name)}
+                          okText="Logout"
+                          cancelText="Cancel"
+                          okButtonProps={{ danger: true }}
+                        >
+                          <button
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-none transition-colors cursor-pointer"
+                            title="Force Logout Session"
                           >
-                            <Button
-                              type="default"
-                              danger
-                              icon={<LogoutOutlined />}
-                              className="rounded-lg"
-                            />
-                          </Popconfirm>
-                        </Tooltip>
-                      </Space>
+                            <LogoutOutlined className="text-xs" />
+                          </button>
+                        </Popconfirm>
+                      </div>
                     )
                   }
                 ]}
               />
             )}
           </div>
-        </Card>
+        </div>
       ) : activeTab === "analytics" ? (
         /* ================= ANALYTICS DASHBOARD TAB ================= */
-        <div className="space-y-6 animate-fadeIn">
+        <div className="space-y-4 animate-fadeIn">
           {/* Filters Bar */}
-          <div className="bg-white border border-gray-200 rounded p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-white border border-slate-300 rounded-none p-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Dashboard Charts & Analytics</h3>
-              <p className="text-gray-500 text-xs mt-1">Interactive 3D Cylinder & Pie charts with custom data filtering.</p>
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider m-0">Dashboard Charts &amp; Analytics</h3>
+              <p className="text-slate-500 text-[10px] mt-0.5 font-bold">Interactive distribution charts with real-time zone &amp; role filtering.</p>
             </div>
             
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               {/* Role Filter */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-gray-600">Role:</label>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-extrabold uppercase text-slate-600">Role:</label>
                 <select
                   value={chartRoleFilter}
                   onChange={(e) => setChartRoleFilter(e.target.value)}
-                  className="px-2 py-1 text-xs border border-gray-300 rounded bg-white font-semibold text-gray-700 outline-none focus:border-blue-500 cursor-pointer"
+                  className="px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer h-8"
                 >
                   <option value="all">All Roles</option>
                   <option value="engineer">Engineer</option>
@@ -1892,12 +1896,12 @@ export default function AdminPage() {
               </div>
 
               {/* Zone Filter */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-gray-600">Zone:</label>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-extrabold uppercase text-slate-600">Zone:</label>
                 <select
                   value={chartZoneFilter}
                   onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
-                  className="px-2 py-1 text-xs border border-gray-300 rounded bg-white font-semibold text-gray-700 outline-none focus:border-blue-500 cursor-pointer"
+                  className="px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer h-8"
                 >
                   <option value="all">All Zones</option>
                   {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
@@ -1907,14 +1911,14 @@ export default function AdminPage() {
               </div>
 
               {/* District Filter (dependent on Zone) */}
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-bold text-gray-600">District:</label>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-extrabold uppercase text-slate-600">District:</label>
                 <select
                   value={chartDistrictFilter}
                   onChange={(e) => setChartDistrictFilter(e.target.value)}
                   disabled={chartZoneFilter === "all"}
-                  className={`px-2 py-1 text-xs border border-gray-300 rounded bg-white font-semibold outline-none focus:border-blue-500 ${
-                    chartZoneFilter === "all" ? "text-gray-400 cursor-not-allowed opacity-60" : "text-gray-700 cursor-pointer"
+                  className={`px-2 py-1 text-xs font-extrabold bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none h-8 ${
+                    chartZoneFilter === "all" ? "text-slate-400 cursor-not-allowed opacity-60" : "text-slate-900 cursor-pointer"
                   }`}
                 >
                   <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
@@ -1926,263 +1930,132 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Zone-wise Chart (Donut style) */}
-            <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-[#2f5bb7] text-white flex items-center justify-between rounded-t">
-                <h4 className="text-xs font-bold uppercase tracking-wider">
-                  Zone-wise Distribution
-                </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Zone-wise Donut Chart (Analysis Page Style) */}
+            <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <PieChartOutlined style={{ fontSize: 13 }} />
+                  ZONE DISTRIBUTION
+                </span>
+                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 font-bold">
+                  {getZoneData().reduce((s, x) => s + x.value, 0)} Total
+                </span>
               </div>
-              <div className="p-4" style={{ height: "290px" }}>
-                <div className="relative flex justify-center items-center h-full" style={{ height: "230px" }}>
-                  <ResponsivePie
-                    data={getZoneData().slice(0, 5).map((z, i) => ({ id: z.name, label: z.name, value: z.value, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                    innerRadius={0.7}
-                    padAngle={3}
-                    colors={{ datum: 'data.color' }}
-                    borderWidth={2}
-                    borderColor="#ffffff"
-                    enableArcLinkLabels={false}
-                    enableArcLabels={false}
-                    tooltip={({ datum }) => (
-                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 text-slate-300">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                            Count:
-                          </span>
-                          <span className="font-mono font-bold text-white">{datum.value}</span>
-                        </div>
-                      </div>
-                    )}
-                  />
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
-                    <span className="text-xs font-black text-slate-800 font-mono">
-                      {getZoneData().reduce((sum, item) => sum + item.value, 0)}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                  {getZoneData().slice(0, 5).map((item, i) => (
-                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                      <span>{item.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* District-wise Chart (Bar style) */}
-            <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-[#2b7d50] text-white flex items-center justify-between rounded-t">
-                <h4 className="text-xs font-bold uppercase tracking-wider">
-                  District-wise Distribution
-                </h4>
-              </div>
-              <div className="p-4" style={{ height: "290px" }}>
-                <ResponsiveBar
-                  data={getDistrictData().slice(0, 6)}
-                  keys={["value"]}
-                  indexBy="name"
-                  margin={{ top: 15, right: 10, bottom: 35, left: 30 }}
-                  padding={0.35}
-                  colors={GALLERY_COLORS}
-                  colorBy="indexValue"
-                  borderRadius={6}
-                  borderWidth={0}
-                  enableLabel={false}
-                  axisTop={null}
-                  axisRight={null}
-                  axisBottom={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  axisLeft={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  theme={{
-                    grid: {
-                      line: {
-                        stroke: '#f1f5f9',
-                        strokeWidth: 1
-                      }
-                    },
-                    axis: {
-                      ticks: {
-                        text: {
-                          fontSize: 8,
-                          fontWeight: 'bold',
-                          fill: '#64748b'
-                        }
-                      }
-                    }
-                  }}
-                  tooltip={({ value, color, indexValue }) => (
-                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          Count:
-                        </span>
-                        <span className="font-mono font-bold text-white">{value}</span>
-                      </div>
-                    </div>
-                  )}
+              <div className="p-3 flex flex-col justify-between" style={{ minHeight: 310 }}>
+                <SaaSDonutChart
+                  data={getZoneData().map((z, i) => ({
+                    name: z.name,
+                    value: z.value,
+                    count: z.value,
+                    color: GALLERY_COLORS[i % GALLERY_COLORS.length]
+                  }))}
+                  height={290}
+                  centerTitle="Total Users"
+                  valueFormatter={(v) => `${v.toLocaleString()} Users`}
                 />
               </div>
             </div>
 
-            {/* Manager-wise Chart (Horizontal Bar style) */}
-            <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-[#854aa5] text-white flex items-center justify-between rounded-t">
-                <h4 className="text-xs font-bold uppercase tracking-wider">
-                  Manager-wise Distribution
-                </h4>
+            {/* District-wise Donut Chart (Analysis Page Style) */}
+            <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <PieChartOutlined style={{ fontSize: 13 }} />
+                  DISTRICT DISTRIBUTION
+                </span>
+                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 font-bold">
+                  {getDistrictData().reduce((s, x) => s + x.value, 0)} Total
+                </span>
               </div>
-              <div className="p-4" style={{ height: "290px" }}>
-                <ResponsiveBar
-                  data={getManagerData().slice(0, 6)}
-                  keys={["value"]}
-                  indexBy="name"
-                  layout="horizontal"
-                  margin={{ top: 15, right: 10, bottom: 35, left: 85 }}
-                  padding={0.35}
-                  colors={GALLERY_COLORS}
-                  colorBy="indexValue"
-                  borderRadius={6}
-                  borderWidth={0}
-                  enableLabel={false}
-                  axisTop={null}
-                  axisRight={null}
-                  axisBottom={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  axisLeft={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  theme={{
-                    grid: {
-                      line: {
-                        stroke: '#f1f5f9',
-                        strokeWidth: 1
-                      }
-                    },
-                    axis: {
-                      ticks: {
-                        text: {
-                          fontSize: 8,
-                          fontWeight: 'bold',
-                          fill: '#64748b'
-                        }
-                      }
-                    }
-                  }}
-                  tooltip={({ value, color, indexValue }) => (
-                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          Count:
-                        </span>
-                        <span className="font-mono font-bold text-white">{value}</span>
-                      </div>
-                    </div>
-                  )}
+              <div className="p-3 flex flex-col justify-between" style={{ minHeight: 310 }}>
+                <SaaSDonutChart
+                  data={getDistrictData().map((d, i) => ({
+                    name: d.name,
+                    value: d.value,
+                    count: d.value,
+                    color: GALLERY_COLORS[i % GALLERY_COLORS.length]
+                  }))}
+                  height={290}
+                  centerTitle="Total Users"
+                  valueFormatter={(v) => `${v.toLocaleString()} Users`}
                 />
               </div>
             </div>
 
-            {/* Designation-wise Chart (Pie style) */}
-            <div className="bg-white border border-gray-200 rounded shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 bg-[#d28b2a] text-white flex items-center justify-between rounded-t">
-                <h4 className="text-xs font-bold uppercase tracking-wider">
-                  Designation-wise Distribution
-                </h4>
+            {/* Manager-wise Donut Chart (Analysis Page Style) */}
+            <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <PieChartOutlined style={{ fontSize: 13 }} />
+                  MANAGER DISTRIBUTION
+                </span>
+                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 font-bold">
+                  {getManagerData().reduce((s, x) => s + x.value, 0)} Total
+                </span>
               </div>
-              <div className="p-4" style={{ height: "290px" }}>
-                <div className="relative flex justify-center items-center h-full" style={{ height: "230px" }}>
-                  <ResponsivePie
-                    data={getDesignationData().slice(0, 5).map((d, i) => ({ id: d.name, label: d.name, value: d.value, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                    innerRadius={0}
-                    padAngle={1.5}
-                    colors={{ datum: 'data.color' }}
-                    borderWidth={2}
-                    borderColor="#ffffff"
-                    enableArcLinkLabels={false}
-                    enableArcLabels={false}
-                    tooltip={({ datum }) => (
-                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 text-slate-300">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                            Count:
-                          </span>
-                          <span className="font-mono font-bold text-white">{datum.value}</span>
-                        </div>
-                      </div>
-                    )}
-                  />
-                </div>
-                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                  {getDesignationData().slice(0, 5).map((item, i) => (
-                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                      <span>{item.name}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="p-3 flex flex-col justify-between" style={{ minHeight: 310 }}>
+                <SaaSDonutChart
+                  data={getManagerData().map((m, i) => ({
+                    name: m.name,
+                    value: m.value,
+                    count: m.value,
+                    color: GALLERY_COLORS[i % GALLERY_COLORS.length]
+                  }))}
+                  height={290}
+                  centerTitle="Total Users"
+                  valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                />
               </div>
+            </div>
+
+            {/* Designation-wise Donut Chart (Analysis Page Style) */}
+            <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <PieChartOutlined style={{ fontSize: 13 }} />
+                  DESIGNATION DISTRIBUTION
+                </span>
+                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 font-bold">
+                  {getDesignationData().reduce((s, x) => s + x.value, 0)} Total
+                </span>
+              </div>
+              <div className="p-3 flex flex-col justify-between" style={{ minHeight: 310 }}>
+                <SaaSDonutChart
+                  data={getDesignationData().map((d, i) => ({
+                    name: d.name,
+                    value: d.value,
+                    count: d.value,
+                    color: GALLERY_COLORS[i % GALLERY_COLORS.length]
+                  }))}
+                  height={290}
+                  centerTitle="Total Users"
+                  valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
       ) : activeTab === "approvals" ? (
         /* ================= ROLE MAPPINGS TAB ================= */
-        <div className="space-y-6">
-          <div className="flex justify-between items-center bg-white border border-gray-200 rounded p-4 shadow-sm">
+        <div className="space-y-4">
+          <div className="flex flex-wrap justify-between items-center bg-white border border-slate-300 rounded-none p-3 shadow-2xs gap-3">
             <div>
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Team Hierarchy Mappings</h3>
-              <p className="text-gray-500 text-xs mt-1">Add approval groups with named requesters and level-by-level approvers flow.</p>
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider leading-none">Team Hierarchy Mappings</h3>
+              <p className="text-slate-500 text-[10px] mt-1 font-bold">Add approval groups with named requesters and level-by-level approvers flow.</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handleExportHierarchies}
-                className="btn-lte-outline uppercase tracking-wider font-bold flex items-center gap-1.5"
+                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors flex items-center gap-1.5"
                 title="Export all team hierarchies to CSV"
               >
-                <Download className="w-3.5 h-3.5 text-blue-600" />
+                <Download className="w-3.5 h-3.5 text-[#4A6A8A]" />
                 Export CSV
               </button>
               <button
-                onClick={() => {
-                  setHierarchyCsvText("");
-                  setBulkHierarchyResult(null);
-                  setShowBulkHierarchyModal(true);
-                }}
-                className="btn-lte-outline uppercase tracking-wider font-bold flex items-center gap-1.5"
-                title="Import team hierarchies from CSV"
-              >
-                <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-                Import CSV
-              </button>
-              <button
                 onClick={() => handleOpenHierarchyModal()}
-                className="btn-lte-primary uppercase tracking-wider font-bold"
+                className="px-3 py-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white text-xs font-extrabold uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors"
               >
                 + Create Team
               </button>
@@ -2190,34 +2063,34 @@ export default function AdminPage() {
           </div>
 
           {safeHierarchies.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded p-8 text-center text-xs uppercase tracking-wider text-gray-500 font-semibold">
+            <div className="bg-white border border-slate-300 rounded-none p-8 text-center text-xs uppercase tracking-wider text-slate-500 font-extrabold shadow-2xs">
               No team hierarchy configurations created. Click "Create Team" to define one.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-4">
               {safeHierarchies.map((hq) => (
-                <div key={hq.id} className="bg-white border border-gray-200 rounded shadow-sm overflow-hidden flex flex-col justify-between">
-                  <div className="p-4 space-y-4">
+                <div key={hq.id} className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden flex flex-col justify-between">
+                  <div className="p-3 space-y-3">
                     
                     {/* Card Header */}
-                    <div className="flex justify-between items-start gap-4">
+                    <div className="flex justify-between items-start gap-4 border-b border-slate-200 pb-2">
                       <div>
-                        <h4 className="font-bold text-gray-800 text-sm">{hq.name}</h4>
-                        <span className="text-[9px] text-blue-600 font-bold uppercase tracking-wider block mt-0.5">
-                          {hq.approvers.length} Levels approval
+                        <h4 className="font-extrabold text-slate-900 text-sm m-0 uppercase tracking-wide">{hq.name}</h4>
+                        <span className="text-[10px] text-[#4A6A8A] font-extrabold uppercase tracking-wider block mt-0.5 font-mono">
+                          {hq.approvers.length} Levels Approval Sequence
                         </span>
                       </div>
                       <div className="flex gap-1.5">
                         <button
                           onClick={() => handleOpenHierarchyModal(hq)}
-                          className="p-1.5 bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 rounded transition-all cursor-pointer"
+                          className="p-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-none transition-all cursor-pointer"
                           title="Edit Mappings"
                         >
-                          <Pencil className="w-3.5 h-3.5" />
+                          <Pencil className="w-3.5 h-3.5 text-[#4A6A8A]" />
                         </button>
                         <button
                           onClick={() => handleDeleteHierarchy(hq.id)}
-                          className="p-1.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-600 rounded transition-all cursor-pointer"
+                          className="p-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded-none transition-all cursor-pointer"
                           title="Delete Team"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -2227,13 +2100,13 @@ export default function AdminPage() {
 
                     {/* Requesters Box */}
                     <div className="space-y-1">
-                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">Requesters ({hq.requesters.length})</span>
-                      <div className="flex flex-nowrap gap-1.5 p-2 bg-gray-50 border border-gray-200 rounded overflow-x-auto whitespace-nowrap scrollbar-thin">
+                      <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Mapped Requesters ({hq.requesters.length})</span>
+                      <div className="flex flex-nowrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-none overflow-x-auto whitespace-nowrap scrollbar-thin">
                         {hq.requesters.length === 0 ? (
-                          <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">No employees mapped</span>
+                          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">No employees mapped</span>
                         ) : (
                           hq.requesters.map((r) => (
-                            <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded bg-gray-200 text-gray-700 text-[10px] font-medium border border-gray-300 font-mono shrink-0">
+                            <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded-none bg-slate-200 text-slate-800 text-[10px] font-bold border border-slate-300 font-mono shrink-0">
                               {r.user_name} ({r.user_code})
                             </span>
                           ))
@@ -2241,30 +2114,30 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Approvers Pipeline - Premium Horizontal Flow */}
-                    <div className="space-y-2 pt-2 border-t border-gray-100">
-                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Approval Sequence ({hq.approvers.length} Levels)</span>
-                      <div className="flex flex-wrap md:flex-nowrap items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg overflow-x-auto scrollbar-thin">
+                    {/* Approvers Pipeline - Enterprise Flow */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                      <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Approval Sequence ({hq.approvers.length} Levels)</span>
+                      <div className="flex flex-wrap md:flex-nowrap items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-none overflow-x-auto scrollbar-thin">
                         {hq.approvers.length === 0 ? (
-                          <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">No approvers mapped</span>
+                          <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">No approvers mapped</span>
                         ) : (
                           hq.approvers.map((a, idx) => (
                             <React.Fragment key={a.id}>
                               {idx > 0 && (
-                                <div className="hidden md:flex items-center text-gray-400 font-bold px-1 text-base shrink-0 select-none">
+                                <div className="hidden md:flex items-center text-slate-400 font-extrabold px-1 text-xs shrink-0 select-none font-mono">
                                   →
                                 </div>
                               )}
-                              <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg p-2.5 shadow-xs shrink-0 border-l-4 border-l-blue-600 min-w-[200px]">
-                                <span className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black shadow-inner">
+                              <div className="flex items-center gap-2.5 bg-white border border-slate-300 rounded-none p-2 shadow-2xs shrink-0 border-l-4 border-l-[#4A6A8A] min-w-[190px]">
+                                <span className="h-6 w-6 rounded-none bg-[#4A6A8A] text-white flex items-center justify-center text-xs font-mono font-extrabold">
                                   L{a.level_number}
                                 </span>
                                 <div className="space-y-0.5">
-                                  <div className="text-xs font-bold text-gray-800 leading-tight">
+                                  <div className="text-xs font-extrabold text-slate-900 leading-tight">
                                     {a.approver_name}
                                   </div>
-                                  <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider leading-none">
-                                    {a.approver_role} <span className="font-mono font-normal">({a.approver_code})</span>
+                                  <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider leading-none">
+                                    {a.approver_role} <span className="font-mono text-[#4A6A8A]">({a.approver_code})</span>
                                   </div>
                                 </div>
                               </div>
@@ -2282,37 +2155,39 @@ export default function AdminPage() {
         </div>
       ) : (
         /* ================= SYSTEM SETTINGS TAB ================= */
-        <div className="space-y-6 animate-fadeIn max-w-4xl">
-          <Card className="rounded-2xl border-slate-200/90 shadow-sm" bodyStyle={{ padding: "24px" }}>
-            <div className="border-b border-slate-100 pb-4 mb-6">
-              <Title level={4} className="text-slate-900 m-0 uppercase tracking-wide font-black flex items-center gap-2">
-                <ControlOutlined className="text-indigo-600" /> Global System Settings & Policies
-              </Title>
-              <Text className="text-slate-400 text-xs mt-1 block">
-                Configure global expense submission windows, monthly cutoff dates, and auto-approval/rejection expiry routing rules.
-              </Text>
+        <div className="space-y-4 animate-fadeIn max-w-5xl">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xs p-4">
+            <div className="border-b border-slate-300 pb-3 mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-extrabold text-slate-900 m-0 uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <ControlOutlined className="text-[#4A6A8A]" /> Global System Settings &amp; Policies
+                </h2>
+                <p className="text-slate-500 text-[10px] mt-0.5 font-bold">
+                  Configure global expense submission windows, monthly cutoff dates, auto-approval rules, and grade allowance rates.
+                </p>
+              </div>
             </div>
 
-            <form onSubmit={handleSaveSettings} className="space-y-6">
+            <form onSubmit={handleSaveSettings} className="space-y-4">
               
               {/* Section 1: Expense Submission Policies */}
-              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-4">
-                <Text className="text-xs font-black uppercase tracking-wider text-indigo-700 block border-b border-slate-200/60 pb-2">
-                  1. Expense Submission Window & Cutoff Policies
-                </Text>
+              <div className="bg-slate-50 p-3 rounded-none border border-slate-300 space-y-3">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-[#4A6A8A] block border-b border-slate-300 pb-1.5 font-mono">
+                  1. Expense Submission Window &amp; Cutoff Policies
+                </span>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
                       Allowed Past Days Submission Window *
                     </label>
-                    <Input
+                    <input
                       type="number"
                       min={1}
                       required
                       value={settings.max_past_days_limit || "15"}
                       onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
-                      className="rounded-xl font-bold text-sm h-10 border-slate-200"
+                      className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                       placeholder="e.g. 15"
                     />
                     <span className="text-[10px] text-slate-400 font-medium mt-1 block">
@@ -2321,17 +2196,17 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
                       Monthly Cutoff Day (of next month) *
                     </label>
-                    <Input
+                    <input
                       type="number"
                       min={1}
                       max={28}
                       required
                       value={settings.monthly_cutoff_day || "3"}
                       onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
-                      className="rounded-xl font-bold text-sm h-10 border-slate-200"
+                      className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                       placeholder="e.g. 3"
                     />
                     <span className="text-[10px] text-slate-400 font-medium mt-1 block">
@@ -2342,23 +2217,23 @@ export default function AdminPage() {
               </div>
 
               {/* Section 2: Auto-Expiry & Approval System Rules */}
-              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-4">
-                <Text className="text-xs font-black uppercase tracking-wider text-indigo-700 block border-b border-slate-200/60 pb-2">
-                  2. Auto-Approval / Expiry Rules & Routing Levels
-                </Text>
+              <div className="bg-slate-50 p-3 rounded-none border border-slate-300 space-y-3">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-[#4A6A8A] block border-b border-slate-300 pb-1.5 font-mono">
+                  2. Auto-Approval / Expiry Rules &amp; Routing Levels
+                </span>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
                       Pending Days Threshold *
                     </label>
-                    <Input
+                    <input
                       type="number"
                       min={0}
                       required
                       value={settings.pending_auto_expiry_days || "5"}
                       onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
-                      className="rounded-xl font-bold text-sm h-10 border-slate-200"
+                      className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                       placeholder="e.g. 5"
                     />
                     <span className="text-[10px] text-slate-400 font-medium mt-1 block">
@@ -2367,13 +2242,13 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
                       Auto-Expiry Action Type *
                     </label>
                     <select
                       value={settings.pending_auto_action || "approve"}
                       onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
-                      className="help-custom-select w-full h-10 rounded-xl"
+                      className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                     >
                       <option value="approve">⚡ Auto Approve Current Level</option>
                       <option value="reject">❌ Auto Reject Claim</option>
@@ -2385,13 +2260,13 @@ export default function AdminPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
                       Auto-Approve Target Routing Level
                     </label>
                     <select
                       value={settings.auto_approve_target_level || "next_level"}
                       onChange={(e) => setSettings({ ...settings, auto_approve_target_level: e.target.value })}
-                      className="help-custom-select w-full h-10 rounded-xl"
+                      className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                     >
                       <option value="next_level">⏩ Forward to Next Manager Level (L1 → L2)</option>
                       <option value="l1_only">1️⃣ Auto-Approve L1 Only</option>
@@ -2401,62 +2276,61 @@ export default function AdminPage() {
                       When auto-approved, specifies which level the claim automatically routes to.
                     </span>
                   </div>
-                </div>
 
-                <div className="pt-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Rejection Fallback Routing Level
-                  </label>
-                  <select
-                    value={settings.rejection_fallback_level || "creator"}
-                    onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
-                    className="help-custom-select w-full h-10 rounded-xl"
-                  >
-                    <option value="creator">↩️ Return to Submitter / Drafts (For Edit & Re-submit)</option>
-                    <option value="previous_level">◀️ Return to Previous Manager Level</option>
-                    <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
-                  </select>
-                  <span className="text-[10px] text-slate-400 font-medium mt-1 block">
-                    Target destination when a claim is rejected (both manual and auto-rejections).
-                  </span>
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                      Rejection Fallback Routing Level
+                    </label>
+                    <select
+                      value={settings.rejection_fallback_level || "creator"}
+                      onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
+                      className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
+                    >
+                      <option value="creator">↩️ Return to Submitter / Drafts (For Edit &amp; Re-submit)</option>
+                      <option value="previous_level">◀️ Return to Previous Manager Level</option>
+                      <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
+                    </select>
+                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                      Target destination when a claim is rejected (both manual and auto-rejections).
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Section 3: Allowance Master TA/DA Rates & Hotel Caps */}
-              <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-200/70 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
-                  <Text className="text-xs font-black uppercase tracking-wider text-indigo-700 block">
-                    3. Allowance Master — TA / DA Rates & Hotel Caps
-                  </Text>
-                  <Button
-                    type="primary"
-                    size="small"
-                    loading={savingRates}
+              <div className="bg-slate-50 p-3 rounded-none border border-slate-300 space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-300 pb-2">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-[#4A6A8A] block font-mono">
+                    3. Allowance Master — TA / DA Rates &amp; Hotel Caps
+                  </span>
+                  <button
+                    type="button"
+                    disabled={savingRates}
                     onClick={handleSaveAllowanceRates}
-                    className="bg-emerald-600 hover:bg-emerald-700 font-extrabold text-[11px] uppercase tracking-wider rounded-lg h-7"
+                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors disabled:opacity-60"
                   >
-                    Save Allowance Rates
-                  </Button>
+                    {savingRates ? "Saving..." : "Save Allowance Rates"}
+                  </button>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border border-slate-300 rounded-none">
                   <Table
                     dataSource={allowanceRates}
                     rowKey="id"
                     loading={loadingRates}
                     pagination={false}
                     size="small"
-                    className="ant-table-striped"
+                    className="ant-table-sharp"
                     columns={[
                       {
                         title: "GRADE / LEVEL",
                         key: "grade_level",
                         render: (_: any, r: any) => (
                           <div className="space-y-0.5">
-                            <Tag color="purple" className="font-extrabold text-[10px] uppercase">
+                            <span className="px-1.5 py-0.5 bg-[#4A6A8A]/10 text-[#4A6A8A] border border-[#4A6A8A]/20 font-extrabold text-[10px] uppercase rounded-none inline-block font-mono">
                               {r.grade ? `Grade ${r.grade}` : (r.level || "—")}
-                            </Tag>
-                            <div className="text-[10px] text-slate-500 font-semibold">{r.category || ""}</div>
+                            </span>
+                            <div className="text-[10px] text-slate-500 font-extrabold">{r.category || ""}</div>
                           </div>
                         )
                       },
@@ -2471,7 +2345,7 @@ export default function AdminPage() {
                               updated[idx].vehicle_type = e.target.value;
                               setAllowanceRates(updated);
                             }}
-                            className="text-xs p-1 border border-slate-200 rounded font-semibold bg-white"
+                            className="px-2 py-1 text-xs font-extrabold border border-slate-300 rounded-none bg-white text-slate-900 cursor-pointer h-8"
                           >
                             <option value="Bike">Bike</option>
                             <option value="Car">Car</option>
@@ -2493,7 +2367,7 @@ export default function AdminPage() {
                               updated[idx].rate_per_km = val || 0;
                               setAllowanceRates(updated);
                             }}
-                            className="w-20 font-bold"
+                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
                           />
                         )
                       },
@@ -2510,7 +2384,7 @@ export default function AdminPage() {
                               updated[idx].daily_in_district = val || 0;
                               setAllowanceRates(updated);
                             }}
-                            className="w-20 font-bold"
+                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
                           />
                         )
                       },
@@ -2527,7 +2401,7 @@ export default function AdminPage() {
                               updated[idx].daily_out_district = val || 0;
                               setAllowanceRates(updated);
                             }}
-                            className="w-20 font-bold"
+                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
                           />
                         )
                       },
@@ -2544,7 +2418,7 @@ export default function AdminPage() {
                               updated[idx].daily_hotel = val || 0;
                               setAllowanceRates(updated);
                             }}
-                            className="w-20 font-bold"
+                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
                           />
                         )
                       },
@@ -2563,7 +2437,7 @@ export default function AdminPage() {
                                 updated[idx].hotel_in_state_s = val || 0;
                                 setAllowanceRates(updated);
                               }}
-                              className="w-16 font-bold text-xs"
+                              className="w-16 font-mono font-bold text-xs rounded-none border-slate-300"
                             />
                             <InputNumber
                               min={0}
@@ -2575,7 +2449,7 @@ export default function AdminPage() {
                                 updated[idx].hotel_in_state_d = val || 0;
                                 setAllowanceRates(updated);
                               }}
-                              className="w-16 font-bold text-xs"
+                              className="w-16 font-mono font-bold text-xs rounded-none border-slate-300"
                             />
                           </div>
                         )
@@ -2593,7 +2467,7 @@ export default function AdminPage() {
                               updated[idx].max_km_per_month = val || 0;
                               setAllowanceRates(updated);
                             }}
-                            className="w-20 font-bold"
+                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
                           />
                         )
                       }
@@ -2604,27 +2478,25 @@ export default function AdminPage() {
 
               {/* Submit Action Bar */}
               <div className="flex justify-end pt-2">
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={savingSettings}
-                  size="large"
-                  className="bg-primary-600 hover:bg-primary-700 font-extrabold text-xs uppercase tracking-wider rounded-xl h-11 px-8 shadow-2xs"
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none py-2.5 px-8 border-0 cursor-pointer shadow-2xs transition-colors disabled:opacity-60"
                 >
                   {savingSettings ? "Saving Settings..." : "Save System Settings"}
-                </Button>
+                </button>
               </div>
             </form>
-          </Card>
+          </div>
 
           {/* Override Rejected Claims Panel */}
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 space-y-6 max-w-3xl mt-6">
-            <div>
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide border-b border-gray-100 pb-2 flex items-center gap-2">
-                <i className="fas fa-undo text-red-500"></i> Override / Re-submit Rejected Claims
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xs p-4 space-y-4">
+            <div className="border-b border-slate-300 pb-2">
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider m-0 flex items-center gap-2 font-mono">
+                <span className="text-rose-600">↩</span> Override / Re-submit Rejected Claims
               </h3>
-              <p className="text-gray-500 text-xs mt-1">
-                Search and override rejected claims to reset their status to 'Submitted'. This will re-initialize the approval hierarchy sequence from Level 1.
+              <p className="text-slate-500 text-[10px] mt-0.5 font-bold">
+                Search and override rejected claims to reset their status to 'Submitted' and re-initialize approval routing from L1.
               </p>
             </div>
 
@@ -2638,54 +2510,54 @@ export default function AdminPage() {
                     fetchRejectedClaims(rejectedSearch);
                   }
                 }}
-                className="flex-1 p-2 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className="flex-1 px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                 placeholder="Search by Claim Code, Employee Code, or Name..."
               />
               <button
                 type="button"
                 onClick={() => fetchRejectedClaims(rejectedSearch)}
-                className="px-4 py-2 bg-slate-800 text-white rounded text-xs font-bold hover:bg-slate-700 cursor-pointer border-0 shadow-sm"
+                className="px-4 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white rounded-none text-xs font-extrabold uppercase tracking-wider cursor-pointer border-0 shadow-2xs"
               >
                 Search
               </button>
             </div>
 
             {loadingRejected ? (
-              <div className="text-center py-6 text-xs text-slate-500 font-bold">
-                <i className="fas fa-spinner fa-spin mr-2"></i> Loading rejected claims...
+              <div className="text-center py-6 text-xs text-slate-500 font-extrabold uppercase tracking-wider">
+                Loading rejected claims...
               </div>
             ) : rejectedClaims.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-400 border border-dashed border-slate-200 rounded">
+              <div className="text-center py-6 text-xs text-slate-500 font-extrabold uppercase tracking-wider border border-dashed border-slate-300 rounded-none">
                 No rejected claims found matching search criteria.
               </div>
             ) : (
-              <div className="border border-slate-200 rounded overflow-x-auto">
+              <div className="border border-slate-300 rounded-none overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="p-2.5 font-bold text-slate-700">Claim Code</th>
-                      <th className="p-2.5 font-bold text-slate-700">Employee</th>
-                      <th className="p-2.5 font-bold text-slate-700">Expense Date</th>
-                      <th className="p-2.5 font-bold text-slate-700">Amount</th>
-                      <th className="p-2.5 font-bold text-slate-700 text-right">Action</th>
+                    <tr className="bg-[#4A6A8A] text-white border-b border-slate-300">
+                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase font-mono">Claim Code</th>
+                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase">Employee</th>
+                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase font-mono">Expense Date</th>
+                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase font-mono">Amount</th>
+                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rejectedClaims.map((claim) => (
-                      <tr key={claim.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                      <tr key={claim.id} className="border-b border-slate-200 hover:bg-slate-50">
                         <td className="p-2.5 font-mono font-bold text-slate-900">{claim.expense_code}</td>
                         <td className="p-2.5">
-                          <div className="font-bold text-slate-800">{claim.employee_name}</div>
-                          <div className="text-[10px] text-slate-500">{claim.employee_code}</div>
+                          <div className="font-extrabold text-slate-800">{claim.employee_name}</div>
+                          <div className="text-[10px] text-slate-500 font-mono font-bold">{claim.employee_code}</div>
                         </td>
-                        <td className="p-2.5 text-slate-600">{claim.expense_date}</td>
+                        <td className="p-2.5 text-slate-600 font-mono font-bold">{claim.expense_date}</td>
                         <td className="p-2.5 font-mono font-bold text-slate-900">₹{parseFloat(claim.amount).toLocaleString()}</td>
                         <td className="p-2.5 text-right">
                           <button
                             type="button"
                             disabled={actioningClaimId === claim.id}
                             onClick={() => handleResubmitClaim(claim.id)}
-                            className="px-2.5 py-1.5 bg-blue-600 text-white rounded text-[10px] font-bold hover:bg-blue-700 cursor-pointer border-0 shadow-sm disabled:bg-slate-300"
+                            className="px-3 py-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white rounded-none text-[10px] font-extrabold uppercase tracking-wider cursor-pointer border-0 shadow-2xs disabled:opacity-60"
                           >
                             {actioningClaimId === claim.id ? "Resetting..." : "Reset to Submitted"}
                           </button>
@@ -2703,65 +2575,75 @@ export default function AdminPage() {
 
       {/* ================= MODAL: CREATE SINGLE USER ================= */}
       {showSingleUserModal && (
-        <div className="modal-lte-overlay z-[9999]">
-          <div className="modal-lte-content max-w-4xl p-6 max-h-[90vh] flex flex-col">
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
-              Register New Employee
-            </h3>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Solid Enterprise Header Bar */}
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 flex items-center gap-2 font-mono">
+                <span>Register New Employee</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowSingleUserModal(false)}
+                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
             
-            <form onSubmit={handleCreateSingleUser} className="flex-1 flex flex-col overflow-hidden mt-4 space-y-4">
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
+            <form onSubmit={handleCreateSingleUser} className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
               {singleUserError && (
-                <div className="p-3 border border-red-200 bg-red-50 text-red-700 font-semibold text-xs rounded">
+                <div className="p-3 border border-rose-300 bg-rose-50 text-rose-800 font-extrabold text-xs rounded-none">
                   {singleUserError}
                 </div>
               )}
 
               {/* Grid 1 - Core Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">Employee Code *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Employee Code *</label>
                   <input
                     type="text"
                     placeholder="e.g. RJCYR045"
                     value={eCode}
                     onChange={(e) => setECode(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Full Name *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Full Name *</label>
                   <input
                     type="text"
                     placeholder="e.g. SUBHASH YADAV"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Password *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Password *</label>
                   <input
                     type="password"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
               </div>
 
               {/* Grid 2 - Role and Designations */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">System Role *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">System Role *</label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     {dropdowns?.roles?.map((r: string) => (
                       <option key={r} value={r}>{r}</option>
@@ -2769,11 +2651,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Designation *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Designation *</label>
                   <select
                     value={designation}
                     onChange={(e) => setDesignation(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     {dropdowns?.designations?.map((d: string) => (
                       <option key={d} value={d}>{d}</option>
@@ -2781,11 +2663,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Grade *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Grade *</label>
                   <select
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     {(dropdowns?.grades && dropdowns.grades.length > 0 ? dropdowns.grades : ["A", "B", "C", "D"]).map((g: string) => (
                       <option key={g} value={g}>{g}</option>
@@ -2795,13 +2677,13 @@ export default function AdminPage() {
               </div>
 
               {/* Grid 3 - Zone and District */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">Zone *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Zone *</label>
                   <select
                     value={zone}
                     onChange={(e) => handleZoneChange(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="All">All</option>
                     {dropdowns?.zones && Object.keys(dropdowns.zones).map((z) => (
@@ -2810,11 +2692,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">District *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">District *</label>
                   <select
                     value={district}
                     onChange={(e) => setDistrict(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="All">All</option>
                     {zone !== "All" && dropdowns?.zones?.[zone]?.map((d: string) => (
@@ -2823,11 +2705,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">User Type *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">User Type *</label>
                   <select
                     value={userType}
                     onChange={(e) => setUserType(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="Employee">Employee</option>
                     <option value="Contractor">Contractor</option>
@@ -2836,14 +2718,14 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Grid 4 - Hierarchy Reporting Managers (Dynamic select dropdowns showing user names instead of text input ID strings) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Grid 4 - Hierarchy Reporting Managers */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">Reporting Manager</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Reporting Manager</label>
                   <select
                     value={manager}
                     onChange={(e) => setManager(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="">-- None / Select Reporting Manager --</option>
                     {mList.map((u) => (
@@ -2854,11 +2736,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Zonal Manager</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Zonal Manager</label>
                   <select
                     value={zonalManager}
                     onChange={(e) => setZonalManager(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="">-- None / Select Zonal Manager --</option>
                     {zmList.map((u) => (
@@ -2869,11 +2751,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Coordinator</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Coordinator</label>
                   <select
                     value={coordinator}
                     onChange={(e) => setCoordinator(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="">-- None / Select Coordinator --</option>
                     {cList.map((u) => (
@@ -2886,37 +2768,37 @@ export default function AdminPage() {
               </div>
 
               {/* Grid 5 - Mobile, Email, and Upkaran */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">Mobile Number *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Mobile Number *</label>
                   <input
                     type="tel"
                     placeholder="e.g. 9876543210"
                     value={mobileNumber}
                     onChange={(e) => setMobileNumber(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Email ID *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Email ID *</label>
                   <input
                     type="email"
                     placeholder="e.g. subhash@cyrix.com"
                     value={mailId}
                     onChange={(e) => setMailId(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Device / Upkaran ID *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Device / Upkaran ID *</label>
                   <input
                     type="text"
                     placeholder="e.g. UPK-9988-XY"
                     value={eUpkaranId}
                     onChange={(e) => setEUpkaranId(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
@@ -2924,7 +2806,7 @@ export default function AdminPage() {
 
               {/* Base Reporting Location Section */}
               <div className="space-y-1">
-                <label className="label-lte">Base Reporting Location(s) *</label>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Base Reporting Location(s) *</label>
                 {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
                   <MultiSelectDropdown
                     options={dropdowns.facilities[district]}
@@ -2938,47 +2820,47 @@ export default function AdminPage() {
                     placeholder="e.g. PHC Location or custom hospital"
                     value={baseReportingLocation}
                     onChange={(e) => setBaseReportingLocation(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 )}
               </div>
 
               {/* Grid 6 - Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="label-lte">Date of Joining *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Date of Joining *</label>
                   <input
                     type="date"
                     value={dateOfJoining}
                     onChange={(e) => setDateOfJoining(e.target.value)}
-                    className="input-lte [color-scheme:light]"
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 [color-scheme:light]"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Date of Birth *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Date of Birth *</label>
                   <input
                     type="date"
                     value={dateOfBirth}
                     onChange={(e) => setDateOfBirth(e.target.value)}
-                    className="input-lte [color-scheme:light]"
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 [color-scheme:light]"
                     required
                   />
                 </div>
               </div>
 
               {/* Screen permissions grid checkboxes */}
-              <div className="space-y-2 pt-2 border-t border-gray-200">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Allowed Navigation Screens</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-gray-50 rounded border border-gray-200">
+              <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">Allowed Navigation Screens</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 bg-slate-50 rounded-none border border-slate-200">
                   {ALL_WINDOWS.map((win) => (
-                    <label key={win.id} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
+                    <label key={win.id} className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={allowedWindows.includes(win.id)}
                         onChange={() => handleToggleWindow(win.id, false)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                        className="rounded-none border-slate-300 text-[#4A6A8A] focus:ring-[#4A6A8A] h-4 w-4 cursor-pointer"
                       />
                       {win.name}
                     </label>
@@ -2988,102 +2870,101 @@ export default function AdminPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
               <button
-                  type="button"
-                  onClick={() => setShowSingleUserModal(false)}
-                  className="btn-lte-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={singleUserLoading}
-                  className="btn-lte-primary"
-                >
-                  {singleUserLoading && <LteSpinner />}
-                  <span>Register Employee</span>
-                </button>
-              </div>
-            </form>
-          </div>
+                type="button"
+                onClick={() => setShowSingleUserModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={singleUserLoading}
+                className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
+              >
+                {singleUserLoading && <LteSpinner />}
+                <span>Register Employee</span>
+              </button>
+            </div>
+          </form>
         </div>
-      )}
-
-      {/* ================= MODAL: EDIT USER DETAILS ================= */}
-      {showEditUserModal && editingUser && (
-        <div className="modal-lte-overlay z-[9999]">
-          <div className="modal-lte-content max-w-4xl p-6 max-h-[90vh] flex flex-col">
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800 flex items-center justify-between">
-              <span>
-                Update Employee:{" "}
+      </div>
+    )}
+              {showEditUserModal && editingUser && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Solid Enterprise Header Bar */}
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 flex items-center gap-2 font-mono">
+                <span>Update Employee:</span>
                 <button
                   type="button"
                   onClick={() => setShowUnlockModal(true)}
                   title="Click to change ID/Code/Password"
-                  className="text-blue-600 font-mono font-bold hover:underline"
+                  className="bg-white/20 hover:bg-white/30 text-white font-mono font-extrabold px-2 py-0.5 rounded-none cursor-pointer border-0"
                 >
                   {editingUser.user_id}
                 </button>
-              </span>
+              </h3>
               {!isSensitiveSectionUnlocked ? (
                 <button
                   type="button"
                   onClick={() => setShowUnlockModal(true)}
-                  className="text-[9px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded font-bold uppercase hover:bg-red-100 transition duration-150"
+                  className="text-[10px] bg-rose-600 hover:bg-rose-700 text-white font-extrabold uppercase px-2.5 py-1 rounded-none border-0 cursor-pointer shadow-2xs transition-colors"
                 >
-                  🔒 Unlock credentials
+                  🔒 Unlock Credentials
                 </button>
               ) : (
-                <span className="text-[9px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded font-bold uppercase">
+                <span className="text-[10px] bg-emerald-600 text-white font-extrabold uppercase px-2.5 py-1 rounded-none shadow-2xs">
                   🔓 Unlocked
                 </span>
               )}
-            </h3>
+            </div>
             
-            <form onSubmit={handleUpdateUserSubmit} className="flex-1 flex flex-col overflow-hidden mt-4 space-y-4">
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin">
+            <form onSubmit={handleUpdateUserSubmit} className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
               {editUserError && (
-                <div className="p-3 border border-red-200 bg-red-50 text-red-700 font-semibold text-xs rounded">
+                <div className="p-3 border border-rose-300 bg-rose-50 text-rose-800 font-extrabold text-xs rounded-none">
                   {editUserError}
                 </div>
               )}
 
               {/* Sensitive Fields (User ID, Employee Code, Password) — Shown only when unlocked */}
               {isSensitiveSectionUnlocked && (
-                <div className="p-4 bg-amber-50/15 border border-amber-200 rounded-lg space-y-4 text-left">
-                  <span className="text-[10px] font-bold text-amber-850 uppercase tracking-wider block">🔓 Edit Credentials (Unlocked)</span>
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-none space-y-3 text-left">
+                  <span className="text-[10px] font-extrabold text-amber-900 uppercase tracking-wider block">🔓 Edit Credentials (Unlocked)</span>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="label-lte font-bold">User ID *</label>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">User ID *</label>
                       <input
                         type="text"
                         value={editUserId}
                         onChange={(e) => setEditUserId(e.target.value)}
-                        className="input-lte font-mono bg-white"
+                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                         required
                       />
                     </div>
                     <div>
-                      <label className="label-lte font-bold">Employee Code *</label>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Employee Code *</label>
                       <input
                         type="text"
                         value={editECode}
                         onChange={(e) => setEditECode(e.target.value)}
-                        className="input-lte font-mono bg-white"
+                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                         required
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="label-lte font-bold">New Password (Leave blank to keep current password)</label>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">New Password (Leave blank to keep current password)</label>
                     <input
                       type="password"
                       value={editUserPassword}
                       onChange={(e) => setEditUserPassword(e.target.value)}
-                      className="input-lte bg-white"
+                      className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                       placeholder="Enter new password for this user"
                     />
                   </div>
@@ -3091,23 +2972,23 @@ export default function AdminPage() {
               )}
 
               {/* Grid 1 - Core Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="label-lte">Full Name *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Full Name *</label>
                   <input
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">System Status *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">System Status *</label>
                   <select
                     value={editUserStatus}
                     onChange={(e) => setEditUserStatus(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="active">Active</option>
                     <option value="locked">Locked</option>
@@ -3117,13 +2998,13 @@ export default function AdminPage() {
               </div>
 
               {/* Grid 2 - Role and Designations */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">System Role *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">System Role *</label>
                   <select
                     value={editRole}
                     onChange={(e) => setEditRole(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     {dropdowns?.roles?.map((r: string) => (
                       <option key={r} value={r}>{r}</option>
@@ -3131,11 +3012,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Designation *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Designation *</label>
                   <select
                     value={editDesignation}
                     onChange={(e) => setEditDesignation(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     {dropdowns?.designations?.map((d: string) => (
                       <option key={d} value={d}>{d}</option>
@@ -3143,11 +3024,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Grade *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Grade *</label>
                   <select
                     value={editGrade}
                     onChange={(e) => setEditGrade(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     {(dropdowns?.grades && dropdowns.grades.length > 0 ? dropdowns.grades : ["A", "B", "C", "D"]).map((g: string) => (
                       <option key={g} value={g}>{g}</option>
@@ -3157,13 +3038,13 @@ export default function AdminPage() {
               </div>
 
               {/* Grid 3 - Zone and District */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">Zone *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Zone *</label>
                   <select
                     value={editZone}
                     onChange={(e) => handleEditZoneChange(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="All">All</option>
                     {dropdowns?.zones && Object.keys(dropdowns.zones).map((z) => (
@@ -3172,11 +3053,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">District *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">District *</label>
                   <select
                     value={editDistrict}
                     onChange={(e) => setEditDistrict(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="All">All</option>
                     {editZone !== "All" && dropdowns?.zones?.[editZone]?.map((d: string) => (
@@ -3185,11 +3066,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">User Type *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">User Type *</label>
                   <select
                     value={editUserType}
                     onChange={(e) => setEditUserType(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="Employee">Employee</option>
                     <option value="Contractor">Contractor</option>
@@ -3199,13 +3080,13 @@ export default function AdminPage() {
               </div>
 
               {/* Grid 4 - Reporting Managers (Dropdown selection showing names) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">Reporting Manager</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Reporting Manager</label>
                   <select
                     value={editManager}
                     onChange={(e) => setEditManager(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="">-- None / Clear Reporting Manager --</option>
                     {mList.map((u) => (
@@ -3219,11 +3100,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Zonal Manager</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Zonal Manager</label>
                   <select
                     value={editZonalManager}
                     onChange={(e) => setEditZonalManager(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="">-- None / Clear Zonal Manager --</option>
                     {zmList.map((u) => (
@@ -3237,11 +3118,11 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="label-lte">Coordinator</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Coordinator</label>
                   <select
                     value={editCoordinator}
                     onChange={(e) => setEditCoordinator(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   >
                     <option value="">-- None / Clear Coordinator --</option>
                     {cList.map((u) => (
@@ -3257,34 +3138,34 @@ export default function AdminPage() {
               </div>
 
               {/* Grid 5 - Mobile, Email, and Device */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="label-lte">Mobile Number *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Mobile Number *</label>
                   <input
                     type="tel"
                     value={editMobileNumber}
                     onChange={(e) => setEditMobileNumber(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Email ID *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Email ID *</label>
                   <input
                     type="email"
                     value={editMailId}
                     onChange={(e) => setEditMailId(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Device / Upkaran ID *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Device / Upkaran ID *</label>
                   <input
                     type="text"
                     value={editEUpkaranId}
                     onChange={(e) => setEditEUpkaranId(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 </div>
@@ -3292,7 +3173,7 @@ export default function AdminPage() {
 
               {/* Base Reporting Location Section */}
               <div className="space-y-1">
-                <label className="label-lte">Base Reporting Location(s) *</label>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Base Reporting Location(s) *</label>
                 {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
                   <MultiSelectDropdown
                     options={[
@@ -3309,47 +3190,47 @@ export default function AdminPage() {
                     placeholder="e.g. PHC Location or custom hospital"
                     value={editBaseReportingLocation}
                     onChange={(e) => setEditBaseReportingLocation(e.target.value)}
-                    className="input-lte"
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                     required
                   />
                 )}
               </div>
 
               {/* Grid 6 - Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="label-lte">Date of Joining *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Date of Joining *</label>
                   <input
                     type="date"
                     value={editDateOfJoining}
                     onChange={(e) => setEditDateOfJoining(e.target.value)}
-                    className="input-lte [color-scheme:light]"
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 [color-scheme:light]"
                     required
                   />
                 </div>
                 <div>
-                  <label className="label-lte">Date of Birth *</label>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Date of Birth *</label>
                   <input
                     type="date"
                     value={editDateOfBirth}
                     onChange={(e) => setEditDateOfBirth(e.target.value)}
-                    className="input-lte [color-scheme:light]"
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 [color-scheme:light]"
                     required
                   />
                 </div>
               </div>
 
               {/* Checkboxes edit */}
-              <div className="space-y-2 pt-2 border-t border-gray-200">
-                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Allowed Navigation Screens</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-gray-50 rounded border border-gray-200">
+              <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">Allowed Navigation Screens</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 bg-slate-50 rounded-none border border-slate-200">
                   {ALL_WINDOWS.map((win) => (
-                    <label key={win.id} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
+                    <label key={win.id} className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={editAllowedWindows.includes(win.id)}
                         onChange={() => handleToggleWindow(win.id, true)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                        className="rounded-none border-slate-300 text-[#4A6A8A] focus:ring-[#4A6A8A] h-4 w-4 cursor-pointer"
                       />
                       {win.name}
                     </label>
@@ -3359,113 +3240,125 @@ export default function AdminPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+            <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
               <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditUserModal(false);
-                    setEditingUser(null);
-                  }}
-                  className="btn-lte-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editUserLoading}
-                  className="btn-lte-primary"
-                >
-                  {editUserLoading && <LteSpinner />}
-                  <span>Save Updates</span>
-                </button>
-              </div>
-            </form>
-          </div>
+                type="button"
+                onClick={() => {
+                  setShowEditUserModal(false);
+                  setEditingUser(null);
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={editUserLoading}
+                className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
+              >
+                {editUserLoading && <LteSpinner />}
+                <span>Save Updates</span>
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ================= MODAL: CSV BULK IMPORT ================= */}
       {showBulkUploadModal && (
-        <div className="modal-lte-overlay z-[9999]">
-          <div className="modal-lte-content max-w-2xl p-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
-              Import Employees via CSV
-            </h3>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Solid Enterprise Header Bar */}
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono">
+                Import Employees via CSV
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowBulkUploadModal(false)}
+                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
 
-            <div className="space-y-4 mt-4">
-              <div className="text-xs text-gray-500 space-y-1">
-                <p>Upload a comma-separated values (.csv) file containing employee details.</p>
-                <p className="font-bold text-blue-600 uppercase tracking-wider text-[9px]">
-                  Required Headers: e_code, name, password, role, designation, grade, district, zone, manager, zonal_manager, coordinator, mobile_number, mail_id, type, date_of_joining, date_of_birth, e_upkaran_id
-                </p>
-                <p className="text-[10px] text-red-500 font-semibold">All fields are compulsory for every row.</p>
-              </div>
-
-              {/* Upload Input */}
-              <div className="p-4 border-2 border-dashed border-gray-300 bg-gray-50 rounded text-center">
-                <input
-                  type="file"
-                  accept=".csv"
-                  ref={fileInputRef}
-                  onChange={handleCSVFileSelect}
-                  className="hidden"
-                />
-                <div className="flex justify-center gap-3">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="btn-lte-outline uppercase font-bold text-xs"
-                  >
-                    Choose CSV File
-                  </button>
-                  <button
-                    onClick={downloadSampleCSV}
-                    className="btn-lte-secondary uppercase font-bold text-xs flex items-center gap-1.5"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <span>Download Template</span>
-                  </button>
-                </div>
-                {csvText && (
-                  <p className="text-[11px] text-green-600 mt-2 font-mono truncate max-w-md mx-auto font-semibold">
-                    Loaded CSV ({csvText.split("\n").length - 1} rows)
+            <div className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
+                <div className="text-xs text-slate-600 space-y-1">
+                  <p className="font-bold">Upload a comma-separated values (.csv) file containing employee details.</p>
+                  <p className="font-bold text-[#4A6A8A] uppercase tracking-wider text-[10px] font-mono">
+                    Required Headers: e_code, name, password, role, designation, grade, district, zone, manager, zonal_manager, coordinator, mobile_number, mail_id, type, date_of_joining, date_of_birth, e_upkaran_id
                   </p>
+                  <p className="text-[10px] text-rose-600 font-extrabold">All fields are compulsory for every row.</p>
+                </div>
+
+                {/* Upload Input */}
+                <div className="p-4 border-2 border-dashed border-slate-300 bg-slate-50 rounded-none text-center">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    ref={fileInputRef}
+                    onChange={handleCSVFileSelect}
+                    className="hidden"
+                  />
+                  <div className="flex justify-center gap-3">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                    >
+                      Choose CSV File
+                    </button>
+                    <button
+                      onClick={downloadSampleCSV}
+                      className="px-4 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download Template</span>
+                    </button>
+                  </div>
+                  {csvText && (
+                    <p className="text-[11px] text-emerald-700 mt-2 font-mono truncate max-w-md mx-auto font-bold">
+                      Loaded CSV ({csvText.split("\n").length - 1} rows)
+                    </p>
+                  )}
+                </div>
+
+                {/* Bulk Results Summary */}
+                {bulkResult && (
+                  <div className="p-3 bg-slate-50 rounded-none border border-slate-300 max-h-48 overflow-y-auto text-xs space-y-1.5 font-mono">
+                    {bulkResult.error && <p className="text-rose-600 font-bold">{bulkResult.error}</p>}
+                    {bulkResult.rowErrors?.map((err: string, i: number) => (
+                      <p key={i} className="text-rose-600">{err}</p>
+                    ))}
+                    {bulkResult.status === "success" && (
+                      <div className="text-emerald-700 font-bold space-y-0.5">
+                        <p>Import Status: SUCCESS</p>
+                        <p>Created: {bulkResult.created_count}</p>
+                        <p>Failed: {bulkResult.failed_count}</p>
+                        {bulkResult.errors.map((err: string, idx: number) => (
+                          <p key={idx} className="text-amber-700 font-normal">{err}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Bulk Results Summary */}
-              {bulkResult && (
-                <div className="p-3 bg-gray-50 rounded border border-gray-200 max-h-48 overflow-y-auto text-xs space-y-1.5 font-mono">
-                  {bulkResult.error && <p className="text-red-600 font-bold">{bulkResult.error}</p>}
-                  {bulkResult.rowErrors?.map((err: string, i: number) => (
-                    <p key={i} className="text-red-500">{err}</p>
-                  ))}
-                  {bulkResult.status === "success" && (
-                    <div className="text-green-600 font-bold space-y-0.5">
-                      <p>Import Status: SUCCESS</p>
-                      <p>Created: {bulkResult.created_count}</p>
-                      <p>Failed: {bulkResult.failed_count}</p>
-                      {bulkResult.errors.map((err: string, idx: number) => (
-                        <p key={idx} className="text-amber-600 font-normal">{err}</p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Footer */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
                 <button
+                  type="button"
                   onClick={() => setShowBulkUploadModal(false)}
-                  className="btn-lte-secondary"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
                 >
                   Close
                 </button>
                 <button
+                  type="button"
                   onClick={handleBulkUploadSubmit}
                   disabled={bulkLoading || !csvText}
-                  className="btn-lte-primary disabled:opacity-50"
+                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
                 >
                   {bulkLoading && <LteSpinner />}
                   <span>Start Import</span>
@@ -3478,90 +3371,102 @@ export default function AdminPage() {
 
       {/* ================= MODAL: CSV BULK HIERARCHY IMPORT ================= */}
       {showBulkHierarchyModal && (
-        <div className="modal-lte-overlay z-[9999]">
-          <div className="modal-lte-content max-w-2xl p-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800 text-left">
-              Import Team Hierarchies via CSV
-            </h3>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Solid Enterprise Header Bar */}
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono">
+                Import Team Hierarchies via CSV
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowBulkHierarchyModal(false)}
+                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
 
-            <div className="space-y-4 mt-4 text-left">
-              <div className="text-xs text-gray-500 space-y-1">
-                <p>Upload a comma-separated values (.csv) file containing team hierarchy details.</p>
-                <p className="font-bold text-blue-600 uppercase tracking-wider text-[9px]">
-                  Required Headers: hierarchy_name, requester_e_codes, level_1_approver, level_2_approver, level_3_approver, level_4_approver, level_5_approver
-                </p>
-                <p className="text-[10px] text-gray-500 font-semibold mt-1">
-                  Note: Multiple requester employee codes can be separated by commas (e.g. &quot;E001,E002,E003&quot;). Approver fields accept a single employee code.
-                </p>
-              </div>
-
-              {/* Upload Input */}
-              <div className="p-4 border-2 border-dashed border-gray-300 bg-gray-50 rounded text-center">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        setHierarchyCsvText(event.target?.result as string || "");
-                      };
-                      reader.readAsText(file);
-                    }
-                  }}
-                  className="hidden"
-                  id="hierarchy-file-upload"
-                />
-                <label
-                  htmlFor="hierarchy-file-upload"
-                  className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-gray-100 border border-gray-300 rounded font-semibold text-xs text-gray-700 shadow-sm transition-all"
-                >
-                  <UploadCloud className="w-4 h-4 text-blue-600" />
-                  <span>Choose CSV File</span>
-                </label>
-              </div>
-
-              {/* Raw CSV Text Area */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-gray-600">
-                  Or Paste Raw CSV Data:
-                </label>
-                <textarea
-                  value={hierarchyCsvText}
-                  onChange={(e) => setHierarchyCsvText(e.target.value)}
-                  placeholder="hierarchy_name,requester_e_codes,level_1_approver,level_2_approver,level_3_approver,level_4_approver,level_5_approver&#10;Team Rajasthan,E001,E100,E200,E300,,&#10;Team Jodhpur,E002,E100,E200,,,"
-                  rows={6}
-                  className="w-full text-xs font-mono p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                />
-              </div>
-
-              {/* Bulk Results Summary */}
-              {bulkHierarchyResult && (
-                <div className={`p-4 rounded border text-xs font-semibold max-h-48 overflow-y-auto ${
-                  bulkHierarchyResult.error 
-                    ? "bg-red-50 border-red-200 text-red-700" 
-                    : "bg-green-50 border-green-200 text-green-700"
-                }`}>
-                  {bulkHierarchyResult.error && <p className="text-red-600 font-bold mb-1">{bulkHierarchyResult.error}</p>}
-                  {bulkHierarchyResult.rowErrors?.map((err: string, i: number) => (
-                    <div key={i} className="text-red-500 font-mono text-[10px] mt-0.5">{err}</div>
-                  ))}
-                  {bulkHierarchyResult.errors?.map((err: string, i: number) => (
-                    <div key={i} className="text-red-500 font-mono text-[10px] mt-0.5">{err}</div>
-                  ))}
-                  {!bulkHierarchyResult.error && !bulkHierarchyResult.errors && (
-                    <p className="text-green-600 font-bold">Successfully imported and updated all team hierarchies!</p>
-                  )}
+            <div className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
+                <div className="text-xs text-slate-600 space-y-1">
+                  <p className="font-bold">Upload a comma-separated values (.csv) file containing team hierarchy details.</p>
+                  <p className="font-bold text-[#4A6A8A] uppercase tracking-wider text-[10px] font-mono">
+                    Required Headers: hierarchy_name, requester_e_codes, level_1_approver, level_2_approver, level_3_approver, level_4_approver, level_5_approver
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-extrabold">
+                    Note: Multiple requester employee codes can be separated by commas (e.g. &quot;E001,E002,E003&quot;). Approver fields accept a single employee code.
+                  </p>
                 </div>
-              )}
+
+                {/* Upload Input */}
+                <div className="p-4 border-2 border-dashed border-slate-300 bg-slate-50 rounded-none text-center">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          setHierarchyCsvText(event.target?.result as string || "");
+                        };
+                        reader.readAsText(file);
+                      }
+                    }}
+                    className="hidden"
+                    id="hierarchy-file-upload"
+                  />
+                  <label
+                    htmlFor="hierarchy-file-upload"
+                    className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 shadow-2xs transition-colors"
+                  >
+                    <UploadCloud className="w-4 h-4 text-[#4A6A8A]" />
+                    <span>Choose CSV File</span>
+                  </label>
+                </div>
+
+                {/* Raw CSV Text Area */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
+                    Or Paste Raw CSV Data:
+                  </label>
+                  <textarea
+                    value={hierarchyCsvText}
+                    onChange={(e) => setHierarchyCsvText(e.target.value)}
+                    placeholder="hierarchy_name,requester_e_codes,level_1_approver,level_2_approver,level_3_approver,level_4_approver,level_5_approver&#10;Team Rajasthan,E001,E100,E200,E300,,&#10;Team Jodhpur,E002,E100,E200,,,"
+                    rows={6}
+                    className="w-full text-xs font-mono p-3 border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] shadow-2xs bg-white resize-y"
+                  />
+                </div>
+
+                {/* Bulk Results Summary */}
+                {bulkHierarchyResult && (
+                  <div className={`p-4 rounded-none border text-xs font-bold font-mono max-h-48 overflow-y-auto ${
+                    bulkHierarchyResult.error 
+                      ? "bg-rose-50 border-rose-300 text-rose-800" 
+                      : "bg-emerald-50 border-emerald-300 text-emerald-800"
+                  }`}>
+                    {bulkHierarchyResult.error && <p className="text-rose-700 font-extrabold mb-1">{bulkHierarchyResult.error}</p>}
+                    {bulkHierarchyResult.rowErrors?.map((err: string, i: number) => (
+                      <div key={i} className="text-rose-600 text-[10px] mt-0.5">{err}</div>
+                    ))}
+                    {bulkHierarchyResult.errors?.map((err: string, i: number) => (
+                      <div key={i} className="text-rose-600 text-[10px] mt-0.5">{err}</div>
+                    ))}
+                    {!bulkHierarchyResult.error && !bulkHierarchyResult.errors && (
+                      <p className="text-emerald-700 font-extrabold">Successfully imported and updated all team hierarchies!</p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Footer Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
+              <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowBulkHierarchyModal(false)}
-                  className="btn-lte-secondary"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
                 >
                   Close
                 </button>
@@ -3569,7 +3474,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={handleBulkHierarchySubmit}
                   disabled={bulkHierarchyLoading || !hierarchyCsvText}
-                  className="btn-lte-primary disabled:opacity-50"
+                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
                 >
                   {bulkHierarchyLoading && <LteSpinner />}
                   <span>Start Import</span>
@@ -3582,186 +3487,204 @@ export default function AdminPage() {
 
       {/* ================= MODAL: USER UPDATE ROLE MAPPING (HIERARCHY CONFIG) ================= */}
       {showHierarchyModal && (
-        <div className="modal-lte-overlay z-[9999]">
-          <div className="modal-lte-content max-w-3xl p-6">
-            <h3 className="text-base font-bold text-gray-850 tracking-wide border-b border-gray-200 pb-3 text-left">
-              User Update Role Mapping
-            </h3>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Solid Enterprise Header Bar */}
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono">
+                User Update Role Mapping
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowHierarchyModal(false);
+                  setEditingHierarchy(null);
+                }}
+                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
 
-            <div className="space-y-4 mt-4 text-left">
-              {hierarchyError && (
-                <div className="p-3 border border-red-200 bg-red-50 text-red-700 font-semibold text-xs rounded">
-                  {hierarchyError}
+            <div className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
+                {hierarchyError && (
+                  <div className="p-3 border border-rose-300 bg-rose-50 text-rose-800 font-extrabold text-xs rounded-none">
+                    {hierarchyError}
+                  </div>
+                )}
+
+                {/* Hierarchy Type Input */}
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Hierarchy Type</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Bikaner Zone DI"
+                    value={hierarchyName}
+                    onChange={(e) => setHierarchyName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
+                  />
                 </div>
-              )}
 
-              {/* Hierarchy Type Input */}
-              <div>
-                <label className="label-lte">Hierarchy Type</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Ajmer Team"
-                  value={hierarchyName}
-                  onChange={(e) => setHierarchyName(e.target.value)}
-                  className="input-lte"
-                />
-              </div>
-
-              {/* Requester User Container Box */}
-              <div>
-                <label className="label-lte">Requester User</label>
-                
-                {/* Chip List Container */}
-                <div className="min-h-[50px] max-h-36 overflow-y-auto p-2 bg-gray-50 border border-gray-300 rounded flex flex-wrap gap-1.5 items-center">
-                  {selectedRequesterIds.length === 0 ? (
-                    <span className="text-[10px] text-gray-400 uppercase tracking-wider pl-2 select-none font-semibold">
-                      No employees mapped as requesters
-                    </span>
-                  ) : (
-                    selectedRequesterIds.map((rid) => {
-                      const u = safeUsers.find(userObj => userObj.id === rid);
-                      return (
-                        <span 
-                          key={rid} 
-                          className="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded bg-gray-200 text-gray-800 text-[10px] font-semibold border border-gray-300 font-mono shadow-sm"
-                        >
-                          {u ? `${u.name} (${u.user_id})` : `User ID ${rid}`}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveRequesterChip(rid)}
-                            className="h-3.5 w-3.5 rounded-full flex items-center justify-center hover:bg-gray-300 text-gray-500 hover:text-red-600 font-bold transition-all text-[9px] cursor-pointer border-0 p-0 leading-none bg-transparent"
+                {/* Requester User Container Box */}
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Requester User</label>
+                  
+                  {/* Chip List Container */}
+                  <div className="min-h-[50px] max-h-36 overflow-y-auto p-2 bg-slate-50 border border-slate-300 rounded-none flex flex-wrap gap-1.5 items-center">
+                    {selectedRequesterIds.length === 0 ? (
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider pl-1 select-none font-bold">
+                        No employees mapped as requesters
+                      </span>
+                    ) : (
+                      selectedRequesterIds.map((rid) => {
+                        const u = safeUsers.find(userObj => userObj.id === rid);
+                        return (
+                          <span 
+                            key={rid} 
+                            className="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-none bg-slate-200 text-slate-900 text-xs font-extrabold border border-slate-300 font-mono shadow-2xs"
                           >
-                            ×
-                          </button>
-                        </span>
-                      );
-                    })
-                  )}
+                            {u ? `${u.name} (${u.user_id})` : `User ID ${rid}`}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveRequesterChip(rid)}
+                              className="h-4 w-4 rounded-none flex items-center justify-center hover:bg-rose-200 text-slate-600 hover:text-rose-800 font-bold transition-all text-xs cursor-pointer border-0 p-0 leading-none bg-transparent"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Dropdown to add requesters */}
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      handleAddRequesterChip(e.target.value);
+                      e.target.value = "";
+                    }}
+                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer mt-1.5"
+                  >
+                    <option value="" disabled>-- Select an employee to map as requester --</option>
+                    {getEligibleRequesters().map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.user_id}) | {u.role}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                {/* Dropdown to add requesters */}
-                <select
-                  value=""
-                  onChange={(e) => {
-                    handleAddRequesterChip(e.target.value);
-                    e.target.value = "";
-                  }}
-                  className="input-lte mt-1.5"
-                >
-                  <option value="" disabled>-- Select an employee to map as requester --</option>
-                  {getEligibleRequesters().map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.user_id}) | {u.role}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {/* Checkbox / Rel Level / Approvers Table */}
+                <div className="space-y-2 pt-2 border-t border-slate-200">
+                  
+                  {/* Row actions */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAddApproverRow}
+                      className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors flex items-center gap-1.5"
+                      title="Add level row"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-[#4A6A8A]" />
+                      Add Level
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteCheckedRows}
+                      className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-extrabold uppercase tracking-wider rounded-none border border-rose-300 cursor-pointer transition-colors flex items-center gap-1.5"
+                      title="Delete checked rows"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                      Delete Selected
+                    </button>
+                  </div>
 
-              {/* Checkbox / Rel Level / Approvers Table */}
-              <div className="space-y-2 pt-2">
-                
-                {/* Row actions */}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleAddApproverRow}
-                    className="btn-lte-outline p-1.5 rounded text-blue-600 font-bold cursor-pointer"
-                    title="Add level row"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDeleteCheckedRows}
-                    className="p-1.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-600 rounded transition-all cursor-pointer"
-                    title="Delete checked rows"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Table */}
-                <div className="border border-gray-300 rounded overflow-hidden shadow-sm">
-                  <table className="table-lte">
-                    <thead>
-                      <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase tracking-wider text-[10px]">
-                        <th className="py-2 px-3 w-12 text-center">Select</th>
-                        <th className="py-2 px-3 w-32">Rel Level</th>
-                        <th className="py-2 px-3">Approver</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {approverRows.length === 0 ? (
-                        <tr>
-                          <td colSpan={3} className="py-6 text-center text-gray-400 uppercase tracking-wider text-[10px] font-semibold">
-                            No levels configured. Click '+' to add a level.
-                          </td>
+                  {/* Table */}
+                  <div className="border border-slate-300 rounded-none overflow-hidden shadow-2xs">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-[#4A6A8A] text-white border-b border-slate-300 font-extrabold uppercase tracking-wider text-[10px]">
+                          <th className="py-2.5 px-3 w-12 text-center text-white font-mono">SELECT</th>
+                          <th className="py-2.5 px-3 w-32 text-white font-mono">REL LEVEL</th>
+                          <th className="py-2.5 px-3 text-white font-mono">APPROVER</th>
                         </tr>
-                      ) : (
-                        approverRows.map((row, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                            {/* Checkbox */}
-                            <td className="py-1.5 px-3 text-center">
-                              <input
-                                type="checkbox"
-                                checked={row.checked}
-                                onChange={() => handleRowCheckboxToggle(idx)}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer"
-                              />
-                            </td>
-                            {/* Rel Level Number */}
-                            <td className="py-1.5 px-3">
-                              <input
-                                type="number"
-                                value={row.level}
-                                onChange={(e) => handleRowLevelChange(idx, e.target.value)}
-                                className="w-16 px-2 py-0.5 bg-white border border-gray-300 rounded text-xs text-gray-800 focus:outline-none"
-                              />
-                            </td>
-                            {/* Approvers select list (Role constrained Managers, Coordinators, Project Heads) */}
-                            <td className="py-1.5 px-3">
-                              <select
-                                value={row.approverId}
-                                onChange={(e) => handleRowApproverChange(idx, e.target.value)}
-                                className="w-full max-w-md px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-800 focus:outline-none"
-                              >
-                                <option value="">-- Select level approver --</option>
-                                {getUsersByRole(["Manager", "Zonal Manager", "Coordinator", "VP", "Project Head", "MIS", "Admin"]).map((u) => (
-                                  <option key={u.id} value={u.id}>
-                                    {u.name} ({u.user_id}) | {u.role}
-                                  </option>
-                                ))}
-                              </select>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 bg-white">
+                        {approverRows.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="py-6 text-center text-slate-400 uppercase tracking-wider text-[10px] font-extrabold">
+                              No levels configured. Click 'Add Level' to add a level.
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          approverRows.map((row, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                              {/* Checkbox */}
+                              <td className="py-2 px-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={row.checked}
+                                  onChange={() => handleRowCheckboxToggle(idx)}
+                                  className="rounded-none border-slate-300 text-[#4A6A8A] focus:ring-[#4A6A8A] h-4 w-4 cursor-pointer"
+                                />
+                              </td>
+                              {/* Rel Level Number */}
+                              <td className="py-2 px-3">
+                                <input
+                                  type="number"
+                                  value={row.level}
+                                  onChange={(e) => handleRowLevelChange(idx, e.target.value)}
+                                  className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-none text-xs font-mono font-bold text-slate-900 focus:border-[#4A6A8A] outline-none"
+                                />
+                              </td>
+                              {/* Approvers select list */}
+                              <td className="py-2 px-3">
+                                <select
+                                  value={row.approverId}
+                                  onChange={(e) => handleRowApproverChange(idx, e.target.value)}
+                                  className="w-full max-w-md px-2 py-1 bg-white border border-slate-300 rounded-none text-xs font-extrabold text-slate-900 focus:border-[#4A6A8A] outline-none h-8 cursor-pointer"
+                                >
+                                  <option value="">-- Select level approver --</option>
+                                  {getUsersByRole(["Manager", "Zonal Manager", "Coordinator", "VP", "Project Head", "MIS", "Admin"]).map((u) => (
+                                    <option key={u.id} value={u.id}>
+                                      {u.name} ({u.user_id}) | {u.role}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
                 </div>
 
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-6">
-                <button
-                  type="button"
-                  onClick={handleSaveHierarchySubmit}
-                  disabled={hierarchyLoading}
-                  className="btn-lte-primary font-bold text-xs uppercase tracking-wider"
-                >
-                  {hierarchyLoading && <LteSpinner />}
-                  <span>Save Mapping</span>
-                </button>
+              <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => {
                     setShowHierarchyModal(false);
                     setEditingHierarchy(null);
                   }}
-                  className="btn-lte-secondary"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
                 >
                   Close
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveHierarchySubmit}
+                  disabled={hierarchyLoading}
+                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
+                >
+                  {hierarchyLoading && <LteSpinner />}
+                  <span>Save Mapping</span>
                 </button>
               </div>
             </div>
@@ -3770,38 +3693,54 @@ export default function AdminPage() {
       )}
       {/* ================= MODAL: UNLOCK SENSITIVE FIELDS ================= */}
       {showUnlockModal && (
-        <div className="modal-lte-overlay z-[99999]">
-          <div className="modal-lte-content max-w-md p-6">
-            <h3 className="text-sm font-bold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800">
-              Enter Admin Security Password
-            </h3>
-            <form onSubmit={handleUnlockSensitiveSubmit} className="mt-4 space-y-4">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono">
+                Enter Admin Security Password
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUnlockModal(false);
+                  setUnlockPassword("");
+                }}
+                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleUnlockSensitiveSubmit} className="p-4 space-y-4">
               <div>
-                <label className="label-lte">Admin Security Password *</label>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                  Admin Security Password *
+                </label>
                 <input
                   type="password"
                   value={unlockPassword}
                   onChange={(e) => setUnlockPassword(e.target.value)}
-                  className="input-lte"
+                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
                   placeholder="Enter security password to unlock fields"
                   required
                   autoFocus
                 />
               </div>
-              <div className="flex justify-end gap-3 pt-2">
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => {
                     setShowUnlockModal(false);
                     setUnlockPassword("");
                   }}
-                  className="btn-lte-secondary"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn-lte-primary"
+                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors"
                 >
                   Unlock
                 </button>

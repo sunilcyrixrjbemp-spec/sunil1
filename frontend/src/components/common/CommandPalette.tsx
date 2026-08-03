@@ -41,8 +41,6 @@ const COMMANDS: CommandItem[] = [
   { id: "consolidated_report", name: "Consolidated Reports", category: "Reports", path: "/consolidated-report", icon: FileSpreadsheet },
   { id: "penalty_report", name: "Penalty Audit", category: "Reports", path: "/penalty-report", icon: ShieldAlert },
   { id: "admin", name: "Admin Console", category: "System", path: "/admin", icon: Settings },
-  { id: "db_monitor", name: "DB Health", category: "System", path: "/db-monitor", icon: Activity },
-  { id: "upload_data", name: "Data Import", category: "System", path: "/upload-data", icon: UploadCloud },
   { id: "asset_upload", name: "Asset Master", category: "System", path: "/asset-upload", icon: Package },
   { id: "profile", name: "User Profile & Security", category: "Account", path: "/profile", icon: User },
   { id: "help", name: "Help & Support Center", category: "Account", path: "/help-center", icon: HelpCircle },

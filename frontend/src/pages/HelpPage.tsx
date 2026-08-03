@@ -34,6 +34,7 @@ import { ticketService, TicketCreatePayload } from "../services/ticketService";
 import { expenseService } from "../services/expenseService";
 import api from "../services/api";
 import { ResponsiveBar } from "@nivo/bar";
+import { X } from "lucide-react";
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -598,31 +599,31 @@ export default function HelpPage() {
 
   const getPriorityBadge = (pri: string) => {
     if (pri === "Critical" || pri === "Urgent") {
-      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-rose-100 text-rose-700 border border-rose-300">🔥 Critical</span>;
+      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-rose-100 text-rose-700 border border-rose-300">🔥 Critical</span>;
     }
     if (pri === "High") {
-      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-orange-100 text-orange-700 border border-orange-300">⚡ High</span>;
+      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-orange-100 text-orange-700 border border-orange-300">⚡ High</span>;
     }
     if (pri === "Medium") {
-      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-100 text-amber-700 border border-amber-300">⚖️ Medium</span>;
+      return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-amber-100 text-amber-700 border border-amber-300">⚖️ Medium</span>;
     }
-    return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md bg-slate-100 text-slate-700 border border-slate-300">🔹 Low</span>;
+    return <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-slate-100 text-slate-700 border border-slate-300">🔹 Low</span>;
   };
 
   const getStatusBadge = (stat: string) => {
     if (stat === "Open") {
-      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-amber-500 text-white shadow-xs">🟡 Open</span>;
+      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-none bg-amber-600 text-white shadow-2xs">🟡 Open</span>;
     }
     if (stat === "Updated" || stat === "In Progress") {
-      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-blue-600 text-white shadow-xs">🔵 In Progress</span>;
+      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-none bg-blue-600 text-white shadow-2xs">🔵 In Progress</span>;
     }
     if (stat === "Re-opened") {
-      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-purple-600 text-white shadow-xs">🟣 Re-opened</span>;
+      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-none bg-purple-600 text-white shadow-2xs">🟣 Re-opened</span>;
     }
     if (stat === "Closed" || stat === "Final Closed") {
-      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-emerald-600 text-white shadow-xs">🟢 Resolved</span>;
+      return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-none bg-emerald-600 text-white shadow-2xs">🟢 Resolved</span>;
     }
-    return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md bg-slate-600 text-white">{stat}</span>;
+    return <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-none bg-slate-600 text-white">{stat}</span>;
   };
 
   const getCardTopStatusBorder = (status: string) => {
@@ -710,11 +711,13 @@ export default function HelpPage() {
                 Reopen Ticket
               </Button>
             )}
-            {isMobile && (
-              <Button size="middle" onClick={() => setSelectedTicket(null)} className="font-bold">
-                Close
-              </Button>
-            )}
+            <button
+              type="button"
+              onClick={() => setSelectedTicket(null)}
+              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+            >
+              Close ✕
+            </button>
           </div>
         </div>
 
@@ -893,70 +896,96 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 text-slate-800 font-sans max-w-[1600px] mx-auto min-h-screen">
+    <div className="space-y-4 animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 text-[#212529] font-sans max-w-[1600px] mx-auto min-h-screen">
       
-      {/* Ant Design Header Banner */}
-      <Card className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-slate-800 text-white rounded-2xl shadow-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="h-12 w-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400 shadow-sm shrink-0">
-              <CustomerServiceOutlined className="text-2xl" />
-            </div>
-            <div>
-              <Title level={4} className="text-white m-0 uppercase tracking-wide font-black flex items-center gap-2">
-                Query Desk
-              </Title>
-            </div>
+      {/* Enterprise Header Banner */}
+      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
+            <CustomerServiceOutlined className="text-base" />
           </div>
-          <div className="flex items-center gap-2">
-            <Tag color="green" className="font-extrabold text-[10px] uppercase py-0.5 px-2 flex items-center gap-1 m-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Live Realtime Sync
-            </Tag>
-            <button
-              type="button"
-              onClick={handleManualRefresh}
-              disabled={refreshing}
-              className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-extrabold text-xs px-3.5 py-2 rounded-xl border border-indigo-500 shadow-sm flex items-center gap-1.5 cursor-pointer transition-all active:scale-95 disabled:opacity-80"
-            >
-              <ReloadOutlined spin={refreshing} className="text-white text-xs" />
-              <span>{refreshing ? "Refreshing..." : "Refresh Desk"}</span>
-            </button>
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 leading-none">HELP &amp; SUPPORT DESK</h1>
+            <p className="text-[10px] text-slate-500 mt-0.5">Realtime query desk, support ticket management, and discussion thread.</p>
           </div>
         </div>
-      </Card>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-none border border-emerald-200 font-mono flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Live Sync Active
+          </span>
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none px-3.5 py-1 border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors disabled:opacity-80"
+          >
+            <ReloadOutlined spin={refreshing} className="text-white text-xs" />
+            <span>{refreshing ? "Refreshing..." : "Refresh Desk"}</span>
+          </button>
+        </div>
+      </div>
 
-      {/* Quick KPI Summary Bar (Visible on Mobile & Desktop) */}
+      {/* 4 Enterprise Quick KPI Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="rounded-2xl border-indigo-200/70 bg-gradient-to-br from-indigo-50/80 to-white shadow-2xs" bodyStyle={{ padding: "14px" }}>
-          <Text className="text-[10px] font-black uppercase text-indigo-500 tracking-wider block">Total Raised</Text>
-          <div className="text-xl font-extrabold font-mono text-indigo-900 mt-1">{baseList.length}</div>
-        </Card>
-        <Card className="rounded-2xl border-amber-200/70 bg-gradient-to-br from-amber-50/80 to-white shadow-2xs" bodyStyle={{ padding: "14px" }}>
-          <Text className="text-[10px] font-black uppercase text-amber-600 tracking-wider block">Open & Active</Text>
-          <div className="text-xl font-extrabold font-mono text-amber-700 mt-1">
-            {baseList.filter(t => t.status === "Open" || t.status === "Re-opened").length}
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0 font-bold">
+            <TagOutlined />
           </div>
-        </Card>
-        <Card className="rounded-2xl border-blue-200/70 bg-gradient-to-br from-blue-50/80 to-white shadow-2xs" bodyStyle={{ padding: "14px" }}>
-          <Text className="text-[10px] font-black uppercase text-blue-600 tracking-wider block">Updated / In Progress</Text>
-          <div className="text-xl font-extrabold font-mono text-blue-700 mt-1">
-            {baseList.filter(t => t.status === "Updated").length}
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Raised</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{baseList.length}</span>
+            <span className="text-[9px] text-[#4A6A8A] font-bold uppercase block mt-0.5">Total Tickets</span>
           </div>
-        </Card>
-        <Card className="rounded-2xl border-emerald-200/70 bg-gradient-to-br from-emerald-50/80 to-white shadow-2xs" bodyStyle={{ padding: "14px" }}>
-          <Text className="text-[10px] font-black uppercase text-emerald-600 tracking-wider block">Resolved & Closed</Text>
-          <div className="text-xl font-extrabold font-mono text-emerald-700 mt-1">
-            {baseList.filter(t => t.status === "Closed" || t.status === "Final Closed").length}
+        </div>
+
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-amber-600 flex items-center justify-center text-white shrink-0 font-bold">
+            <ClockCircleOutlined />
           </div>
-        </Card>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Open &amp; Active</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">
+              {baseList.filter(t => t.status === "Open" || t.status === "Re-opened").length}
+            </span>
+            <span className="text-[9px] text-amber-700 font-bold uppercase block mt-0.5">Awaiting Action</span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-blue-600 flex items-center justify-center text-white shrink-0 font-bold">
+            <MessageOutlined />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">In Progress</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">
+              {baseList.filter(t => t.status === "Updated").length}
+            </span>
+            <span className="text-[9px] text-blue-700 font-bold uppercase block mt-0.5">Under Review</span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-emerald-600 flex items-center justify-center text-white shrink-0 font-bold">
+            <CheckCircleOutlined />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Resolved</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">
+              {baseList.filter(t => t.status === "Closed" || t.status === "Final Closed").length}
+            </span>
+            <span className="text-[9px] text-emerald-700 font-bold uppercase block mt-0.5">Completed Concerns</span>
+          </div>
+        </div>
       </div>
 
       {/* Analytics Grid Cards */}
-      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+      <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Category Chart */}
-        <Card title={<Text className="text-xs font-black text-slate-600 uppercase tracking-wider"><TagOutlined className="mr-1 text-indigo-600" /> Concerns by Category</Text>} className="rounded-2xl border-slate-200/80 shadow-xs">
-          <div style={{ height: 160 }}>
+        <div className="bg-white border border-slate-300 rounded-none p-3 shadow-2xs">
+          <div className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+            <TagOutlined className="text-[#4A6A8A]" /> Concerns by Category
+          </div>
+          <div style={{ height: 150 }}>
             <ResponsiveBar
               data={analytics.categoryChart}
               keys={["amount"]}
@@ -966,23 +995,26 @@ export default function HelpPage() {
               padding={0.35}
               colors={GALLERY_COLORS}
               colorBy="indexValue"
-              borderRadius={6}
+              borderRadius={0}
               enableLabel={false}
               axisTop={null}
               axisRight={null}
               axisBottom={{ tickSize: 0, tickPadding: 6 }}
               axisLeft={{ tickSize: 0, tickPadding: 6 }}
               theme={{
-                grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                grid: { line: { stroke: '#e2e8f0', strokeWidth: 1 } },
+                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#475569' } } }
               }}
             />
           </div>
-        </Card>
+        </div>
 
         {/* Priority Chart */}
-        <Card title={<Text className="text-xs font-black text-slate-600 uppercase tracking-wider"><ExclamationCircleOutlined className="mr-1 text-amber-500" /> Concerns by Priority</Text>} className="rounded-2xl border-slate-200/80 shadow-xs">
-          <div style={{ height: 160 }}>
+        <div className="bg-white border border-slate-300 rounded-none p-3 shadow-2xs">
+          <div className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+            <ExclamationCircleOutlined className="text-amber-600" /> Concerns by Priority
+          </div>
+          <div style={{ height: 150 }}>
             <ResponsiveBar
               data={analytics.priorityChart}
               keys={["amount"]}
@@ -992,23 +1024,26 @@ export default function HelpPage() {
               padding={0.35}
               colors={GALLERY_COLORS}
               colorBy="indexValue"
-              borderRadius={6}
+              borderRadius={0}
               enableLabel={false}
               axisTop={null}
               axisRight={null}
               axisBottom={{ tickSize: 0, tickPadding: 6 }}
               axisLeft={{ tickSize: 0, tickPadding: 6 }}
               theme={{
-                grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                grid: { line: { stroke: '#e2e8f0', strokeWidth: 1 } },
+                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#475569' } } }
               }}
             />
           </div>
-        </Card>
+        </div>
 
         {/* Status Chart */}
-        <Card title={<Text className="text-xs font-black text-slate-600 uppercase tracking-wider"><ClockCircleOutlined className="mr-1 text-emerald-500" /> Concerns by Status</Text>} className="rounded-2xl border-slate-200/80 shadow-xs">
-          <div style={{ height: 160 }}>
+        <div className="bg-white border border-slate-300 rounded-none p-3 shadow-2xs">
+          <div className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5 border-b border-slate-200 pb-1.5">
+            <ClockCircleOutlined className="text-emerald-600" /> Concerns by Status
+          </div>
+          <div style={{ height: 150 }}>
             <ResponsiveBar
               data={analytics.statusChart}
               keys={["amount"]}
@@ -1018,23 +1053,22 @@ export default function HelpPage() {
               padding={0.35}
               colors={GALLERY_COLORS}
               colorBy="indexValue"
-              borderRadius={6}
+              borderRadius={0}
               enableLabel={false}
               axisTop={null}
               axisRight={null}
               axisBottom={{ tickSize: 0, tickPadding: 6 }}
               axisLeft={{ tickSize: 0, tickPadding: 6 }}
               theme={{
-                grid: { line: { stroke: '#f1f5f9', strokeWidth: 1 } },
-                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#64748b' } } }
+                grid: { line: { stroke: '#e2e8f0', strokeWidth: 1 } },
+                axis: { ticks: { text: { fontSize: 8, fontWeight: 'bold', fill: '#475569' } } }
               }}
             />
           </div>
-        </Card>
-
+        </div>
       </div>
 
-      {/* Ant Design Select, Custom Select and Segmented styling */}
+      {/* Select Styling */}
       <style>{`
         .help-custom-select {
           appearance: none !important;
@@ -1044,10 +1078,10 @@ export default function HelpPage() {
           background-repeat: no-repeat !important;
           background-position: right 10px center !important;
           background-size: 14px 14px !important;
-          padding: 0 30px 0 12px !important;
-          border-radius: 8px !important;
-          min-height: 38px !important;
-          height: 38px !important;
+          padding: 0 30px 0 10px !important;
+          border-radius: 0px !important;
+          min-height: 32px !important;
+          height: 32px !important;
           border: 1px solid #cbd5e1 !important;
           background-color: #ffffff !important;
           font-size: 12px !important;
@@ -1058,45 +1092,61 @@ export default function HelpPage() {
           cursor: pointer !important;
         }
         .help-custom-select:focus {
-          border-color: #4f46e5 !important;
-          box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
-        }
-        .help-tab-segmented .ant-segmented-item-selected {
-          background-color: #4f46e5 !important;
-        }
-        .help-tab-segmented .ant-segmented-item-selected * {
-          color: #ffffff !important;
-          font-weight: 800 !important;
+          border-color: #4A6A8A !important;
         }
       `}</style>
 
-      {/* Prominent Tab Switcher Bar - Always Visible at Top */}
-      <Card className="rounded-2xl border-slate-200/80 shadow-2xs" bodyStyle={{ padding: "12px" }}>
-        <Segmented
-          value={activeTab}
-          onChange={(val) => { handleTabChange(val as any); setSelectedTicket(null); }}
-          options={[
-            { label: `My Raised Tickets (${myRaisedTickets.length})`, value: "my-tickets" },
-            { label: "File Support Ticket", value: "raise" },
-            ...(hasAccessToAssignedTab ? [{ label: `Assigned Concerns (${assignedTickets.length})`, value: "assigned-tickets" }] : [])
-          ]}
-          block
-          className="help-tab-segmented bg-slate-100/90 p-1 font-extrabold text-xs"
-        />
-      </Card>
+      {/* Enterprise Sharp Tab Switcher Bar */}
+      <div className="bg-white border border-slate-300 rounded-none p-1.5 shadow-2xs flex flex-wrap gap-1">
+        <button
+          type="button"
+          onClick={() => { handleTabChange("my-tickets"); setSelectedTicket(null); }}
+          className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none ${
+            activeTab === "my-tickets"
+              ? "bg-[#4A6A8A] text-white shadow-2xs"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          My Raised Tickets ({myRaisedTickets.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => { handleTabChange("raise"); setSelectedTicket(null); }}
+          className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none ${
+            activeTab === "raise"
+              ? "bg-[#4A6A8A] text-white shadow-2xs"
+              : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+          }`}
+        >
+          + File Support Ticket
+        </button>
+        {hasAccessToAssignedTab && (
+          <button
+            type="button"
+            onClick={() => { handleTabChange("assigned-tickets"); setSelectedTicket(null); }}
+            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none ${
+              activeTab === "assigned-tickets"
+                ? "bg-[#4A6A8A] text-white shadow-2xs"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
+          >
+            Assigned Concerns ({assignedTickets.length})
+          </button>
+        )}
+      </div>
 
-      {/* Home-style Filter Toolbar */}
+      {/* Filter Toolbar */}
       {activeTab !== "raise" && (
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="bg-white border border-slate-300 rounded-none p-3 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-700 uppercase tracking-wider shrink-0">
-              <FilterOutlined className="text-indigo-600 text-sm" />
+            <div className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 uppercase tracking-wider shrink-0">
+              <FilterOutlined className="text-[#4A6A8A] text-sm" />
               <span>Filter Concerns:</span>
             </div>
 
             {/* Follow-up Filter */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Flag:</span>
+              <span className="text-[10px] font-extrabold uppercase text-slate-500">Flag:</span>
               <select
                 value={filterFollowup}
                 onChange={(e) => setFilterFollowup(e.target.value as any)}
@@ -1110,7 +1160,7 @@ export default function HelpPage() {
 
             {/* Status Filter */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Status:</span>
+              <span className="text-[10px] font-extrabold uppercase text-slate-500">Status:</span>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -1127,7 +1177,7 @@ export default function HelpPage() {
 
             {/* Category Filter */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 w-full sm:w-auto">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Category:</span>
+              <span className="text-[10px] font-extrabold uppercase text-slate-500">Category:</span>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
@@ -1142,176 +1192,171 @@ export default function HelpPage() {
             </div>
           </div>
 
-          <Button 
+          <button 
             onClick={() => {
               setFilterFollowup("all");
               setFilterStatus("all");
               setFilterCategory("all");
             }}
-            className="text-xs font-bold text-slate-600 rounded-xl hover:text-indigo-600 border-slate-200 self-end md:self-auto"
+            className="px-3 py-1 border border-slate-300 bg-white text-slate-700 text-xs font-bold rounded-none hover:bg-slate-50 transition-colors cursor-pointer self-end md:self-auto"
           >
             Reset Filters
-          </Button>
+          </button>
         </div>
       )}
 
       {/* Main Workspace Layout */}
-      <Row gutter={[20, 20]}>
+      <Row gutter={[16, 16]}>
         
         {/* Left Column: File Ticket Form */}
         <Col xs={24} lg={8} className={activeTab === "raise" ? "block pb-48 lg:pb-0" : "hidden lg:block pb-48 lg:pb-0"}>
-          <Card 
-            title={
-              <Text className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <PlusOutlined className="text-indigo-600" /> File Support Ticket
-              </Text>
-            } 
-            className="rounded-2xl border-slate-200/80 shadow-sm"
-          >
-            <form onSubmit={handleRaiseTicket} className="space-y-4">
-              
-              {/* Concern type dropdown */}
-              <div>
-                <Text className="text-xs font-bold text-slate-600 block mb-1">Concern Field *</Text>
-                <select
-                  value={concernType}
-                  onChange={(e) => setConcernType(e.target.value)}
-                  className="help-custom-select w-full"
-                >
-                  <option value="Expense">Expense Claim Reference</option>
-                  <option value="TA/DA">TA / DA Allowance Cap</option>
-                  <option value="Profile">Profile Mappings</option>
-                  <option value="Other">Other / Custom Issue</option>
-                </select>
-              </div>
-
-              {/* Custom Category Input */}
-              {concernType === "Other" && (
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
+            <div className="bg-[#4A6A8A] text-white px-3 py-2 text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 rounded-none">
+              <PlusOutlined className="text-white" /> File Support Ticket
+            </div>
+            <div className="p-4">
+              <form onSubmit={handleRaiseTicket} className="space-y-3">
+                
+                {/* Concern type dropdown */}
                 <div>
-                  <Text className="text-xs font-bold text-slate-600 block mb-1">Specify Custom Category *</Text>
-                  <Input
-                    placeholder="e.g. System Crash, Fuel Rates, Sim Card"
-                    value={otherCategory}
-                    onChange={(e) => setOtherCategory(e.target.value)}
-                    size="large"
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Concern Field *</label>
+                  <select
+                    value={concernType}
+                    onChange={(e) => setConcernType(e.target.value)}
+                    className="help-custom-select w-full"
+                  >
+                    <option value="Expense">Expense Claim Reference</option>
+                    <option value="TA/DA">TA / DA Allowance Cap</option>
+                    <option value="Profile">Profile Mappings</option>
+                    <option value="Other">Other / Custom Issue</option>
+                  </select>
+                </div>
+
+                {/* Custom Category Input */}
+                {concernType === "Other" && (
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Specify Custom Category *</label>
+                    <Input
+                      placeholder="e.g. System Crash, Fuel Rates, Sim Card"
+                      value={otherCategory}
+                      onChange={(e) => setOtherCategory(e.target.value)}
+                      className="rounded-none border-slate-300 font-bold text-xs"
+                      required
+                    />
+                  </div>
+                )}
+
+                {/* Select Expense Claim Dropdown */}
+                {concernType === "Expense" && (
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Select Claim Reference *</label>
+                    <select
+                      value={selectedExpenseId}
+                      onChange={(e) => setSelectedExpenseId(e.target.value)}
+                      className="help-custom-select w-full"
+                    >
+                      <option value="">-- Select Related Expense Claim --</option>
+                      {myExpenses.map(exp => (
+                        <option key={exp.id} value={String(exp.id)}>
+                          {exp.expense_code} — {exp.itinerary} (₹{exp.amount.toLocaleString()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Select Assignee */}
+                {concernType !== "Profile" ? (
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Assign Target Supervisor *</label>
+                    <select
+                      value={assignedToName}
+                      onChange={(e) => setAssignedToName(e.target.value)}
+                      className="help-custom-select w-full"
+                    >
+                      {currentUser?.manager && (
+                        <option value={currentUser.manager}>Reporting Manager: {currentUser.manager}</option>
+                      )}
+                      {currentUser?.coordinator && (
+                        <option value={currentUser.coordinator}>Zonal Coordinator: {currentUser.coordinator}</option>
+                      )}
+                      {(!currentUser?.manager && !currentUser?.coordinator) && (
+                        <option value="Admin System">Admin System</option>
+                      )}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Assign Target Supervisor</label>
+                    <div className="bg-slate-100 text-slate-700 px-3 py-1.5 text-xs font-bold border border-slate-300 flex items-center justify-center gap-1">
+                      <LockOutlined /> Locked to Admin System
+                    </div>
+                  </div>
+                )}
+
+                {/* Priority */}
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Priority Level *</label>
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="help-custom-select w-full"
+                  >
+                    <option value="Low">Low (General Query)</option>
+                    <option value="Medium">Medium (Delay/Discrepancy)</option>
+                    <option value="High">High (Urgent Action)</option>
+                    <option value="Critical">Critical (System Lockout)</option>
+                  </select>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Detailed Remarks / Description *</label>
+                  <TextArea
+                    rows={4}
+                    placeholder="Explain your concern with clear details..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="rounded-none border-slate-300 font-semibold text-xs"
                     required
                   />
                 </div>
-              )}
 
-              {/* Select Expense Claim Dropdown */}
-              {concernType === "Expense" && (
-                <div>
-                  <Text className="text-xs font-bold text-slate-600 block mb-1">Select Claim Reference *</Text>
-                  <select
-                    value={selectedExpenseId}
-                    onChange={(e) => setSelectedExpenseId(e.target.value)}
-                    className="help-custom-select w-full"
-                  >
-                    <option value="">-- Select Related Expense Claim --</option>
-                    {myExpenses.map(exp => (
-                      <option key={exp.id} value={String(exp.id)}>
-                        {exp.expense_code} — {exp.itinerary} (₹{exp.amount.toLocaleString()})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Select Assignee */}
-              {concernType !== "Profile" ? (
-                <div>
-                  <Text className="text-xs font-bold text-slate-600 block mb-1">Assign Target Supervisor *</Text>
-                  <select
-                    value={assignedToName}
-                    onChange={(e) => setAssignedToName(e.target.value)}
-                    className="help-custom-select w-full"
-                  >
-                    {currentUser?.manager && (
-                      <option value={currentUser.manager}>Reporting Manager: {currentUser.manager}</option>
-                    )}
-                    {currentUser?.coordinator && (
-                      <option value={currentUser.coordinator}>Zonal Coordinator: {currentUser.coordinator}</option>
-                    )}
-                    {(!currentUser?.manager && !currentUser?.coordinator) && (
-                      <option value="Admin System">Admin System</option>
-                    )}
-                  </select>
-                </div>
-              ) : (
-                <div>
-                  <Text className="text-xs font-bold text-slate-600 block mb-1">Assign Target Supervisor</Text>
-                  <Tag color="blue" className="w-full py-1.5 px-3 text-xs font-bold flex items-center justify-center gap-1">
-                    <LockOutlined /> Locked to Admin System
-                  </Tag>
-                </div>
-              )}
-
-              {/* Priority */}
-              <div>
-                <Text className="text-xs font-bold text-slate-600 block mb-1">Priority Level *</Text>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="help-custom-select w-full"
+                <button
+                  type="submit"
+                  disabled={raising}
+                  className="w-full bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none py-2.5 border-0 cursor-pointer shadow-2xs transition-colors disabled:opacity-60"
                 >
-                  <option value="Low">Low (General Query)</option>
-                  <option value="Medium">Medium (Delay/Discrepancy)</option>
-                  <option value="High">High (Urgent Action)</option>
-                  <option value="Critical">Critical (System Lockout)</option>
-                </select>
-              </div>
+                  {raising ? "Filing Support Request..." : "Submit Ticket"}
+                </button>
 
-              {/* Description */}
-              <div>
-                <Text className="text-xs font-bold text-slate-600 block mb-1">Detailed Remarks / Description *</Text>
-                <TextArea
-                  rows={4}
-                  placeholder="Explain your concern with clear details..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="rounded-xl border-slate-200 font-medium"
-                  required
-                />
-              </div>
-
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={raising}
-                block
-                size="large"
-                className="bg-emerald-600 hover:bg-emerald-700 font-extrabold text-xs uppercase tracking-wider rounded-xl h-11"
-              >
-                {raising ? "Filing Support Request..." : "Submit Ticket"}
-              </Button>
-
-            </form>
-          </Card>
+              </form>
+            </div>
+          </div>
         </Col>
 
         {/* Right Column: Listing & Thread */}
         <Col xs={24} lg={16} className={activeTab === "raise" ? "hidden lg:block" : "block"}>
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             
             {/* List Header Title */}
-            <div className="px-4 py-3 bg-white border border-slate-200/90 shadow-2xs rounded-t-2xl flex items-center justify-between">
-              <Text className="font-extrabold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                <MessageOutlined className="text-indigo-600" />
+            <div className="px-3 py-2 bg-[#4A6A8A] text-white shadow-2xs rounded-none flex items-center justify-between">
+              <span className="font-extrabold text-xs uppercase tracking-wider text-white flex items-center gap-2">
+                <MessageOutlined className="text-white" />
                 {activeTab === "assigned-tickets" ? "Assigned Concerns Queue" : "My Support Tickets Queue"} ({filteredList.length})
-              </Text>
-              <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">Sorted: Newest First</span>
+              </span>
+              <span className="text-[10px] font-mono text-slate-200 font-bold uppercase">Sorted: Newest First</span>
             </div>
 
             {/* Ticket Cards List */}
             {loading && tickets.length === 0 ? (
-              <div className="p-12 text-center bg-white border border-slate-200/90 rounded-b-2xl shadow-xs">
+              <div className="p-12 text-center bg-white border border-slate-300 rounded-none shadow-2xs">
                 <Spin size="large" tip="Loading support desk tickets..." />
               </div>
             ) : filteredList.length === 0 ? (
-              <div className="py-16 text-center bg-white border border-slate-200/90 rounded-b-2xl shadow-xs">
-                <Empty description={<Text className="font-bold text-slate-400 uppercase text-xs">No tickets match active filters</Text>} />
+              <div className="py-16 text-center bg-white border border-slate-300 rounded-none shadow-2xs">
+                <Empty description={<Text className="font-extrabold text-slate-500 uppercase text-xs">No tickets match active filters</Text>} />
               </div>
             ) : (
               <div className="space-y-3 pb-48 lg:pb-12">
@@ -1325,17 +1370,16 @@ export default function HelpPage() {
                     <div 
                       key={tkt.id} 
                       onClick={() => setSelectedTicket(tkt)}
-                      className={`bg-white border rounded-xl p-3 space-y-2.5 transition-all cursor-pointer group shadow-2xs hover:shadow-md ${statusBorderClass} ${
+                      className={`bg-white border border-slate-300 rounded-none p-3 space-y-2.5 transition-all cursor-pointer group shadow-2xs hover:shadow-md ${statusBorderClass} ${
                         isSelected 
-                          ? "ring-2 ring-indigo-600 border-indigo-600 bg-indigo-50/40" 
+                          ? "ring-2 ring-[#4A6A8A] border-[#4A6A8A] bg-slate-50" 
                           : ""
                       }`}
                     >
-                      {/* Top Header Section (Strict 2 Horizontal Lines) */}
-                      <div className="border-b border-slate-100 pb-2 space-y-1.5">
-                        {/* Horizontal Line 1: Ticket ID (Left) & Priority + Status (Right) */}
+                      {/* Top Header Section */}
+                      <div className="border-b border-slate-200 pb-2 space-y-1.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="bg-slate-900 text-white font-extrabold py-0.5 px-2.5 rounded-md text-xs font-mono shadow-2xs">
+                          <span className="bg-[#4A6A8A] text-white font-extrabold py-0.5 px-2.5 rounded-none text-xs font-mono shadow-2xs">
                             {codeDisplay}
                           </span>
 
@@ -1345,28 +1389,27 @@ export default function HelpPage() {
                           </div>
                         </div>
 
-                        {/* Horizontal Line 2: Category & Claim Ref (Left) & Submitted Date (Right) */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="bg-indigo-50 text-indigo-700 font-extrabold px-2 py-0.5 text-[10px] uppercase rounded-md border border-indigo-200">
+                            <span className="bg-slate-100 text-[#4A6A8A] font-extrabold px-2 py-0.5 text-[10px] uppercase rounded-none border border-slate-200">
                               {tkt.concern_type || tkt.concernType}
                             </span>
 
                             {claimCodeStr && (
-                              <span className="bg-purple-50 text-purple-700 font-mono font-extrabold text-[10px] px-2 py-0.5 rounded-md border border-purple-200">
+                              <span className="bg-slate-100 text-slate-800 font-mono font-extrabold text-[10px] px-2 py-0.5 rounded-none border border-slate-200">
                                 Claim: {claimCodeStr}
                               </span>
                             )}
                           </div>
 
-                          <span className="text-[10px] text-slate-400 font-bold font-mono shrink-0">
+                          <span className="text-[10px] text-slate-500 font-bold font-mono shrink-0">
                             📅 {formatToIST(tkt.created_at || tkt.createdAt)}
                           </span>
                         </div>
                       </div>
 
                       {/* Problem Statement Box */}
-                      <div className="bg-slate-50/90 rounded-md p-2.5 border border-slate-200/70 space-y-0.5">
+                      <div className="bg-slate-50 rounded-none p-2.5 border border-slate-200 space-y-0.5">
                         <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block">CONCERN DETAILS</span>
                         <p className="text-xs sm:text-sm font-extrabold text-slate-900 leading-snug m-0 whitespace-pre-wrap" title={tkt.description}>
                           {tkt.description}
@@ -1374,16 +1417,16 @@ export default function HelpPage() {
                       </div>
 
                       {/* Structured Metadata Grid Chips */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] sm:text-[11px] font-bold text-slate-600 bg-slate-100/70 p-2 rounded-md border border-slate-200/60">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px] sm:text-[11px] font-bold text-slate-600 bg-slate-100 p-2 rounded-none border border-slate-200">
                         <div className="truncate">
                           <span className="text-slate-400 font-extrabold uppercase text-[8px] block">Raised By</span>
                           <span className="text-slate-900 font-black">{tkt.created_by_name || tkt.createdByName || "User"}</span>
-                          <span className="text-slate-400 text-[9px]"> ({tkt.created_by_code || tkt.createdByCode || ""})</span>
+                          <span className="text-slate-500 text-[9px]"> ({tkt.created_by_code || tkt.createdByCode || ""})</span>
                         </div>
 
                         <div className="truncate">
                           <span className="text-slate-400 font-extrabold uppercase text-[8px] block">Assigned Supervisor</span>
-                          <span className="text-indigo-700 font-black">{tkt.assigned_to_name || tkt.assignedToName || "Support Desk"}</span>
+                          <span className="text-[#4A6A8A] font-black">{tkt.assigned_to_name || tkt.assignedToName || "Support Desk"}</span>
                         </div>
 
                         <div className="truncate hidden sm:block">
@@ -1395,8 +1438,8 @@ export default function HelpPage() {
                       </div>
 
                       {/* CTA Action Button Bar */}
-                      <div className="bg-indigo-600 group-hover:bg-indigo-700 text-white font-extrabold text-xs py-1.5 px-3 rounded-md flex items-center justify-between transition-colors shadow-2xs">
-                        <span>Tap to View Discussion & Reply</span>
+                      <div className="bg-[#4A6A8A] group-hover:bg-[#3b5570] text-white font-extrabold text-xs py-1.5 px-3 rounded-none flex items-center justify-between transition-colors shadow-2xs">
+                        <span>Tap to View Discussion &amp; Reply</span>
                         <span className="group-hover:translate-x-1 transition-transform font-mono">→</span>
                       </div>
                     </div>
@@ -1406,25 +1449,32 @@ export default function HelpPage() {
             )}
           </div>
 
-          {/* Ticket Discussion Thread Panel (Desktop) */}
-          {selectedTicket && !isMobile && (
-            <Card className="mt-6 rounded-2xl border-slate-200/80 shadow-md">
-              {renderTicketDetail()}
-            </Card>
-          )}
+          {/* Ticket Chat Discussion Modal (Desktop & Mobile) */}
+          {selectedTicket && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
+              <div className="bg-white border border-slate-400 rounded-none shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-fadeIn">
+                {/* Modal Header Bar */}
+                <div className="bg-[#4A6A8A] text-white px-4 py-2.5 flex items-center justify-between rounded-none shrink-0">
+                  <div className="flex items-center gap-2 font-mono font-extrabold text-xs uppercase tracking-wider text-white">
+                    <MessageOutlined className="text-white text-sm" />
+                    <span>Ticket Chat &amp; Discussion Thread — {getFormattedTicketCode(selectedTicket)}</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setSelectedTicket(null)}
+                    className="text-white/80 hover:text-white transition-colors cursor-pointer border-0 bg-transparent p-1 leading-none"
+                    title="Close Chat Modal"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
 
-          {/* Ticket Discussion Drawer (Mobile) */}
-          {selectedTicket && isMobile && (
-            <Drawer
-              open={!!selectedTicket}
-              onClose={() => setSelectedTicket(null)}
-              placement="bottom"
-              height="90vh"
-              className="rounded-t-2xl"
-              bodyStyle={{ padding: "16px", paddingBottom: "110px" }}
-            >
-              {renderTicketDetail()}
-            </Drawer>
+                {/* Modal Body */}
+                <div className="p-4 overflow-y-auto space-y-4 flex-1">
+                  {renderTicketDetail()}
+                </div>
+              </div>
+            </div>
           )}
 
         </Col>

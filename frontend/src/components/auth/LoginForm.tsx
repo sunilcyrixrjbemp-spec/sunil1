@@ -209,29 +209,27 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     <div style={{ padding: "40px 36px 32px" }}>
 
       {/* ── Logo + Title ────────────────────────────────────────────────── */}
-      <div className="text-center mb-8">
-        <img
-          src="/brand.png"
-          alt="Cyrix Field Ops"
-          className="mx-auto object-contain cursor-pointer"
-          style={{ height: 52, width: "auto", marginBottom: 16 }}
+      <div className="text-center mb-6">
+        <div className="inline-flex p-2 bg-white rounded-md border border-slate-200 shadow-2xs mb-3 cursor-pointer"
           onClick={() => {
             const clicks = logoClicks + 1;
             setLogoClicks(clicks);
             if (clicks >= 5) { setShowDiagnostics(true); setLogoClicks(0); }
-          }}
-        />
+          }}>
+          <img
+            src="/brand.png"
+            alt="Cyrix Field Ops"
+            className="object-contain"
+            style={{ height: 44, width: "auto" }}
+          />
+        </div>
         <h1
-          className="m-0"
-          style={{
-            fontFamily: "'Inter Tight', 'Inter', sans-serif",
-            fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em",
-            color: "var(--ink-900)",
-          }}
+          className="m-0 text-xl font-extrabold text-slate-900 tracking-tight"
+          style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
         >
           Welcome back
         </h1>
-        <p className="mt-1 m-0" style={{ fontSize: 13, color: "var(--ink-500)" }}>
+        <p className="mt-1 m-0 text-xs text-slate-500 font-medium">
           Sign in to your Cyrix Field Ops account
         </p>
       </div>
@@ -239,46 +237,38 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
       {/* ── Status Message ──────────────────────────────────────────────── */}
       {statusMessage && (
         <div
-          className="mb-5 flex items-start gap-2.5 rounded-lg"
+          className="mb-5 flex items-start gap-2.5 rounded-none p-3 border-l-4"
           style={{
-            padding: "11px 14px",
-            backgroundColor: statusMessage.type === "error" ? "var(--rejected-bg)" : "var(--approved-bg)",
-            border: `1px solid ${statusMessage.type === "error" ? "var(--rejected-border)" : "var(--approved-border)"}`,
-            borderLeft: `3px solid ${statusMessage.type === "error" ? "var(--rejected-text)" : "var(--approved-text)"}`,
+            backgroundColor: statusMessage.type === "error" ? "#fef2f2" : "#ecfdf5",
+            borderColor: statusMessage.type === "error" ? "#fca5a5" : "#6ee7b7",
+            borderLeftColor: statusMessage.type === "error" ? "#dc2626" : "#059669",
           }}
         >
           <AlertTriangle
             style={{
-              width: 14, height: 14, marginTop: 1, flexShrink: 0,
-              color: statusMessage.type === "error" ? "var(--rejected-text)" : "var(--approved-text)",
+              width: 15, height: 15, marginTop: 1, flexShrink: 0,
+              color: statusMessage.type === "error" ? "#dc2626" : "#059669",
             }}
           />
-          <span style={{ fontSize: 13, color: statusMessage.type === "error" ? "var(--rejected-text)" : "var(--approved-text)", fontWeight: 500, lineHeight: "18px" }}>
+          <span style={{ fontSize: 12, color: statusMessage.type === "error" ? "#991b1b" : "#065f46", fontWeight: 600, lineHeight: "18px" }}>
             {statusMessage.text}
           </span>
         </div>
       )}
 
       {/* ── Form ────────────────────────────────────────────────────────── */}
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
         {/* User ID Field */}
         <div>
           <label
             htmlFor="userId"
-            style={{
-              display: "block", marginBottom: 6,
-              fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase",
-              color: "var(--ink-500)",
-            }}
+            className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
           >
             User ID
           </label>
           <div className="relative">
-            <span
-              className="absolute inset-y-0 left-0 flex items-center pointer-events-none"
-              style={{ paddingLeft: 12, color: "var(--ink-300)" }}
-            >
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
               <User size={15} />
             </span>
             <input
@@ -289,8 +279,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               onChange={(e) => { setUserId(e.target.value); setStatusMessage(null); }}
               disabled={loading}
               required
-              className="input-lte"
-              style={{ paddingLeft: 40 }}
+              className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
             />
           </div>
         </div>
@@ -299,19 +288,12 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
         <div>
           <label
             htmlFor="password"
-            style={{
-              display: "block", marginBottom: 6,
-              fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase",
-              color: "var(--ink-500)",
-            }}
+            className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
           >
             Password
           </label>
           <div className="relative">
-            <span
-              className="absolute inset-y-0 left-0 flex items-center pointer-events-none"
-              style={{ paddingLeft: 12, color: "var(--ink-300)" }}
-            >
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
               <Lock size={15} />
             </span>
             <input
@@ -322,29 +304,26 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               onChange={(e) => { setPassword(e.target.value); setStatusMessage(null); }}
               disabled={loading}
               required
-              className="input-lte"
-              style={{ paddingLeft: 40, paddingRight: 40 }}
+              className="w-full h-11 pl-10 pr-10 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 flex items-center border-0 bg-transparent cursor-pointer"
-              style={{ paddingRight: 12, color: "var(--ink-300)" }}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 border-0 bg-transparent text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
         </div>
 
-        {/* Submit */}
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading}
-          className="btn-lte-primary w-full"
-          style={{ height: 44, fontSize: 14, fontWeight: 600, gap: 8, marginTop: 4 }}
+          className="w-full h-11 mt-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
         >
           {loading ? (
-            <><Spinner /><span>{loadingMessage}</span></>
+            <><Spinner /><span className="normal-case">{loadingMessage}</span></>
           ) : (
             <><span>Sign In</span><ArrowRight size={15} /></>
           )}
@@ -361,53 +340,40 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               if (success) navigate("/home");
             }}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 border-0 cursor-pointer transition-all rounded-lg"
-            style={{
-              height: 44, fontSize: 13, fontWeight: 600,
-              backgroundColor: "var(--surface-sunken)",
-              border: "1px solid var(--line)",
-              color: "var(--ink-700)",
-            }}
+            className="w-full h-11 flex items-center justify-center gap-2 border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-none cursor-pointer transition-colors"
           >
-            <Fingerprint size={16} style={{ color: "var(--accent-600)" }} />
+            <Fingerprint size={16} className="text-[#4A6A8A]" />
             <span>{biometryType === 'face' ? 'Login with Face ID' : 'Login with Fingerprint'}</span>
           </button>
         )}
       </form>
 
       {/* ── Footer links ────────────────────────────────────────────────── */}
-      <div
-        className="flex items-center justify-between mt-6 pt-5"
-        style={{ borderTop: "1px solid var(--line)" }}
-      >
+      <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
         <button
+          type="button"
           onClick={onForgotPassword}
-          className="border-0 bg-transparent cursor-pointer"
-          style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-500)" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--accent-600)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--ink-500)")}
+          className="border-0 bg-transparent cursor-pointer text-xs font-bold text-[#4A6A8A] hover:text-slate-900 transition-colors"
         >
           Forgot Password?
         </button>
         <button
+          type="button"
           onClick={onUnlockAccount}
-          className="border-0 bg-transparent cursor-pointer"
-          style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-500)" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--accent-600)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--ink-500)")}
+          className="border-0 bg-transparent cursor-pointer text-xs font-bold text-[#4A6A8A] hover:text-slate-900 transition-colors"
         >
           Unlock Account
         </button>
       </div>
 
       {/* ── Attribution ─────────────────────────────────────────────────── */}
-      <p className="text-center mt-4 m-0" style={{ fontSize: 11, color: "var(--ink-300)" }}>
+      <p className="text-center mt-4 m-0 text-xs text-slate-500 font-medium">
         Designed by{" "}
         <a
           href="https://sunilbishnoi.co.in/"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: "var(--accent-600)", fontWeight: 600, textDecoration: "none" }}
+          className="text-[#4A6A8A] font-bold hover:underline"
         >
           Sunil Bishnoi
         </a>

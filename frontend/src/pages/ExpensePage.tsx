@@ -11,6 +11,7 @@ import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsPdf } from "../utils/pdf";
 import { getISTDate, getISTMonth } from "../utils/dateUtils";
+import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
 import { 
   Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
@@ -27,7 +28,8 @@ import {
   Bike,
   BookOpen,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Search
 } from "lucide-react";
 import api from "../services/api";
 import { 
@@ -731,6 +733,25 @@ export default function ExpensePage() {
   const [activeClaimsTab, setActiveClaimsTab] = useState<"sheets" | "legs">("sheets");
 
   useEffect(() => {
+    // Unconditionally clear any lingering scroll locks on mount and unmount
+    document.body.style.overflow = '';
+    document.body.style.pointerEvents = '';
+    document.body.style.touchAction = '';
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.pointerEvents = '';
+    document.documentElement.style.touchAction = '';
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.pointerEvents = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.pointerEvents = '';
+      document.documentElement.style.touchAction = '';
+    };
+  }, []);
+
+  useEffect(() => {
     const hasAnyModalOpen = showDetailsModal || showConfirmModal || !!submitStatus || showApprovalModal || validationModal.show || !!activeCameraTarget || !!activeActivityCameraTarget || !!lightboxImage;
     if (hasAnyModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -741,6 +762,8 @@ export default function ExpensePage() {
       document.documentElement.style.overflow = '';
       document.documentElement.style.pointerEvents = '';
       document.documentElement.style.touchAction = '';
+      document.body.classList.remove('ant-scrolling-effect');
+      document.documentElement.classList.remove('ant-scrolling-effect');
     }
   }, [showDetailsModal, showConfirmModal, submitStatus, showApprovalModal, validationModal.show, activeCameraTarget, activeActivityCameraTarget, lightboxImage]);
   const [claimsSortOrder, setClaimsSortOrder] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc">("date_desc");
@@ -2734,15 +2757,24 @@ export default function ExpensePage() {
   };
 
   const handleViewDetails = async (claimId: number) => {
-    setSelectedClaim(null);
-    setDetailsLoading(true);
+    // Instantly set selectedClaim from claims list (0ms delay) so modal opens immediately
+    const existingClaim = claims.find((c: any) => c.id === claimId);
+    if (existingClaim) {
+      setSelectedClaim(existingClaim);
+    }
     setShowDetailsModal(true);
+    setDetailsLoading(true);
+
     try {
       const details = await expenseService.getExpenseDetails(claimId);
-      setSelectedClaim(details);
+      if (details) {
+        setSelectedClaim(details);
+      }
     } catch (err: any) {
-      toast.error("Failed to load claim status details.");
-      setShowDetailsModal(false);
+      if (!existingClaim) {
+        toast.error("Failed to load claim status details.");
+        setShowDetailsModal(false);
+      }
     } finally {
       setDetailsLoading(false);
     }
@@ -2964,25 +2996,27 @@ export default function ExpensePage() {
     <>
       <div className="space-y-6 animate-fadeIn text-[#212529] pb-32 md:pb-8 text-xs font-sans">
       
-      {/* Header Info */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
-        <div>
-          <h2 className="text-base font-bold text-slate-800 uppercase tracking-tight flex items-center gap-2">
-            <FileText className="w-5 h-5 text-indigo-650" />
-            Submit Daily Expense
-          </h2>
-          <p className="text-slate-450 text-xs mt-0.5">Fill out your travel details and work report for the day</p>
+      {/* Header Info Bar */}
+      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 leading-none tracking-tight">Submit Daily Expense Claim</h1>
+            <p className="text-[10px] text-slate-500 mt-1 font-medium">Fill out your travel details and work report for the day with automated policy validation.</p>
+          </div>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-center">
-          <span className="text-[10px] text-slate-400 font-bold uppercase">Expense ID:</span>
-          <span className="bg-indigo-600 text-white font-extrabold py-1 px-3.5 sharp-card rounded-none text-[11px] font-mono shadow-sm">
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">EXPENSE ID:</span>
+          <span className="bg-[#4A6A8A] text-white font-extrabold py-1.5 px-4 rounded-none text-[11px] font-mono tracking-wide shadow-2xs">
             {nextExpId}
           </span>
         </div>
       </div>
 
       {policyMissing && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg flex items-start gap-2.5 font-medium shadow-sm animate-pulse">
+        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-none flex items-start gap-2.5 font-medium shadow-2xs animate-pulse">
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-rose-650" />
           <div className="min-w-0 flex-1">
             <p className="font-bold text-sm">Policy data load नहीं हुआ, कृपया page reload करें</p>
@@ -2991,74 +3025,72 @@ export default function ExpensePage() {
         </div>
       )}
 
-      {/* 4 Info-Box Widgets (Unified Mobile/Desktop) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4 Premium Stat Cards (High-Density Design System) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Profile Card */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-indigo-50 text-indigo-655 shrink-0">
-            <User className="w-5 h-5 text-indigo-600" />
+        <div className="bg-white border border-slate-200 rounded-none shadow-2xs p-3 flex items-center gap-3 hover:border-indigo-300 transition-all">
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <User className="w-4.5 h-4.5" />
           </div>
-          <div className="info-box-content min-w-0">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
-              Employee Profile
-            </span>
-            <span className="text-xs font-bold text-slate-800 block truncate" title={user.name || "—"}>
+          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">EMPLOYEE PROFILE</span>
+            <span className="text-xs font-extrabold text-slate-900 leading-tight truncate" title={user.name || "—"}>
               {user.name || "—"}
             </span>
-            <span className="text-[10px] text-slate-500 block truncate font-mono mt-0.5">
-              {user.e_code || "—"} | Grade: {user.grade || "—"}
-            </span>
+            <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-mono mt-0.5">
+              <span>{user.e_code || "—"}</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-indigo-600 font-bold bg-indigo-50 px-1 py-0.2 border border-indigo-100 rounded-none">Grade: {user.grade || "—"}</span>
+            </div>
           </div>
         </div>
 
         {/* Assigned Home District Card */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-emerald-50 text-emerald-600 shrink-0">
-            <MapPin className="w-5 h-5" />
+        <div className="bg-white border border-slate-200 rounded-none shadow-2xs p-3 flex items-center gap-3 hover:border-emerald-300 transition-all">
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <MapPin className="w-4.5 h-4.5" />
           </div>
-          <div className="info-box-content min-w-0">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
-              Assigned District
-            </span>
-            <span className="text-xs font-bold text-slate-800 block truncate">
+          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">ASSIGNED DISTRICT</span>
+            <span className="text-xs font-extrabold text-slate-900 leading-tight truncate">
               {user.district || "—"}
             </span>
-            <span className="text-[10px] text-emerald-600 font-extrabold block mt-0.5">
+            <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit mt-0.5">
               In-District Boundary
             </span>
           </div>
         </div>
 
         {/* Monthly Distance Limit Card */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-blue-50 text-blue-600 shrink-0">
+        <div className="bg-white border border-slate-200 rounded-none shadow-2xs p-3 flex items-center gap-3 hover:border-blue-300 transition-all">
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
             {allowance.vehicle_type === "Car" ? (
-              <Car className="w-5 h-5" />
+              <Car className="w-4.5 h-4.5" />
             ) : allowance.vehicle_type === "Bike" ? (
-              <Bike className="w-5 h-5" />
+              <Bike className="w-4.5 h-4.5" />
             ) : (
-              <Navigation className="w-5 h-5" />
+              <Navigation className="w-4.5 h-4.5" />
             )}
           </div>
-          <div className="info-box-content min-w-0">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
+          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
               {limitPillLabel}
             </span>
-            <span className="text-xs font-bold text-slate-800 block font-mono">
+            <span className="text-xs font-mono font-black text-slate-900 leading-tight">
               {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 0) + approvedKm)} KM
             </span>
-            <div className="w-full bg-slate-100 rounded-full h-1 mt-1.5 overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-none h-1.5 mt-1 overflow-hidden">
               <div 
-                className="bg-blue-650 h-1 rounded-full transition-all duration-300"
+                className="bg-blue-600 h-1.5 rounded-none transition-all duration-300"
                 style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 0) + approvedKm))}%` }}
               ></div>
             </div>
             {existingKmReq && (
-              <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[9px] font-bold shrink-0">
+              <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[9px] font-bold shrink-0">
                 <span className="text-slate-400">Request:</span>
                 <span className={
                   existingKmReq.status === "Approved" ? "text-green-600 font-black" :
-                  existingKmReq.status === "Rejected" ? "text-red-650 font-black" :
+                  existingKmReq.status === "Rejected" ? "text-rose-600 font-black" :
                   "text-amber-600 animate-pulse font-black"
                 }>
                   {existingKmReq.status === "Approved" ? "✓ Approved" :
@@ -3071,29 +3103,29 @@ export default function ExpensePage() {
         </div>
 
         {/* Monthly Auto Cap Card */}
-        <div className="info-box-lte animate-fadeIn">
-          <div className="info-box-icon bg-amber-50 text-amber-600 shrink-0">
-            <Navigation className="w-5 h-5" />
+        <div className="bg-white border border-slate-200 rounded-none shadow-2xs p-3 flex items-center gap-3 hover:border-amber-300 transition-all">
+          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <Navigation className="w-4.5 h-4.5" />
           </div>
-          <div className="info-box-content min-w-0">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
-              Monthly Auto Cap
+          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
+              MONTHLY AUTO CAP
             </span>
-            <span className="text-xs font-bold text-slate-800 block font-mono">
+            <span className="text-xs font-mono font-black text-slate-900 leading-tight">
               ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{((allowance.max_auto_per_month || 0) + approvedAuto).toLocaleString()}
             </span>
-            <div className="w-full bg-slate-100 rounded-full h-1 mt-1.5 overflow-hidden">
+            <div className="w-full bg-slate-100 rounded-none h-1.5 mt-1 overflow-hidden">
               <div 
-                className="bg-amber-500 h-1 rounded-full transition-all duration-300"
+                className="bg-amber-500 h-1.5 rounded-none transition-all duration-300"
                 style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, ((allowance.max_auto_per_month || 0) + approvedAuto))}%` }}
               ></div>
             </div>
             {existingAutoReq && (
-              <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-[9px] font-bold shrink-0">
+              <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[9px] font-bold shrink-0">
                 <span className="text-slate-400">Request:</span>
                 <span className={
                   existingAutoReq.status === "Approved" ? "text-green-600 font-black" :
-                  existingAutoReq.status === "Rejected" ? "text-red-650 font-black" :
+                  existingAutoReq.status === "Rejected" ? "text-rose-600 font-black" :
                   "text-amber-600 animate-pulse font-black"
                 }>
                   {existingAutoReq.status === "Approved" ? "✓ Approved" :
@@ -3106,112 +3138,7 @@ export default function ExpensePage() {
         </div>
       </div>
 
-      {/* Policy Guide Panel */}
-      <div className="card border border-slate-100 bg-white shadow-sm rounded-3xl overflow-hidden mb-6">
-        <div 
-          onClick={() => setShowPolicyPanel(!showPolicyPanel)}
-          className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20 cursor-pointer hover:bg-slate-50/40 transition-colors"
-        >
-          <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-            <BookOpen className="w-4 h-4 text-indigo-650" />
-            Your Grade Allowances & Policies ({user.grade || "—"})
-          </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-400 font-semibold sm:inline hidden">Quick policy reference</span>
-            {showPolicyPanel ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-          </div>
-        </div>
-        
-        {showPolicyPanel && (
-          <div className="card-body p-5 space-y-4 animate-fadeIn">
-            <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50/50 p-2.5 sharp-card rounded-none border border-indigo-100/30">
-              <Info className="w-4 h-4 shrink-0 text-indigo-500" />
-              <p className="text-[10px] font-semibold leading-relaxed text-slate-655">
-                These are the active reimbursement rules for your grade loaded dynamically from the database. Claims exceeding these limits are auto-flagged and subject to deduction.
-              </p>
-            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fadeIn">
-              {/* 1. Daily Allowance In-District */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (In-District)</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.daily_in_district || 0).toFixed(2)}</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Daily allowance for travel within headquarters district.</p>
-              </div>
-
-              {/* 2. Daily Allowance Out-District */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Out-District)</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.daily_out_district || 0).toFixed(2)}</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Daily allowance for travel outside headquarters district.</p>
-              </div>
-
-              {/* 3. Daily Allowance Hotel */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Hotel Stay)</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.daily_hotel || 0).toFixed(2)}</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Daily allowance when staying overnight at a hotel.</p>
-              </div>
-
-              {/* 4. Daily Allowance Out-State */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Out-of-State)</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.daily_out_state || 0).toFixed(2)}</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Daily allowance when traveling outside parent state.</p>
-              </div>
-
-              {/* 5. In-State Hotel Room Rent */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Hotel Rent (In-State)</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.hotel_in_state_s || 1000).toFixed(2)} / Night</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for in-state hotel boarding/lodging.</p>
-              </div>
-
-              {/* 6. Out-of-State Hotel Room Rent */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Hotel Rent (Out-State)</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.hotel_out_state_s || 2000).toFixed(2)} / Night</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for out-of-state hotel boarding/lodging.</p>
-              </div>
-
-              {/* 7. Bike Rate */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Bike Travel Rate</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.rate_bike || 4.5).toFixed(2)} / KM</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal motorcycle.</p>
-              </div>
-
-              {/* 8. Car Rate */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Car Travel Rate</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.rate_car || 9.0).toFixed(2)} / KM</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal car.</p>
-              </div>
-
-              {/* 9. Max KM per month */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Travel Cap</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{allowance.max_km_per_month || 0} KM</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursable distance allowed per month.</p>
-              </div>
-
-              {/* 10. Max Auto per month */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Auto Cap</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(allowance.max_auto_per_month || 0).toFixed(2)}</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">Maximum reimbursable amount allowed for auto/cab fares per month.</p>
-              </div>
-
-              {/* 11. Vehicle Type */}
-              <div className="p-3.5 bg-slate-50/40 border border-slate-100/70 rounded-2xl">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Approved Vehicle</span>
-                <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{allowance.vehicle_type || "None"}</span>
-                <p className="text-[9px] text-slate-450 leading-normal font-medium">The standard vehicle type authorized for your grade.</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Main Form container supporting dual layout */}
       <form onSubmit={handleFormSubmit} className="space-y-6">
@@ -3306,6 +3233,11 @@ export default function ExpensePage() {
               {itineraries.map((leg, index) => {
                 const legNum = index + 1;
                 const isFirst = legNum === 1;
+                const prevLeg = index > 0 ? itineraries[index - 1] : null;
+                const isFromLocked = !isFirst && Boolean(prevLeg?.to && prevLeg.to.trim() !== "");
+                const currentFromDist = isFromLocked ? (prevLeg?.district || prevLeg?.district_from || leg.district_from) : leg.district_from;
+                const currentFrom = isFromLocked ? (prevLeg?.to || leg.from) : leg.from;
+
                 const rawDistOpts = Object.keys(facilities).length > 0 ? Object.keys(facilities) : [
                   "Ajmer", "Beawer", "Bhilwara", "Nagaur", "Tonk", "Bikaner", "Churu", "Ganganagar", "Hanumangarh", 
                   "Barmer", "Balotra", "Jaisalmer", "Jalore", "Jodhpur", "Pali", "Phalodi", "Sirohi", 
@@ -3315,24 +3247,12 @@ export default function ExpensePage() {
                 const distOpts = Array.from(new Set([...rawDistOpts, hDist, "Jaipur", "Kota"])).filter(Boolean).filter(d => d !== "All");
 
                 return (
-                  <div key={leg.leg} className={`card-lte bg-white animate-fadeIn text-xs mb-6 shadow-sm border border-slate-300 sharp-card rounded-none border-t-4 ${
-                    leg.travel_type === "In-District"
-                      ? "border-t-indigo-600"
-                      : "border-t-amber-500"
-                  }`}>
+                  <div key={leg.leg} className="bg-white text-xs mb-6 border border-slate-200 rounded-none shadow-2xs overflow-hidden border-t-4 border-t-[#4A6A8A]">
                     
-                    {/* Leg Header with Light Soft Background & Square Styling */}
-                    <div className={`px-4 py-2.5 flex items-center justify-between border-b ${
-                      leg.travel_type === "In-District"
-                        ? "bg-indigo-50/80 border-indigo-200"
-                        : "bg-amber-50/80 border-amber-200"
-                    }`}>
-                      <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2.5 m-0">
-                        <span className={`h-5 px-2 rounded-none flex items-center justify-center text-[10px] font-black font-mono border ${
-                          leg.travel_type === "In-District"
-                            ? "bg-indigo-600 text-white border-indigo-700"
-                            : "bg-amber-500 text-white border-amber-600"
-                        }`}>
+                    {/* Leg Header with Solid Theme Styling */}
+                    <div className="px-4 py-2.5 bg-[#4A6A8A] text-white flex items-center justify-between border-b border-[#4A6A8A]">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2.5 m-0">
+                        <span className="h-5 px-2 rounded-none flex items-center justify-center text-[10px] font-black font-mono bg-white text-[#4A6A8A]">
                           #{legNum}
                         </span>
                         <span>Facility Visit {legNum}</span>
@@ -3341,7 +3261,7 @@ export default function ExpensePage() {
                         <button
                           type="button"
                           onClick={() => removeItinerary(leg.leg)}
-                          className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-none cursor-pointer flex items-center gap-1 transition-colors"
+                          className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] uppercase px-2.5 py-1 rounded-none border-0 cursor-pointer flex items-center gap-1 transition-colors shadow-2xs"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Remove Visit
                         </button>
@@ -3350,21 +3270,17 @@ export default function ExpensePage() {
 
                     <div className="p-4 space-y-4">
                       
-                      <div className={`flex items-center justify-between pb-3 -mx-4 px-4 -mt-4 pt-3 mb-1 ${
-                        leg.travel_type === "In-District"
-                          ? "bg-indigo-50"
-                          : "bg-amber-50"
-                      }`} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                        <span className="text-xs font-bold text-gray-700">Travel Category</span>
+                      <div className="flex items-center justify-between pb-3 -mx-4 px-4 -mt-4 pt-3 mb-1 bg-slate-50 border-b border-slate-200">
+                        <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Travel Category</span>
                         <div className="flex gap-2" role="group">
                           <button
                             key="In-District"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "In-District")}
-                            className={`px-4 py-1.5 text-xs font-black rounded-none sharp-card border transition-all cursor-pointer shadow-sm ${
+                            className={`px-4 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
                               leg.travel_type === "In-District"
-                                ? "border-indigo-650 bg-indigo-600 text-white font-extrabold"
-                                : "border-gray-300 bg-white text-gray-600 hover:bg-slate-50"
+                                ? "border-[#4A6A8A] bg-[#4A6A8A] text-white"
+                                : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                             }`}
                           >
                             In-District
@@ -3373,10 +3289,10 @@ export default function ExpensePage() {
                             key="Outdoor"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Outdoor")}
-                            className={`px-4 py-1.5 text-xs font-black rounded-none sharp-card border transition-all cursor-pointer shadow-sm ${
+                            className={`px-4 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
                               leg.travel_type === "Outdoor"
-                                ? "border-amber-600 bg-amber-500 text-white font-extrabold"
-                                : "border-gray-300 bg-white text-gray-600 hover:bg-slate-50"
+                                ? "border-amber-600 bg-amber-500 text-white"
+                                : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                             }`}
                           >
                             Outdoor
@@ -3387,24 +3303,33 @@ export default function ExpensePage() {
                       {/* Locations Row (From and To side by side) */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* From Location block */}
-                        <div className="p-4 bg-slate-50 border border-gray-200 rounded-md space-y-3 shadow-xs">
-                          <div className="flex items-center gap-1.5 border-b border-gray-200 pb-1.5">
-                            <MapPin className="w-4 h-4 text-green-600 shrink-0" />
-                            <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Starting Location (From)</span>
+                        <div className="p-4 bg-white border border-slate-200 rounded-none space-y-3 shadow-2xs">
+                          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 rounded-none bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold shrink-0">
+                                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                              </div>
+                              <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">STARTING LOCATION (FROM)</span>
+                            </div>
+                            {isFromLocked && (
+                              <span className="text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none uppercase tracking-wider flex items-center gap-1">
+                                🔒 AUTO-LOCKED (VISIT #{prevLeg?.leg} TO)
+                              </span>
+                            )}
                           </div>
                           <div className="space-y-2.5">
                             <div>
                               <label className="label-lte">District <span className="text-red-500">*</span></label>
                               <div className="relative">
                                 <select
-                                  value={leg.district_from}
+                                  value={currentFromDist}
                                   required
-                                  disabled={leg.travel_type === "In-District"}
+                                  disabled={leg.travel_type === "In-District" || isFromLocked}
                                   onChange={(e) => {
                                     handleItineraryChange(leg.leg, "district_from", e.target.value);
                                     handleItineraryChange(leg.leg, "from", ""); // reset location on district change
                                   }}
-                                  className="input-lte font-semibold pr-8 border-gray-305 shadow-inner disabled:bg-gray-100 disabled:text-gray-500"
+                                  className="input-lte font-semibold pr-8 border-slate-300 rounded-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                                 >
                                   <option value="">Select District</option>
                                   {distOpts.map(d => <option key={d} value={d}>{d}</option>)}
@@ -3415,8 +3340,7 @@ export default function ExpensePage() {
                             <div>
                               <div className="flex justify-between items-center mb-1">
                                 <label className="label-lte mb-0">Facility / Location Name <span className="text-red-500">*</span></label>
-                                {/* Leg 1 In-District: no toggle button (always manual). All other legs: show toggle */}
-                                {!(isFirst && leg.travel_type === "In-District") && leg.district_from && getFacilitiesForDistrict(leg.district_from).length > 0 && (
+                                {!isFromLocked && !(isFirst && leg.travel_type === "In-District") && leg.district_from && getFacilitiesForDistrict(leg.district_from).length > 0 && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -3429,8 +3353,16 @@ export default function ExpensePage() {
                                   </button>
                                 )}
                               </div>
-                              {/* Leg 1 In-District: always manual text input with Home/Room/Hotel hint */}
-                              {isFirst && leg.travel_type === "In-District" ? (
+                              {isFromLocked ? (
+                                <input
+                                  type="text"
+                                  required
+                                  readOnly
+                                  disabled
+                                  value={currentFrom}
+                                  className="input-lte font-semibold border-slate-300 rounded-none disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed shadow-2xs"
+                                />
+                              ) : isFirst && leg.travel_type === "In-District" ? (
                                 <div>
                                   <input
                                     type="text"
@@ -3438,7 +3370,7 @@ export default function ExpensePage() {
                                     value={leg.from}
                                     placeholder="e.g. My Home / My Room / Hotel Name..."
                                     onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                    className="input-lte font-semibold border-gray-305"
+                                    className="input-lte font-semibold border-slate-300 rounded-none"
                                   />
                                   <p className="text-[10px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
                                     <span>⚠️</span>
@@ -3450,7 +3382,7 @@ export default function ExpensePage() {
                                   required
                                   value={leg.from}
                                   onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305"
+                                  className="input-lte font-semibold border-slate-300 rounded-none"
                                 >
                                   <option value="">-- Select Hospital / Location --</option>
                                   {getFacilitiesForDistrict(leg.district_from).map((f: string, fIdx: number) => (
@@ -3464,7 +3396,7 @@ export default function ExpensePage() {
                                   value={leg.from}
                                   placeholder="Enter facility or location..."
                                   onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305"
+                                  className="input-lte font-semibold border-slate-300 rounded-none"
                                 />
                               )}
                             </div>
@@ -3475,7 +3407,7 @@ export default function ExpensePage() {
                         <div className="p-4 bg-slate-50 border border-gray-200 rounded-md space-y-3 shadow-xs">
                           <div className="flex items-center gap-1.5 border-b border-gray-200 pb-1.5">
                             <MapPin className="w-4 h-4 text-red-600 shrink-0" />
-                            <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Destination Location (To)</span>
+                            <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">DESTINATION LOCATION (TO)</span>
                           </div>
                           <div className="space-y-2.5">
                             <div>
@@ -3489,7 +3421,7 @@ export default function ExpensePage() {
                                     handleItineraryChange(leg.leg, "district", e.target.value);
                                     handleItineraryChange(leg.leg, "to", ""); // reset location on district change
                                   }}
-                                  className="input-lte font-semibold pr-8 border-gray-305 shadow-inner disabled:bg-gray-100 disabled:text-gray-500"
+                                  className="input-lte font-semibold pr-8 border-slate-300 rounded-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500"
                                 >
                                   <option value="">Select District</option>
                                   {distOpts.map(d => <option key={d} value={d}>{d}</option>)}
@@ -3509,7 +3441,7 @@ export default function ExpensePage() {
                                     }}
                                     className="text-[9px] font-bold text-blue-600 hover:text-blue-800 border-0 bg-transparent cursor-pointer uppercase tracking-wider"
                                   >
-                                    {leg.to_custom ? "📋 Select from list" : "✍️ Type Custom"}
+                                    {leg.to_custom ? "📋 Select from list" : "⚡ TYPE CUSTOM"}
                                   </button>
                                 )}
                               </div>
@@ -3518,7 +3450,7 @@ export default function ExpensePage() {
                                   required
                                   value={leg.to}
                                   onChange={(e) => handleItineraryChange(leg.leg, "to", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305"
+                                  className="input-lte font-semibold border-slate-300 rounded-none"
                                 >
                                   <option value="">-- Select Hospital / Location --</option>
                                   {getFacilitiesForDistrict(leg.district).map((f: string, fIdx: number) => (
@@ -3532,7 +3464,7 @@ export default function ExpensePage() {
                                   value={leg.to}
                                   placeholder="Enter facility or location..."
                                   onChange={(e) => handleItineraryChange(leg.leg, "to", e.target.value)}
-                                  className="input-lte font-semibold border-gray-305"
+                                  className="input-lte font-semibold border-slate-300 rounded-none"
                                 />
                               )}
                             </div>
@@ -3541,8 +3473,11 @@ export default function ExpensePage() {
                       </div>
                       
                       {/* Travel Mode, KM and Amount details */}
-                      <div className="border-t border-gray-150 pt-4 space-y-4">
-                        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider leading-none">Travel Details</h4>
+                      <div className="border-t border-slate-200 pt-4 space-y-3">
+                        <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none flex items-center gap-1.5">
+                          <Navigation className="w-3.5 h-3.5 text-[#4A6A8A]" />
+                          TRAVEL DETAILS
+                        </h4>
                         
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                           <div className="md:col-span-2">
@@ -3551,7 +3486,7 @@ export default function ExpensePage() {
                               value={leg.mode}
                               required
                               onChange={(e) => handleItineraryChange(leg.leg, "mode", e.target.value)}
-                              className="input-lte font-bold border-gray-300"
+                              className="input-lte font-bold border-slate-300 rounded-none"
                             >
                               <option value="">Select Travel Mode</option>
                               {[
@@ -3579,9 +3514,9 @@ export default function ExpensePage() {
                                 disabled={leg.mode !== "Bike" && leg.mode !== "Car"}
                                 placeholder="0"
                                 onChange={(e) => handleItineraryChange(leg.leg, "km", e.target.value)}
-                                className="input-lte rounded-none rounded-l font-mono disabled:bg-gray-100 disabled:text-gray-400 border-gray-300"
+                                className="input-lte rounded-none font-mono disabled:bg-slate-100 disabled:text-slate-500 border-slate-300"
                               />
-                              <span className="inline-flex items-center rounded-r border border-l-0 border-gray-305 bg-gray-50 px-2.5 text-gray-505 text-[10px] font-bold uppercase shrink-0">
+                              <span className="inline-flex items-center rounded-none border border-l-0 border-slate-300 bg-slate-100 px-3 text-slate-700 text-[10px] font-mono font-bold uppercase shrink-0">
                                 KM
                               </span>
                             </div>
@@ -3589,8 +3524,8 @@ export default function ExpensePage() {
 
                           <div>
                             <label className="label-lte">Fare Amount {leg.mode !== "" && <span className="text-red-500">*</span>}</label>
-                            <div className="flex rounded shadow-xs">
-                              <span className="inline-flex items-center rounded-l border border-r-0 border-gray-305 bg-gray-50 px-2.5 text-gray-505 text-xs font-semibold shrink-0">
+                            <div className="flex rounded-none shadow-2xs">
+                              <span className="inline-flex items-center rounded-none border border-r-0 border-slate-300 bg-slate-100 px-3 text-slate-700 text-xs font-mono font-bold shrink-0">
                                 ₹
                               </span>
                               <input
@@ -3601,7 +3536,7 @@ export default function ExpensePage() {
                                 disabled={leg.mode === "Bike" || leg.mode === "Car"}
                                 placeholder="0"
                                 onChange={(e) => handleItineraryChange(leg.leg, "amount", e.target.value)}
-                                className="input-lte rounded-none rounded-r font-mono disabled:bg-gray-100 disabled:text-gray-400 border-gray-305"
+                                className="input-lte rounded-none font-mono disabled:bg-slate-100 disabled:text-slate-500 border-slate-300"
                               />
                             </div>
                           </div>
@@ -4059,21 +3994,21 @@ export default function ExpensePage() {
                       </div>
 
                       {/* Visit Activities & Tasks Section */}
-                      <div className="border-t border-gray-150 pt-4 flex flex-col gap-4">
+                      <div className="border-t border-slate-200 pt-4 flex flex-col gap-3">
                         <div>
-                          <label className="label-lte font-bold block mb-2 text-gray-700">Visit Activities / Tasks</label>
-                          <div className="flex flex-wrap gap-x-6 gap-y-2 bg-gray-50/50 p-2.5 rounded border border-gray-150">
+                          <label className="label-lte font-extrabold text-[10px] uppercase tracking-wider text-slate-500 block mb-1.5">VISIT ACTIVITIES / TASKS</label>
+                          <div className="flex flex-wrap gap-x-6 gap-y-2.5 bg-slate-50 p-3 rounded-none border border-slate-200 shadow-2xs">
                             {/* We check if calibration user or regular */}
                             {(() => {
                               const isCalib = (user?.designation || "").toLowerCase().includes("calibration");
                               if (isCalib) {
                                 return (
-                                  <label className="flex items-center gap-2 text-xs font-bold text-gray-700 cursor-pointer">
+                                  <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
                                     <input
                                       type="checkbox"
                                       checked={true}
                                       disabled={true}
-                                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                                      className="rounded-none text-[#4A6A8A] focus:ring-0 w-4 h-4"
                                     />
                                     <span>Calibration</span>
                                   </label>
@@ -4093,7 +4028,7 @@ export default function ExpensePage() {
                               return options.map(opt => {
                                 const checked = (leg.selected_activities || []).includes(opt.val);
                                 return (
-                                  <label key={opt.val} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer hover:text-blue-600 transition-colors">
+                                  <label key={opt.val} className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer hover:text-[#4A6A8A] transition-colors select-none">
                                     <input
                                       type="checkbox"
                                       checked={checked}
@@ -4107,7 +4042,7 @@ export default function ExpensePage() {
                                         }
                                         handleItineraryChange(leg.leg, "selected_activities", next);
                                       }}
-                                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                      className="rounded-none text-[#4A6A8A] focus:ring-0 w-4 h-4 cursor-pointer"
                                     />
                                     <span>{opt.label}</span>
                                   </label>
@@ -4658,24 +4593,24 @@ export default function ExpensePage() {
 
                           {/* Other Task Sub-Form */}
                           {(leg.selected_activities || []).includes("Other") && (
-                            <div className="bg-amber-50/90 border-2 border-amber-300 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-xs ring-2 ring-amber-400/20 transition-all">
-                              <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
-                                <span className="text-[11px] font-black text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-                                  <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>
-                                  ✏️ Other Activity Description / Remark
+                            <div className="bg-slate-50 border border-slate-300 rounded-none p-3.5 flex flex-col gap-2.5 shadow-2xs">
+                              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                  ✏️ OTHER ACTIVITY DESCRIPTION / REMARK
                                 </span>
-                                <span className="text-[9px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300 uppercase">
-                                  Required
+                                <span className="text-[9px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-none border border-amber-300 uppercase tracking-wider">
+                                  REQUIRED
                                 </span>
                               </div>
                               <div>
-                                <label className="label-lte text-amber-900 font-extrabold text-xs mb-1 block">State exact details & purpose of work done:</label>
+                                <label className="label-lte text-slate-700 font-extrabold text-[10px] uppercase tracking-wider mb-1 block">STATE EXACT DETAILS & PURPOSE OF WORK DONE:</label>
                                 <textarea
                                   value={leg.activity_other_desc || ""}
                                   onChange={(e) => handleItineraryChange(leg.leg, "activity_other_desc", e.target.value)}
                                   placeholder="Describe the miscellaneous work performed in detail..."
                                   rows={2.5}
-                                  className="w-full text-xs font-extrabold text-amber-950 bg-white border-2 border-amber-350 focus:border-amber-600 focus:ring-2 focus:ring-amber-400 rounded-lg p-2.5 shadow-inner placeholder:text-amber-400/70"
+                                  className="w-full text-xs font-semibold text-slate-900 bg-white border border-slate-300 focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] rounded-none p-2.5 shadow-2xs placeholder:text-slate-400 outline-none"
                                 />
                               </div>
                             </div>
@@ -4707,98 +4642,98 @@ export default function ExpensePage() {
         </div>
 
         {/* Claims Totals & Submissions bar (Full width under the grid) */}
-        <div className="bg-white border border-gray-300 border-t-4 border-t-green-600 rounded shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs font-semibold mt-6 w-full">
+        <div className="bg-white border border-slate-200 border-t-4 border-t-[#4A6A8A] rounded-none shadow-2xs p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs font-semibold mt-6 w-full">
           <div className="flex flex-wrap items-center gap-4 md:gap-6 text-[11px]">
-            <div className="flex items-center gap-1.5 border-r border-gray-200 pr-4 md:pr-6">
-              <TrendingUp className="w-4 h-4 text-green-600" />
-              <span className="text-xs font-extrabold uppercase text-gray-700 tracking-wide">Claim Summary</span>
+            <div className="flex items-center gap-1.5 border-r border-slate-200 pr-4 md:pr-6">
+              <TrendingUp className="w-4 h-4 text-[#4A6A8A]" />
+              <span className="text-xs font-extrabold uppercase text-slate-800 tracking-wider">CLAIM SUMMARY</span>
             </div>
             <div>
-              <span className="text-gray-400 uppercase text-[9px] block mb-0.5">TRAVEL DATE</span>
-              <span className="text-gray-800">{date || "No date selected"}</span>
+              <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">TRAVEL DATE</span>
+              <span className="text-slate-800 font-bold">{date || "No date selected"}</span>
             </div>
             {totalBikeCarKm > 0 && (
               <div>
-                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">BIKE / CAR</span>
-                <span className="text-gray-800 font-mono">{totalBikeCarKm.toFixed(1)} KM (₹{totalBikeCarAmt.toLocaleString()})</span>
+                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">BIKE / CAR</span>
+                <span className="text-slate-800 font-mono font-bold">{totalBikeCarKm.toFixed(1)} KM (₹{totalBikeCarAmt.toLocaleString()})</span>
               </div>
             )}
             {totalAuto > 0 && (
               <div>
-                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">AUTO COST</span>
-                <span className="text-gray-800 font-mono">₹{totalAuto.toLocaleString()}</span>
+                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">AUTO COST</span>
+                <span className="text-slate-800 font-mono font-bold">₹{totalAuto.toLocaleString()}</span>
               </div>
             )}
             {totalDA > 0 && (
               <div>
-                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">DA</span>
-                <span className="text-gray-800 font-mono">₹{totalDA.toLocaleString()}</span>
+                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">DA</span>
+                <span className="text-slate-800 font-mono font-bold">₹{totalDA.toLocaleString()}</span>
               </div>
             )}
             {totalHotel > 0 && (
               <div>
-                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">HOTEL</span>
-                <span className="text-gray-800 font-mono">₹{totalHotel.toLocaleString()}</span>
+                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">HOTEL</span>
+                <span className="text-slate-800 font-mono font-bold">₹{totalHotel.toLocaleString()}</span>
               </div>
             )}
             {totalLocalPurchase > 0 && (
               <div>
-                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">LOCAL PURCHASE</span>
-                <span className="text-gray-800 font-mono">₹{totalLocalPurchase.toLocaleString()}</span>
+                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">LOCAL PURCHASE</span>
+                <span className="text-slate-800 font-mono font-bold">₹{totalLocalPurchase.toLocaleString()}</span>
               </div>
             )}
             {totalOther > 0 && (
               <div>
-                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">OTHER</span>
-                <span className="text-gray-800 font-mono">₹{totalOther.toLocaleString()}</span>
+                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">OTHER</span>
+                <span className="text-slate-800 font-mono font-bold">₹{totalOther.toLocaleString()}</span>
               </div>
             )}
             {totalBikeCarKm === 0 && totalAuto === 0 && (
               <div>
-                <span className="text-gray-400 uppercase text-[9px] block mb-0.5">DISTANCE</span>
-                <span className="text-gray-800 font-mono">0.0 KM</span>
+                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">DISTANCE</span>
+                <span className="text-slate-800 font-mono font-bold">0.0 KM</span>
               </div>
             )}
-            <div className="border-l border-gray-200 pl-4 md:pl-6">
-              <span className="text-gray-900 font-black uppercase text-[10px] block mb-0.5">TOTAL AMOUNT</span>
-              <span className="text-blue-700 font-black font-mono text-sm">₹{totalAmt.toLocaleString()}</span>
+            <div className="border-l border-slate-200 pl-4 md:pl-6">
+              <span className="text-slate-900 font-black uppercase text-[10px] block mb-0.5 tracking-wider">TOTAL AMOUNT</span>
+              <span className="text-[#4A6A8A] font-black font-mono text-base">₹{totalAmt.toLocaleString()}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0">
             {isLimitExceeded && (
               <button
                 type="button"
                 onClick={() => setShowApprovalModal(true)}
                 disabled={policyMissing}
-                className="btn-lte-warning py-1.5 px-3 rounded text-[10px] font-extrabold uppercase cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold uppercase tracking-wider py-2 px-4 rounded-none shadow-2xs border border-amber-600 cursor-pointer text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Extend Limit
+                EXTEND LIMIT
               </button>
             )}
             <button
               type="submit"
               disabled={isLimitExceeded || submitting || policyMissing}
-              className="btn-lte-success py-2 px-6 font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 border-0 cursor-pointer text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider py-2.5 px-6 rounded-none shadow-2xs border border-emerald-600 flex items-center justify-center gap-2 cursor-pointer text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Submitting...</span>
+                  <span>SUBMITTING...</span>
                 </>
               ) : (
                 <>
-                  <Check className="w-4 h-4" />
-                  <span>{editExpenseId ? "Update Claim" : "Submit Claim"}</span>
+                  <Check className="w-4 h-4 stroke-[3]" />
+                  <span>{editExpenseId ? "UPDATE CLAIM" : "SUBMIT CLAIM"}</span>
                 </>
               )}
             </button>
             <button
               type="button"
               onClick={() => navigate("/home")}
-              className="btn-lte-outline py-2 px-4 font-bold uppercase tracking-wider text-center cursor-pointer text-xs"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold uppercase tracking-wider py-2.5 px-5 rounded-none border border-slate-300 shadow-2xs cursor-pointer text-xs transition-colors"
             >
-              Cancel
+              CANCEL
             </button>
           </div>
         </div>
@@ -4849,40 +4784,69 @@ export default function ExpensePage() {
         className="sharp-card rounded-none border-slate-200/80 shadow-xs overflow-hidden mt-6"
         bodyStyle={{ padding: 0 }}
       >
-        {/* Card Header with Segmented Tab Switcher */}
-        <div className="px-4 py-3.5 bg-slate-50/80 border-b border-slate-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        {/* Card Header with Sharp Tab Switcher */}
+        <div className="px-4 py-3 bg-[#4A6A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#4A6A8A]">
           <div className="flex items-center gap-2">
-            <FileTextOutlined className="text-indigo-600 text-base" />
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider m-0">My Claims Dashboard</h3>
+            <FileText className="text-white w-4 h-4" />
+            <h3 className="text-xs font-black text-white uppercase tracking-wider m-0">MY CLAIMS DASHBOARD</h3>
           </div>
-          <Segmented
-            value={activeClaimsTab}
-            onChange={(val: any) => { setActiveClaimsTab(val); setMyClaimsPage(1); }}
-            options={[
-              { label: `Expense Sheets (${getFilteredClaims().length})`, value: "sheets" },
-              { label: `Legs Details (${getFilteredLegs().length})`, value: "legs" }
-            ]}
-            className="help-tab-segmented font-extrabold text-xs"
-          />
+          
+          {/* Custom Sharp Tab Buttons */}
+          <div className="flex gap-1.5 bg-white/10 p-1 rounded-none border border-white/20">
+            <button
+              type="button"
+              onClick={() => { setActiveClaimsTab("sheets"); setMyClaimsPage(1); }}
+              className={`px-3 py-1 text-xs font-black rounded-none border transition-all cursor-pointer ${
+                activeClaimsTab === "sheets"
+                  ? "bg-white text-[#4A6A8A] border-white shadow-2xs"
+                  : "bg-transparent text-white/80 border-transparent hover:bg-white/15"
+              }`}
+            >
+              Expense Sheets ({getFilteredClaims().length})
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveClaimsTab("legs"); setMyClaimsPage(1); }}
+              className={`px-3 py-1 text-xs font-black rounded-none border transition-all cursor-pointer ${
+                activeClaimsTab === "legs"
+                  ? "bg-white text-[#4A6A8A] border-white shadow-2xs"
+                  : "bg-transparent text-white/80 border-transparent hover:bg-white/15"
+              }`}
+            >
+              Legs Details ({getFilteredLegs().length})
+            </button>
+          </div>
         </div>
 
-        {/* Ant Design Filter Toolbar */}
-        <div className="p-3 bg-white border-b border-slate-200/80 flex flex-col md:flex-row items-center justify-between gap-3">
-          <Input.Search
-            placeholder="Search code, purpose, mode, route, amount..."
-            value={claimsSearch}
-            onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
-            className="w-full md:w-72"
-            allowClear
-          />
+        {/* High-Density Sharp Filter Toolbar */}
+        <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="relative w-full md:w-80">
+            <input
+              type="text"
+              placeholder="Search code, purpose, mode, route, amount..."
+              value={claimsSearch}
+              onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
+              className="input-lte pl-9 pr-7 rounded-none font-semibold text-xs border-slate-300 shadow-2xs"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+            {claimsSearch && (
+              <button
+                type="button"
+                onClick={() => { setClaimsSearch(""); setMyClaimsPage(1); }}
+                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 border-0 bg-transparent cursor-pointer text-xs font-bold"
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-          <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
-            <div className="flex flex-col gap-0.5 w-full md:w-auto">
-              <span className="text-[9px] font-extrabold uppercase text-slate-400">Month</span>
+          <div className="grid grid-cols-3 gap-3 w-full md:w-auto md:flex md:items-center">
+            <div className="flex flex-col gap-1 w-full md:w-auto">
+              <span className="text-[9px] font-extrabold uppercase text-slate-500 tracking-wider">MONTH</span>
               <select
                 value={claimsMonthFilter}
                 onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
-                className="help-custom-select w-full md:w-36 text-[11px] font-bold"
+                className="input-lte w-full md:w-36 text-xs font-bold border-slate-300 rounded-none cursor-pointer"
               >
                 <option value="all">All Months</option>
                 {getUniqueMonths().map(m => (
@@ -4891,12 +4855,12 @@ export default function ExpensePage() {
               </select>
             </div>
 
-            <div className="flex flex-col gap-0.5 w-full md:w-auto">
-              <span className="text-[9px] font-extrabold uppercase text-slate-400">Status</span>
+            <div className="flex flex-col gap-1 w-full md:w-auto">
+              <span className="text-[9px] font-extrabold uppercase text-slate-500 tracking-wider">STATUS</span>
               <select
                 value={claimsStatusFilter}
                 onChange={(e) => { setClaimsStatusFilter(e.target.value as any); setMyClaimsPage(1); }}
-                className="help-custom-select w-full md:w-36 text-[11px] font-bold"
+                className="input-lte w-full md:w-36 text-xs font-bold border-slate-300 rounded-none cursor-pointer"
               >
                 <option value="all">All Statuses</option>
                 <option value="draft">Draft</option>
@@ -4907,12 +4871,12 @@ export default function ExpensePage() {
               </select>
             </div>
 
-            <div className="flex flex-col gap-0.5 w-full md:w-auto">
-              <span className="text-[9px] font-extrabold uppercase text-slate-400">Sort</span>
+            <div className="flex flex-col gap-1 w-full md:w-auto">
+              <span className="text-[9px] font-extrabold uppercase text-slate-500 tracking-wider">SORT</span>
               <select
                 value={claimsSortOrder}
                 onChange={(e) => { setClaimsSortOrder(e.target.value as any); setMyClaimsPage(1); }}
-                className="help-custom-select w-full md:w-36 text-[11px] font-bold"
+                className="input-lte w-full md:w-36 text-xs font-bold border-slate-300 rounded-none cursor-pointer"
               >
                 <option value="date_desc">Newest Date</option>
                 <option value="date_asc">Oldest Date</option>
@@ -4946,61 +4910,63 @@ export default function ExpensePage() {
               if (activeClaimsTab === "sheets") {
                 return (
                   <>
-                    <table className="hidden md:table table-lte w-full text-xs">
-                      <thead>
-                        <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
-                          <th className="py-2.5 px-3 text-left">Claim ID</th>
-                          <th className="py-2.5 px-3 text-left">Date</th>
-                          <th className="py-2.5 px-3 text-left">Purpose</th>
-                          <th className="py-2.5 px-3 text-left">Travel Mode</th>
-                          <th className="py-2.5 px-3 text-left">Amount</th>
-                          <th className="py-2.5 px-3 text-left">Status</th>
-                          <th className="py-2.5 px-3 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {slicedItems.map((exp: any) => (
-                          <tr
-                            key={exp.id}
-                            onClick={() => handleViewDetails(exp.id)}
-                            className="hover:bg-slate-50 cursor-pointer transition-colors"
-                          >
-                            <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
-                            <td className="py-3 px-3 text-slate-600 font-medium whitespace-nowrap">{exp.itinerary}</td>
-                            <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
-                            <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.travel_mode}</td>
-                            <td className="py-3 px-3 font-black text-slate-900 whitespace-nowrap text-blue-700">₹{exp.amount.toLocaleString()}</td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              {renderAntdStatusTag(exp.status)}
-                            </td>
-                            <td className="py-3 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                              {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
-                                <Space size="small">
-                                  <Button
-                                    size="small"
-                                    type="primary"
-                                    icon={<EditOutlined />}
-                                    onClick={() => handleEditFromModal(exp.id)}
-                                    className="bg-amber-500 hover:bg-amber-600 font-bold text-[10px] border-0"
-                                  >
-                                    Edit
-                                  </Button>
-                                  <Button
-                                    size="small"
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    onClick={() => handleDeleteClaim(exp.id)}
-                                    className="font-bold text-[10px]"
-                                  >
-                                    Delete
-                                  </Button>
-                                </Space>
-                              )}
-                            </td>
+                    <div className="overflow-x-auto w-full border border-slate-200 shadow-2xs rounded-none">
+                      <table className="hidden md:table table-lte w-full text-xs min-w-[850px]">
+                        <thead>
+                          <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
+                            <th className="py-2.5 px-3 text-left">Claim ID</th>
+                            <th className="py-2.5 px-3 text-left">Date</th>
+                            <th className="py-2.5 px-3 text-left">Purpose</th>
+                            <th className="py-2.5 px-3 text-left">Travel Mode</th>
+                            <th className="py-2.5 px-3 text-left">Amount</th>
+                            <th className="py-2.5 px-3 text-left">Status</th>
+                            <th className="py-2.5 px-3 text-right">Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {slicedItems.map((exp: any) => (
+                            <tr
+                              key={exp.id}
+                              onClick={() => handleViewDetails(exp.id)}
+                              className="hover:bg-slate-50 cursor-pointer transition-colors"
+                            >
+                              <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
+                              <td className="py-3 px-3 text-slate-600 font-medium whitespace-nowrap">{exp.itinerary}</td>
+                              <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
+                              <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.travel_mode}</td>
+                              <td className="py-3 px-3 font-black text-slate-900 whitespace-nowrap text-blue-700">₹{exp.amount.toLocaleString()}</td>
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                {renderAntdStatusTag(exp.status)}
+                              </td>
+                              <td className="py-3 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
+                                  <Space size="small">
+                                    <Button
+                                      size="small"
+                                      type="primary"
+                                      icon={<EditOutlined />}
+                                      onClick={() => handleEditFromModal(exp.id)}
+                                      className="bg-amber-500 hover:bg-amber-600 font-bold text-[10px] border-0"
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      danger
+                                      icon={<DeleteOutlined />}
+                                      onClick={() => handleDeleteClaim(exp.id)}
+                                      className="font-bold text-[10px]"
+                                    >
+                                      Delete
+                                    </Button>
+                                  </Space>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
 
                     {/* Mobile Card List View */}
                     <div className="block md:hidden space-y-3 text-xs">
@@ -5068,58 +5034,60 @@ export default function ExpensePage() {
               } else {
                 return (
                   <>
-                    <table className="hidden md:table table-lte w-full text-xs">
-                      <thead>
-                        <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
-                          <th className="py-2.5 px-3 text-left">Parent ID</th>
-                          <th className="py-2.5 px-3 text-left">Travel Date</th>
-                          <th className="py-2.5 px-3 text-center">Leg</th>
-                          <th className="py-2.5 px-3 text-left">Route</th>
-                          <th className="py-2.5 px-3 text-left">Mode</th>
-                          <th className="py-2.5 px-3 text-right">KM</th>
-                          <th className="py-2.5 px-3 text-right">Fare</th>
-                          <th className="py-2.5 px-3 text-right">DA</th>
-                          <th className="py-2.5 px-3 text-right">Hotel</th>
-                          <th className="py-2.5 px-3 text-right">Local Purchase</th>
-                          <th className="py-2.5 px-3 text-right">Other</th>
-                          <th className="py-2.5 px-3 text-left">Purpose</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 bg-white">
-                        {slicedItems.map((leg: any, idx: number) => {
-                          const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
-                          return (
-                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                              <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{leg.parentCode}</td>
-                              <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{leg.parentDate}</td>
-                              <td className="py-3 px-3 text-center font-bold text-slate-400 whitespace-nowrap">
-                                <Tag color="blue" className="font-bold text-[10px] uppercase">Visit {leg.leg}</Tag>
-                              </td>
-                              <td className="py-3 px-3 whitespace-nowrap">
-                                <span className="font-bold text-slate-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                <span className="text-[9px] text-slate-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
-                              </td>
-                              <td className="py-3 px-3 whitespace-nowrap">
-                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode || "Other"}</span>
-                                {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
-                              </td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-650 whitespace-nowrap">{leg.km || 0} KM</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
-                                ₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}
-                                {leg.local_purchase_remark && (
-                                  <span className="text-[9.5px] text-amber-700 font-sans block font-normal truncate max-w-[120px]" title={leg.local_purchase_remark}>"{leg.local_purchase_remark}"</span>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
-                              <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate whitespace-nowrap" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                    <div className="overflow-x-auto w-full border border-slate-200 shadow-2xs rounded-none">
+                      <table className="hidden md:table table-lte w-full text-xs min-w-[1100px]">
+                        <thead>
+                          <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
+                            <th className="py-2.5 px-3 text-left">Parent ID</th>
+                            <th className="py-2.5 px-3 text-left">Travel Date</th>
+                            <th className="py-2.5 px-3 text-center">Leg</th>
+                            <th className="py-2.5 px-3 text-left">Route</th>
+                            <th className="py-2.5 px-3 text-left">Mode</th>
+                            <th className="py-2.5 px-3 text-right">KM</th>
+                            <th className="py-2.5 px-3 text-right">Fare</th>
+                            <th className="py-2.5 px-3 text-right">DA</th>
+                            <th className="py-2.5 px-3 text-right">Hotel</th>
+                            <th className="py-2.5 px-3 text-right">Local Purchase</th>
+                            <th className="py-2.5 px-3 text-right">Other</th>
+                            <th className="py-2.5 px-3 text-left">Purpose</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {slicedItems.map((leg: any, idx: number) => {
+                            const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                                <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{leg.parentCode}</td>
+                                <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{leg.parentDate}</td>
+                                <td className="py-3 px-3 text-center font-bold text-slate-400 whitespace-nowrap">
+                                  <Tag color="blue" className="font-bold text-[10px] uppercase">Visit {leg.leg}</Tag>
+                                </td>
+                                <td className="py-3 px-3 whitespace-nowrap">
+                                  <span className="font-bold text-slate-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
+                                  <span className="text-[9px] text-slate-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
+                                </td>
+                                <td className="py-3 px-3 whitespace-nowrap">
+                                  <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode || "Other"}</span>
+                                  {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
+                                </td>
+                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-650 whitespace-nowrap">{leg.km || 0} KM</td>
+                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
+                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
+                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
+                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
+                                  ₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}
+                                  {leg.local_purchase_remark && (
+                                    <span className="text-[9.5px] text-amber-700 font-sans block font-normal truncate max-w-[120px]" title={leg.local_purchase_remark}>"{leg.local_purchase_remark}"</span>
+                                  )}
+                                </td>
+                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
+                                <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate whitespace-nowrap" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
 
                     {/* Mobile Card List View */}
                     <div className="block md:hidden space-y-3 text-xs">
@@ -5219,31 +5187,57 @@ export default function ExpensePage() {
 
       {/* ================= STEP 3 CONFIRMATION SUBMIT DIALOG ================= */}
       {showConfirmModal && (
-        <div className="modal-lte-overlay">
-          <div className="modal-lte-content max-w-md">
-            <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-200 pb-3 text-gray-800 text-left bg-gradient-to-r from-slate-50 to-gray-100 -mx-6 -mt-4 px-6 pt-4 rounded-t">
-              Confirm Reimbursement Submission
-            </h3>
+        <div className="modal-lte-overlay z-[99999]">
+          <div className="modal-lte-content max-w-md p-0 overflow-hidden rounded-none border border-slate-300 shadow-2xl bg-white">
+            {/* Solid Theme Header */}
+            <div className="px-4 py-3 bg-[#4A6A8A] text-white flex items-center justify-between border-b border-[#4A6A8A]">
+              <h3 className="text-xs font-black uppercase tracking-wider text-white m-0 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-white" />
+                <span>CONFIRM REIMBURSEMENT SUBMISSION</span>
+              </h3>
+            </div>
 
-            <div className="space-y-4 mt-4 text-left text-xs font-semibold">
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded space-y-1.5">
-                <p>Date of Travel: <span className="font-bold text-gray-900">{formatToDDMMYYYY(date)}</span></p>
+            <div className="p-4 space-y-4 text-xs font-semibold">
+              {/* Breakdown Details Card */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-none space-y-2 shadow-2xs">
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">TRAVEL DATE</span>
+                  <span className="font-extrabold text-slate-900 font-mono">{formatToDDMMYYYY(date)}</span>
+                </div>
                 {totalKm > 0 && (
-                  <p>Total Distance: <span className="font-bold text-gray-900">{totalKm.toFixed(1)} KM</span></p>
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">TOTAL DISTANCE</span>
+                    <span className="font-extrabold text-slate-900 font-mono">{totalKm.toFixed(1)} KM</span>
+                  </div>
                 )}
                 {totalAuto > 0 && (
-                  <p>Auto / Rickshaw Fare: <span className="font-bold text-gray-900">₹{totalAuto.toLocaleString()}</span></p>
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">AUTO / RICKSHAW FARE</span>
+                    <span className="font-extrabold text-slate-900 font-mono">₹{totalAuto.toLocaleString()}</span>
+                  </div>
                 )}
                 {totalDA > 0 && (
-                  <p>Daily Allowance (DA): <span className="font-bold text-emerald-700">₹{totalDA.toLocaleString()}</span></p>
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">DAILY ALLOWANCE (DA)</span>
+                    <span className="font-extrabold text-emerald-700 font-mono">₹{totalDA.toLocaleString()}</span>
+                  </div>
                 )}
                 {totalHotel > 0 && (
-                  <p>Hotel Stay: <span className="font-bold text-indigo-700">₹{totalHotel.toLocaleString()}</span></p>
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">HOTEL STAY</span>
+                    <span className="font-extrabold text-indigo-700 font-mono">₹{totalHotel.toLocaleString()}</span>
+                  </div>
                 )}
                 {totalOther > 0 && (
-                  <p>Other Expenses: <span className="font-bold text-amber-700">₹{totalOther.toLocaleString()}</span></p>
+                  <div className="flex items-center justify-between text-slate-700">
+                    <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">OTHER EXPENSES</span>
+                    <span className="font-extrabold text-amber-700 font-mono">₹{totalOther.toLocaleString()}</span>
+                  </div>
                 )}
-                <p className="border-t border-gray-200 pt-1.5 mt-1.5">Total Claim Amount: <span className="font-black text-blue-700">₹{totalAmt.toLocaleString()}</span></p>
+                <div className="border-t border-slate-200 pt-2 mt-2 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">TOTAL CLAIM AMOUNT</span>
+                  <span className="text-[#4A6A8A] font-black font-mono text-base">₹{totalAmt.toLocaleString()}</span>
+                </div>
               </div>
 
               {/* ── Base Location Deduction Breakdown (PRE-SUBMISSION PREVIEW) ── */}
@@ -5252,38 +5246,38 @@ export default function ExpensePage() {
                 const totalDA = baseLocDeductions.items.reduce((s, i) => s + i.daDeducted, 0);
                 const totalDeducted = totalTA + totalDA;
                 return (
-                  <div className="rounded-xl border border-amber-300 overflow-hidden shadow-sm">
+                  <div className="rounded-none border border-amber-300 overflow-hidden shadow-2xs">
                     {/* Card Header */}
-                    <div className="bg-gradient-to-r from-amber-600 to-amber-500 px-3.5 py-2.5 flex items-center justify-between">
+                    <div className="bg-amber-600 px-3.5 py-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4 text-white shrink-0" />
-                        <span className="text-white text-xs font-black uppercase tracking-wider">
-                          Policy Deductions Summary (Before Submit)
+                        <span className="text-white text-[11px] font-black uppercase tracking-wider">
+                          Policy Deductions Summary
                         </span>
                       </div>
-                      <span className="bg-white/20 text-white text-[11px] font-bold px-2 py-0.5 rounded">
+                      <span className="bg-white/20 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-none">
                         -₹{totalDeducted.toFixed(0)}
                       </span>
                     </div>
 
                     {/* Leg Breakdown Rows */}
-                    <div className="divide-y divide-amber-100 bg-amber-50/80">
+                    <div className="divide-y divide-amber-100 bg-amber-50">
                       {baseLocDeductions.items.map(item => (
-                        <div key={item.leg} className="px-3.5 py-2.5">
-                          <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider mb-0.5">
+                        <div key={item.leg} className="px-3.5 py-2">
+                          <p className="text-[9px] font-black text-slate-600 uppercase tracking-wider mb-0.5">
                             Visit {item.leg}
                           </p>
-                          <p className="text-[11px] font-semibold text-gray-800 truncate mb-1.5">
-                            {item.from} <span className="text-gray-400 mx-1">→</span> {item.to}
+                          <p className="text-[11px] font-semibold text-slate-800 truncate mb-1">
+                            {item.from} <span className="text-slate-400 mx-1">→</span> {item.to}
                           </p>
                           <div className="flex gap-2 flex-wrap">
                             {item.taDeducted > 0 && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200">
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-none border border-rose-200 font-mono">
                                 Commute TA: -₹{item.taDeducted.toFixed(0)}
                               </span>
                             )}
                             {item.daDeducted > 0 && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200">
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-none border border-rose-200 font-mono">
                                 Base Location DA: -₹{item.daDeducted.toFixed(0)}
                               </span>
                             )}
@@ -5293,30 +5287,21 @@ export default function ExpensePage() {
                     </div>
 
                     {/* Total Deduction Footer */}
-                    <div className="bg-amber-100 px-3.5 py-2 flex items-center justify-between border-t border-amber-200">
-                      <span className="text-[11px] font-black text-amber-900 uppercase tracking-wider">
+                    <div className="bg-amber-100/80 px-3.5 py-2 flex items-center justify-between border-t border-amber-200">
+                      <span className="text-[10px] font-black text-amber-900 uppercase tracking-wider">
                         Total Amount Deducted:
                       </span>
-                      <span className="text-xs font-black text-rose-700">
+                      <span className="text-xs font-black text-rose-700 font-mono">
                         -₹{totalDeducted.toFixed(0)}
                       </span>
                     </div>
-
-                    {/* Policy Reason */}
-                    {baseLocDeductions.policyMessage && (
-                      <div className="bg-white px-3.5 py-2 border-t border-amber-100">
-                        <p className="text-[10px] text-amber-800 leading-relaxed font-medium italic">
-                          {baseLocDeductions.policyMessage}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 );
               })()}
 
-              <div className="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded flex items-start gap-1.5">
+              <div className="p-3 bg-blue-50/80 border border-blue-200 text-blue-900 rounded-none flex items-start gap-2 text-[11px] leading-relaxed font-medium shadow-2xs">
                 <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <p className="leading-relaxed font-medium">
+                <p>
                   {totalAmt <= 0
                     ? "This claim has ₹0 amount (all TA/DA waived by policy). It will be auto-approved without requiring manager review."
                     : "By clicking Confirm, you verify that this travel log and all attached invoice screenshots are genuine. The claim will be forwarded to your mapped manager."
@@ -5324,23 +5309,33 @@ export default function ExpensePage() {
                 </p>
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 mt-6">
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setShowConfirmModal(false)}
-                  className="btn-lte-secondary"
                   disabled={submitting}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold uppercase tracking-wider py-2 px-5 rounded-none border border-slate-300 shadow-2xs cursor-pointer text-xs transition-colors"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
                   type="button"
                   onClick={doSubmit}
                   disabled={submitting}
-                  className="btn-lte-success px-5 py-2 flex items-center justify-center gap-1.5 border-0"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider py-2 px-6 rounded-none shadow-2xs border border-emerald-600 flex items-center justify-center gap-2 cursor-pointer text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Confirm Submit</span>
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>SUBMITTING...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>CONFIRM SUBMIT</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -5350,44 +5345,38 @@ export default function ExpensePage() {
 
       {/* ================= SUBMISSION STATUS MODAL (SUCCESS/ERROR) ================= */}
       {submitStatus && (
-        <div className="modal-lte-overlay">
-        <div className={`modal-lte-content max-w-sm p-0 overflow-hidden sharp-card rounded-none shadow-2xl border-0 ${
-            submitStatus.type === "success"
-              ? submitStatus.title === "Auto Approved!"
-                ? "ring-1 ring-indigo-200"
-                : "ring-1 ring-emerald-200"
-              : "ring-1 ring-rose-200"
-          }`}>
+        <div className="modal-lte-overlay z-[99999]">
+          <div className="modal-lte-content max-w-sm p-0 overflow-hidden rounded-none shadow-2xl border border-slate-300 bg-white">
 
-            {/* Gradient Header Strip */}
-            <div className={`px-6 pt-6 pb-5 text-center ${
+            {/* Solid Header Strip */}
+            <div className={`px-6 pt-5 pb-4 text-center ${
               submitStatus.type === "success"
                 ? submitStatus.title === "Auto Approved!"
-                  ? "bg-gradient-to-br from-indigo-500 to-violet-600"
-                  : "bg-gradient-to-br from-emerald-500 to-teal-600"
-                : "bg-gradient-to-br from-rose-500 to-red-600"
+                  ? "bg-indigo-600"
+                  : "bg-emerald-600"
+                : "bg-rose-600"
             }`}>
-              <div className="mx-auto w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center mb-3 ring-4 ring-white/30">
+              <div className="mx-auto w-12 h-12 rounded-none bg-white/20 flex items-center justify-center mb-2.5 border border-white/30 shadow-2xs">
                 {submitStatus.type === "success"
-                  ? <ShieldCheck className="h-7 w-7 text-white" />
-                  : <AlertTriangle className="h-7 w-7 text-white" />
+                  ? <ShieldCheck className="h-6 w-6 text-white" />
+                  : <AlertTriangle className="h-6 w-6 text-white" />
                 }
               </div>
-              <h3 className="text-base font-black uppercase tracking-widest text-white">
-                {submitStatus.type === "success" ? submitStatus.title : "Submission Failed"}
+              <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                {submitStatus.type === "success" ? submitStatus.title : "SUBMISSION FAILED"}
               </h3>
               {submitStatus.type === "success" && submitStatus.claimCode && (
-                <p className="mt-1.5 inline-block bg-white/20 text-white font-mono text-[11px] font-bold px-3 py-0.5 rounded-full tracking-widest uppercase">
+                <p className="mt-1.5 inline-block bg-white/25 text-white font-mono text-[11px] font-bold px-3 py-1 rounded-none tracking-widest uppercase border border-white/30 shadow-2xs">
                   #{submitStatus.claimCode}
                 </p>
               )}
             </div>
 
             {/* Body */}
-            <div className="px-6 py-5 bg-white space-y-4">
+            <div className="px-5 py-4 bg-white space-y-4 text-xs font-semibold">
 
               {/* Main Message */}
-              <p className="text-xs text-gray-600 font-semibold leading-relaxed text-center">
+              <p className="text-xs text-slate-700 font-semibold leading-relaxed text-center bg-slate-50 p-3 rounded-none border border-slate-200 shadow-2xs">
                 {submitStatus.message}
               </p>
 
@@ -5396,33 +5385,33 @@ export default function ExpensePage() {
                 const totalTA = submitStatus.deductions.items.reduce((s, i) => s + i.taDeducted, 0);
                 const totalDA = submitStatus.deductions.items.reduce((s, i) => s + i.daDeducted, 0);
                 return (
-                  <div className="rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+                  <div className="rounded-none border border-amber-300 overflow-hidden shadow-2xs">
                     {/* Card Header */}
-                    <div className="bg-amber-500 px-3.5 py-2 flex items-center gap-2">
+                    <div className="bg-amber-600 px-3 py-1.5 flex items-center gap-2">
                       <AlertTriangle className="w-3.5 h-3.5 text-white shrink-0" />
-                      <span className="text-white text-[11px] font-black uppercase tracking-wider">
+                      <span className="text-white text-[10px] font-black uppercase tracking-wider">
                         Policy Deduction Applied
                       </span>
                     </div>
                     {/* Leg Rows */}
                     <div className="divide-y divide-amber-100 bg-amber-50">
                       {submitStatus.deductions.items.map(item => (
-                        <div key={item.leg} className="px-3.5 py-2.5">
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                        <div key={item.leg} className="px-3 py-2">
+                          <p className="text-[9px] font-black text-slate-600 uppercase tracking-wider mb-0.5">
                             Visit {item.leg}
                           </p>
-                          <p className="text-[11px] font-semibold text-gray-700 truncate mb-1.5">
-                            {item.from} <span className="text-gray-400 mx-1">→</span> {item.to}
+                          <p className="text-[11px] font-semibold text-slate-800 truncate mb-1">
+                            {item.from} <span className="text-slate-400 mx-1">→</span> {item.to}
                           </p>
-                          <div className="flex gap-3 flex-wrap">
+                          <div className="flex gap-2 flex-wrap">
                             {item.taDeducted > 0 && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                TA &minus;₹{item.taDeducted.toFixed(0)}
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-none border border-rose-200 font-mono">
+                                TA -₹{item.taDeducted.toFixed(0)}
                               </span>
                             )}
                             {item.daDeducted > 0 && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                DA &minus;₹{item.daDeducted.toFixed(0)}
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-none border border-rose-200 font-mono">
+                                DA -₹{item.daDeducted.toFixed(0)}
                               </span>
                             )}
                           </div>
@@ -5430,22 +5419,11 @@ export default function ExpensePage() {
                       ))}
                     </div>
                     {/* Totals Row */}
-                    <div className="bg-amber-100 px-3.5 py-2 flex items-center justify-between">
-                      <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider">Total Deducted</span>
-                      <span className="text-[12px] font-black text-rose-700">
-                        &minus;₹{(totalTA + totalDA).toFixed(0)}
-                        {totalTA > 0 && totalDA > 0 && (
-                          <span className="text-[9px] font-semibold text-amber-700 ml-1.5">
-                            (TA: ₹{totalTA.toFixed(0)} + DA: ₹{totalDA.toFixed(0)})
-                          </span>
-                        )}
+                    <div className="bg-amber-100 px-3 py-1.5 flex items-center justify-between border-t border-amber-200">
+                      <span className="text-[10px] font-black text-amber-900 uppercase tracking-wider">Total Deducted</span>
+                      <span className="text-[11px] font-black text-rose-700 font-mono">
+                        -₹{(totalTA + totalDA).toFixed(0)}
                       </span>
-                    </div>
-                    {/* Policy Note */}
-                    <div className="bg-white px-3.5 py-2 border-t border-amber-100">
-                      <p className="text-[10px] text-amber-700 leading-relaxed font-medium italic">
-                        Travel Allowance and Daily Allowance are not reimbursable for travel within your base reporting location as per company policy.
-                      </p>
                     </div>
                   </div>
                 );
@@ -5461,15 +5439,22 @@ export default function ExpensePage() {
                     navigate("/home");
                   }
                 }}
-                className={`w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all border-0 cursor-pointer shadow-lg ${
+                className={`w-full py-2.5 px-4 rounded-none text-xs font-black uppercase tracking-wider transition-all border cursor-pointer shadow-2xs flex items-center justify-center gap-2 ${
                   submitStatus.type === "success"
                     ? submitStatus.title === "Auto Approved!"
-                      ? "bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white shadow-indigo-500/30"
-                      : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/30"
-                    : "bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white shadow-rose-500/30"
+                      ? "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                    : "bg-rose-600 hover:bg-rose-700 text-white border-rose-600"
                 }`}
               >
-                {submitStatus.type === "success" ? "✓ Done, Go to Dashboard" : "Close"}
+                {submitStatus.type === "success" ? (
+                  <>
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>DONE, GO TO DASHBOARD</span>
+                  </>
+                ) : (
+                  <span>CLOSE</span>
+                )}
               </button>
             </div>
           </div>
@@ -5483,7 +5468,7 @@ export default function ExpensePage() {
         const hasExistingRequest = exceededType === "KM" ? !!existingKmReq : !!existingAutoReq;
         const existingReq = exceededType === "KM" ? existingKmReq : existingAutoReq;
         return (
-          <div className="modal-lte-overlay">
+          <div className="modal-lte-overlay z-[99999]">
             <div className="modal-lte-content max-w-md">
               <h3 className="text-sm font-extrabold uppercase tracking-wider border-b border-gray-200 pb-3 text-red-600 text-left flex items-center gap-1.5">
                 <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -5568,7 +5553,7 @@ export default function ExpensePage() {
 
       {/* ================= CUSTOM VALIDATION WARNING MODAL ================= */}
       {validationModal.show && (
-        <div className="modal-lte-overlay z-[9999]">
+        <div className="modal-lte-overlay z-[99999]">
           <div className="modal-lte-content max-w-md w-full bg-white sharp-card rounded-none shadow-2xl p-5 border border-red-100 transform transition-all duration-300 scale-100 flex flex-col gap-4">
             {/* Header Icon + Title */}
             <div className="flex items-center gap-3 pb-2 border-b border-red-50">
@@ -5602,9 +5587,39 @@ export default function ExpensePage() {
         </div>
       )}
 
-      {/* ================= DETAILS MODAL ================= */}
-      <Modal
+      {/* ================= DETAILS MODAL (ClaimDetailsModal - DITTO COPY OF HOME PAGE) ================= */}
+      <ClaimDetailsModal
+        sourceMode="expense"
         open={showDetailsModal}
+        claimDetails={selectedClaim}
+        user={user}
+        comments=""
+        setComments={() => {}}
+        actionLoading={false}
+        handleApprove={() => {}}
+        handleReject={() => {}}
+        handleDeleteClaim={handleDeleteClaim}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedClaim(null);
+        }}
+        navigate={navigate}
+        setLightboxImage={(url) => setLightboxImage(url)}
+        getStatusBadgeClass={(status) => {
+          if (status === "approved" || status === "auto_approved") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+          if (status === "rejected") return "bg-rose-50 text-rose-700 border-rose-200";
+          return "bg-amber-50 text-amber-700 border-amber-200";
+        }}
+        getStatusLabel={(status) => {
+          if (status === "auto_approved") return "Auto Approved";
+          if (status === "approved") return "Approved";
+          if (status === "rejected") return "Rejected";
+          return "Pending";
+        }}
+      />
+      {false && (
+        <Modal
+          open={showDetailsModal}
         destroyOnClose={true}
         onCancel={() => {
           setShowDetailsModal(false);
@@ -6551,6 +6566,7 @@ export default function ExpensePage() {
               )}
             </div>
       </Modal>
+      )}
 
       {/* ================= RECEIPT IMAGE LIGHTBOX POPUP ================= */}
       {lightboxImage && createPortal(

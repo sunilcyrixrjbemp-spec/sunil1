@@ -20,8 +20,7 @@ import {
   Filter,
   Zap
 } from "lucide-react";
-import { ResponsivePie } from "@nivo/pie";
-import { ResponsiveBar } from "@nivo/bar";
+import { SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart } from "../components/common/SaaSCharts";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import Loader from "../components/common/Loader";
@@ -149,8 +148,11 @@ export default function AssetUploadPage() {
   const [combinations, setCombinations] = useState<any[]>([]);
   const [months, setMonths] = useState<string[]>([]);
 
-  // Tab: "upload" | "inventory" | "analytics"
-  const [activeTab, setActiveTab] = useState<"upload" | "inventory" | "analytics">("upload");
+  // State to toggle inline upload panel
+  const [showUploadPanel, setShowUploadPanel] = useState(false);
+
+  // Tab: "inventory" | "analytics"
+  const [activeTab, setActiveTab] = useState<"inventory" | "analytics">("inventory");
 
   // Debounce search query to prevent hammering the server on every keypress
   useEffect(() => {
@@ -298,6 +300,14 @@ export default function AssetUploadPage() {
         continue;
       }
       row.qr_code = qr;
+
+      if (!row.equipment_type || row.equipment_type.trim() === "" || row.equipment_type.trim() === "Biomedical" || row.equipment_type.trim() === "Others" || row.equipment_type.trim() === "Critical") {
+        row.equipment_type = "Non-Biomedical";
+      }
+      if (!row.equipment_category || row.equipment_category.trim() === "" || row.equipment_category.trim() === "Biomedical" || row.equipment_category.trim() === "Others" || row.equipment_category.trim() === "Critical") {
+        row.equipment_category = "Non-Biomedical";
+      }
+
       rows.push(row);
     }
 
@@ -457,139 +467,123 @@ export default function AssetUploadPage() {
   const hasFilters = filterZone || filterDistrict || filterDI || filterMonth;
 
   return (
-    <div className="space-y-4 animate-fadeIn text-gray-800 font-sans">
+    <div className="space-y-2.5 antialiased text-slate-800 font-sans">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-black text-gray-800 uppercase tracking-wide flex items-center gap-2">
-            <Package className="w-5 h-5 text-indigo-600" />
-            Asset Inventory Manager
-          </h2>
-          <p className="text-gray-500 text-xs mt-0.5">
-            Import equipment assets via CSV and manage inventory with billing analytics.
-          </p>
+      {/* ── Page Header ── */}
+      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
+            <Package className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 leading-none">Asset Inventory Manager</h1>
+            <p className="text-[10px] text-slate-500 mt-0.5">Import equipment assets via CSV and manage inventory with billing analytics.</p>
+          </div>
         </div>
-        <button
-          onClick={downloadSampleCSV}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-gray-200 rounded text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 cursor-pointer transition-colors shadow-sm"
-        >
-          <Download className="w-3.5 h-3.5" />
-          Download Sample CSV
-        </button>
-      </div>
-
-      {/* ===== Filters Row (Dependent Dropdowns) ===== */}
-      <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-            <Filter className="w-3 h-3" /> Filters
-          </span>
-          <select value={filterZone} onChange={e => { setFilterZone(e.target.value); setFilterDistrict(""); setFilterDI(""); setCurrentPage(1); }}
-            className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
-            <option value="">All Zones</option>
-            {availableZones.map(z => <option key={z} value={z}>{z}</option>)}
-          </select>
-          <select value={filterDistrict} onChange={e => { setFilterDistrict(e.target.value); setFilterDI(""); setCurrentPage(1); }}
-            className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
-            <option value="">All Districts</option>
-            {availableDistricts.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <select value={filterDI} onChange={e => { setFilterDI(e.target.value); setCurrentPage(1); }}
-            className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[120px]">
-            <option value="">All DI Names</option>
-            {availableDIs.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <select value={filterMonth} onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
-            className="text-[11px] font-semibold border border-gray-200 rounded px-2.5 py-1.5 bg-white focus:outline-none focus:border-indigo-400 min-w-[140px]">
-            <option value="">All Months</option>
-            {months.map(m => <option key={m} value={m}>{formatMonthLabel(m)}</option>)}
-          </select>
-          {hasFilters && (
-            <button onClick={clearFilters}
-              className="text-[10px] font-bold text-red-500 hover:text-red-700 flex items-center gap-0.5 cursor-pointer bg-transparent border-0">
-              <X className="w-3 h-3" /> Clear
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowUploadPanel(prev => !prev)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#4A6A8A] rounded-none text-xs font-bold text-white bg-[#4A6A8A] hover:bg-[#3a5a7a] transition-colors cursor-pointer"
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            {showUploadPanel ? "Hide Import" : "Import CSV File"}
+          </button>
+          <button
+            onClick={downloadSampleCSV}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-none text-xs font-bold text-slate-600 bg-white hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download Sample CSV
+          </button>
         </div>
       </div>
 
-      {/* ===== Stats Dashboard (AdminLTE Theme Grid) ===== */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      {/* ── Filter Bar ── */}
+      <div className="bg-white border border-slate-200 rounded-none shadow-2xs px-3.5 py-2 flex flex-wrap items-center gap-2">
+        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+          <Filter className="w-3 h-3" /> Filters
+        </span>
+        <select value={filterZone} onChange={e => { setFilterZone(e.target.value); setFilterDistrict(""); setFilterDI(""); setCurrentPage(1); }}
+          className="text-xs font-semibold border border-slate-200 rounded-none px-2.5 py-1.5 bg-slate-50 focus:outline-none focus:border-[#4A6A8A] min-w-[120px]">
+          <option value="">All Zones</option>
+          {availableZones.map(z => <option key={z} value={z}>{z}</option>)}
+        </select>
+        <select value={filterDistrict} onChange={e => { setFilterDistrict(e.target.value); setFilterDI(""); setCurrentPage(1); }}
+          className="text-xs font-semibold border border-slate-200 rounded-none px-2.5 py-1.5 bg-slate-50 focus:outline-none focus:border-[#4A6A8A] min-w-[120px]">
+          <option value="">All Districts</option>
+          {availableDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={filterDI} onChange={e => { setFilterDI(e.target.value); setCurrentPage(1); }}
+          className="text-xs font-semibold border border-slate-200 rounded-none px-2.5 py-1.5 bg-slate-50 focus:outline-none focus:border-[#4A6A8A] min-w-[120px]">
+          <option value="">All DI Names</option>
+          {availableDIs.map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
+        <select value={filterMonth} onChange={e => { setFilterMonth(e.target.value); setCurrentPage(1); }}
+          className="text-xs font-semibold border border-slate-200 rounded-none px-2.5 py-1.5 bg-slate-50 focus:outline-none focus:border-[#4A6A8A] min-w-[140px]">
+          <option value="">All Months</option>
+          {months.map(m => <option key={m} value={m}>{formatMonthLabel(m)}</option>)}
+        </select>
+        {hasFilters && (
+          <button onClick={clearFilters} className="text-[10px] font-bold text-rose-500 hover:text-rose-700 flex items-center gap-0.5 cursor-pointer">
+            <X className="w-3 h-3" /> Clear
+          </button>
+        )}
+      </div>
+
+      {/* ── Stats Row 1: Equipment Counts ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {[
-          { label: "Total Equipment", value: (stats?.total_equipment ?? 0).toLocaleString(), icon: <Package className="w-5 h-5 text-white" />, bgColor: "bg-[#007bff]" },
-          { label: "Verified Equipment", value: (stats?.verified_equipment ?? 0).toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
-          { label: "Under Warranty", value: (stats?.under_warranty ?? 0).toLocaleString(), icon: <ShieldCheck className="w-5 h-5 text-white" />, bgColor: "bg-[#17a2b8]" },
-          { label: "Out of Warranty", value: (stats?.out_of_warranty ?? 0).toLocaleString(), icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#ffc107]" },
-          { label: "Total Equipment Value", value: fmtRs(stats?.total_value ?? 0), icon: <IndianRupee className="w-5 h-5 text-white" />, bgColor: "bg-[#605ca8]" },
+          { label: "Total Equipment", value: (stats?.total_equipment ?? 0).toLocaleString(), badge: "Units", icon: <Package className="w-4 h-4" />, grad: "from-blue-600 to-indigo-600", badgeCls: "text-blue-700 bg-blue-50 border-blue-200" },
+          { label: "Verified Equipment", value: (stats?.verified_equipment ?? 0).toLocaleString(), badge: "Verified", icon: <ShieldCheck className="w-4 h-4" />, grad: "from-emerald-600 to-teal-600", badgeCls: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+          { label: "Under Warranty", value: (stats?.under_warranty ?? 0).toLocaleString(), badge: "Active", icon: <ShieldCheck className="w-4 h-4" />, grad: "from-cyan-500 to-sky-600", badgeCls: "text-cyan-700 bg-cyan-50 border-cyan-200" },
+          { label: "Out of Warranty", value: (stats?.out_of_warranty ?? 0).toLocaleString(), badge: "OOW", icon: <ShieldOff className="w-4 h-4" />, grad: "from-amber-500 to-orange-500", badgeCls: "text-amber-700 bg-amber-50 border-amber-200" },
+          { label: "Total Equipment Value", value: fmtRs(stats?.total_value ?? 0), badge: "Asset Value", icon: <IndianRupee className="w-4 h-4" />, grad: "from-indigo-500 to-purple-600", badgeCls: "text-indigo-700 bg-indigo-50 border-indigo-200" },
         ].map((s, i) => (
-          <div key={i} className="info-box-lte animate-fadeIn">
-            <div className={`info-box-icon ${s.bgColor}`}>
-              {s.icon}
-            </div>
-            <div className="info-box-content">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">{s.label}</span>
-              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{s.value}</span>
+          <div key={i} className="bg-white border border-slate-200 rounded-none shadow-2xs p-2.5 flex items-center gap-2.5 hover:shadow-md transition-all">
+            <div className={`w-9 h-9 rounded-none bg-gradient-to-br ${s.grad} flex items-center justify-center text-white shrink-0`}>{s.icon}</div>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">{s.label}</span>
+              <span className="text-[13px] font-mono font-extrabold text-slate-900 leading-none">{s.value}</span>
+              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-none border font-mono leading-none w-fit ${s.badgeCls}`}>{s.badge}</span>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
+      {/* ── Stats Row 2: Billing ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {[
-          { label: "Verified Value", value: fmtRs(stats?.verified_value ?? 0), sub: "Total Verified Inventory Cost", icon: <CheckCircle className="w-5 h-5 text-white" />, bgColor: "bg-[#28a745]" },
-          { label: "Verified OOW Value", value: fmtRs(stats?.verified_out_of_warranty_value ?? 0), sub: "Total OOW Asset Cost (Billed @ 6.08%)", icon: <ShieldOff className="w-5 h-5 text-white" />, bgColor: "bg-[#fd7e14]" },
-          { 
-            label: "Monthly Billing", 
-            value: fmtRs(stats?.monthly_value ?? 0), 
-            sub: `+ GST (18%): ${fmtRs(stats?.monthly_billing_gst ?? Math.round((stats?.monthly_value ?? 0) * 0.18))} | GST Inc: ${fmtRs(stats?.monthly_billing_gst_inc ?? Math.round((stats?.monthly_value ?? 0) * 1.18))}`, 
-            icon: <Calendar className="w-5 h-5 text-white" />, 
-            bgColor: "bg-[#007bff]" 
-          },
-          { 
-            label: "Arrear Billing", 
-            value: fmtRs(stats?.arrear_billing ?? 0), 
-            sub: `+ GST (18%): ${fmtRs(stats?.arrear_billing_gst ?? Math.round((stats?.arrear_billing ?? 0) * 0.18))} | GST Inc: ${fmtRs(stats?.arrear_billing_gst_inc ?? Math.round((stats?.arrear_billing ?? 0) * 1.18))}`, 
-            icon: <Receipt className="w-5 h-5 text-white" />, 
-            bgColor: "bg-[#dc3545]" 
-          },
-          { 
-            label: "Total Billing (GST Inc)", 
-            value: fmtRs(stats?.total_billing_gst_inc ?? Math.round((stats?.total_billing ?? 0) * 1.18)), 
-            sub: `Excl. GST: ${fmtRs(stats?.total_billing ?? 0)} | GST 18%: ${fmtRs(stats?.total_billing_gst ?? Math.round((stats?.total_billing ?? 0) * 0.18))}`, 
-            icon: <IndianRupee className="w-5 h-5 text-white" />, 
-            bgColor: "bg-[#6f42c1]" 
-          },
+          { label: "Verified Value", value: fmtRs(stats?.verified_value ?? 0), sub: "Verified Inventory Cost", icon: <CheckCircle className="w-4 h-4" />, grad: "from-emerald-600 to-teal-600", badgeCls: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+          { label: "Verified OOW Value", value: fmtRs(stats?.verified_out_of_warranty_value ?? 0), sub: "OOW @ 6.08%", icon: <ShieldOff className="w-4 h-4" />, grad: "from-amber-500 to-orange-500", badgeCls: "text-amber-700 bg-amber-50 border-amber-200" },
+          { label: "Monthly Billing", value: fmtRs(stats?.monthly_value ?? 0), sub: `GST Inc: ${fmtRs(stats?.monthly_billing_gst_inc ?? Math.round((stats?.monthly_value ?? 0) * 1.18))}`, icon: <Calendar className="w-4 h-4" />, grad: "from-blue-600 to-indigo-600", badgeCls: "text-blue-700 bg-blue-50 border-blue-200" },
+          { label: "Arrear Billing", value: fmtRs(stats?.arrear_billing ?? 0), sub: `GST Inc: ${fmtRs(stats?.arrear_billing_gst_inc ?? Math.round((stats?.arrear_billing ?? 0) * 1.18))}`, icon: <Receipt className="w-4 h-4" />, grad: "from-rose-500 to-red-600", badgeCls: "text-rose-700 bg-rose-50 border-rose-200" },
+          { label: "Total Billing (GST Inc)", value: fmtRs(stats?.total_billing_gst_inc ?? Math.round((stats?.total_billing ?? 0) * 1.18)), sub: `Excl. GST: ${fmtRs(stats?.total_billing ?? 0)}`, icon: <IndianRupee className="w-4 h-4" />, grad: "from-indigo-500 to-purple-600", badgeCls: "text-indigo-700 bg-indigo-50 border-indigo-200" },
         ].map((s, i) => (
-          <div key={i} className="info-box-lte animate-fadeIn">
-            <div className={`info-box-icon ${s.bgColor}`}>
-              {s.icon}
-            </div>
-            <div className="info-box-content">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 block">{s.label}</span>
-              <span className="text-base font-extrabold text-gray-800 font-mono block mt-0.5">{s.value}</span>
-              {"sub" in s && s.sub && <span className="text-[7px] text-gray-500 font-semibold block mt-0.5 leading-none">{s.sub}</span>}
+          <div key={i} className="bg-white border border-slate-200 rounded-none shadow-2xs p-2.5 flex items-center gap-2.5 hover:shadow-md transition-all">
+            <div className={`w-9 h-9 rounded-none bg-gradient-to-br ${s.grad} flex items-center justify-center text-white shrink-0`}>{s.icon}</div>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">{s.label}</span>
+              <span className="text-[13px] font-mono font-extrabold text-slate-900 leading-none">{s.value}</span>
+              <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-none border font-mono leading-none w-fit ${s.badgeCls}`}>{s.sub}</span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Tab Switcher */}
-      <div className="bg-slate-50 flex items-center justify-start p-1.5 gap-2 rounded-t-lg mb-4" style={{ borderBottom: '1px solid #e2e8f0' }}>
+      {/* ── Tab Switcher ── */}
+      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex items-center gap-1 px-3 py-2">
         {[
-          { key: "upload" as const, label: "Upload Assets", icon: <UploadCloud className="w-3.5 h-3.5" /> },
-          { key: "inventory" as const, label: "View Inventory", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+          { key: "inventory" as const, label: "View Inventory & CSV Import", icon: <FileSpreadsheet className="w-3.5 h-3.5" /> },
           { key: "analytics" as const, label: "Analytics & Charts", icon: <BarChart3 className="w-3.5 h-3.5" /> },
         ].map(tab => (
           <button
             key={tab.key}
             type="button"
             onClick={() => { setActiveTab(tab.key); if (tab.key === "inventory") setCurrentPage(1); }}
-            style={{ minHeight: 'auto' }}
-            className={`py-1.5 px-4 font-black text-xs uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap border-0 ${
+            className={`px-3 py-1.5 text-[11px] font-bold transition-all flex items-center gap-1.5 rounded-none border whitespace-nowrap cursor-pointer ${
               activeTab === tab.key
-                ? "bg-[#a5d8e8] text-slate-900 font-extrabold shadow-sm"
-                : "text-gray-500 bg-transparent hover:text-gray-800 hover:bg-slate-100"
+                ? "bg-[#4A6A8A] text-white border-[#4A6A8A]"
+                : "text-slate-600 border-slate-200 hover:bg-slate-50"
             }`}
           >
             {tab.icon}
@@ -598,515 +592,419 @@ export default function AssetUploadPage() {
         ))}
       </div>
 
-      {/* ====== Upload Tab ====== */}
-      {activeTab === "upload" && (
-        <div className={selectedFile ? "grid grid-cols-1 lg:grid-cols-5 gap-5 animate-fadeIn" : "max-w-[350px] mx-auto space-y-3.5 animate-fadeIn"}>
-          {/* Left: Upload Form */}
-          <div className={selectedFile ? "lg:col-span-2 bg-white border border-gray-200 border-t-[3px] border-t-indigo-600 rounded-lg shadow-sm p-4 space-y-4" : "bg-white border border-gray-200 border-t-[3px] border-t-indigo-600 rounded-lg shadow-sm p-4.5 space-y-4"}>
-            <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-              <Zap className="w-3 h-3" />
-              Import CSV File
-            </h3>
+      {/* ====== Inventory & CSV Upload Combined Tab ====== */}
+      {activeTab === "inventory" && (
+        <div className="space-y-2.5">
+          {/* Inline Collapsible CSV Upload Section */}
+          {(showUploadPanel || selectedFile) && (
+            <div className={selectedFile ? "grid grid-cols-1 lg:grid-cols-5 gap-2.5" : "w-full space-y-2.5"}>
+              {/* Left/Main: Upload Form */}
+              <div className={selectedFile ? "lg:col-span-2 bg-white border border-slate-200 rounded-none shadow-2xs p-4 space-y-3" : "bg-white border border-slate-200 rounded-none shadow-2xs p-4 space-y-3"}>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-[#4A6A8A]" />
+                    Import CSV Asset Inventory
+                  </h3>
+                  <button
+                    onClick={() => { setShowUploadPanel(false); setSelectedFile(null); setParsedRows([]); }}
+                    className="text-slate-400 hover:text-slate-600 text-xs font-bold p-1 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
 
-            {/* Drag Zone */}
-            <div
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border border-dashed rounded-lg py-6 px-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
-                isDragActive ? "border-indigo-500 bg-indigo-50/50"
-                  : selectedFile ? "border-green-500 bg-green-50/20"
-                  : "border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-              }`}
-            >
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
-              {selectedFile ? (
-                <>
-                  <FileSpreadsheet className="w-8 h-8 text-green-600 animate-bounce-slow" />
-                  <p className="text-[11px] font-bold text-gray-800 break-all">{selectedFile.name}</p>
-                  <p className="text-[9px] text-gray-500 font-mono">
-                    {(selectedFile.size / 1024).toFixed(1)} KB • {parsedRows.length} valid rows
-                  </p>
-                  {skippedCount > 0 && (
-                    <span className="text-[8px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200 font-bold uppercase">
-                      {skippedCount} rows skipped (invalid QR)
-                    </span>
+                {/* Drag Zone */}
+                <div
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border border-dashed rounded-none py-4 px-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+                    isDragActive ? "border-[#4A6A8A] bg-blue-50/50"
+                      : selectedFile ? "border-emerald-500 bg-emerald-50/20"
+                      : "border-slate-300 hover:bg-slate-50 hover:border-slate-400"
+                  }`}
+                >
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".csv" className="hidden" />
+                  {selectedFile ? (
+                    <>
+                      <FileSpreadsheet className="w-7 h-7 text-green-600 animate-bounce-slow" />
+                      <p className="text-[11px] font-bold text-slate-800 break-all">{selectedFile.name}</p>
+                      <p className="text-[9px] text-slate-500 font-mono">
+                        {(selectedFile.size / 1024).toFixed(1)} KB • {parsedRows.length} valid rows
+                      </p>
+                      {skippedCount > 0 && (
+                        <span className="text-[8px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-none border border-amber-200 font-bold uppercase">
+                          {skippedCount} rows skipped (invalid QR)
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-7 h-7 text-slate-400" />
+                      <p className="text-[11px] font-bold text-slate-700">Drag & drop CSV file here or click to browse</p>
+                      <span className="text-[8px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-none uppercase font-bold tracking-wider">
+                        Safe Upload • Chunks of 500 rows
+                      </span>
+                    </>
                   )}
-                  <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded uppercase font-black tracking-wider">
-                    Ready for import
-                  </span>
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="w-8 h-8 text-gray-400" />
-                  <p className="text-[11px] font-bold text-gray-700">Drag & drop CSV file here</p>
-                  <p className="text-[9px] text-gray-400">or click to browse local files</p>
-                  <span className="text-[8px] bg-gray-100 text-gray-650 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">
-                    Safe Upload • Chunks of 500 rows
-                  </span>
-                </>
+                </div>
+
+                {/* Upload Progress */}
+                {uploading && (
+                  <div className="space-y-1 p-2 bg-blue-50 border border-blue-200 rounded-none">
+                    <div className="flex items-center justify-between text-[9px] font-bold text-[#4A6A8A] uppercase tracking-wider">
+                      <span>{uploadProgressDetail}</span>
+                      <span className="font-mono">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-200 rounded-none overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#4A6A8A] to-indigo-500 transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Result */}
+                {uploadResult && (
+                  <div className="flex items-start gap-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-none text-[11px] text-emerald-800">
+                    <CheckCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Upload Successful</p>
+                      <p className="text-[9px] mt-0.5">
+                        {uploadResult.inserted} inserted • {uploadResult.updated} updated • {uploadResult.skipped} skipped
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={handleUpload}
+                    disabled={uploading || parsedRows.length === 0}
+                    className="flex-1 h-8 bg-[#4A6A8A] hover:bg-[#3a5a7a] disabled:bg-slate-100 disabled:text-slate-400 text-white rounded-none font-extrabold text-[11px] flex items-center justify-center border-0 transition-colors cursor-pointer uppercase tracking-wider gap-1"
+                  >
+                    {uploading ? (
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</>
+                    ) : (
+                      <><Zap className="w-3 h-3" /> Upload {parsedRows.length > 0 ? `(${parsedRows.length} Rows)` : "Assets"}</>
+                    )}
+                  </button>
+                  {selectedFile && !uploading && (
+                    <button
+                      onClick={() => { setSelectedFile(null); setParsedRows([]); setSkippedCount(0); setUploadResult(null); }}
+                      className="h-8 px-2.5 border border-slate-200 rounded-none text-slate-500 hover:bg-slate-50 bg-white text-xs font-bold cursor-pointer transition-colors"
+                    ><X className="w-3.5 h-3.5" /></button>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: Preview Table */}
+              {selectedFile && (
+                <div className="lg:col-span-3 bg-white border border-slate-200 rounded-none shadow-2xs overflow-hidden">
+                  <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-2">
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                      CSV Preview {parsedRows.length > 0 && `— ${parsedRows.length} rows`}
+                    </span>
+                    {parsedRows.length > 0 && (
+                      <span className="text-[10px] font-semibold text-blue-100 bg-white/15 px-2 py-0.5 rounded-none border border-white/20 flex items-center gap-1">
+                        <QrCode className="w-3 h-3" />
+                        {parsedRows.length} Valid QR Codes
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto max-h-[320px] overflow-y-auto">
+                    <table className="w-full text-left text-[10px] border-collapse min-w-[800px]">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200 text-[9px] tracking-wider sticky top-0 z-10">
+                          <th className="py-2 px-2">#</th>
+                          <th className="py-2 px-2">District</th>
+                          <th className="py-2 px-2">Hospital</th>
+                          <th className="py-2 px-2">Equipment</th>
+                          <th className="py-2 px-2">Type</th>
+                          <th className="py-2 px-2">QR Code</th>
+                          <th className="py-2 px-2">Serial No</th>
+                          <th className="py-2 px-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium">
+                        {parsedRows.slice(0, 100).map((row, idx) => (
+                          <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                            <td className="py-1.5 px-2 text-slate-400 font-mono">{idx + 1}</td>
+                            <td className="py-1.5 px-2 text-slate-700 truncate max-w-[90px]" title={row.district_name}>{row.district_name}</td>
+                            <td className="py-1.5 px-2 text-slate-700 truncate max-w-[120px]" title={row.hospital_name}>{row.hospital_name}</td>
+                            <td className="py-1.5 px-2 text-slate-800 font-semibold truncate max-w-[120px]" title={row.equipment_name}>{row.equipment_name}</td>
+                            <td className="py-1.5 px-2 text-slate-600 truncate max-w-[90px]" title={row.equipment_type}>{row.equipment_type || "Non-Biomedical"}</td>
+                            <td className="py-1.5 px-2 font-mono text-[#4A6A8A] font-bold truncate max-w-[120px]" title={row.qr_code}>{row.qr_code}</td>
+                            <td className="py-1.5 px-2 text-slate-600 font-mono">{row.serial_no}</td>
+                            <td className="py-1.5 px-2">
+                              <span className={`inline-block px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase border ${
+                                (row.equipment_status || "").toLowerCase().includes("functional") ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-100 border-slate-200 text-slate-600"
+                              }`}>{row.equipment_status || "N/A"}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               )}
             </div>
+          )}
 
-            {/* Upload Progress */}
-            {uploading && (
-              <div className="space-y-1 p-2.5 bg-indigo-50/30 border border-indigo-100 rounded-lg animate-pulse">
-                <div className="flex items-center justify-between text-[9px] font-bold text-indigo-700 uppercase tracking-wider">
-                  <span>{uploadProgressDetail}</span>
-                  <span className="font-mono">{uploadProgress}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-gray-150 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
+          {/* Main Inventory Table */}
+          <div className="bg-white border border-slate-200 rounded-none shadow-2xs overflow-hidden">
+            {/* Header */}
+            <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wide flex items-center gap-2">
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                ASSET INVENTORY TABLE
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold text-blue-100 bg-white/15 px-2 py-0.5 rounded-none border border-white/20">
+                  {totalAssets.toLocaleString()} Assets
+                </span>
               </div>
-            )}
-
-            {/* Upload Result */}
-            {uploadResult && (
-              <div className="flex items-start gap-1.5 p-2.5 bg-green-50 border border-green-200 rounded text-[11px] text-green-800">
-                <CheckCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold">Upload Successful</p>
-                  <p className="text-[9px] mt-0.5">
-                    {uploadResult.inserted} inserted • {uploadResult.updated} updated • {uploadResult.skipped} skipped • {uploadResult.elapsed_ms}ms
-                  </p>
-                </div>
+            </div>
+            {/* Search Bar */}
+            <div className="px-3.5 py-2 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row gap-2 items-center justify-between">
+              <div className="relative flex-1 max-w-md w-full">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by equipment, QR code, serial no, hospital..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                  className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-none text-xs bg-white focus:outline-none focus:border-[#4A6A8A] font-medium"
+                />
               </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex gap-1.5">
-              <button
-                onClick={handleUpload}
-                disabled={uploading || parsedRows.length === 0}
-                className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-100 disabled:text-gray-400 text-white rounded-lg font-extrabold text-[11px] flex items-center justify-center shadow-sm border-0 transition-colors cursor-pointer uppercase tracking-wider gap-1"
-              >
-                {uploading ? (
-                  <><Loader2 className="w-3 h-3 animate-spin" /> Uploading...</>
-                ) : (
-                  <><Zap className="w-3 h-3" /> Upload {parsedRows.length > 0 ? `(${parsedRows.length} Rows)` : "Assets"}</>
-                )}
-              </button>
-              {selectedFile && !uploading && (
-                <button
-                  onClick={() => { setSelectedFile(null); setParsedRows([]); setSkippedCount(0); setUploadResult(null); }}
-                  className="h-9 px-2.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 bg-white text-xs font-bold cursor-pointer transition-colors"
-                ><X className="w-3.5 h-3.5" /></button>
-              )}
             </div>
 
-            {/* Info Box */}
-            <div className="p-2.5 bg-gray-50 border border-gray-150 rounded text-[9px] text-gray-400 space-y-1">
-              <p className="font-bold text-gray-500 uppercase tracking-wider text-[8px]">Import Rules</p>
-              <ul className="list-disc list-inside space-y-0.5">
-                <li>Rows with QR Code = "<span className="font-mono font-bold">--</span>" are automatically skipped</li>
-                <li>Rows with empty or whitespace-only QR Code are skipped</li>
-                <li>Duplicate QR codes are skipped to preserve existing data</li>
-                <li>Optimized read engine operates with zero DB lookups</li>
-                <li>Replicates immediately to edge and primary nodes</li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Right: Preview Table */}
-          {selectedFile && (
-            <div className="lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  CSV Preview {parsedRows.length > 0 && `(${parsedRows.length} rows)`}
-                </h3>
-                {parsedRows.length > 0 && (
-                  <span className="text-[9px] font-bold text-indigo-600 uppercase flex items-center gap-1">
-                    <QrCode className="w-3 h-3" />
-                    {parsedRows.length} Valid QR Codes
-                  </span>
-                )}
+            {/* Table */}
+            {loadingAssets ? (
+              <div className="py-8">
+                <Loader message="Loading inventory..." />
               </div>
-
-              <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
-                <table className="w-full text-left text-[10px] border-collapse min-w-[900px]">
+            ) : assets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-slate-400">
+                <Package className="w-12 h-12 mb-3 opacity-30" />
+                <p className="text-xs font-bold">No assets in inventory</p>
+                <p className="text-[10px] mt-1">Click "Import CSV File" at top to upload equipment assets</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="hidden md:table w-full text-left text-[10px] border-collapse min-w-[1400px]">
                   <thead>
-                    <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 text-[9px] tracking-wider sticky top-0 z-10">
-                      <th className="py-2 px-2">#</th>
-                      <th className="py-2 px-2">District</th>
-                      <th className="py-2 px-2">Hospital</th>
-                      <th className="py-2 px-2">Equipment</th>
-                      <th className="py-2 px-2">Type</th>
-                      <th className="py-2 px-2">QR Code</th>
-                      <th className="py-2 px-2">Serial No</th>
-                      <th className="py-2 px-2">Status</th>
-                      <th className="py-2 px-2">Value</th>
+                    <tr className="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200 text-[9px] tracking-wider sticky top-0 z-10">
+                      <th className="py-2.5 px-2">#</th>
+                      <th className="py-2.5 px-2">District</th>
+                      <th className="py-2.5 px-2">Hospital</th>
+                      <th className="py-2.5 px-2">Department</th>
+                      <th className="py-2.5 px-2">Equipment</th>
+                      <th className="py-2.5 px-2">Type</th>
+                      <th className="py-2.5 px-2">Model</th>
+                      <th className="py-2.5 px-2">Serial No</th>
+                      <th className="py-2.5 px-2">QR Code</th>
+                      <th className="py-2.5 px-2">Category</th>
+                      <th className="py-2.5 px-2">Status</th>
+                      <th className="py-2.5 px-2">Value</th>
+                      <th className="py-2.5 px-2">DI Name</th>
+                      <th className="py-2.5 px-2">Zone</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium">
-                    {parsedRows.slice(0, 200).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="py-1.5 px-2 text-gray-400 font-mono">{idx + 1}</td>
-                        <td className="py-1.5 px-2 text-gray-700 truncate max-w-[100px]" title={row.district_name}>{row.district_name}</td>
-                        <td className="py-1.5 px-2 text-gray-700 truncate max-w-[130px]" title={row.hospital_name}>{row.hospital_name}</td>
-                        <td className="py-1.5 px-2 text-gray-800 font-semibold truncate max-w-[130px]" title={row.equipment_name}>{row.equipment_name}</td>
-                        <td className="py-1.5 px-2 text-gray-600 truncate max-w-[90px]" title={row.equipment_type}>{row.equipment_type || "-"}</td>
-                        <td className="py-1.5 px-2 font-mono text-indigo-600 font-bold truncate max-w-[130px]" title={row.qr_code}>{row.qr_code}</td>
-                        <td className="py-1.5 px-2 text-gray-600 font-mono">{row.serial_no}</td>
-                        <td className="py-1.5 px-2">
-                          <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
-                            (row.equipment_status || "").toLowerCase().includes("functional") ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-100 border-gray-200 text-gray-600"
-                          }`}>{row.equipment_status || "N/A"}</span>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {assets.map((a, idx) => (
+                      <tr key={a.id || idx} className="hover:bg-blue-50/30 transition-colors">
+                        <td className="py-2 px-2 text-slate-400 font-mono">{(currentPage - 1) * pageSize + idx + 1}</td>
+                        <td className="py-2 px-2 text-slate-700 truncate max-w-[90px]" title={a.district_name}>{a.district_name}</td>
+                        <td className="py-2 px-2 text-slate-700 truncate max-w-[120px]" title={a.hospital_name}>{a.hospital_name}</td>
+                        <td className="py-2 px-2 text-slate-600 truncate max-w-[100px]" title={a.department_name}>{a.department_name}</td>
+                        <td className="py-2 px-2 text-slate-800 font-semibold truncate max-w-[120px]" title={a.equipment_name}>{a.equipment_name}</td>
+                        <td className="py-2 px-2 text-slate-600 truncate max-w-[80px]" title={a.equipment_type}>{a.equipment_type || "Non-Biomedical"}</td>
+                        <td className="py-2 px-2 text-slate-600 truncate max-w-[90px]" title={a.model_name}>{a.model_name}</td>
+                        <td className="py-2 px-2 font-mono text-slate-600">{a.serial_no}</td>
+                        <td className="py-2 px-2 font-mono text-[#4A6A8A] font-bold truncate max-w-[120px]" title={a.qr_code}>{a.qr_code}</td>
+                        <td className="py-2 px-2 text-slate-600">{a.equipment_category || "Non-Biomedical"}</td>
+                        <td className="py-2 px-2">
+                          <span className={`inline-block px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase border ${
+                            (a.equipment_status || "").toLowerCase().includes("functional") ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-100 border-slate-200 text-slate-600"
+                          }`}>{a.equipment_status || "N/A"}</span>
                         </td>
-                        <td className="py-1.5 px-2 text-gray-700 font-mono">₹{row.asset_value || "0"}</td>
+                        <td className="py-2 px-2 text-slate-700 font-mono">₹{a.asset_value || "0"}</td>
+                        <td className="py-2 px-2 text-slate-600 truncate max-w-[90px]">{a.di_name}</td>
+                        <td className="py-2 px-2 text-slate-600">{a.zone_name}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {parsedRows.length > 200 && (
-                  <div className="p-2 text-center text-[10px] text-gray-400 font-bold bg-gray-50 border-t border-gray-200">
-                    Showing first 200 of {parsedRows.length} rows
+
+                {/* Mobile Card List View */}
+                <div className="block md:hidden space-y-2.5 p-3">
+                  {assets.map((a, idx) => (
+                    <div key={a.id || idx} className="bg-white border border-slate-200 rounded-none p-3 space-y-2.5 shadow-2xs text-xs">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-bold text-slate-800 leading-tight">{a.equipment_name}</div>
+                          <span className="text-[9px] font-bold text-[#4A6A8A] bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded-none font-mono block mt-1 w-fit">{a.qr_code}</span>
+                        </div>
+                        <span className={`inline-block px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase border ${
+                          (a.equipment_status || "").toLowerCase().includes("functional") ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-slate-100 border-slate-200 text-slate-600"
+                        }`}>{a.equipment_status || "N/A"}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-slate-100 pt-2">
+                        <div>
+                          <span className="text-slate-400 font-bold uppercase text-[9px] block">Location</span>
+                          <span className="text-slate-700 font-semibold block">{a.hospital_name}</span>
+                          <span className="text-slate-500 block text-[9px]">{a.district_name}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-bold uppercase text-[9px] block">Department / Type</span>
+                          <span className="text-slate-600 block">{a.department_name}</span>
+                          <span className="text-slate-500 block text-[9px]">{a.equipment_type || "Non-Biomedical"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-bold uppercase text-[9px] block">Model / Serial No</span>
+                          <span className="text-slate-600 block">{a.model_name || "-"}</span>
+                          <span className="text-slate-500 font-mono block text-[9px]">{a.serial_no}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-bold uppercase text-[9px] block">Asset Value / Category</span>
+                          <span className="text-slate-700 font-semibold font-mono block">₹{a.asset_value || "0"}</span>
+                          <span className="text-slate-500 block text-[9px]">{a.equipment_category || "Non-Biomedical"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-3.5 py-2 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}
+                  className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-none bg-white hover:bg-slate-50 disabled:opacity-40 flex items-center gap-1 transition-colors cursor-pointer">
+                  <ChevronLeft className="w-3 h-3" /> Prev
+                </button>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
+                  className="px-3 py-1.5 text-xs font-bold border border-slate-200 rounded-none bg-white hover:bg-slate-50 disabled:opacity-40 flex items-center gap-1 transition-colors cursor-pointer">
+                  Next <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ====== Analytics Tab (Horizontal Bar Charts) ====== */}
+      {activeTab === "analytics" && (
+        <>
+          {/* Mobile view warning message */}
+          <div className="block lg:hidden bg-white border border-slate-200 rounded-none p-8 text-center">
+            <BarChart3 className="w-12 h-12 text-[#4A6A8A] mx-auto mb-3 opacity-80" />
+            <p className="text-sm font-bold text-slate-700">Analytics & Charts are optimized for desktop</p>
+            <p className="text-xs text-slate-500 mt-1">Please use a desktop browser to view the interactive charts and regional distribution reports.</p>
+          </div>
+
+          <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-3">
+            {/* Chart 1: Equipment Status Distribution (Bar Chart - avoids label overlap for 1%/2%) */}
+            <div className="bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  EQUIPMENT STATUS DISTRIBUTION
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 290 }}>
+                {stats.charts.status_list.length > 0 ? (
+                  <SaaSHorizontalBarChart
+                    data={stats.charts.status_list}
+                    valueKey="value"
+                    nameKey="name"
+                    height={270}
+                    isCurrency={false}
+                    valueFormatter={(v) => `${v.toLocaleString('en-IN')} Units`}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No status data available
                   </div>
                 )}
               </div>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* ====== Inventory Tab ====== */}
-      {activeTab === "inventory" && (
-        <div className="bg-white border border-gray-200 border-t-[3px] border-t-indigo-600 rounded shadow-sm overflow-hidden">
-          {/* Search Bar */}
-          <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row gap-3 items-center justify-between">
-            <div className="relative flex-1 max-w-md w-full">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by equipment, QR code, serial no, hospital..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded text-xs bg-white focus:outline-none focus:border-indigo-400 font-medium"
-              />
-            </div>
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-              {totalAssets.toLocaleString()} total assets
-            </div>
-          </div>
-
-          {/* Table */}
-          {loadingAssets ? (
-            <div className="py-8">
-              <Loader message="Loading inventory..." />
-            </div>
-          ) : assets.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
-              <Package className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-xs font-bold">No assets in inventory</p>
-              <p className="text-[10px] mt-1">Upload a CSV file to populate the database</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="hidden md:table w-full text-left text-[10px] border-collapse min-w-[1400px]">
-                <thead>
-                  <tr className="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200 text-[9px] tracking-wider sticky top-0 z-10">
-                    <th className="py-2.5 px-2">#</th>
-                    <th className="py-2.5 px-2">District</th>
-                    <th className="py-2.5 px-2">Hospital</th>
-                    <th className="py-2.5 px-2">Department</th>
-                    <th className="py-2.5 px-2">Equipment</th>
-                    <th className="py-2.5 px-2">Type</th>
-                    <th className="py-2.5 px-2">Model</th>
-                    <th className="py-2.5 px-2">Serial No</th>
-                    <th className="py-2.5 px-2">QR Code</th>
-                    <th className="py-2.5 px-2">Category</th>
-                    <th className="py-2.5 px-2">Status</th>
-                    <th className="py-2.5 px-2">Value</th>
-                    <th className="py-2.5 px-2">DI Name</th>
-                    <th className="py-2.5 px-2">Zone</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 font-medium">
-                  {assets.map((a, idx) => (
-                    <tr key={a.id || idx} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-2 px-2 text-gray-400 font-mono">{(currentPage - 1) * pageSize + idx + 1}</td>
-                      <td className="py-2 px-2 text-gray-700 truncate max-w-[90px]" title={a.district_name}>{a.district_name}</td>
-                      <td className="py-2 px-2 text-gray-700 truncate max-w-[120px]" title={a.hospital_name}>{a.hospital_name}</td>
-                      <td className="py-2 px-2 text-gray-600 truncate max-w-[100px]" title={a.department_name}>{a.department_name}</td>
-                      <td className="py-2 px-2 text-gray-800 font-semibold truncate max-w-[120px]" title={a.equipment_name}>{a.equipment_name}</td>
-                      <td className="py-2 px-2 text-gray-600 truncate max-w-[80px]" title={a.equipment_type}>{a.equipment_type || "-"}</td>
-                      <td className="py-2 px-2 text-gray-600 truncate max-w-[90px]" title={a.model_name}>{a.model_name}</td>
-                      <td className="py-2 px-2 font-mono text-gray-600">{a.serial_no}</td>
-                      <td className="py-2 px-2 font-mono text-indigo-600 font-bold truncate max-w-[120px]" title={a.qr_code}>{a.qr_code}</td>
-                      <td className="py-2 px-2 text-gray-600">{a.equipment_category}</td>
-                      <td className="py-2 px-2">
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
-                          (a.equipment_status || "").toLowerCase().includes("functional") ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-100 border-gray-200 text-gray-600"
-                        }`}>{a.equipment_status || "N/A"}</span>
-                      </td>
-                      <td className="py-2 px-2 text-gray-700 font-mono">₹{a.asset_value || "0"}</td>
-                      <td className="py-2 px-2 text-gray-600 truncate max-w-[90px]">{a.di_name}</td>
-                      <td className="py-2 px-2 text-gray-600">{a.zone_name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Mobile Card List View */}
-              <div className="block md:hidden space-y-3 p-3">
-                {assets.map((a, idx) => (
-                  <div
-                    key={a.id || idx}
-                    className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm text-xs"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-gray-800 leading-tight">{a.equipment_name}</div>
-                        <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded font-mono block mt-1 w-fit">{a.qr_code}</span>
-                      </div>
-                      <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border ${
-                        (a.equipment_status || "").toLowerCase().includes("functional") ? "bg-green-50 border-green-200 text-green-700" : "bg-gray-100 border-gray-200 text-gray-600"
-                      }`}>{a.equipment_status || "N/A"}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-gray-100 pt-2.5">
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Location</span>
-                        <span className="text-gray-700 font-semibold block">{a.hospital_name}</span>
-                        <span className="text-gray-500 block text-[9px]">{a.district_name}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Department / Type</span>
-                        <span className="text-gray-600 block">{a.department_name}</span>
-                        <span className="text-gray-500 block text-[9px]">{a.equipment_type || "-"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Model / Serial No</span>
-                        <span className="text-gray-600 block">{a.model_name || "-"}</span>
-                        <span className="text-gray-500 font-mono block text-[9px]">{a.serial_no}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Asset Value / Category</span>
-                        <span className="text-gray-700 font-semibold font-mono block">₹{a.asset_value || "0"}</span>
-                        <span className="text-gray-550 block text-[9px]">{a.equipment_category || "-"}</span>
-                      </div>
-                    </div>
+            {/* Chart 2: Top Equipment Types (Pie / Donut Chart) */}
+            <div className="bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  TOP EQUIPMENT TYPES
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 290 }}>
+                {stats.charts.top_types.length > 0 ? (
+                  <SaaSDonutChart
+                    data={stats.charts.top_types.map((t, idx) => ({
+                      name: (t.name === "Biomedical" || t.name === "Critical" || t.name === "Others" || !t.name) ? "Non-Biomedical" : t.name,
+                      value: t.value,
+                      color: [
+                        "#2563eb", // Blue
+                        "#059669", // Emerald Green
+                        "#d97706", // Amber
+                        "#7c3aed", // Purple
+                        "#0891b2"  // Cyan
+                      ][idx % 5]
+                    }))}
+                    height={270}
+                    centerTitle="Types"
+                    valueFormatter={(v) => `${v.toLocaleString('en-IN')} Units`}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No equipment type data
                   </div>
-                ))}
+                )}
               </div>
             </div>
-          )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="p-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between mb-2 sm:mb-0">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage <= 1}
-                className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors">
-                <ChevronLeft className="w-3 h-3" /> Prev
-              </button>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}
-                className="px-3 py-1.5 text-xs font-bold border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-colors">
-                Next <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "analytics" && (
-        <>
-          {/* Mobile view warning message */}
-          <div className="block lg:hidden card-lte p-8 text-center bg-white shadow-sm font-sans">
-            <BarChart3 className="w-12 h-12 text-blue-500 mx-auto mb-3 opacity-80" />
-            <p className="text-sm font-bold text-gray-700">Analytics & Charts are optimized for desktop</p>
-            <p className="text-xs text-gray-500 mt-1">Please use a desktop browser to view the interactive charts and regional distribution reports.</p>
-          </div>
-
-          <div className="hidden lg:grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {/* Chart 1: Status Breakdown */}
-          <div className="bg-white border border-gray-200 border-t-[3px] border-t-primary rounded shadow-sm flex flex-col">
-            <div className="p-3 border-b border-gray-150 flex items-center justify-between bg-gray-50/50">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
-                <BarChart3 className="w-4 h-4 text-indigo-500" />
-                Equipment Status Distribution
-              </h3>
-            </div>
-            <div className="w-full h-64 p-4">
-              {stats.charts.status_list.length > 0 ? (
-                <div className="relative flex justify-center items-center h-full" style={{ height: "200px" }}>
-                  <ResponsivePie
-                    data={stats.charts.status_list.map((s, i) => ({ id: s.name, label: s.name, value: s.value, color: GALLERY_COLORS[i % GALLERY_COLORS.length] }))}
-                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                    innerRadius={0.7}
-                    padAngle={3}
-                    colors={{ datum: 'data.color' }}
-                    borderWidth={2}
-                    borderColor="#ffffff"
-                    enableArcLinkLabels={false}
-                    enableArcLabels={false}
-                    tooltip={({ datum }) => (
-                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 text-slate-300">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                            Units:
-                          </span>
-                          <span className="font-mono font-bold text-white">{datum.value}</span>
-                        </div>
-                      </div>
-                    )}
+            {/* Chart 3: Warranty Status Breakdown (Pie / Donut Chart) */}
+            <div className="bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
+              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  WARRANTY STATUS BREAKDOWN
+                </span>
+              </div>
+              <div className="p-3" style={{ height: 290 }}>
+                {stats.charts.warranty_list.some(w => w.value > 0) ? (
+                  <SaaSDonutChart
+                    data={stats.charts.warranty_list.map((w, idx) => ({
+                      name: w.name,
+                      value: w.value,
+                      color: idx === 0 ? "#2563eb" : "#059669"
+                    }))}
+                    height={270}
+                    centerTitle="Warranty"
+                    valueFormatter={(v) => `${v.toLocaleString('en-IN')} Units`}
                   />
-                  <div className="absolute flex flex-col items-center justify-center pointer-events-none" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">Total</span>
-                    <span className="text-xs font-black text-slate-800 font-mono">
-                      {stats.charts.status_list.reduce((sum, item) => sum + item.value, 0)}
-                    </span>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No warranty data available
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
-              )}
-              {stats.charts.status_list.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                  {stats.charts.status_list.map((item, i) => (
-                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: GALLERY_COLORS[i % GALLERY_COLORS.length] }} />
-                      <span>{item.name}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Chart 2: Top Equipment Types */}
-          <div className="bg-white border border-gray-200 border-t-[3px] border-t-success rounded shadow-sm flex flex-col">
-            <div className="p-3 border-b border-gray-150 flex items-center justify-between bg-gray-50/50">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
-                <BarChart3 className="w-4 h-4 text-emerald-500" />
-                Top 5 Equipment Types
-              </h3>
-            </div>
-            <div className="w-full h-64 p-4">
-              {stats.charts.top_types.length > 0 ? (
-                <ResponsiveBar
-                  data={stats.charts.top_types as any}
-                  keys={["value"]}
-                  indexBy="name"
-                  layout="horizontal"
-                  margin={{ top: 15, right: 15, bottom: 35, left: 80 }}
-                  padding={0.35}
-                  colors={GALLERY_COLORS}
-                  colorBy="indexValue"
-                  borderRadius={6}
-                  borderWidth={0}
-                  enableLabel={false}
-                  axisTop={null}
-                  axisRight={null}
-                  axisBottom={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  axisLeft={{
-                    tickSize: 0,
-                    tickPadding: 8,
-                    tickRotation: 0
-                  }}
-                  theme={{
-                    grid: {
-                      line: {
-                        stroke: '#f1f5f9',
-                        strokeWidth: 1
-                      }
-                    },
-                    axis: {
-                      ticks: {
-                        text: {
-                          fontSize: 8,
-                          fontWeight: 'bold',
-                          fill: '#64748b'
-                        }
-                      }
-                    }
-                  }}
-                  tooltip={({ value, color, indexValue }) => (
-                    <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                      <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{indexValue}</p>
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                          Units:
-                        </span>
-                        <span className="font-mono font-bold text-white">{value}</span>
-                      </div>
-                    </div>
-                  )}
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
-              )}
-            </div>
-          </div>
-
-          {/* Chart 3: Warranty Breakdown */}
-          <div className="bg-white border border-gray-200 border-t-[3px] border-t-warning rounded shadow-sm flex flex-col">
-            <div className="p-3 border-b border-gray-150 flex items-center justify-between bg-gray-50/50">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
-                <BarChart3 className="w-4 h-4 text-orange-500" />
-                Warranty Status Breakdown
-              </h3>
-            </div>
-            <div className="w-full h-64 p-4">
-              {stats.charts.warranty_list.some(w => w.value > 0) ? (
-                <div className="relative flex justify-center items-center h-full" style={{ height: "200px" }}>
-                  <ResponsivePie
-                    data={stats.charts.warranty_list.map((w, i) => ({ id: w.name, label: w.name, value: w.value, color: i === 0 ? "#2b7d50" : "#d28b2a" }))}
-                    margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                    innerRadius={0}
-                    padAngle={1.5}
-                    colors={{ datum: 'data.color' }}
-                    borderWidth={2}
-                    borderColor="#ffffff"
-                    enableArcLinkLabels={false}
-                    enableArcLabels={false}
-                    tooltip={({ datum }) => (
-                      <div className="bg-slate-900/95 backdrop-blur-md text-white border border-slate-800 shadow-2xl rounded-xl p-3 text-xs min-w-[120px] font-sans pointer-events-none z-50">
-                        <p className="font-extrabold text-[10px] uppercase text-slate-400 tracking-wider mb-1.5">{datum.label}</p>
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="flex items-center gap-1.5 text-slate-300">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: datum.color }} />
-                            Units:
-                          </span>
-                          <span className="font-mono font-bold text-white">{datum.value}</span>
-                        </div>
-                      </div>
-                    )}
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-xs text-gray-400 font-bold">No Data Available</div>
-              )}
-              {stats.charts.warranty_list.some(w => w.value > 0) && (
-                <div className="flex flex-wrap justify-center gap-x-2.5 gap-y-1 mt-2">
-                  {stats.charts.warranty_list.map((item, i) => (
-                    <div key={i} className="flex items-center gap-1 text-[8px] font-bold text-slate-500">
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: i === 0 ? "#2b7d50" : "#d28b2a" }} />
-                      <span>{item.name}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </>
-    )}
+        </>
+      )}
 
     </div>
   );

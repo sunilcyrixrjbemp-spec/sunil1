@@ -253,198 +253,185 @@ export default function ConsolidatedReportPage() {
   const totalNet = data.reduce((s, r) => s + r.net_payable, 0);
 
   return (
-    <div className="w-full mx-auto px-1 sm:px-2 lg:px-4 space-y-6 animate-fadeIn font-sans pb-12">
-      {/* AdminLTE Content Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 px-1">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
-            <FileSpreadsheet className="w-5.5 h-5.5 text-primary-600" />
-            Consolidated Monthly Report
-            <span className="text-xs font-normal text-slate-400 hidden sm:inline-block ml-1">Excel Export & Reconciliation</span>
-          </h1>
+    <div className="w-full space-y-4 animate-fadeIn font-sans pb-12 text-[#212529]">
+      {/* Header Info Bar */}
+      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
+            <FileSpreadsheet className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 leading-none">CONSOLIDATED MONTHLY REPORT</h1>
+            <p className="text-[10px] text-slate-500 mt-0.5">Excel export, claims audit matrix, and company expense policy rules.</p>
+          </div>
         </div>
-        <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
-          <Link to="/home" className="text-indigo-600 hover:underline">Home</Link>
-          <span className="text-slate-300">/</span>
-          <span className="text-slate-500">Consolidated Report</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-white bg-[#4A6A8A] px-2.5 py-1 rounded-none border border-[#4A6A8A] font-mono">
+            Claims Listed: <strong>{data.length}</strong>
+          </span>
+          <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-none border border-amber-200 font-mono">
+            Claimed: <strong>₹{fmt(totalClaimed)}</strong>
+          </span>
+          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-none border border-emerald-200 font-mono">
+            Net Payable: <strong>₹{fmt(totalNet)}</strong>
+          </span>
         </div>
       </div>
 
-      {/* Info Boxes */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4 Enterprise Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Card 1: Total Claims */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-600 shrink-0">
-            <Users className="w-5 h-5" />
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
+            <Users className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Total Claims</span>
-            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{data.length}</span>
-            <span className="text-[9px] text-indigo-600 font-extrabold uppercase block mt-1">Engineers Listed</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Claims</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{data.length}</span>
+            <span className="text-[9px] text-[#4A6A8A] font-bold uppercase block mt-0.5">Engineers Listed</span>
           </div>
         </div>
 
         {/* Card 2: Claimed Amount */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
-            <IndianRupee className="w-5 h-5" />
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-amber-600 flex items-center justify-center text-white shrink-0">
+            <IndianRupee className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Claimed Amount</span>
-            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">₹{fmt(totalClaimed)}</span>
-            <span className="text-[9px] text-amber-600 font-extrabold uppercase block mt-1">Before Deductions</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Claimed Amount</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">₹{fmt(totalClaimed)}</span>
+            <span className="text-[9px] text-amber-700 font-bold uppercase block mt-0.5">Before Deductions</span>
           </div>
         </div>
 
         {/* Card 3: Total Advances */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-50 text-rose-600 shrink-0">
-            <ShieldAlert className="w-5 h-5" />
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-rose-600 flex items-center justify-center text-white shrink-0">
+            <ShieldAlert className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Total Advances</span>
-            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">₹{fmt(totalAdvances)}</span>
-            <span className="text-[9px] text-rose-650 font-extrabold uppercase block mt-1">Paid in Advance</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Advances</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">₹{fmt(totalAdvances)}</span>
+            <span className="text-[9px] text-rose-700 font-bold uppercase block mt-0.5">Paid in Advance</span>
           </div>
         </div>
 
         {/* Card 4: Net Payable */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-emerald-600 flex items-center justify-center text-white shrink-0">
+            <CheckCircle2 className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Net Payable</span>
-            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">₹{fmt(totalNet)}</span>
-            <span className="text-[9px] text-emerald-650 font-extrabold uppercase block mt-1">Net Reimbursement</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Net Payable</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">₹{fmt(totalNet)}</span>
+            <span className="text-[9px] text-emerald-700 font-bold uppercase block mt-0.5">Net Reimbursement</span>
           </div>
         </div>
       </div>
 
-      {/* Policy Guide Panel */}
-      <div className="card border border-slate-100 bg-white shadow-sm rounded-3xl overflow-hidden">
+      {/* Company Policy Guide Panel */}
+      <div className="border border-slate-300 rounded-none bg-white shadow-2xs overflow-hidden">
         <div 
           onClick={() => setShowPolicyPanel(!showPolicyPanel)}
-          className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20 cursor-pointer hover:bg-slate-50/40 transition-colors"
+          className="bg-[#4A6A8A] text-white px-3 py-2 text-xs font-extrabold uppercase tracking-wider flex items-center justify-between rounded-none cursor-pointer transition-colors"
         >
-          <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-            <BookOpen className="w-4 h-4 text-primary-600" />
+          <h3 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5 m-0">
+            <BookOpen className="w-4 h-4 text-slate-200" />
             Company Expense Policies (Non-AI Policy Guide)
           </h3>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-400 font-semibold sm:inline hidden">Quick policy limits lookup</span>
-            {showPolicyPanel ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            <span className="text-[10px] text-slate-200 font-bold sm:inline hidden">Quick policy limits lookup</span>
+            {showPolicyPanel ? <ChevronUp className="w-4 h-4 text-white" /> : <ChevronDown className="w-4 h-4 text-white" />}
           </div>
         </div>
         
         {showPolicyPanel && (
-          <div className="card-body p-5 space-y-4 animate-fadeIn">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-b border-slate-100 pb-4">
+          <div className="p-3 space-y-3 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-b border-slate-200 pb-3">
               <div className="w-full sm:w-1/3 max-w-[240px]">
-                <label className="block text-[10px] font-bold text-slate-455 uppercase tracking-wider mb-1">Select Grade</label>
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Select Grade</label>
                 <select 
                   value={selectedPolicyGrade} 
                   onChange={(e) => setSelectedPolicyGrade(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                  className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
                 >
                   {availableGrades.map((g) => (
                     <option key={g} value={g}>{g}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex-1 flex items-center gap-2 text-indigo-600 bg-indigo-50/50 p-2.5 rounded-2xl border border-indigo-100/30">
-                <Info className="w-4 h-4 shrink-0 text-indigo-500" />
-                <p className="text-[10px] font-semibold leading-relaxed text-slate-650">
-                  Showing active rules loaded dynamically from the Allowance Master database. Claimed amounts exceeding these limits are auto-flagged and subject to deduction.
+              <div className="flex-1 flex items-center gap-2 text-[#4A6A8A] bg-slate-50 p-2 border border-slate-200">
+                <Info className="w-4 h-4 shrink-0 text-[#4A6A8A]" />
+                <p className="text-[10.5px] font-bold leading-relaxed text-slate-700 m-0">
+                  Showing active rules loaded dynamically from Allowance Master. Claimed amounts exceeding these limits are auto-flagged and subject to deduction.
                 </p>
               </div>
             </div>
 
             {loadingPolicies ? (
-              <div className="flex items-center justify-center py-6 gap-2 text-slate-400 text-xs font-semibold">
-                <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" /> Loading allowances...
+              <div className="flex items-center justify-center py-6 gap-2 text-slate-500 text-xs font-bold">
+                <RefreshCw className="w-4 h-4 animate-spin text-[#4A6A8A]" /> Loading allowances...
               </div>
             ) : !selectedPolicy ? (
-              <div className="text-center py-6 text-slate-400 font-medium italic text-xs">
+              <div className="text-center py-6 text-slate-400 font-bold uppercase tracking-wider text-xs">
                 No policy rules configured for this grade.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fadeIn">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 animate-fadeIn">
                 {/* 1. Daily Allowance In-District */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (In-District)</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.daily_in_district || 0).toFixed(2)}</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Daily allowance when traveling inside headquarters district.</p>
+                <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">DA (In-District)</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.daily_in_district || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Daily allowance inside headquarters district.</p>
                 </div>
 
                 {/* 2. Daily Allowance Out-District */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Out-District)</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.daily_out_district || 0).toFixed(2)}</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Daily allowance when traveling outside headquarters district.</p>
+                <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">DA (Out-District)</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.daily_out_district || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Daily allowance outside headquarters district.</p>
                 </div>
 
                 {/* 3. Daily Allowance Hotel */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Hotel Stay)</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.daily_hotel || 0).toFixed(2)}</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Daily allowance when staying at a hotel.</p>
+                <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">DA (Hotel Stay)</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.daily_hotel || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Daily allowance when staying at a hotel.</p>
                 </div>
 
                 {/* 4. Daily Allowance Out-State */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">DA (Out-of-State)</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.daily_out_state || 0).toFixed(2)}</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Daily allowance when traveling outside parent state.</p>
+                <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">DA (Out-of-State)</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.daily_out_state || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Daily allowance outside parent state.</p>
                 </div>
 
                 {/* 5. In-State Hotel Room Rent */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-primary-600 block mb-0.5">Hotel Rent (In-State)</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.hotel_in_state_s || 0).toFixed(2)} / Night</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for in-state hotel boarding/lodging.</p>
+                <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">Hotel Rent (In-State)</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.hotel_in_state_s || 0).toFixed(2)} / Night</span>
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Max reimbursement per night for in-state hotel.</p>
                 </div>
 
                 {/* 6. Out-of-State Hotel Room Rent */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-primary-600 block mb-0.5">Hotel Rent (Out-State)</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.hotel_out_state_s || 0).toFixed(2)} / Night</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursement per night for out-of-state hotel boarding/lodging.</p>
+                <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">Hotel Rent (Out-State)</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.hotel_out_state_s || 0).toFixed(2)} / Night</span>
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Max reimbursement per night for out-state hotel.</p>
                 </div>
 
                 {/* 7. Bike Rate */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200 animate-fadeIn">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Bike Travel Rate</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.rate_bike || 4.5).toFixed(2)} / KM</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal motorcycle.</p>
+                <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">Bike Travel Rate</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.rate_bike || 4.5).toFixed(2)} / KM</span>
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Rate per kilometer when using personal bike.</p>
                 </div>
 
                 {/* 8. Car Rate */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200 animate-fadeIn">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Car Travel Rate</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.rate_car || 9.0).toFixed(2)} / KM</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Reimbursement rate per kilometer when using personal car.</p>
-                </div>
-
-                {/* 9. Max KM per month */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Travel Cap</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{selectedPolicy.max_km_per_month || 2000} KM</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursable distance allowed per month.</p>
-                </div>
-
-                {/* 10. Max Auto per month */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Monthly Auto Cap</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">₹{(selectedPolicy.max_auto_per_month || 1000).toFixed(2)}</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">Maximum reimbursable amount allowed for auto/cab fares per month.</p>
-                </div>
-
-                {/* 11. Vehicle Type */}
-                <div className="p-3.5 bg-slate-50/40 hover:bg-slate-50 border border-slate-100/70 rounded-2xl transition-all duration-200">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-650 block mb-0.5">Approved Vehicle</span>
-                  <span className="text-sm font-extrabold text-slate-800 block mb-1 font-mono">{selectedPolicy.vehicle_type || "None"}</span>
-                  <p className="text-[9.5px] text-slate-450 leading-normal font-medium">The standard vehicle type authorized for this grade.</p>
+                <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">Car Travel Rate</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.rate_car || 9.0).toFixed(2)} / KM</span>
+                  <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Rate per kilometer when using personal car.</p>
                 </div>
               </div>
             )}
@@ -452,178 +439,186 @@ export default function ConsolidatedReportPage() {
         )}
       </div>
 
-      {/* Filter Card */}
-      <div className="card border border-slate-100 bg-white shadow-sm rounded-3xl overflow-hidden">
-        <div className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20">
-          <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-indigo-600" />
+      {/* Filter Billing Period Card */}
+      <div className="bg-white border border-slate-300 rounded-none shadow-2xs p-3">
+        <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
+          <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5 m-0">
+            <Calendar className="w-4 h-4 text-[#4A6A8A]" />
             Select Billing Period
           </h3>
           <button 
             onClick={fetchReport} 
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-60 transform hover:-translate-y-0.5 active:translate-y-0 duration-200"
+            className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-[10.5px] font-bold rounded-none cursor-pointer disabled:opacity-60 transition-colors"
           >
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
           </button>
         </div>
-        <div className="card-body p-5">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Select Month</label>
-              <select value={month} onChange={(e) => setMonth(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Select Year</label>
-              <select value={year} onChange={(e) => setYear(parseInt(e.target.value))}
-                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            <div className="flex items-end">
-              <button 
-                onClick={fetchReport} 
-                disabled={loading}
-                className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-700 hover:from-indigo-700 hover:to-violet-850 text-white text-xs font-bold rounded-full shadow-md hover:shadow-lg transition-all disabled:opacity-60 cursor-pointer min-h-[38px] transform hover:-translate-y-0.5 active:translate-y-0 duration-200"
-              >
-                <Search className="w-3.5 h-3.5" /> Fetch Consolidated Data
-              </button>
-            </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Select Month</label>
+            <select 
+              value={month} 
+              onChange={(e) => setMonth(e.target.value)}
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
+            >
+              {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Select Year</label>
+            <select 
+              value={year} 
+              onChange={(e) => setYear(parseInt(e.target.value))}
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
+            >
+              {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button 
+              onClick={fetchReport} 
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-1.5 bg-[#4A6A8A] hover:bg-[#3b5570] text-white text-xs font-extrabold uppercase rounded-none cursor-pointer border-0 shadow-2xs transition-colors disabled:opacity-60 h-[32px]"
+            >
+              <Search className="w-3.5 h-3.5" /> Fetch Consolidated Data
+            </button>
           </div>
         </div>
       </div>
 
       {/* Report Table Card */}
-      <div className="card border-t-3 border-green-500 bg-white shadow-sm border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden">
-        <div className="card-header border-b border-gray-150 px-4 py-3 flex items-center justify-between bg-gray-50/40">
+      <div className="border border-slate-300 rounded-none shadow-2xs bg-white overflow-hidden">
+        <div className="bg-[#4A6A8A] text-white px-3 py-2 text-xs font-extrabold uppercase tracking-wider flex items-center justify-between rounded-none flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className="w-4 h-4 text-green-600 flex-shrink-0" />
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-              {month} {year} Summary Grid
+            <FileSpreadsheet className="w-4 h-4 text-slate-200 shrink-0" />
+            <span>
+              {month} {year} Summary Grid <span className="text-emerald-300 font-mono">({data.length} records)</span>
             </span>
           </div>
           <button 
             onClick={downloadExcel} 
             disabled={data.length === 0}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-green-650 hover:from-emerald-700 hover:to-green-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0 duration-205"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-none bg-emerald-600 hover:bg-emerald-700 text-white text-[10.5px] font-extrabold uppercase tracking-wider border-0 cursor-pointer shadow-2xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-3.5 h-3.5" /> Export Consolidated Excel
           </button>
         </div>
-        <div className="card-body p-0 overflow-x-auto">
+
+        <div className="overflow-x-auto w-full">
           {loading ? (
-            <div className="flex items-center justify-center py-12 gap-2 text-gray-400 font-semibold text-xs">
-              <RefreshCw className="w-5 h-5 animate-spin text-blue-600" /> Loading report data...
+            <div className="flex items-center justify-center py-12 gap-2 text-slate-500 font-bold text-xs">
+              <RefreshCw className="w-4 h-4 animate-spin text-[#4A6A8A]" /> Loading report data...
             </div>
           ) : data.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 font-medium italic text-xs">
+            <div className="text-center py-16 text-slate-500 font-extrabold text-xs uppercase tracking-wider">
               No approved claims found for this month/year.
             </div>
           ) : (
-            <table className="w-full text-[10px] border-collapse min-w-[2200px] border border-slate-200">
+            <table className="w-full text-[10px] border-collapse min-w-[2200px] border border-slate-300">
               <thead>
-                <tr className="bg-slate-100 text-slate-700 font-bold uppercase tracking-wider text-left">
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Sl No</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Submitted Date</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Mail / Hard Copy</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">EE Code</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Grade</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Designation</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">CC</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">EE Name</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314101 - Exp Travelling Expense - Private Transport (Bike and personal car)</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314101 - Exp Travelling Expense - public Transport (Bus, Train, Auto, uber, Rapido etc)</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314102 - Exp Daily Allowances</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314108 - Exp Spare Purchase Cost - Non GST</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314103 - Exp Courier Charges</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314104 - Exp Boarding & Lodging</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314105 - Exp Printing & Stationery</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314106 - Exp Miscellaneous Expenses</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">5314107 - Exp Fuel Expenses</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold bg-slate-50">Total</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold text-red-700 bg-red-50/10">Advances</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold text-green-700 bg-green-50/10">Net Payable</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">GST Bills</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Status</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold min-w-[150px]">Reason for deduction</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Month</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">Hold Reson</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">Remarks</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-left font-bold">Manager</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-center font-bold">State</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">total claimed amount</th>
-                  <th className="py-1.5 px-1.5 border border-slate-200 text-right font-bold">differenece</th>
+                <tr className="bg-[#4A6A8A] text-white text-[10px] font-extrabold uppercase tracking-wider text-left border-b border-slate-600">
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">Sl No</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">Submitted Date</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">Mail / Hard Copy</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">EE Code</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">Grade</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">Designation</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">CC</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-left">EE Name</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314101 - Exp Private Transport</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314101 - Exp Public Transport</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314102 - Exp DA</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314108 - Exp Spare Purchase</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314103 - Exp Courier</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314104 - Exp Boarding &amp; Lodging</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314105 - Exp Printing</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314106 - Misc</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">5314107 - Fuel</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right bg-slate-700/40">Total</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right bg-rose-700/40">Advances</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right bg-emerald-700/40">Net Payable</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-left">GST Bills</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">Status</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-left min-w-[150px]">Reason for Deduction</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">Month</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">Hold Reason</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-left">Remarks</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-left">Manager</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-center">State</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">Total Claimed</th>
+                  <th className="py-2 px-1.5 border border-slate-600 text-right">Difference</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200 text-xs">
                 {data.map((r, idx) => {
                   const privateTravel = (r.bike_km || 0) * 4.5 + (r.car_km || 0) * 9.0;
                   const publicTravel = (r.auto_amount || 0) + (r.train_bus_amount || 0);
                   const rowDiff = r.claimed_amount - r.total;
                   return (
-                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-slate-700">
-                      <td className="py-1.5 px-1.5 text-center font-semibold border border-slate-200">{idx + 1}</td>
-                      <td className="py-1.5 px-1.5 text-center font-mono border border-slate-200 whitespace-nowrap">{r.submitted_date || ""}</td>
-                      <td className="py-1.5 px-1.5 text-center font-medium border border-slate-200">{r.mail_hard_copy || ""}</td>
-                      <td className="py-1.5 px-1.5 text-center border border-slate-200 font-mono font-bold text-blue-700 bg-blue-50/20">{r.ee_code}</td>
-                      <td className="py-1.5 px-1.5 text-center font-medium border border-slate-200">{r.grade || ""}</td>
-                      <td className="py-1.5 px-1.5 font-medium border border-slate-200 truncate max-w-[150px]" title={r.designation}>{r.designation || ""}</td>
-                      <td className="py-1.5 px-1.5 text-center font-medium border border-slate-200">{r.cc || ""}</td>
-                      <td className="py-1.5 px-1.5 font-semibold border border-slate-200">{r.ee_name || ""}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{fmt(privateTravel)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{fmt(publicTravel)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{fmt(r.da_allowance)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{fmt(r.spare_purchase)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{fmt(r.courier_charges)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{fmt(r.boarding_lodging)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">{fmt(r.printing_stationery)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">0.00</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono">0.00</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono font-bold bg-slate-50">{fmt(r.total)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono font-bold text-red-700 bg-red-50/10">{fmt(r.advance)}</td>
-                      <td className="py-1.5 px-1.5 text-right border border-slate-200 font-mono font-bold text-green-700 bg-green-50/10">{fmt(r.net_payable)}</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200"></td>
-                      <td className="py-1.5 px-1.5 text-center font-bold text-green-600 border border-slate-200">Approved</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200 min-w-[150px] whitespace-normal break-words font-medium text-slate-700" title={r.deduction_reason}>{r.deduction_reason || ""}</td>
-                      <td className="py-1.5 px-1.5 text-center border border-slate-200 font-mono">{r.month || ""}</td>
-                      <td className="py-1.5 px-1.5 text-center border border-slate-200 font-semibold text-slate-500">{r.hold_reason || "No"}</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200 whitespace-normal break-words min-w-[150px]">{r.remarks || ""}</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200 truncate max-w-[120px]" title={r.manager}>{r.manager || ""}</td>
-                      <td className="py-1.5 px-1.5 text-center border border-slate-200">{r.state || "Rajasthan"}</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200 text-right font-mono font-semibold">{fmt(r.claimed_amount)}</td>
-                      <td className="py-1.5 px-1.5 border border-slate-200 text-right font-mono font-semibold text-red-650 bg-red-50/5">{fmt(rowDiff)}</td>
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors text-slate-800 border-b border-slate-200">
+                      <td className="py-2 px-1.5 text-center font-mono font-bold border border-slate-200 text-slate-400">{idx + 1}</td>
+                      <td className="py-2 px-1.5 text-center font-mono border border-slate-200 whitespace-nowrap">{r.submitted_date || ""}</td>
+                      <td className="py-2 px-1.5 text-center font-semibold border border-slate-200">{r.mail_hard_copy || ""}</td>
+                      <td className="py-2 px-1.5 text-center border border-slate-200 font-mono font-extrabold text-[#4A6A8A] bg-slate-100">{r.ee_code}</td>
+                      <td className="py-2 px-1.5 text-center font-semibold border border-slate-200">{r.grade || ""}</td>
+                      <td className="py-2 px-1.5 font-semibold border border-slate-200 truncate max-w-[150px]" title={r.designation}>{r.designation || ""}</td>
+                      <td className="py-2 px-1.5 text-center font-semibold border border-slate-200">{r.cc || ""}</td>
+                      <td className="py-2 px-1.5 font-extrabold text-slate-900 border border-slate-200">{r.ee_name || ""}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-bold">{fmt(privateTravel)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-bold">{fmt(publicTravel)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-bold">{fmt(r.da_allowance)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-bold">{fmt(r.spare_purchase)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-bold">{fmt(r.courier_charges)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-bold">{fmt(r.boarding_lodging)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-bold">{fmt(r.printing_stationery)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono text-slate-400">0.00</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono text-slate-400">0.00</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-black bg-slate-100">{fmt(r.total)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-black text-rose-700 bg-rose-50/40">{fmt(r.advance)}</td>
+                      <td className="py-2 px-1.5 text-right border border-slate-200 font-mono font-black text-emerald-700 bg-emerald-50/40">{fmt(r.net_payable)}</td>
+                      <td className="py-2 px-1.5 border border-slate-200"></td>
+                      <td className="py-2 px-1.5 text-center font-extrabold text-emerald-700 border border-slate-200 uppercase">Approved</td>
+                      <td className="py-2 px-1.5 border border-slate-200 min-w-[150px] whitespace-normal break-words font-semibold text-slate-700" title={r.deduction_reason}>{r.deduction_reason || ""}</td>
+                      <td className="py-2 px-1.5 text-center border border-slate-200 font-mono font-bold text-[#4A6A8A]">{r.month || ""}</td>
+                      <td className="py-2 px-1.5 text-center border border-slate-200 font-bold text-slate-500">{r.hold_reason || "No"}</td>
+                      <td className="py-2 px-1.5 border border-slate-200 whitespace-normal break-words min-w-[150px] text-slate-700">{r.remarks || ""}</td>
+                      <td className="py-2 px-1.5 border border-slate-200 truncate max-w-[120px] font-bold" title={r.manager}>{r.manager || ""}</td>
+                      <td className="py-2 px-1.5 text-center border border-slate-200 font-semibold">{r.state || "Rajasthan"}</td>
+                      <td className="py-2 px-1.5 border border-slate-200 text-right font-mono font-bold">{fmt(r.claimed_amount)}</td>
+                      <td className="py-2 px-1.5 border border-slate-200 text-right font-mono font-black text-rose-700 bg-rose-50/20">{fmt(rowDiff)}</td>
                     </tr>
                   );
                 })}
               </tbody>
               <tfoot>
-                <tr className="bg-amber-50/30 border-t-2 border-slate-200 text-[10px] font-bold text-slate-800">
-                  <td colSpan={8} className="py-1.5 px-2 border border-slate-200 text-center uppercase tracking-wider text-slate-650 font-sans">
-                    Grand Total
+                <tr className="bg-slate-100 border-t-2 border-slate-300 text-xs font-black text-slate-900 font-mono">
+                  <td colSpan={8} className="py-2.5 px-2 border border-slate-300 text-center uppercase tracking-wider text-slate-800 font-sans font-extrabold">
+                    Grand Total Summary
                   </td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + ((r.bike_km || 0) * 4.5 + (r.car_km || 0) * 9.0), 0))}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + ((r.auto_amount || 0) + (r.train_bus_amount || 0)), 0))}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.da_allowance, 0))}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.spare_purchase, 0))}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.courier_charges, 0))}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.boarding_lodging, 0))}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(data.reduce((s, r) => s + r.printing_stationery, 0))}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">0.00</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">0.00</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono bg-slate-50">{fmt(data.reduce((s, r) => s + r.total, 0))}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono text-red-700 bg-red-50/10">{fmt(totalAdvances)}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono text-green-700 bg-green-50/10">{fmt(totalNet)}</td>
-                  <td className="border border-slate-200" />
-                  <td className="border border-slate-200" />
-                  <td className="border border-slate-200" />
-                  <td className="border border-slate-200" />
-                  <td className="border border-slate-200" />
-                  <td className="border border-slate-200" />
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono">{fmt(totalClaimed)}</td>
-                  <td className="py-1.5 px-2 text-right border border-slate-200 font-mono text-red-700">{fmt(totalClaimed - data.reduce((s, r) => s + r.total, 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">{fmt(data.reduce((s, r) => s + ((r.bike_km || 0) * 4.5 + (r.car_km || 0) * 9.0), 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">{fmt(data.reduce((s, r) => s + ((r.auto_amount || 0) + (r.train_bus_amount || 0)), 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">{fmt(data.reduce((s, r) => s + r.da_allowance, 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">{fmt(data.reduce((s, r) => s + r.spare_purchase, 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">{fmt(data.reduce((s, r) => s + r.courier_charges, 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">{fmt(data.reduce((s, r) => s + r.boarding_lodging, 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">{fmt(data.reduce((s, r) => s + r.printing_stationery, 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">0.00</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono">0.00</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono bg-slate-200">{fmt(data.reduce((s, r) => s + r.total, 0))}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono text-rose-800 bg-rose-100/60">{fmt(totalAdvances)}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono text-emerald-800 bg-emerald-100/60">{fmt(totalNet)}</td>
+                  <td className="border border-slate-300" />
+                  <td className="border border-slate-300" />
+                  <td className="border border-slate-300" />
+                  <td className="border border-slate-300 text-center font-sans font-bold text-slate-700">{data.length} Staff</td>
+                  <td className="border border-slate-300" />
+                  <td className="border border-slate-300" />
+                  <td className="border border-slate-300" />
+                  <td className="border border-slate-300" />
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono font-black">{fmt(totalClaimed)}</td>
+                  <td className="py-2.5 px-2 text-right border border-slate-300 font-mono font-black text-rose-800 bg-rose-100/60">{fmt(totalClaimed - data.reduce((s, r) => s + r.total, 0))}</td>
                 </tr>
               </tfoot>
             </table>

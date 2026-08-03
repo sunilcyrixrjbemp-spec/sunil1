@@ -4,7 +4,7 @@ import { expenseService } from "../services/expenseService";
 import api from "../services/api";
 import {
   Calendar, Download, RefreshCw, Users, CheckCircle,
-  IndianRupee, MapPin, Search, Filter, FileText, Loader2, Printer,
+  IndianRupee, MapPin, Search, Filter, FileText, Loader2, Printer, X
 } from "lucide-react";
 import Loader from "../components/common/Loader";
 
@@ -1222,396 +1222,465 @@ export default function MonthSummaryPage() {
   };
 
   return (
-    <div className="space-y-4 animate-fadeIn font-sans pb-10">
-      {/* AdminLTE Content Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 px-1">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2 tracking-tight">
-            <Users className="w-5.5 h-5.5 text-primary-600" />
-            Month Summary
-            <span className="text-xs font-normal text-slate-400 hidden sm:inline-block ml-1">Reports &amp; Billing</span>
-          </h1>
+    <div className="space-y-4 animate-fadeIn font-sans pb-10 text-[#212529]">
+      {/* Header Info Bar */}
+      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-sm font-extrabold text-slate-900 leading-none">MONTH SUMMARY REPORT</h1>
+            <p className="text-[10px] text-slate-500 mt-0.5">Comprehensive monthly claim breakdown, field statistics, and PDF export center.</p>
+          </div>
         </div>
-        <div className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
-          <span className="text-indigo-600 cursor-pointer hover:underline">Home</span>
-          <span className="text-slate-300">/</span>
-          <span className="text-indigo-600 cursor-pointer hover:underline">Reports</span>
-          <span className="text-slate-300">/</span>
-          <span className="text-slate-500">Month Summary</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-bold text-white bg-[#4A6A8A] px-2.5 py-1 rounded-none border border-[#4A6A8A] font-mono">
+            Total Staff: <strong>{totalEngineers}</strong>
+          </span>
+          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-none border border-emerald-200 font-mono">
+            Approved Claims: <strong>{totalClaims}</strong>
+          </span>
+          <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2.5 py-1 rounded-none border border-blue-200 font-mono">
+            Total Value: <strong>{fmt(totalAmount)}</strong>
+          </span>
         </div>
       </div>
 
-      {/* AdminLTE Info Boxes (Stats) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 4 Enterprise Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Box 1 */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-indigo-50 text-indigo-600 shrink-0">
-            <Users className="w-5 h-5" />
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
+            <Users className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Engineers</span>
-            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{totalEngineers}</span>
-            <span className="text-[9px] text-indigo-600 font-extrabold uppercase block mt-1">Active Staff</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Engineers</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{totalEngineers}</span>
+            <span className="text-[9px] text-[#4A6A8A] font-bold uppercase block mt-0.5">Active Staff</span>
           </div>
         </div>
+
         {/* Box 2 */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-50 text-emerald-600 shrink-0">
-            <CheckCircle className="w-5 h-5" />
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-emerald-600 flex items-center justify-center text-white shrink-0">
+            <CheckCircle className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Approved Claims</span>
-            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{totalClaims}</span>
-            <span className="text-[9px] text-emerald-650 font-extrabold uppercase block mt-1">Processed</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Approved Claims</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{totalClaims}</span>
+            <span className="text-[9px] text-emerald-700 font-bold uppercase block mt-0.5">Processed</span>
           </div>
         </div>
+
         {/* Box 3 */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
-            <IndianRupee className="w-5 h-5" />
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-amber-600 flex items-center justify-center text-white shrink-0">
+            <IndianRupee className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Total Amount</span>
-            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{fmt(totalAmount)}</span>
-            <span className="text-[9px] text-amber-600 font-extrabold uppercase block mt-1">Disbursed</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Amount</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{fmt(totalAmount)}</span>
+            <span className="text-[9px] text-amber-700 font-bold uppercase block mt-0.5">Disbursed Value</span>
           </div>
         </div>
+
         {/* Box 4 */}
-        <div className="group bg-white border border-slate-100 rounded-3xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-300 animate-fadeIn">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-purple-50 text-purple-650 shrink-0">
-            <MapPin className="w-5 h-5" />
+        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
+          <div className="w-9 h-9 rounded-none bg-purple-600 flex items-center justify-center text-white shrink-0">
+            <MapPin className="w-4.5 h-4.5" />
           </div>
           <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Total Distance</span>
-            <span className="text-base font-extrabold text-slate-800 font-mono block mt-0.5">{fmtN(totalKM)} km</span>
-            <span className="text-[9px] text-purple-600 font-extrabold uppercase block mt-1">Travelled</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Distance</span>
+            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{fmtN(totalKM)} km</span>
+            <span className="text-[9px] text-purple-700 font-bold uppercase block mt-0.5">Travelled</span>
           </div>
         </div>
       </div>
 
-      {/* AdminLTE Card: Filters */}
-      <div className="card border border-slate-100 bg-white shadow-sm rounded-3xl overflow-hidden">
-        <div className="card-header border-b border-slate-100 px-5 py-3.5 flex items-center justify-between bg-slate-50/20">
-          <h3 className="card-title text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-            <Filter className="w-4 h-4 text-indigo-600" />
+      {/* Filter Month Report Card */}
+      <div className="bg-white border border-slate-300 rounded-none shadow-2xs p-3">
+        <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
+          <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-[#4A6A8A]" />
             Filter Month Report
           </h3>
-          <button onClick={() => fetchData(appliedFilters)} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold transition-all cursor-pointer disabled:opacity-60">
+          <button 
+            onClick={() => fetchData(appliedFilters)} 
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-[10.5px] font-bold rounded-none cursor-pointer disabled:opacity-60 transition-colors"
+          >
             <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
           </button>
         </div>
-        <div className="card-body p-5">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Select Month</label>
-              <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                <option value="">All Months</option>
-                {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">Select Year</label>
-              <select value={filterYear || ""} onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : 0)}
-                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                <option value="">All Years</option>
-                {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider mb-1">District Location</label>
-              <select value={filterDistrict} onChange={(e) => setFilterDistrict(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                <option value="">All Districts</option>
-                {districts.map((d) => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Engineer / E-Code</label>
-              <input type="text" value={filterEngineer} onChange={(e) => setFilterEngineer(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleApplyFilters()}
-                placeholder="Type name or code..."
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs font-medium text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
-            </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Select Month</label>
+            <select 
+              value={filterMonth} 
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
+            >
+              <option value="">All Months</option>
+              {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
           </div>
-          <div className="flex gap-2 border-t border-gray-100 pt-3.5">
-            <button onClick={handleApplyFilters} disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-sm shadow-sm transition-colors disabled:opacity-60 cursor-pointer">
-              <Search className="w-3.5 h-3.5" /> Search Summary
-            </button>
-            <button onClick={handleClear}
-              className="px-4 py-2 border border-gray-300 bg-white text-gray-700 text-xs font-semibold rounded-sm hover:bg-gray-100 transition-colors cursor-pointer">
-              Reset Filters
-            </button>
+
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Select Year</label>
+            <select 
+              value={filterYear || ""} 
+              onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : 0)}
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
+            >
+              <option value="">All Years</option>
+              {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
           </div>
+
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">District Location</label>
+            <select 
+              value={filterDistrict} 
+              onChange={(e) => setFilterDistrict(e.target.value)}
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
+            >
+              <option value="">All Districts</option>
+              {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Engineer / E-Code</label>
+            <input 
+              type="text" 
+              value={filterEngineer} 
+              onChange={(e) => setFilterEngineer(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleApplyFilters()}
+              placeholder="Type name or code..."
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] bg-white" 
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-2 border-t border-slate-200">
+          <button 
+            onClick={handleApplyFilters} 
+            disabled={loading}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#4A6A8A] hover:bg-[#3b5570] text-white text-xs font-extrabold uppercase rounded-none cursor-pointer border-0 shadow-2xs transition-colors disabled:opacity-60"
+          >
+            <Search className="w-3.5 h-3.5" /> Search Summary
+          </button>
+          <button 
+            onClick={handleClear}
+            className="px-4 py-1.5 border border-slate-300 bg-white text-slate-700 text-xs font-bold rounded-none hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            Reset Filters
+          </button>
         </div>
       </div>
 
-      {/* AdminLTE Card: Data Table */}
-      <div className="card border-t-3 border-blue-500 bg-white shadow-sm border border-gray-200 rounded-sm">
-        <div className="card-header border-b border-gray-150 px-4 py-3 flex items-center justify-between bg-gray-50/40">
+      {/* Summary Data Table Section */}
+      <div className="border border-slate-300 rounded-none shadow-2xs bg-white overflow-hidden">
+        {/* Table Header Banner */}
+        <div className="bg-[#4A6A8A] text-white px-3 py-2 text-xs font-extrabold uppercase tracking-wider flex items-center justify-between rounded-none flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+            <Calendar className="w-4 h-4 text-slate-200 shrink-0" />
+            <span>
               {appliedFilters.month && appliedFilters.year
                 ? `${appliedFilters.month} ${appliedFilters.year}`
                 : appliedFilters.month || (appliedFilters.year ? String(appliedFilters.year) : "All Months")}
               {" Summary "}
-              <span className="text-blue-600 font-mono">({filtered.length} row(s))</span>
+              <span className="text-emerald-300 font-mono">({filtered.length} row(s))</span>
             </span>
           </div>
+
           <div className="flex items-center gap-3">
             {selectedKeys.length > 0 && (
-              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 px-3 py-1 rounded-sm animate-fadeIn">
-                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+              <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1 rounded-none border border-white/20">
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider">
                   {selectedKeys.length} Selected
                 </span>
-                <button onClick={handleBulkPrintCombined}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm cursor-pointer transition-all">
+                <button 
+                  onClick={handleBulkPrintCombined}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-none bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold border-0 cursor-pointer transition-all"
+                >
                   <Printer className="w-3 h-3" /> Print Combined
                 </button>
-                <button onClick={handleBulkDownloadZIP}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold shadow-sm cursor-pointer transition-all">
-                  <Download className="w-3 h-3" /> Download PDFs (ZIP)
+                <button 
+                  onClick={handleBulkDownloadZIP}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-none bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold border-0 cursor-pointer transition-all"
+                >
+                  <Download className="w-3 h-3" /> Download ZIP
                 </button>
               </div>
             )}
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Quick search..."
-                className="pl-8 pr-2.5 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 w-44" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input 
+                type="text" 
+                value={search} 
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Quick filter..."
+                className="pl-7 pr-2 py-1 border border-slate-400 bg-white rounded-none text-xs font-bold text-slate-900 focus:outline-none focus:border-white w-40" 
+              />
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           {loading ? (
             <div className="py-8">
               <Loader message="Loading summary records..." />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-20">
-              <FileText className="w-10 h-10 text-gray-250 mx-auto mb-3" />
-              <p className="text-gray-500 font-bold text-xs uppercase tracking-wider">No matching summary records found</p>
-              <p className="text-gray-450 text-[11px] mt-1">Make sure filters are correct and claims have been approved.</p>
+            <div className="text-center py-16">
+              <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="text-slate-700 font-extrabold text-xs uppercase tracking-wider">No matching summary records found</p>
+              <p className="text-slate-400 text-[11px] mt-0.5">Ensure filters are selected correctly and claims are approved.</p>
             </div>
           ) : (
             <>
-              <table className="hidden md:table w-full text-left table-auto min-w-[1050px] border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-bold tracking-wider text-gray-600 font-sans">
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center w-10">
-                    <input type="checkbox"
-                      checked={filtered.length > 0 && selectedKeys.length === filtered.length}
-                      onChange={handleSelectAll}
-                      className="cursor-pointer rounded" />
-                  </th>
-                  <th className="py-2.5 px-3 border-r border-gray-200">#</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200">Engineer Details</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200">E-Code</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200">Base District</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right">Claimed (₹)</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right text-green-700 bg-green-50/10">Approved (₹)</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-right text-rose-700 bg-rose-50/10">Rejected (₹)</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center text-blue-700">Calls (Comp/Assg)</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center text-indigo-700">PMS Count</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center text-amber-700">Asset Tagging</th>
-                  <th className="py-2.5 px-3 border-r border-gray-200 text-center">Month</th>
-                  <th className="py-2.5 px-3 text-center">Export</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 text-xs">
-                {filtered.map((row, idx) => {
+              <table className="hidden md:table w-full text-left table-auto border-collapse min-w-full">
+                <thead>
+                  <tr className="bg-[#4A6A8A] text-white text-[10.5px] font-extrabold uppercase tracking-wider border-b border-slate-600">
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-center w-10">
+                      <input 
+                        type="checkbox"
+                        checked={filtered.length > 0 && selectedKeys.length === filtered.length}
+                        onChange={handleSelectAll}
+                        className="cursor-pointer rounded-none" 
+                      />
+                    </th>
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-center w-10">#</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600">Engineer Details</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600">E-Code</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600">Base District</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-right">Claimed (₹)</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-right bg-emerald-700/30">Approved (₹)</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-right bg-rose-700/30">Rejected (₹)</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-center">Calls</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-center">PMS</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-center">Tagging</th>
+                    <th className="py-2.5 px-3 border-r border-slate-600 text-center">Month</th>
+                    <th className="py-2.5 px-3 text-center whitespace-nowrap">Export</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-xs">
+                  {filtered.map((row, idx) => {
+                    const key = `${row.user_id}-${row.month}-${row.year}`;
+                    const isLoading = pdfLoadingId === key;
+                    return (
+                      <tr key={key} className="hover:bg-slate-50 transition-colors border-b border-slate-200">
+                        <td className="py-2.5 px-3 border-r border-slate-200 text-center w-10">
+                          <input 
+                            type="checkbox"
+                            checked={selectedKeys.includes(key)}
+                            onChange={(e) => handleSelectRow(key, e.target.checked)}
+                            className="cursor-pointer rounded-none" 
+                          />
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-400 font-mono font-bold border-r border-slate-200 text-center">{idx + 1}</td>
+                        <td className="py-2.5 px-3 border-r border-slate-200">
+                          <div className="font-extrabold text-slate-900 text-xs">{row.name}</div>
+                          <div className="text-[10px] text-slate-500 font-bold uppercase">{row.designation}</div>
+                        </td>
+                        <td className="py-2.5 px-3 border-r border-slate-200">
+                          <span className="font-mono font-extrabold text-xs text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200">
+                            {row.e_code}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-800 font-bold border-r border-slate-200">{row.district || "—"}</td>
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 border-r border-slate-200">
+                          {fmt(row.claimed_amount)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-emerald-700 bg-emerald-50/40 border-r border-slate-200">
+                          {fmt(row.total_amount)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono font-black text-rose-700 bg-rose-50/30 border-r border-slate-200">
+                          {row.rejected_amount > 0 ? fmt(row.rejected_amount) : <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
+                          {row.calls_assigned > 0 ? `${row.calls_completed}/${row.calls_assigned}` : <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
+                          {row.pms_count || <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
+                          {row.asset_tagging_count || <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="py-2.5 px-3 border-r border-slate-200 text-center">
+                          <span className="text-[10px] font-bold text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200 whitespace-nowrap">
+                            {row.month} {row.year}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <button 
+                            onClick={() => handlePDF(row)} 
+                            disabled={isLoading}
+                            className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-[10.5px] uppercase tracking-wider rounded-none px-2.5 py-1 border-0 cursor-pointer shadow-2xs inline-flex items-center gap-1 transition-colors disabled:opacity-60 whitespace-nowrap"
+                            title={`Download Reimbursement Form PDF for ${row.name}`}
+                          >
+                            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                            {isLoading ? "..." : "Download PDF"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                {filtered.length > 1 && (
+                  <tfoot>
+                    <tr className="bg-slate-100 border-t-2 border-slate-300 text-xs font-black text-slate-900 font-mono">
+                      <td className="border-r border-slate-200" />
+                      <td colSpan={4} className="py-2.5 px-3 border-r border-slate-200 uppercase tracking-wider text-slate-700 font-sans font-extrabold">
+                        Grand Total Summary
+                      </td>
+                      <td className="py-2.5 px-3 text-right border-r border-slate-200 font-mono font-black text-slate-900">
+                        {fmt(filtered.reduce((s, r) => s + r.claimed_amount, 0))}
+                      </td>
+                      <td className="py-2.5 px-3 text-right border-r border-slate-200 font-mono font-black text-emerald-800 bg-emerald-100/60">
+                        {fmt(totalAmount)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right border-r border-slate-200 font-mono font-black text-rose-800 bg-rose-100/60">
+                        {fmt(filtered.reduce((s, r) => s + r.rejected_amount, 0))}
+                      </td>
+                      <td className="py-2.5 px-3 text-center border-r border-slate-200 font-mono">
+                        {filtered.reduce((s, r) => s + r.calls_completed, 0)}
+                      </td>
+                      <td className="py-2.5 px-3 text-center border-r border-slate-200 font-mono">
+                        {filtered.reduce((s, r) => s + r.pms_count, 0)}
+                      </td>
+                      <td className="py-2.5 px-3 text-center border-r border-slate-200 font-mono">
+                        {filtered.reduce((s, r) => s + r.asset_tagging_count, 0)}
+                      </td>
+                      <td className="py-2.5 px-3 text-center border-r border-slate-200 text-[10px] font-sans font-bold text-slate-600">
+                        {filtered.length} Staff
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-slate-400 text-[10px] font-sans">
+                        —
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+
+              {/* Mobile Card List View */}
+              <div className="block md:hidden space-y-3 p-3">
+                {filtered.map((row) => {
                   const key = `${row.user_id}-${row.month}-${row.year}`;
                   const isLoading = pdfLoadingId === key;
                   return (
-                    <tr key={key} className="hover:bg-blue-50/20 transition-colors border-b border-gray-150">
-                      <td className="py-3 px-3 border-r border-gray-150 text-center w-10">
-                        <input type="checkbox"
-                          checked={selectedKeys.includes(key)}
-                          onChange={(e) => handleSelectRow(key, e.target.checked)}
-                          className="cursor-pointer rounded" />
-                      </td>
-                      <td className="py-3 px-3 text-gray-400 font-mono font-bold border-r border-gray-150">{idx + 1}</td>
-                      <td className="py-3 px-3 border-r border-gray-150 font-sans">
-                        <div className="font-bold text-gray-800">{row.name}</div>
-                        <div className="text-[10px] text-gray-500 font-semibold uppercase">{row.designation}</div>
-                      </td>
-                      <td className="py-3 px-3 border-r border-gray-150">
-                        <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100">{row.e_code}</span>
-                      </td>
-                      <td className="py-3 px-3 text-gray-700 font-semibold border-r border-gray-150">{row.district || "—"}</td>
-                      <td className="py-3 px-3 text-right font-bold text-blue-650 border-r border-gray-150">
-                        {fmt(row.claimed_amount)}
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-green-700 bg-green-50/20 border-r border-gray-150">
-                        {fmt(row.total_amount)}
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-rose-700 bg-rose-50/10 border-r border-gray-150">
-                        {row.rejected_amount > 0 ? fmt(row.rejected_amount) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 text-center font-semibold text-gray-700 border-r border-gray-150">
-                        {row.calls_assigned > 0 ? `${row.calls_completed}/${row.calls_assigned}` : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 text-center font-semibold text-gray-700 border-r border-gray-150">
-                        {row.pms_count || <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 text-center font-semibold text-gray-700 border-r border-gray-150">
-                        {row.asset_tagging_count || <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-3 px-3 border-r border-gray-150 text-center">
-                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100">{row.month} {row.year}</span>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <button onClick={() => handlePDF(row)} disabled={isLoading}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60"
-                          title={`Download Reimbursement Form PDF for ${row.name}`}>
-                          {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                          {isLoading ? "..." : "Download PDF"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              {filtered.length > 1 && (
-                <tfoot>
-                  <tr className="bg-yellow-50/50 border-t-2 border-yellow-200 text-xs font-bold text-gray-800">
-                    <td className="border-r border-gray-150" />
-                    <td colSpan={6} className="py-3 px-3 border-r border-gray-150 uppercase tracking-wider text-gray-600 font-sans">
-                      Grand Total Summary
-                    </td>
-                    <td className="py-3 px-3 text-center border-r border-gray-150 font-mono">{totalClaims}</td>
-                    <td className="py-3 px-3 text-right border-r border-gray-150 font-mono">{fmt(filtered.reduce((s, r) => s + r.da_amount, 0))}</td>
-                    <td className="py-3 px-3 text-right border-r border-gray-150 font-mono">{fmt(filtered.reduce((s, r) => s + r.bike_amount + r.car_amount, 0))}</td>
-                    <td className="py-3 px-3 text-right border-r border-gray-150 font-mono">{fmt(filtered.reduce((s, r) => s + r.auto_amount, 0))}</td>
-                    <td className="py-3 px-3 text-right border-r border-gray-150 font-mono">{fmt(filtered.reduce((s, r) => s + r.hotel_amount, 0))}</td>
-                    <td className="py-3 px-3 text-center border-r border-gray-150 font-mono">{fmtN(totalKM)} km</td>
-                    <td className="py-3 px-3 text-right text-green-700 bg-green-50/20 font-bold border-r border-gray-150 font-mono">
-                      {fmt(totalAmount)}
-                    </td>
-                    <td />
-                  </tr>
-                </tfoot>
-              )}
-            </table>
+                    <div
+                      key={key}
+                      className="bg-white border border-slate-300 rounded-none p-3 space-y-2 shadow-2xs text-xs"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedKeys.includes(key)}
+                            onChange={(e) => handleSelectRow(key, e.target.checked)}
+                            className="cursor-pointer rounded-none h-4 w-4"
+                          />
+                          <div>
+                            <div className="font-extrabold text-slate-900 leading-tight">{row.name}</div>
+                            <span className="text-[9.5px] text-slate-500 font-bold uppercase">{row.designation}</span>
+                          </div>
+                        </div>
+                        <span className="font-mono font-extrabold text-xs text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200">
+                          {row.e_code}
+                        </span>
+                      </div>
 
-            {/* Mobile Card List View */}
-            <div className="block md:hidden space-y-3">
-              {filtered.map((row) => {
-                const key = `${row.user_id}-${row.month}-${row.year}`;
-                const isLoading = pdfLoadingId === key;
-                return (
-                  <div
-                    key={key}
-                    className="bg-white border border-gray-200 rounded-lg p-3.5 space-y-3 shadow-sm text-xs"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedKeys.includes(key)}
-                          onChange={(e) => handleSelectRow(key, e.target.checked)}
-                          className="cursor-pointer rounded h-4 w-4"
-                        />
+                      <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-slate-200 pt-2">
                         <div>
-                          <div className="font-bold text-gray-800 leading-tight">{row.name}</div>
-                          <span className="text-[9px] text-gray-500 font-semibold uppercase">{row.designation}</span>
+                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Base District</span>
+                          <span className="text-slate-800 font-bold">{row.district || "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Month</span>
+                          <span className="text-[10px] font-bold text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200 inline-block mt-0.5">{row.month} {row.year}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Financials</span>
+                          <span className="text-slate-800 font-bold leading-tight block">
+                            Claimed: <span className="font-mono">{fmt(row.claimed_amount)}</span>
+                          </span>
+                          <span className="text-emerald-700 font-black leading-tight block">
+                            Approved: {fmt(row.total_amount)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Task Metrics</span>
+                          <span className="text-slate-700 font-bold block mt-0.5">Calls: {row.calls_assigned > 0 ? `${row.calls_completed}/${row.calls_assigned}` : "—"}</span>
+                          <span className="text-slate-700 font-bold block">PMS: {row.pms_count || "—"}</span>
                         </div>
                       </div>
-                      <span className="text-[9px] font-mono font-bold text-blue-700 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100">{row.e_code}</span>
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-gray-150 pt-2.5">
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Base District</span>
-                        <span className="text-gray-700 font-semibold">{row.district || "—"}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Month</span>
-                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50/50 px-2 py-0.5 rounded border border-indigo-100 inline-block mt-0.5">{row.month} {row.year}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Claimed / Approved / Rejected</span>
-                        <span className="text-gray-800 font-bold leading-tight block">
-                          Claimed: <span className="text-blue-650">{fmt(row.claimed_amount)}</span>
-                        </span>
-                        <span className="text-green-700 font-bold leading-tight block">
-                          Approved: {fmt(row.total_amount)}
-                        </span>
-                        {row.rejected_amount > 0 && (
-                          <span className="text-rose-700 font-bold leading-tight block">
-                            Rejected: {fmt(row.rejected_amount)}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-gray-400 font-bold uppercase text-[9px] block">Tasks Metrics</span>
-                        <span className="text-gray-700 block mt-0.5">Calls: {row.calls_assigned > 0 ? `${row.calls_completed}/${row.calls_assigned}` : "—"}</span>
-                        <span className="text-gray-700 block">PMS: {row.pms_count || "—"}</span>
-                        <span className="text-gray-700 block">Tagging: {row.asset_tagging_count || "—"}</span>
+                      <div className="border-t border-slate-200 pt-2 flex justify-end">
+                        <button 
+                          onClick={() => handlePDF(row)} 
+                          disabled={isLoading}
+                          className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-[10.5px] uppercase tracking-wider rounded-none px-3 py-1.5 border-0 cursor-pointer shadow-2xs inline-flex items-center gap-1.5 transition-colors disabled:opacity-60"
+                        >
+                          {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                          <span>Download PDF</span>
+                        </button>
                       </div>
                     </div>
-
-                    <div className="border-t border-gray-150 pt-3.5 flex justify-end">
-                      <button onClick={() => handlePDF(row)} disabled={isLoading}
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold shadow-sm transition-all cursor-pointer disabled:opacity-60 border-0 active:scale-95"
-                      >
-                        {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                        <span>Download Form PDF</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
+      {/* ================= SET MONTHLY ADVANCE MODAL ================= */}
       {showAdvanceModal && advanceModalConfig && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 overflow-hidden border border-gray-200 animate-scaleUp">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-400 rounded-none shadow-2xl w-full max-w-sm overflow-hidden text-left animate-fadeIn">
             {/* Modal Header */}
-            <div className="bg-[#1e3a8a] text-white px-4 py-3 flex justify-between items-center">
-              <h3 className="text-sm font-bold tracking-wide uppercase m-0 flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-400" /> {advanceModalConfig.title}
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex justify-between items-center rounded-none">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase m-0 flex items-center gap-2 text-white">
+                <CheckCircle className="w-4 h-4 text-emerald-300" /> {advanceModalConfig.title}
               </h3>
               <button 
                 onClick={() => setShowAdvanceModal(false)}
-                className="text-white/80 hover:text-white font-bold text-lg leading-none cursor-pointer border-0 bg-transparent"
+                className="text-white/80 hover:text-white transition-colors cursor-pointer border-0 bg-transparent"
               >
-                &times;
+                <X size={16} />
               </button>
             </div>
+
             {/* Modal Body */}
-            <div className="p-5 flex flex-col gap-4">
-              <p className="text-xs font-semibold text-gray-600 leading-relaxed">
+            <div className="p-4 space-y-3">
+              <p className="text-xs font-semibold text-slate-700 leading-snug">
                 {advanceModalConfig.description}
               </p>
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                <label className="block text-[10.5px] font-extrabold text-slate-700 uppercase tracking-wider mb-1">
                   Advance Amount (₹)
                 </label>
                 <input
                   type="number"
                   value={advanceAmountInput}
                   onChange={(e) => setAdvanceAmountInput(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm font-bold focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full border border-slate-300 rounded-none px-3 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#4A6A8A] bg-white"
                   placeholder="0"
                   min="0"
                 />
               </div>
             </div>
+
             {/* Modal Footer */}
-            <div className="bg-gray-50 px-4 py-3 flex justify-end gap-2 border-t border-gray-150">
+            <div className="bg-slate-50 px-4 py-3 flex justify-end gap-2 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setShowAdvanceModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded text-xs font-bold hover:bg-gray-300 cursor-pointer"
+                className="px-4 py-1.5 rounded-none text-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1622,9 +1691,9 @@ export default function MonthSummaryPage() {
                   setShowAdvanceModal(false);
                   await advanceModalConfig.onSave(amount);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded text-xs font-bold hover:bg-blue-700 cursor-pointer"
+                className="px-4 py-1.5 rounded-none text-xs font-extrabold uppercase tracking-wider bg-[#4A6A8A] hover:bg-[#3b5570] text-white border-0 cursor-pointer shadow-2xs transition-colors"
               >
-                Save & Proceed
+                Save &amp; Proceed
               </button>
             </div>
           </div>

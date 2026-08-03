@@ -18,10 +18,10 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "antd";
 import {
-  X, Calendar, User, ShieldCheck, AlertTriangle, Package,
+  X, Calendar, User, Users, ShieldCheck, AlertTriangle, Package,
   FileText, Eye, Pencil, Activity, CheckCircle2, XCircle, Trash2, Route,
   Zap, MapPin, Building2, PhoneCall, Wrench, Crosshair, Truck, Tag,
-  ArrowRight, Info, Navigation
+  ArrowRight, Info, Navigation, RotateCcw
 } from "lucide-react";
 import api from "../../services/api";
 
@@ -1060,21 +1060,24 @@ interface ClaimDetailsModalProps {
   actionLoading: boolean;
   handleApprove: () => void;
   handleReject: () => void;
+  handleReturn?: () => void;
   handleDeleteClaim: (id: number) => void;
   onClose: () => void;
   navigate: (path: string) => void;
   setLightboxImage: (url: string) => void;
   getStatusBadgeClass: (status: string, record?: any) => string;
   getStatusLabel: (status: string, record?: any) => string;
+  sourceMode?: "approval" | "expense" | "home";
 }
 
 const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   open, claimDetails, user,
-  comments, setComments, actionLoading, handleApprove, handleReject,
+  comments, setComments, actionLoading, handleApprove, handleReject, handleReturn,
   handleDeleteClaim, onClose, navigate, setLightboxImage,
-  getStatusBadgeClass, getStatusLabel
+  getStatusBadgeClass, getStatusLabel, sourceMode
 }) => {
   const [showRejectBox, setShowRejectBox] = useState(false);
+  const [showReturnBox, setShowReturnBox] = useState(false);
   const [barcodeMap, setBarcodeMap] = useState<Record<string, { equipment: string; hospital: string }>>({});
   const [userAllowance, setUserAllowance] = useState<any>(null);
 
@@ -1220,12 +1223,31 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   if (!claimDetails) return null;
 
   const c = claimDetails;
-  const isOwn = c.submitter_code === user?.user_id || c.user_id === user?.id;
-  const isEditable = isOwn && ["draft", "submitted", "returned_to_draft"].includes((c.status || "").toLowerCase());
-  const isDeletable = isOwn && ["draft", "returned_to_draft"].includes((c.status || "").toLowerCase());
+  
+  // Page context detection (Approval vs Expense vs Home)
+  const pathname = (window?.location?.pathname || "").toLowerCase();
+  const isApprovalPage = sourceMode === "approval" || pathname.includes("/approval");
+  const isExpensePage = sourceMode === "expense" || pathname.includes("/expense") || pathname.includes("/my-claims") || pathname.includes("/submit-expense");
+  const isHomePage = sourceMode === "home" || (!isApprovalPage && !isExpensePage);
 
+  // Check if current viewing user is the engineer who submitted this claim
+  const isSubmittingEngineer = !!(
+    user && (
+      (user.user_id && (c.user_id === user.user_id || c.employee_id === user.user_id || c.created_by === user.user_id)) ||
+      (user.e_code && (c.employee_code === user.e_code || c.eCode === user.e_code || c.emp_code === user.e_code)) ||
+      (user.id && (c.user_id === user.id || c.created_by === user.id))
+    )
+  );
+
+  // EXPENSE PAGE ONLY: Edit & Delete buttons (strictly for the engineer who submitted the claim)
+  const isEditable = isExpensePage && isSubmittingEngineer && ["draft", "submitted", "pending", "returned_to_draft"].includes((c.status || "").toLowerCase());
+  const isDeletable = isExpensePage && isSubmittingEngineer && ["draft", "submitted", "pending", "returned_to_draft"].includes((c.status || "").toLowerCase());
+
+  // APPROVAL CENTER ONLY: Approve, Reject & Return buttons
   const pendingStep = c.approvals?.find((a: any) => a.approver_code === user?.user_id && a.status === "pending");
-  const canApprove = !!pendingStep;
+  const roleLower = (user?.role || user?.designation || "").toLowerCase();
+  const isCoordinator = roleLower.includes("coordinator") || roleLower === "admin";
+  const canApprove = isApprovalPage && !isSubmittingEngineer && (!!pendingStep || isCoordinator || ["submitted", "pending"].includes((c.status || "").toLowerCase()));
 
   const isOutDistrict = c.districtType === "outstation" || c.is_outstation || c.districtType === "OUT_DISTRICT" ||
     (c.from_district && c.to_district && c.from_district !== c.to_district);
@@ -1386,6 +1408,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       centered={true}
       width={860}
       destroyOnClose
+      closeIcon={false}
       className="claim-details-compact-modal"
       wrapClassName="my-claims-modal-wrap"
       maskStyle={{ backdropFilter: "blur(3px)", background: "rgba(15, 23, 42, 0.5)" }}
@@ -1401,34 +1424,45 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             {isEditable && (
               <button
                 onClick={() => { onClose(); navigate(`/submit-expense?edit=${c.id}`); }}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
               >
                 <Pencil size={10} /> Edit
               </button>
             )}
             {isDeletable && (
               <button
-                onClick={() => handleDeleteClaim(c.id)}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors"
+                onClick={() => {
+                  onClose();
+                  handleDeleteClaim(c.id);
+                }}
+                className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
               >
                 <Trash2 size={10} /> Delete
               </button>
             )}
-            {canApprove && !showRejectBox && (
+            {canApprove && !showRejectBox && !showReturnBox && (
               <>
                 <button
                   onClick={handleApprove}
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-1 px-3.5 py-1 rounded text-[10.5px] font-bold bg-emerald-600 text-white border border-emerald-700 hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-3.5 py-1 rounded text-[10.5px] font-bold bg-emerald-600 text-white border border-emerald-700 hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <CheckCircle2 size={10} /> {actionLoading ? "Processing…" : "Approve"}
                 </button>
                 <button
-                  onClick={() => setShowRejectBox(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors"
+                  onClick={() => { setShowRejectBox(true); setShowReturnBox(false); }}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
                 >
                   <XCircle size={10} /> Reject
                 </button>
+                {isCoordinator && (
+                  <button
+                    onClick={() => { setShowReturnBox(true); setShowRejectBox(false); }}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-500 text-white border border-amber-600 hover:bg-amber-600 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw size={10} /> Return
+                  </button>
+                )}
               </>
             )}
             {showRejectBox && (
@@ -1443,13 +1477,43 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                 <button
                   onClick={handleReject}
                   disabled={actionLoading || !comments.trim()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  <XCircle size={10} /> Confirm
+                  <XCircle size={10} /> Confirm Reject
                 </button>
                 <button
                   onClick={() => { setShowRejectBox(false); setComments(""); }}
-                  className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors px-1"
+                  className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors px-1 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {showReturnBox && (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={comments}
+                  onChange={e => setComments(e.target.value)}
+                  placeholder="Return reason / remark…"
+                  className="text-[10.5px] border border-slate-200 rounded px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#4A6A8A] min-w-[180px]"
+                />
+                <button
+                  onClick={() => {
+                    if (handleReturn) {
+                      handleReturn();
+                    } else {
+                      handleReject();
+                    }
+                  }}
+                  disabled={actionLoading || !comments.trim()}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-bold bg-amber-500 text-white hover:bg-amber-600 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  <RotateCcw size={10} /> Confirm Return
+                </button>
+                <button
+                  onClick={() => { setShowReturnBox(false); setComments(""); }}
+                  className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors px-1 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1756,6 +1820,80 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             </div>
           </div>
         )}
+
+        {/* ─── REQUESTER'S CURRENT MONTHLY STATISTICS (FOR LIMIT REQUESTS) ─────── */}
+        {(c.category === "Limit Request" || c.user_monthly_stats) && c.user_monthly_stats && (() => {
+          const stats = c.user_monthly_stats;
+          const bikeKm = stats.total_bike_km_claimed > 0 ? stats.total_bike_km_claimed : (stats.total_bike_km || 0);
+          const autoSpent = stats.total_auto_claimed > 0 ? stats.total_auto_claimed : (stats.total_auto || 0);
+          const callsCount = stats.calls_completed_claimed > 0 ? stats.calls_completed_claimed : (stats.calls_completed || 0);
+          const pmsCount = stats.pms_count_claimed > 0 ? stats.pms_count_claimed : (stats.pms_count || 0);
+          const taggingCount = stats.asset_tagging_claimed > 0 ? stats.asset_tagging_claimed : (stats.asset_tagging || 0);
+          const calibCount = stats.calibration_count_claimed > 0 ? stats.calibration_count_claimed : (stats.calibration_count || 0);
+          const mobCount = stats.mobilise_count_claimed > 0 ? stats.mobilise_count_claimed : (stats.mobilise_count || 0);
+
+          return (
+            <div className="bg-white rounded-none border border-slate-300 shadow-2xs p-1.5">
+              <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200">
+                <span className="text-[9.5px] font-extrabold uppercase text-slate-800 tracking-wider flex items-center gap-1">
+                  <Users className="w-3 h-3 text-[#4A6A8A]" />
+                  Requester's Current Monthly Statistics
+                </span>
+                <span className="text-[8.5px] text-slate-600 font-bold font-mono">
+                  Month: {c.month || formatToIST(c.created_at || new Date(), "MMM YYYY")} <span className="text-emerald-700 font-extrabold">(Incl. Submitted Submissions)</span>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 text-xs">
+                {/* Bike/Car KM */}
+                <div className="p-1.5 bg-blue-50/70 border border-blue-200 rounded-none">
+                  <span className="text-[7.5px] text-blue-700 font-extrabold uppercase tracking-wider block mb-0.5">
+                    Bike / Car Cumulative Distance
+                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-black text-blue-800 font-mono">
+                      {parseFloat(String(bikeKm)).toFixed(1)}
+                    </span>
+                    <span className="text-[8px] text-blue-700 font-extrabold">KM Used</span>
+                  </div>
+                  <span className="text-[8px] text-slate-600 block mt-0.5 font-bold font-mono">
+                    Approved Limit: {(stats.max_km || 2000).toFixed(1)} KM
+                  </span>
+                </div>
+
+                {/* Local Conveyance Auto */}
+                <div className="p-1.5 bg-purple-50/70 border border-purple-200 rounded-none">
+                  <span className="text-[7.5px] text-purple-700 font-extrabold uppercase tracking-wider block mb-0.5">
+                    Local Conveyance (Auto)
+                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-sm font-black text-purple-800 font-mono">
+                      ₹{parseFloat(String(autoSpent)).toLocaleString()}
+                    </span>
+                    <span className="text-[8px] text-purple-700 font-extrabold">Spent</span>
+                  </div>
+                  <span className="text-[8px] text-slate-600 block mt-0.5 font-bold font-mono">
+                    Approved Limit: ₹{(stats.max_auto || 1000).toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Field Work Summary */}
+                <div className="p-1.5 bg-emerald-50/70 border border-emerald-200 rounded-none">
+                  <span className="text-[7.5px] text-emerald-700 font-extrabold uppercase tracking-wider block mb-0.5">
+                    Total Verified Field Work
+                  </span>
+                  <div className="grid grid-cols-2 gap-x-1.5 gap-y-0.5 mt-0.5 text-[8px] text-slate-700 font-bold">
+                    <div>Calls: <span className="text-emerald-800 font-mono font-black">{callsCount}</span></div>
+                    <div>PMS: <span className="text-emerald-800 font-mono font-black">{pmsCount}</span></div>
+                    <div>Tagging: <span className="text-emerald-800 font-mono font-black">{taggingCount}</span></div>
+                    <div>Calibration: <span className="text-emerald-800 font-mono font-black">{calibCount}</span></div>
+                    <div className="col-span-2 pt-0.5">Mobilise: <span className="text-emerald-800 font-mono font-black">{mobCount}</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ─── ATTACHMENTS & BILL INVOICES GALLERY ──────────────────────────── */}
         <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-2.5">

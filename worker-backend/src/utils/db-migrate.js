@@ -179,6 +179,23 @@ export async function runMigrations(db) {
     console.error("Failed to execute local_purchase self-healing query:", err.message);
   }
 
+  // Self-healing query: update assets_inventory equipment_type / category from Biomedical or empty to Critical
+  try {
+    await db.prepare(`
+      UPDATE assets_inventory 
+      SET equipment_type = 'Critical' 
+      WHERE equipment_type = 'Biomedical' OR equipment_type IS NULL OR equipment_type = '' OR equipment_type = 'Others'
+    `).run();
+    await db.prepare(`
+      UPDATE assets_inventory 
+      SET equipment_category = 'Critical' 
+      WHERE equipment_category = 'Biomedical' OR equipment_category IS NULL OR equipment_category = '' OR equipment_category = 'Others'
+    `).run();
+    console.log("Successfully updated assets_inventory equipment_type to Critical.");
+  } catch (err) {
+    console.error("Failed to execute equipment_type update query:", err.message);
+  }
+
   // ─── Performance Indexes ────────────────────────────────────────────────────
   // These indexes dramatically reduce query time for the most common operations.
   const indexes = [

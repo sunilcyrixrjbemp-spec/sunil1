@@ -51,7 +51,8 @@ import { handleUploadImage, handleUploadDocument, handleServeFile } from "./rout
 // Import Reports handlers
 import {
   handleGetMisDashboard, handleGetAssetsInventory, handleGetAssetsFilters, handleGetAssetsStats,
-  handleUploadAssetsCSV, handleUploadAssetsChunk, handleGetAssetsCsvTemplate
+  handleUploadAssetsCSV, handleUploadAssetsChunk, handleGetAssetsCsvTemplate,
+  handleGetDistrictFacilitiesSummary
 } from "./routes/reports.js";
 
 // Import Expense handlers
@@ -267,6 +268,7 @@ router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);
 router.get("/api/reports/assets-inventory", handleGetAssetsInventory, true);
 router.get("/api/reports/assets-filters", handleGetAssetsFilters, true);
 router.get("/api/reports/assets-stats", handleGetAssetsStats, true);
+router.get("/api/reports/district-facilities-summary", handleGetDistrictFacilitiesSummary, true);
 router.get("/api/reports/assets-csv-template", handleGetAssetsCsvTemplate, true);
 router.post("/api/reports/upload-assets-csv", handleUploadAssetsCSV, true);
 router.post("/api/reports/upload-assets-chunk", handleUploadAssetsChunk, true);
