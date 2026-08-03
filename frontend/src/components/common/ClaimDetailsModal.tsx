@@ -1647,7 +1647,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             )}
 
             {/* Work done */}
-            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
+            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0 || otherAmount > 0) && (
               <>
                 <span className="shrink-0 text-slate-400">·</span>
                 <span className="shrink-0 font-bold text-slate-700">Work:</span>
@@ -1656,6 +1656,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                 {totalCalibration > 0 && <span className="shrink-0 font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
                 {totalMobilise > 0 && <span className="shrink-0 font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
                 {totalAssetTagging > 0 && <span className="shrink-0 font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}
+                {otherAmount > 0 && <span className="shrink-0 font-extrabold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">{allOtherRemarks ? `Other: ${allOtherRemarks}` : `Other Exp ${rupee(otherAmount)}`}</span>}
               </>
             )}
 
