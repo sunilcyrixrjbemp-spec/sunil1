@@ -13,7 +13,6 @@ import {
   DollarSign, 
   Sparkles, 
   X, 
-  ChevronRight,
   Globe,
   Building2,
   PhoneCall,
@@ -23,7 +22,7 @@ import {
   Calculator,
   AlertTriangle
 } from "lucide-react";
-import { Card, Badge } from "antd";
+
 
 interface ExpenseRecord {
   id?: string | number;

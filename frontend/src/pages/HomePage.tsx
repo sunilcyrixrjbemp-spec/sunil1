@@ -793,8 +793,8 @@ export default function HomePage() {
 
   const filteredTeamExpenses = getFilteredTeamExpenses();
   const paginatedTeamExpenses = filteredTeamExpenses.slice((teamPage - 1) * homeTeamPageSize, teamPage * homeTeamPageSize);
-  const totalFilteredKm = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_km || 0), 0);
-  const totalFilteredAuto = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_auto || 0), 0);
+  const _totalFilteredKm2 = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_km || 0), 0);
+  const _totalFilteredAuto2 = filteredTeamExpenses.filter(e => e.category !== "Limit Request").reduce((sum, e) => sum + (e.total_auto || 0), 0);
 
   // ----------------------------------------------------
   // ENTERPRISE DATA-GRID TABLE COLUMNS & FORMATTERS

@@ -24,6 +24,7 @@ import {
   ArrowRight, Info, Navigation, RotateCcw
 } from "lucide-react";
 import api from "../../services/api";
+import { formatToIST } from "../../utils/timezone";
 
 const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
@@ -1228,7 +1229,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const pathname = (window?.location?.pathname || "").toLowerCase();
   const isApprovalPage = sourceMode === "approval" || pathname.includes("/approval");
   const isExpensePage = sourceMode === "expense" || pathname.includes("/expense") || pathname.includes("/my-claims") || pathname.includes("/submit-expense");
-  const isHomePage = sourceMode === "home" || (!isApprovalPage && !isExpensePage);
+  const _isHomePage = !isApprovalPage && !isExpensePage;
 
   // Check if current viewing user is the engineer who submitted this claim
   const isSubmittingEngineer = !!(
@@ -1840,7 +1841,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   Requester's Current Monthly Statistics
                 </span>
                 <span className="text-[8.5px] text-slate-600 font-bold font-mono">
-                  Month: {c.month || formatToIST(c.created_at || new Date(), "MMM YYYY")} <span className="text-emerald-700 font-extrabold">(Incl. Submitted Submissions)</span>
+                  Month: {c.month || (() => { try { const d = new Date(c.created_at || new Date()); return d.toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "Asia/Kolkata" }); } catch { return ""; } })()} <span className="text-emerald-700 font-extrabold">(Incl. Submitted Submissions)</span>
                 </span>
               </div>
 

@@ -4,8 +4,7 @@ import {
   Award, 
   TrendingUp, 
   Info,
-  Save,
-  Users
+  Save
 } from "lucide-react";
 import { ResponsiveBar } from "@nivo/bar";
 import { authService } from "../services/authService";

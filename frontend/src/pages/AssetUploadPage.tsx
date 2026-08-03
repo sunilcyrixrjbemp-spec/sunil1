@@ -20,7 +20,7 @@ import {
   Filter,
   Zap
 } from "lucide-react";
-import { SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart } from "../components/common/SaaSCharts";
+import { SaaSHorizontalBarChart, SaaSDonutChart } from "../components/common/SaaSCharts";
 import toast from "react-hot-toast";
 import api from "../services/api";
 import Loader from "../components/common/Loader";
@@ -80,7 +80,7 @@ const defaultStats: AssetStats = {
 };
 
 
-const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
+const _GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
 
 const fmt = (n: number) => n >= 10000000 ? `${(n / 10000000).toFixed(2)} Cr` :
   n >= 100000 ? `${(n / 100000).toFixed(2)} L` :

@@ -1,20 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
 import * as XLSX from "xlsx";
-import { SaaSLineChart, SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart, SaaS3DHybridTrendChart } from "../components/common/SaaSCharts";
+import { SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart, SaaS3DHybridTrendChart } from "../components/common/SaaSCharts";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import { adminService } from "../services/adminService";
 import Loader from "../components/common/Loader";
 import RajasthanMapChart from "../components/common/RajasthanMapChart";
 import {
-  Card,
-  Row,
-  Col,
-  Statistic,
   Button,
-  Radio,
-  Progress,
-  Segmented,
   Modal,
   Table,
   Input,
@@ -24,29 +17,20 @@ import {
   FilterOutlined,
   CloseOutlined,
   FileExcelOutlined,
-  DashboardOutlined,
   FundOutlined,
   CheckOutlined,
   InfoCircleOutlined,
   TagOutlined,
-  AimOutlined,
   RocketOutlined,
   SearchOutlined,
   BarChartOutlined,
   PieChartOutlined,
   LineChartOutlined,
   RiseOutlined,
-  TrophyOutlined,
-  CompassOutlined,
-  DollarOutlined,
   WalletOutlined,
-  CalendarOutlined,
   UserOutlined,
   GlobalOutlined,
-  ThunderboltOutlined,
-  AreaChartOutlined,
-  TeamOutlined,
-  BulbOutlined
+  TeamOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
 
@@ -55,12 +39,12 @@ const formatFullNumber = (num: number): string => {
   return num.toLocaleString('en-IN');
 };
 
-const formatFullCurrency = (num: number): string => {
+const _formatFullCurrency = (num: number): string => {
   if (!num || isNaN(num)) return "₹0";
   return `₹${formatFullNumber(num)}`;
 };
 
-const getSegmentedClass = (status: string) => {
+const _getSegmentedClass = (status: string) => {
   switch (status) {
     case "approved":
       return "status-segmented-approved";
@@ -73,7 +57,7 @@ const getSegmentedClass = (status: string) => {
   }
 };
 
-const GALLERY_COLORS = ["#4f46e5", "#8b5cf6", "#10b981", "#06b6d4", "#f59e0b", "#f43f5e", "#0ea5e9", "#14b8a6"];
+const _GALLERY_COLORS = ["#4f46e5", "#8b5cf6", "#10b981", "#06b6d4", "#f59e0b", "#f43f5e", "#0ea5e9", "#14b8a6"];
 
 const months = [
   "January", "February", "March", "April", "May", "June",
@@ -149,9 +133,9 @@ export default function AnalysisPage() {
   const [selectedEngineer, setSelectedEngineer] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedEngineer") || "all";
   });
-  const [districtChartType, setDistrictChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
-  const [employeeChartType, setEmployeeChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
-  const [engineerSearchQuery, setEngineerSearchQuery] = useState<string>("");
+  const [_districtChartType, setDistrictChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
+  const [_employeeChartType, setEmployeeChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
+  const [engineerSearchQuery, _setEngineerSearchQuery] = useState<string>("");
   const [selectedZone, setSelectedZone] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedZone") || "all";
   });
@@ -167,7 +151,7 @@ export default function AnalysisPage() {
   const [endDate, setEndDate] = useState<string>(() => {
     return localStorage.getItem("analysis_endDate") || "";
   });
-  const [activeTab, setActiveTab] = useState<"overview" | "map" | "field" | "financial">("overview");
+  const [activeTab, _setActiveTab] = useState<"overview" | "map" | "field" | "financial">("overview");
   const [isFilterExpanded, setIsFilterExpanded] = useState(true);
 
   useEffect(() => {
@@ -721,7 +705,7 @@ export default function AnalysisPage() {
     return result;
   }, [activeExpenses, selectedMonth, selectedYear, startDate, endDate]);
 
-  const spendBurnMetrics = useMemo(() => {
+  const _spendBurnMetrics = useMemo(() => {
     if (!fullMonthTrendData || fullMonthTrendData.length === 0) {
       return { peakDay: null, avgDaily: 0, lowestDay: null };
     }
@@ -739,7 +723,7 @@ export default function AnalysisPage() {
     return { peakDay: peak, avgDaily, lowestDay: lowest };
   }, [fullMonthTrendData]);
 
-  const totalMonthBurn = useMemo(() => {
+  const _totalMonthBurn = useMemo(() => {
     if (!fullMonthTrendData) return 0;
     return fullMonthTrendData.reduce((acc, curr) => acc + (curr.amount || 0), 0);
   }, [fullMonthTrendData]);
@@ -2145,10 +2129,10 @@ export default function AnalysisPage() {
               <div className="p-3" style={{ height: 310 }}>
                 {coordinatorWiseData.length > 0 ? (
                   <SaaSDonutChart
-                    data={coordinatorWiseData.map(c => ({
+                    data={coordinatorWiseData.map((c: any) => ({
                       name: c.name,
                       value: c.value,
-                      count: c.count
+                      count: (c as any).count
                     }))}
                     height={290}
                     centerTitle="Coordinators"

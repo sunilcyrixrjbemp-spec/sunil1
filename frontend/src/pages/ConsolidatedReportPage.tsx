@@ -4,7 +4,6 @@ import {
   Download, Users, IndianRupee, ShieldAlert, CheckCircle2,
   BookOpen, Info, ChevronDown, ChevronUp
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { expenseService } from "../services/expenseService";
 

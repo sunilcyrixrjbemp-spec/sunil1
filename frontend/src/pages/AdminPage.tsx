@@ -7,27 +7,18 @@ import { formatToIST } from "../utils/timezone";
 
 import { UploadCloud, Pencil, Trash2, Plus, Download } from "lucide-react";
 import { 
-  Card, 
   Table, 
-  Tag, 
-  Button, 
-  Input, 
-  Tooltip, 
   Popconfirm, 
   Alert, 
   Spin, 
-  Space, 
   Typography,
-  Select,
   InputNumber
 } from "antd";
 import { SaaSDonutChart } from "../components/common/SaaSCharts";
 
 import { 
   PlusOutlined, 
-  UploadOutlined, 
   EditOutlined, 
-  SearchOutlined, 
   LogoutOutlined, 
   ControlOutlined,
   FileExcelOutlined,
@@ -39,11 +30,10 @@ import {
   SettingOutlined,
   BarChartOutlined,
   PieChartOutlined,
-  ReloadOutlined,
-  FilterOutlined
+  ReloadOutlined
 } from "@ant-design/icons";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const LteSpinner = () => (
   <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>

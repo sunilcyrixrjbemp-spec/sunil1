@@ -2,17 +2,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { formatToIST, getCurrentTimeUTC } from "../utils/timezone";
 import toast from "react-hot-toast";
 import { 
-  Card, 
   Button, 
   Input, 
   Tag, 
   Row, 
   Col, 
   Typography, 
-  Segmented, 
   Spin, 
-  Empty, 
-  Drawer
+  Empty
 } from "antd";
 import { 
   ReloadOutlined, 
@@ -36,7 +33,7 @@ import api from "../services/api";
 import { ResponsiveBar } from "@nivo/bar";
 import { X } from "lucide-react";
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 const GALLERY_COLORS = ["#4f46e5", "#10b981", "#f59e0b", "#8b5cf6", "#f43f5e", "#06b6d4", "#ec4899"];
@@ -107,7 +104,7 @@ export default function HelpPage() {
   });
 
   // Check screen size for mobile view
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [_isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener("resize", handleResize);

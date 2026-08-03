@@ -22,7 +22,6 @@ import {
   Shield,
   MapPin,
   Users,
-  Lock,
   Database,
   RefreshCw,
   User,
@@ -36,7 +35,6 @@ import {
   Zap,
   PhoneCall,
   Car,
-  Route,
   Receipt
 } from "lucide-react";
 

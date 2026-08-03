@@ -3,19 +3,14 @@ import { formatToIST } from "../utils/timezone";
 import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { 
-  Card, 
   Table, 
-  Tag, 
   Button, 
   Modal, 
-  Alert, 
   Space, 
   Input, 
   Typography, 
   Avatar, 
-  Checkbox,
-  Descriptions,
-  Tooltip
+  Checkbox
 } from "antd";
 import {
   FileTextOutlined,
@@ -29,11 +24,12 @@ import {
   PaperClipOutlined,
   HistoryOutlined
 } from "@ant-design/icons";
+import DistrictBadge from "../components/common/DistrictBadge";
 import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import Loader from "../components/common/Loader";
-import DistrictBadge from "../components/common/DistrictBadge";
+
 import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { 
@@ -42,11 +38,8 @@ import {
   Eye, 
   Search,
   FileText, 
-  AlertTriangle,
-  ExternalLink,
   Loader2,
   RotateCcw,
-  ChevronUp,
   CheckCircle2,
   Zap
 } from "lucide-react";
@@ -55,7 +48,7 @@ import { useNavigate } from "react-router-dom";
 import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
 import api from "../services/api";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const API_BASE = (api.defaults.baseURL || "").replace(/\/api$/, "");
 
 const getAttachmentsArray = (attachments: any): string[] => {
@@ -85,7 +78,7 @@ const getAttachmentsArray = (attachments: any): string[] => {
   return [];
 };
 
-const formatDateTime = (dateVal: any) => {
+const _formatDateTime = (dateVal: any) => {
   if (!dateVal) return "—";
   return formatToIST(dateVal);
 };
@@ -128,7 +121,7 @@ export default function ApprovalPage() {
   
   const [selectedApproval, setSelectedApproval] = useState<any>(null);
   const [expenseDetails, setExpenseDetails] = useState<any>(null);
-  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [_loadingDetails, setLoadingDetails] = useState(false);
   const [comments, setComments] = useState("");
   const [_actionType, setActionType] = useState<"approve" | "reject" | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -157,13 +150,13 @@ export default function ApprovalPage() {
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userRoleLower = (currentUser.role || "").trim().toLowerCase();
   const isBulkAuthorized = ["coordinator", "project head"].includes(userRoleLower);
-  const isCoordinator = ["coordinator", "admin", "project head"].includes(userRoleLower);
+  const _isCoordinator = ["coordinator", "admin", "project head"].includes(userRoleLower);
 
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
   const [removedAttachments, setRemovedAttachments] = useState<string[]>([]);
 
-  const renderAttachmentControls = (receiptUrl: string | null | undefined, previewLabel: string = "👁 Preview Receipt") => {
+  const _renderAttachmentControls = (receiptUrl: string | null | undefined, previewLabel: string = "👁 Preview Receipt") => {
     if (!receiptUrl) return null;
     const isRemoved = removedAttachments.includes(receiptUrl);
     if (isRemoved) {
@@ -232,7 +225,7 @@ export default function ApprovalPage() {
     }
   }, [successModal, showDetailModal, selectedApproval, showBulkModal, bulkActionType, showReturnModal, lightboxImage]);
 
-  const [showModalScrollTop, setShowModalScrollTop] = useState(false);
+  const [_showModalScrollTop, setShowModalScrollTop] = useState(false);
 
   useEffect(() => {
     if (!showDetailModal) {
@@ -268,7 +261,7 @@ export default function ApprovalPage() {
     };
   }, [showDetailModal]);
 
-  const [showPageScrollTop, setShowPageScrollTop] = useState(false);
+  const [_showPageScrollTop, setShowPageScrollTop] = useState(false);
 
   useEffect(() => {
     let frameId: number | null = null;
@@ -366,7 +359,7 @@ export default function ApprovalPage() {
     };
   }, [lightboxImage]);
 
-  const [assetValueMaster, setAssetValueMaster] = useState<any[]>([]);
+  const [_assetValueMaster, setAssetValueMaster] = useState<any[]>([]);
   const [editedLimits, setEditedLimits] = useState<{[key: number]: number}>({});
 
   const handleEditLimitChange = (id: number, val: number) => {
@@ -539,7 +532,7 @@ export default function ApprovalPage() {
     }
   };
 
-  const getLegAttachmentUrl = (legNum: number, billType: string) => {
+  const _getLegAttachmentUrl = (legNum: number, billType: string) => {
     if (!expenseDetails) return null;
 
     const targetTypeLower = (billType || "").trim().toLowerCase();
@@ -654,7 +647,7 @@ export default function ApprovalPage() {
     return null;
   };
 
-  const getAllExpenseAttachments = (details: any): { url: string; billType: string; filename: string; isPdf: boolean }[] => {
+  const _getAllExpenseAttachments = (details: any): { url: string; billType: string; filename: string; isPdf: boolean }[] => {
     if (!details) return [];
     const map = new Map<string, { url: string; billType: string; filename: string; isPdf: boolean }>();
 
@@ -711,7 +704,7 @@ export default function ApprovalPage() {
     return Array.from(map.values());
   };
 
-  const handleLegAmountChange = (index: number, field: string, value: string) => {
+  const _handleLegAmountChange = (index: number, field: string, value: string) => {
     const numericValue = parseFloat(value) || 0;
     setEditedLegs(prev => {
       const updated = [...prev];
@@ -881,7 +874,7 @@ export default function ApprovalPage() {
     }
   };
 
-  const handleOpenReturnModal = (expenseId: number) => {
+  const _handleOpenReturnModal = (expenseId: number) => {
     setReturnExpenseId(expenseId);
     setReturnComments("");
     setShowReturnModal(true);
@@ -1013,7 +1006,7 @@ export default function ApprovalPage() {
     await fetchPendingApprovals(true);
   };
 
-  const isEdited = () => {
+  const _isEdited = () => {
     if (!expenseDetails || !expenseDetails.itineraries) return false;
     return editedLegs.some((leg, index) => {
       const original = expenseDetails.itineraries[index];

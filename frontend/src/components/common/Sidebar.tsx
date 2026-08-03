@@ -1,5 +1,3 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
 import {
   Home,
   CheckSquare,
@@ -12,17 +10,18 @@ import {
   Settings,
   FileSpreadsheet,
   Gauge,
-  UploadCloud,
   ShieldAlert,
   Package,
-  Database,
   ClipboardList,
   TrendingUp,
   ChevronLeft,
   ChevronRight,
   Sparkles,
 } from "lucide-react";
+import React from "react";
+import { useLocation } from "react-router-dom";
 import brandLogo from "../../assets/images/brand.png";
+import { authService } from "../../services/authService";
 
 export interface MenuItem {
   id: string;
@@ -95,7 +94,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   userRole,
   userName,
-  userEmail,
+  userEmail: _userEmail,
   isCollapsed,
   onToggleCollapse,
   onLogout,
