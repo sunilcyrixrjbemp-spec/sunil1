@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Key, Eye, EyeOff, CheckCircle2, User, Calendar, Lock, ArrowRight, ShieldCheck, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, CheckCircle2, User, Calendar, Lock, ArrowRight, ShieldCheck, AlertTriangle } from "lucide-react";
 import { authService } from "../../services/authService";
 
 const Spinner = () => (
@@ -224,7 +224,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
   const passwordsMatch = newPassword && confirmPassword && newPassword === confirmPassword;
 
   return (
-    <div style={{ padding: "40px 36px 32px" }}>
+    <div style={{ padding: "36px 36px 28px" }}>
       {/* Top Header */}
       <div className="flex items-center justify-between pb-3.5 mb-5 border-b border-slate-200">
         <button
@@ -265,15 +265,19 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
       {/* STEP 1 - IDENTITY CHECK */}
       {step === 1 && (
         <div className="flex flex-col gap-5">
-          <div className="text-center">
-            <div className="w-12 h-12 rounded-none bg-[#4A6A8A]/10 border border-[#4A6A8A]/20 text-[#4A6A8A] flex items-center justify-center mx-auto mb-2.5">
-              <Key size={20} />
+          <div className="text-center mb-1">
+            <div className="inline-flex items-center justify-center py-2 px-3.5 bg-white rounded-xl border border-slate-200/90 shadow-sm mb-4 w-fit mx-auto">
+              <img
+                src="/logo-fieldconnect.png"
+                alt="Cyrix Field Connect Logo"
+                className="h-12 sm:h-14 w-auto object-contain drop-shadow-xs"
+              />
             </div>
             <h1
-              className="m-0 text-lg font-extrabold text-slate-900 tracking-tight"
+              className="m-0 text-2xl font-extrabold text-slate-900 tracking-tight"
               style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
             >
-              Identity Check
+              Reset Credentials
             </h1>
             <p className="mt-1 m-0 text-xs text-slate-500 font-medium">
               Verify your registered details to receive your 6-digit OTP code
@@ -436,7 +440,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
               Create New Password
             </h1>
             <p className="mt-1 m-0 text-xs text-slate-500 font-medium">
-              Set a strong password for your Cyrix Field Ops account
+              Set a strong password for your Cyrix Field Connect account
             </p>
           </div>
 
@@ -583,6 +587,19 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
           </button>
         </div>
       )}
+
+      {/* Attribution */}
+      <p className="text-center mt-5 m-0 text-xs text-slate-500 font-medium pt-3 border-t border-slate-200">
+        Designed By{" "}
+        <a
+          href="https://sunilbishnoi.co.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#4A6A8A] font-bold hover:underline"
+        >
+          Sunil Bishnoi
+        </a>
+      </p>
     </div>
   );
 }

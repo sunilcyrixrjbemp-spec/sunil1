@@ -206,21 +206,22 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "40px 36px 32px" }}>
+    <div style={{ padding: "36px 36px 28px" }}>
 
       {/* ── Logo + Title ────────────────────────────────────────────────── */}
       <div className="text-center mb-6">
-        <div className="inline-flex p-2 bg-white rounded-md border border-slate-200 shadow-2xs mb-3 cursor-pointer"
+        <div
+          className="inline-flex items-center justify-center py-2 px-3.5 bg-white rounded-xl border border-slate-200/90 shadow-sm mb-4 w-fit mx-auto cursor-pointer hover:shadow-md transition-shadow duration-200"
           onClick={() => {
             const clicks = logoClicks + 1;
             setLogoClicks(clicks);
             if (clicks >= 5) { setShowDiagnostics(true); setLogoClicks(0); }
-          }}>
+          }}
+        >
           <img
-            src="/brand.png"
-            alt="Cyrix Field Ops"
-            className="object-contain"
-            style={{ height: 44, width: "auto" }}
+            src="/logo-fieldconnect.png"
+            alt="Cyrix Field Connect Logo"
+            className="h-12 sm:h-14 w-auto object-contain drop-shadow-xs"
           />
         </div>
         <h1
@@ -230,7 +231,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           Welcome back
         </h1>
         <p className="mt-1 m-0 text-xs text-slate-500 font-medium">
-          Sign in to your Cyrix Field Ops account
+          Sign in to your Cyrix Field Connect account
         </p>
       </div>
 
@@ -366,9 +367,8 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
         </button>
       </div>
 
-      {/* ── Attribution ─────────────────────────────────────────────────── */}
       <p className="text-center mt-4 m-0 text-xs text-slate-500 font-medium">
-        Designed by{" "}
+        Designed By{" "}
         <a
           href="https://sunilbishnoi.co.in/"
           target="_blank"

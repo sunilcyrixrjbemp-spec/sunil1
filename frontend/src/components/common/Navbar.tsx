@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Menu, Search, ShieldCheck, User as UserIcon, Command } from "lucide-react";
+import { Search, ShieldCheck, User as UserIcon, Command } from "lucide-react";
 import Badge from "./Badge";
 import CommandPalette from "./CommandPalette";
 
 interface NavbarProps {
   userName: string;
   userRole: string;
-  onOpenMobileMenu: () => void;
+  onOpenMobileMenu?: () => void;
   onOpenNotifications?: () => void;
   unreadCount?: number;
 }
@@ -15,7 +15,6 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   userName,
   userRole,
-  onOpenMobileMenu,
 }) => {
   const location = useLocation();
   const [isCmdOpen, setIsCmdOpen] = useState(false);
@@ -44,16 +43,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       <header className="sticky top-0 z-30 h-10 bg-white/95 backdrop-blur-md border-b border-gray-200 px-3 md:px-4 flex items-center justify-between gap-3 shadow-2xs">
-        {/* Left: Mobile Toggle & Page Title */}
+        {/* Left: Page Title */}
         <div className="flex items-center gap-2 min-w-0">
-          <button
-            onClick={onOpenMobileMenu}
-            className="p-1 -ml-1 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md lg:hidden transition-colors cursor-pointer"
-            aria-label="Open Navigation"
-          >
-            <Menu className="w-4 h-4" />
-          </button>
-
           <div className="flex items-center text-xs md:text-sm text-gray-800 font-semibold overflow-hidden truncate">
             <span className="truncate">{formattedPageTitle}</span>
           </div>

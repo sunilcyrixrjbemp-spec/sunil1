@@ -14,7 +14,6 @@ import {
   User,
   LogOut,
   Settings,
-  Menu,
   Lock,
   X,
   FileSpreadsheet,
@@ -24,7 +23,8 @@ import {
   TrendingUp,
   ChevronRight,
   ChevronLeft,
-  Sparkles
+  Sparkles,
+  LayoutGrid
 } from "lucide-react";
 import ProgressLoader from "../common/ProgressLoader";
 import Badge from "../common/Badge";
@@ -299,51 +299,95 @@ export default function DashboardLayout() {
         </div>
       </aside>
 
-      {/* Mobile Backdrop & Drawer Navigation */}
+      {/* Mobile Backdrop & Slide-Up Drawer Navigation */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
+        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
           <div
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="relative w-4/5 max-w-xs bg-slate-50 text-slate-800 flex flex-col h-full z-10 shadow-2xl border-r border-slate-200">
-            <div className="h-14 px-3.5 bg-[#4A6A8A] flex items-center justify-between border-b border-[#3B546F] shrink-0 text-white">
-              <div className="flex items-center gap-2.5">
-                <img src={brandLogo} alt="Cyrix Logo" className="w-6 h-6 object-contain" />
-                <span className="font-bold text-white text-xs uppercase tracking-wider">Cyrix FieldOps</span>
+          <div className="relative w-full max-h-[85vh] bg-slate-50 text-slate-800 flex flex-col z-10 shadow-2xl rounded-t-2xl border-t border-slate-200 overflow-hidden animate-in slide-in-from-bottom duration-300">
+            {/* Drawer Drag Handle + Header */}
+            <div className="pt-2 pb-3 px-4 bg-[#4A6A8A] flex flex-col text-white shrink-0 shadow-xs">
+              <div className="w-12 h-1 bg-white/30 rounded-full mx-auto mb-2" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-md bg-white/20 flex items-center justify-center text-white">
+                    <img src={brandLogo} alt="Cyrix Logo" className="w-5 h-5 object-contain" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-white text-xs tracking-normal">Cyrix Field Connect</span>
+                    <span className="text-[9.5px] text-white/80 font-normal">All Application Menus & Services</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 text-white/80 hover:text-white rounded-md bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1.5 text-white/80 hover:text-white rounded-md"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
-              {allowedMenuItems.map((item) => {
-                const isActive = currentActiveItem?.id === item.id;
+
+            {/* Drawer All Menus Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
+              {SIDEBAR_SECTIONS.map((section) => {
+                const sectionItems = allowedMenuItems.filter((item) => section.ids.includes(item.id));
+                if (sectionItems.length === 0) return null;
                 return (
-                  <Link
-                    key={item.id}
-                    to={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-bold transition-all border ${
-                      isActive
-                        ? "bg-[#4A6A8A] text-white border-[#3B546F] shadow-2xs"
-                        : "text-slate-600 hover:bg-slate-200/60 border-transparent"
-                    }`}
-                  >
-                    <IconTile
-                      icon={item.icon}
-                      gradientFrom={item.gradientFrom}
-                      gradientTo={item.gradientTo}
-                      shadowColor={item.shadowColor}
-                      isActive={isActive}
-                    />
-                    <span>{item.name}</span>
-                  </Link>
+                  <div key={section.label} className="space-y-2">
+                    <p className="text-[10px] font-bold tracking-wider text-slate-500 uppercase px-1">
+                      {section.label}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {sectionItems.map((item) => {
+                        const isActive = currentActiveItem?.id === item.id;
+                        return (
+                          <Link
+                            key={item.id}
+                            to={item.path}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`flex items-center gap-2.5 p-2.5 rounded-xl text-xs font-bold transition-all border ${
+                              isActive
+                                ? "bg-[#4A6A8A] text-white border-[#3B546F] shadow-xs"
+                                : "bg-white text-slate-700 hover:bg-slate-100 border-slate-200/80 shadow-2xs"
+                            }`}
+                          >
+                            <IconTile
+                              icon={item.icon}
+                              gradientFrom={item.gradientFrom}
+                              gradientTo={item.gradientTo}
+                              shadowColor={item.shadowColor}
+                              isActive={isActive}
+                            />
+                            <span className="truncate text-[11px]">{item.name}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
+
+              {/* User Profile Summary & Logout */}
+              <div className="pt-3 border-t border-slate-200/90 flex items-center justify-between bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <div className="w-8 h-8 rounded-lg bg-[#4A6A8A] text-white font-bold text-xs flex items-center justify-center shrink-0">
+                    {initials}
+                  </div>
+                  <div className="flex flex-col min-w-0 leading-none">
+                    <span className="text-xs font-bold text-slate-800 truncate">{user?.name || "Employee"}</span>
+                    <span className="text-[10px] text-slate-500 truncate mt-0.5">{userRole}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer border border-rose-200/80"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -358,12 +402,6 @@ export default function DashboardLayout() {
         {/* Top Navbar */}
         <header className="sticky top-0 z-30 h-10 bg-white/95 backdrop-blur-md border-b border-border px-3 md:px-4 flex items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsMobileMenuOpen(true)}
-              className="p-1 -ml-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md lg:hidden"
-            >
-              <Menu className="w-4 h-4" />
-            </button>
             <div className="flex items-center text-xs md:text-sm text-slate-700 font-semibold">
               <span>{currentActiveItem?.name || "Overview"}</span>
             </div>
@@ -381,8 +419,8 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        {/* Content Area */}
-        <main className="flex-1 p-2 md:p-4 w-full max-w-full mx-auto">
+        {/* Content Area - Bottom padding for mobile bottom bar */}
+        <main className="flex-1 p-2 md:p-4 w-full max-w-full mx-auto pb-16 lg:pb-4">
           {!hasAccess ? (
             <div className="p-8 text-center bg-white border border-border rounded-xl shadow-xs my-8">
               <Lock className="w-12 h-12 text-red-500 mx-auto mb-3" />
@@ -398,6 +436,71 @@ export default function DashboardLayout() {
             <Outlet />
           )}
         </main>
+
+        {/* Mobile Bottom Navigation Bar - Replaces 3-Line Top Hamburger Menu */}
+        <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1 px-2 flex items-center justify-around lg:hidden shadow-lg">
+          <Link
+            to="/home"
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              location.pathname === "/home"
+                ? "text-blue-600 bg-blue-50"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span>Home</span>
+          </Link>
+
+          <Link
+            to="/submit-expense"
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              location.pathname.startsWith("/submit-expense")
+                ? "text-emerald-600 bg-emerald-50"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <FilePlus className="w-4 h-4" />
+            <span>Expense</span>
+          </Link>
+
+          <Link
+            to="/approval-center"
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              location.pathname.startsWith("/approval-center")
+                ? "text-amber-600 bg-amber-50"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <CheckSquare className="w-4 h-4" />
+            <span>Approval</span>
+          </Link>
+
+          <Link
+            to="/profile"
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              location.pathname.startsWith("/profile")
+                ? "text-purple-600 bg-purple-50"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <User className="w-4 h-4" />
+            <span>Profile</span>
+          </Link>
+
+          {/* 9-Dot Bento Grid "More" Button to Open All Menus */}
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+              isMobileMenuOpen
+                ? "text-indigo-600 bg-indigo-50"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+            title="All Menus & Services"
+          >
+            <LayoutGrid className="w-4 h-4 stroke-[2.5]" />
+            <span>More</span>
+          </button>
+        </nav>
       </div>
     </div>
   );
