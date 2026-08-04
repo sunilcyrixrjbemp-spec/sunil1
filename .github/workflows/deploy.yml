@@ -78,6 +78,8 @@ jobs:
             CLEAN_URL=$(echo "${{ secrets.VITE_API_BASE_URL }}" | sed 's/\/$//' | sed 's/\/api$//')
             echo "/api/* $CLEAN_URL/api/:splat 200" > dist/_redirects
           fi
+          echo "/* /index.html 200" >> dist/_redirects
+          cp public/_headers dist/_headers 2>/dev/null || true
 
       - name: Deploy to Cloudflare Pages
         working-directory: ./frontend

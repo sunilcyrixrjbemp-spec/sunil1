@@ -1,0 +1,11 @@
+/cyrix-video.mp4
+  Content-Type: video/mp4
+  Accept-Ranges: bytes
+  Cache-Control: public, max-age=31536000
+
+/logo-fieldconnect.png
+  Content-Type: image/png
+  Cache-Control: public, max-age=31536000
+
+/*
+  Access-Control-Allow-Origin: *
