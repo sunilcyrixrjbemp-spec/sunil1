@@ -1,0 +1,9 @@
+# Robots.txt for Cyrix Field Connect & Cyrix Healthcare Pvt Ltd
+User-agent: *
+Allow: /
+Allow: /logo-fieldconnect.png
+Allow: /cyrix-video.mp4
+Allow: /sitemap.xml
+
+# Sitemap location for Googlebot, Bingbot, and AI search crawlers
+Sitemap: https://cyrixhealthcare.com/sitemap.xml
