@@ -1606,26 +1606,36 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
   // Deduction Auditor Details (WHO deducted & WHY)
   const editHistory = Array.isArray(c.edit_history) ? c.edit_history : (Array.isArray(c.history) ? c.history : []);
-  const latestEditor = editHistory.length > 0 ? editHistory[0] : null;
-  const approverStep = approvals.find((a: any) => a.approver_name || a.approver_code);
+  const humanEditor = editHistory.find((el: any) => el.editor_name && el.editor_name.toUpperCase() !== "SYSTEM");
+  const latestEditor = humanEditor || (editHistory.length > 0 ? editHistory[0] : null);
 
-  const managerDeductorName = latestEditor?.editor_name
+  const approvedSteps = approvals.filter((a: any) => a.status === "approved" || a.status === "Approved");
+  const approverStep = approvedSteps.length > 0
+    ? approvedSteps[approvedSteps.length - 1]
+    : (approvals.find((a: any) => a.approver_name || a.approver_code) || null);
+
+  const isActivelyEditing = canEditAmounts && liveEditedTotalSum !== null;
+
+  const managerDeductorName = (isActivelyEditing && user?.name ? user.name : null)
+    || latestEditor?.editor_name
     || c.approved_by_name
     || c.edited_by_name
     || approverStep?.approver_name
-    || (canEditAmounts && user?.name ? user.name : "Manager / Approver");
+    || (user?.name ? user.name : "Manager / Approver");
 
-  const managerDeductorCode = latestEditor?.editor_code
+  const managerDeductorCode = (isActivelyEditing && (user?.user_id || user?.e_code) ? (user.user_id || user.e_code) : null)
+    || latestEditor?.editor_code
     || c.approved_by_code
     || c.edited_by_code
     || approverStep?.approver_code
-    || (canEditAmounts && (user?.user_id || user?.e_code) ? (user.user_id || user.e_code) : "");
+    || (user?.user_id || user?.e_code || "");
 
-  const managerDeductorRole = latestEditor?.editor_role
+  const managerDeductorRole = (isActivelyEditing && user?.role ? user.role : null)
+    || latestEditor?.editor_role
     || c.approved_by_role
     || c.edited_by_role
     || approverStep?.approver_role
-    || (canEditAmounts && user?.role ? user.role : "Manager");
+    || (user?.role || "Manager");
 
   // Collect all manager deduction remarks across legs, comments, and edit history
   const legRemarksList: string[] = [];

@@ -2051,17 +2051,31 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     }];
   }
 
-  const editHistoryList = (editLogs.results || []).map(el => ({
-    id: el.id,
-    editor_name: el.editor_name,
-    editor_role: el.editor_role,
-    leg_number: el.leg_number,
-    field_name: el.field_name,
-    old_value: el.old_value,
-    new_value: el.new_value,
-    comment: el.comment || "",
-    created_at: el.created_at
-  }));
+  const editorIds = Array.from(new Set((editLogs.results || []).map(el => el.editor_id).filter(Boolean)));
+  let editorUsersMap = {};
+  if (editorIds.length > 0) {
+    const placeholders = editorIds.map(() => "?").join(",");
+    const usersRes = await env.DB.prepare(`SELECT id, user_id, e_code, name, role FROM users WHERE id IN (${placeholders})`).bind(...editorIds).all();
+    for (const u of (usersRes.results || [])) {
+      editorUsersMap[u.id] = u;
+    }
+  }
+
+  const editHistoryList = (editLogs.results || []).map(el => {
+    const edUser = editorUsersMap[el.editor_id];
+    return {
+      id: el.id,
+      editor_name: el.editor_name || edUser?.name || "",
+      editor_code: edUser?.user_id || edUser?.e_code || "",
+      editor_role: el.editor_role || edUser?.role || "",
+      leg_number: el.leg_number,
+      field_name: el.field_name,
+      old_value: el.old_value,
+      new_value: el.new_value,
+      comment: el.comment || "",
+      created_at: el.created_at
+    };
+  });
 
   const monthlyStats = await getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary);
 
