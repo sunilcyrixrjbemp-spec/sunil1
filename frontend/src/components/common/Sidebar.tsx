@@ -16,11 +16,9 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
-import brandLogo from "../../assets/images/brand.png";
 import { authService } from "../../services/authService";
 
 export interface MenuItem {
@@ -127,21 +125,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* HomePage Exact Dark Slate-Blue Header Bar (#4A6A8A) */}
       <div className="h-14 px-3.5 bg-[#4A6A8A] flex items-center justify-between border-b border-[#3B546F] shrink-0 text-white shadow-2xs">
-        <Link to="/home" className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-7 h-7 rounded-md bg-white/20 flex items-center justify-center shrink-0 shadow-2xs text-white">
-            {brandLogo ? (
-              <img src={brandLogo} alt="Cyrix Logo" className="w-5 h-5 object-contain" />
-            ) : (
-              <Sparkles className="w-4 h-4 text-white" />
-            )}
+        <Link to="/home" className="flex items-center gap-2 overflow-hidden">
+          <div className="bg-white/95 px-2 py-1 rounded-lg shadow-2xs flex items-center shrink-0">
+            <img
+              src="/logo-fieldconnect.png"
+              alt="Cyrix Field Connect"
+              className="h-6 w-auto max-w-[160px] object-contain"
+            />
           </div>
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="font-bold text-white text-xs tracking-normal leading-tight">
-                CYRIX <span className="text-white/80 font-normal text-[9.5px] uppercase tracking-wider block">Field Operations</span>
-              </span>
-            </div>
-          )}
         </Link>
         <button
           onClick={onToggleCollapse}
