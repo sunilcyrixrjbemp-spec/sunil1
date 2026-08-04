@@ -290,6 +290,25 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   // 2. Scan claims and legs for any attachment URLs (hotel, local purchase, other bills, travel tickets, etc.)
   (claims || []).forEach((claim: any) => {
     const claimDate = claim.date ? fmtDate(claim.date) : "";
+
+    const claimAtts = [
+      ...(Array.isArray(claim.attachments) ? claim.attachments : []),
+      ...(Array.isArray(claim.attachments_detailed) ? claim.attachments_detailed : []),
+      ...(Array.isArray(claim.attachment_urls) ? claim.attachment_urls : []),
+      ...(typeof claim.attachments === "string" ? (() => { try { return JSON.parse(claim.attachments); } catch { return [claim.attachments]; } })() : [])
+    ];
+
+    claimAtts.forEach((cItem: any, cIdx: number) => {
+      const cUrl = typeof cItem === "string" ? cItem : (cItem.file_url || cItem.url);
+      if (cUrl && typeof cUrl === "string" && cUrl.trim() && !allAttachmentsMap.has(cUrl)) {
+        allAttachmentsMap.set(cUrl, {
+          url: cUrl,
+          date: claimDate,
+          label: (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`
+        });
+      }
+    });
+
     (claim.legs || []).forEach((leg: any) => {
       const candidateFields = [
         { key: "hotel_receipt", label: "Hotel Bill Receipt" },
@@ -835,7 +854,50 @@ export default function MonthSummaryPage() {
           return;
         }
 
-        const rawAttachments = res.attachments || [];
+        // Fetch detailed attachment data for each claim to ensure no receipts are missed
+        await Promise.all(
+          claims.map(async (claim: any) => {
+            try {
+              const details = await expenseService.getExpenseDetails(claim.expense_code);
+              if (details) {
+                if (details.attachments && Array.isArray(details.attachments)) {
+                  claim.attachments = details.attachments;
+                }
+                if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
+                  claim.attachments_detailed = details.attachments_detailed;
+                }
+              }
+            } catch (e) {
+              // Ignore individual fetch errors
+            }
+          })
+        );
+
+        const rawAttachmentsMap = new Map<string, any>();
+        (res.attachments || []).forEach((att: any) => {
+          const url = att.file_url || att.url || (typeof att === "string" ? att : "");
+          if (url) rawAttachmentsMap.set(url, att);
+        });
+
+        claims.forEach((claim: any) => {
+          const cAtts = [
+            ...(Array.isArray(claim.attachments) ? claim.attachments : []),
+            ...(Array.isArray(claim.attachments_detailed) ? claim.attachments_detailed : [])
+          ];
+          cAtts.forEach((att: any) => {
+            const url = typeof att === "string" ? att : (att.file_url || att.url);
+            if (url && !rawAttachmentsMap.has(url)) {
+              rawAttachmentsMap.set(url, {
+                file_url: url,
+                url: url,
+                date: claim.date || "",
+                bill_type: (typeof att === "object" && att.bill_type) ? att.bill_type : "Bill Attachment"
+              });
+            }
+          });
+        });
+
+        const rawAttachments = Array.from(rawAttachmentsMap.values());
         const attachments = await Promise.all(
           rawAttachments.map(async (att: any) => {
             const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
