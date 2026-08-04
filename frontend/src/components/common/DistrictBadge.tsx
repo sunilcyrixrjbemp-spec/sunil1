@@ -100,10 +100,27 @@ export const DistrictBadge: React.FC<DistrictBadgeProps> = ({
   }
 
   const normalized = (resolvedType || "").trim().toUpperCase();
+  const isOutState = normalized === "OUT_OF_STATE" || normalized === "OUT_STATE";
   const isOut = normalized === "OUT_DISTRICT" || normalized === "OUTDOOR" || normalized === "OUT_STATION";
-  const label = isOut ? "Out-District" : "In-District";
+  const label = isOutState ? "Out of State" : (isOut ? "Out-District" : "In-District");
 
-  const badgeStyle: React.CSSProperties = isOut
+  const badgeStyle: React.CSSProperties = isOutState
+    ? {
+        backgroundColor: "#F3E8FF",
+        color: "#6B21A8",
+        borderColor: "#E9D5FF",
+        fontSize: "12px",
+        fontWeight: 600,
+        padding: "2px 10px",
+        borderRadius: "9999px",
+        display: "inline-flex",
+        alignItems: "center",
+        lineHeight: "1.3",
+        whiteSpace: "nowrap",
+        flexShrink: 0,
+        ...style
+      }
+    : (isOut
     ? {
         backgroundColor: "#EFF6FF",
         color: "#1D4ED8",
@@ -133,7 +150,7 @@ export const DistrictBadge: React.FC<DistrictBadgeProps> = ({
         whiteSpace: "nowrap",
         flexShrink: 0,
         ...style
-      };
+      });
 
   return (
     <div className={`inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}>
