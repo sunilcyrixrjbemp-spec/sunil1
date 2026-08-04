@@ -6,4 +6,4 @@ Allow: /cyrix-video.mp4
 Allow: /sitemap.xml
 
 # Sitemap location for Googlebot, Bingbot, and AI search crawlers
-Sitemap: https://cyrixhealthcare.com/sitemap.xml
+Sitemap: https://indrae.in/sitemap.xml
