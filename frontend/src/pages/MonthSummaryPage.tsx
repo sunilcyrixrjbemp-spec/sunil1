@@ -68,21 +68,56 @@ const convertPdfToImageBase64 = async (pdfUrlOrBase64: string): Promise<string> 
   }
 };
 
+const convertPdfBlobToJpgBase64 = async (blob: Blob | ArrayBuffer): Promise<string> => {
+  try {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js");
+    const pdfjsLib = (window as any)["pdfjs-dist/build/pdf"] || (window as any).pdfjsLib;
+    if (!pdfjsLib) return "";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+
+    const source = blob instanceof Blob ? await blob.arrayBuffer() : blob;
+    const loadingTask = pdfjsLib.getDocument(source);
+    const pdfDoc = await loadingTask.promise;
+    const page = await pdfDoc.getPage(1);
+
+    const viewport = page.getViewport({ scale: 2 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({ canvasContext: context, viewport }).promise;
+    return canvas.toDataURL("image/jpeg", 0.95);
+  } catch (e) {
+    console.warn("Failed to render PDF blob to JPG via pdf.js:", e);
+    return "";
+  }
+};
+
 const convertImageUrlToBase64 = async (url: string): Promise<string> => {
   if (!url) return "";
   if (url.startsWith("data:image/")) return url;
   try {
     const absUrl = getAbsoluteUrl(url);
     const cleanUrl = url.toLowerCase().split("?")[0];
-    const isPdf = cleanUrl.endsWith(".pdf") || url.startsWith("data:application/pdf");
+    const isPdfByUrl = cleanUrl.endsWith(".pdf") || url.startsWith("data:application/pdf") || cleanUrl.includes(".pdf");
 
-    if (isPdf) {
-      return await convertPdfToImageBase64(absUrl);
+    if (isPdfByUrl) {
+      const jpgBase64 = await convertPdfToImageBase64(absUrl);
+      if (jpgBase64 && jpgBase64.startsWith("data:image/")) return jpgBase64;
     }
 
     const response = await fetch(absUrl);
     if (!response.ok) return absUrl;
+
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
     const blob = await response.blob();
+
+    if (contentType.includes("pdf") || blob.type.includes("pdf")) {
+      const jpgBase64 = await convertPdfBlobToJpgBase64(blob);
+      if (jpgBase64 && jpgBase64.startsWith("data:image/")) return jpgBase64;
+    }
+
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve((reader.result as string) || absUrl);
@@ -272,22 +307,31 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     return map[m] || m;
   };
 
-  // Collect ALL financial bill attachments
+  // Helper to identify Call Service Reports and PMS Reports
+  const isCallOrPmsReport = (label: string = "", billType: string = ""): boolean => {
+    const l = (label || "").toLowerCase();
+    const b = (billType || "").toLowerCase();
+    return l.includes("pms") || l.includes("call") || l.includes("service report") || l.includes("calibration") ||
+           b.includes("pms") || b.includes("call") || b.includes("service_report") || b.includes("calibration");
+  };
+
+  // Collect ALL financial bill attachments (excluding Call Service Reports & PMS Reports)
   const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
 
   // 1. Top-level attachments array from backend
   (attachments || []).forEach((att: any, idx: number) => {
     const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
-    if (rawUrl && !allAttachmentsMap.has(rawUrl)) {
+    const label = att.bill_type || att.billType || "Expense Bill Attachment";
+    if (rawUrl && !isCallOrPmsReport(label, att.bill_type) && !allAttachmentsMap.has(rawUrl)) {
       allAttachmentsMap.set(rawUrl, {
         url: rawUrl,
         date: att.date ? fmtDate(att.date) : `Bill #${idx + 1}`,
-        label: att.bill_type || att.billType || "Expense Bill Attachment"
+        label: label
       });
     }
   });
 
-  // 2. Scan claims and legs for any attachment URLs (hotel, local purchase, other bills, travel tickets, etc.)
+  // 2. Scan claims and legs for any financial bill attachment URLs
   (claims || []).forEach((claim: any) => {
     const claimDate = claim.date ? fmtDate(claim.date) : "";
 
@@ -300,11 +344,12 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
     claimAtts.forEach((cItem: any, cIdx: number) => {
       const cUrl = typeof cItem === "string" ? cItem : (cItem.file_url || cItem.url);
-      if (cUrl && typeof cUrl === "string" && cUrl.trim() && !allAttachmentsMap.has(cUrl)) {
+      const label = (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`;
+      if (cUrl && typeof cUrl === "string" && cUrl.trim() && !isCallOrPmsReport(label, (cItem.bill_type || "")) && !allAttachmentsMap.has(cUrl)) {
         allAttachmentsMap.set(cUrl, {
           url: cUrl,
           date: claimDate,
-          label: (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`
+          label: label
         });
       }
     });
@@ -324,7 +369,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
       candidateFields.forEach(field => {
         const u = leg[field.key];
-        if (u && typeof u === 'string' && u.trim() && !allAttachmentsMap.has(u)) {
+        if (u && typeof u === 'string' && u.trim() && !isCallOrPmsReport(field.label, "") && !allAttachmentsMap.has(u)) {
           allAttachmentsMap.set(u, { url: u, date: claimDate, label: field.label });
         }
       });
@@ -332,8 +377,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       if (Array.isArray(leg.attachments)) {
         leg.attachments.forEach((aItem: any, aIdx: number) => {
           const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
-          if (aUrl && !allAttachmentsMap.has(aUrl)) {
-            allAttachmentsMap.set(aUrl, { url: aUrl, date: claimDate, label: aItem.bill_type || `Bill Attachment #${aIdx + 1}` });
+          const label = aItem.bill_type || `Bill Attachment #${aIdx + 1}`;
+          if (aUrl && !isCallOrPmsReport(label, aItem.bill_type || "") && !allAttachmentsMap.has(aUrl)) {
+            allAttachmentsMap.set(aUrl, { url: aUrl, date: claimDate, label: label });
           }
         });
       }
