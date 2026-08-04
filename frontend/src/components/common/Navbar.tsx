@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Search, ShieldCheck, User as UserIcon, Command } from "lucide-react";
+import { Search, ShieldCheck, User as UserIcon, Command, Download } from "lucide-react";
 import Badge from "./Badge";
 import CommandPalette from "./CommandPalette";
 
@@ -19,6 +19,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const location = useLocation();
   const [isCmdOpen, setIsCmdOpen] = useState(false);
 
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState<boolean>(false);
+
   // Command palette key shortcut listener (Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -30,6 +33,39 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // PWA Install prompt listener
+  useEffect(() => {
+    const isStandaloneMedia = window.matchMedia("(display-mode: standalone)").matches;
+    const isNavStandalone = (navigator as any).standalone === true;
+    if (isStandaloneMedia || isNavStandalone) {
+      setIsStandalone(true);
+    }
+
+    const handlePrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener("beforeinstallprompt", handlePrompt);
+    return () => window.removeEventListener("beforeinstallprompt", handlePrompt);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice.outcome === "accepted") {
+          setIsStandalone(true);
+        }
+        setDeferredPrompt(null);
+      } catch (e) {}
+    } else {
+      // Trigger global event for InstallAppPrompt
+      window.dispatchEvent(new CustomEvent("trigger-pwa-install"));
+    }
+  };
 
   const pathSegments = location.pathname.split("/").filter(Boolean);
   const formattedPageTitle =
@@ -66,6 +102,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          {!isStandalone && (
+            <button
+              onClick={handleInstallApp}
+              className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-2xs hover:shadow transition-all cursor-pointer active:scale-95"
+              title="Install Cyrix Field Connect App"
+            >
+              <Download className="w-3 h-3 stroke-[2.5]" />
+              <span className="hidden xs:inline">Install App</span>
+            </button>
+          )}
+
           <div className="hidden sm:flex items-center">
             <Badge variant="purple" size="sm" dot={false}>
               <ShieldCheck className="w-3 h-3 mr-1 inline" />

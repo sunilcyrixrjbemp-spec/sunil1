@@ -33,6 +33,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
 
 import ProgressLoader from "./components/common/ProgressLoader";
+import InstallAppPrompt from "./components/common/InstallAppPrompt";
 
 function PageLoader() {
   return <ProgressLoader message="Loading System..." fullPage />;
@@ -281,6 +282,7 @@ function App() {
         )}
         {/* FCM notification system — runs silently in background */}
         <AppInner />
+        <InstallAppPrompt />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public Routes */}
