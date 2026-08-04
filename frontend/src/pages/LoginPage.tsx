@@ -203,11 +203,11 @@ export default function LoginPage() {
                 href={v.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex min-h-[160px] w-full bg-white rounded-lg shadow-sm border border-slate-200/80 overflow-hidden relative group hover:shadow-xl hover:border-[#4A6A8A] transition-all cursor-pointer no-underline"
+                className="flex min-h-[145px] xl:min-h-[155px] w-full bg-white rounded-xl shadow-xs border border-slate-200/90 overflow-hidden relative group hover:shadow-xl hover:border-[#4A6A8A] transition-all cursor-pointer no-underline"
                 title={`Visit ${v.id} on Cyrix Healthcare`}
               >
                 {/* Left Official Photo directly from cyrixhealthcare.com */}
-                <div className="w-[120px] xl:w-[130px] h-full shrink-0 relative overflow-hidden bg-slate-100 border-r border-slate-100">
+                <div className="w-[115px] xl:w-[125px] h-full shrink-0 relative overflow-hidden bg-slate-100 border-r border-slate-150">
                   <img
                     src={v.bgImg}
                     alt={v.id}
@@ -215,24 +215,35 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {/* Right Content Area with Official Logo Image */}
-                <div className="flex-1 p-3.5 xl:p-4 flex flex-col justify-between relative bg-white">
-                  {/* Official Logo Image from cyrixhealthcare.com */}
-                  <div className="pr-4 mb-1.5 flex items-center h-9 xl:h-10">
+                {/* Right Content Area with Official Logo Image & Full Spacing */}
+                <div className="flex-1 p-3.5 xl:p-4 flex flex-col justify-between relative bg-white min-w-0 pr-8 pb-8">
+                  {/* Official Logo Header */}
+                  <div className="mb-2 flex items-center h-8 xl:h-9">
                     <img
                       src={v.logoImg}
                       alt={`${v.id} logo`}
-                      className="max-h-9 xl:max-h-10 w-auto max-w-[180px] object-contain object-left"
+                      className="max-h-8 xl:max-h-9 w-auto max-w-[170px] object-contain object-left"
+                      onError={(e) => {
+                        // If image fails, replace with clean brand title
+                        e.currentTarget.style.display = "none";
+                        const parent = e.currentTarget.parentElement;
+                        if (parent && !parent.querySelector(".fallback-brand")) {
+                          const div = document.createElement("div");
+                          div.className = "fallback-brand flex items-center gap-1.5 font-black text-sm text-[#0f172a]";
+                          div.innerHTML = `<span class="text-[#0f172a]">CYRIX</span><span class="text-[#0284c7] uppercase font-bold">${v.id}</span>`;
+                          parent.appendChild(div);
+                        }
+                      }}
                     />
                   </div>
 
-                  {/* Description Text */}
-                  <p className="m-0 text-[11px] xl:text-xs text-slate-600 font-medium leading-relaxed pr-7 pb-1">
+                  {/* Description Text - Smooth Fit with Zero Clipping */}
+                  <p className="m-0 text-[11px] xl:text-[11.5px] text-slate-600 font-medium leading-snug">
                     {v.desc}
                   </p>
 
                   {/* Bottom Right Solid Red Square Button with Arrow */}
-                  <div className="w-8 h-8 xl:w-9 xl:h-9 bg-[#E50914] text-white flex items-center justify-center absolute bottom-0 right-0 rounded-tl-sm shadow-xs font-black group-hover:bg-red-700 transition-colors">
+                  <div className="w-8 h-8 xl:w-9 xl:h-9 bg-[#E50914] text-white flex items-center justify-center absolute bottom-0 right-0 rounded-tl-lg shadow-xs font-black group-hover:bg-red-700 transition-colors">
                     <ArrowUpRight size={18} className="stroke-[3]" />
                   </div>
                 </div>
