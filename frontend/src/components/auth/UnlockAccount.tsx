@@ -1,9 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Unlock, CheckCircle2, User, Calendar, ArrowRight } from "lucide-react";
+import { ArrowLeft, Unlock, CheckCircle2, User, Calendar, ArrowRight, ShieldCheck, AlertTriangle } from "lucide-react";
 import { authService } from "../../services/authService";
 
-const PremiumSpinner = () => (
-  <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
+const Spinner = () => (
+  <span
+    className="inline-block shrink-0"
+    style={{
+      width: 14, height: 14,
+      border: "2px solid rgba(255,255,255,0.30)",
+      borderTopColor: "#ffffff",
+      borderRadius: "50%",
+      animation: "spin 0.6s linear infinite",
+    }}
+  />
 );
 
 interface UnlockAccountProps {
@@ -164,45 +173,73 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
   };
 
   return (
-    <div className="p-6 sm:p-8 space-y-6">
-      {/* Header Back Button */}
-      <div className="text-center pb-3.5 border-b border-slate-100 flex justify-between items-center">
+    <div style={{ padding: "40px 36px 32px" }}>
+      {/* Top Header */}
+      <div className="flex items-center justify-between pb-3.5 mb-5 border-b border-slate-200">
         <button
+          type="button"
           onClick={onBackToLogin}
-          className="text-slate-500 hover:text-primary-600 flex items-center gap-1.5 text-[10px] cursor-pointer font-black uppercase tracking-wider bg-transparent border-0 outline-none"
+          className="border-0 bg-transparent cursor-pointer text-xs font-bold text-[#4A6A8A] hover:text-slate-900 transition-colors flex items-center gap-1.5 p-0"
         >
-          <ArrowLeft size={12} /> Back
+          <ArrowLeft size={14} />
+          <span>Back to Sign In</span>
         </button>
-        <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Unlock Account</span>
+        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+          Unlock Account
+        </span>
       </div>
 
+      {/* Status Alert Banner */}
       {statusMessage && (
-        <div className={`p-3.5 border rounded-xl text-xs font-bold leading-relaxed ${
-          statusMessage.type === "success" 
-            ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
-            : "bg-rose-50 border-rose-200 text-rose-700"
-        }`}>
-          {statusMessage.text}
+        <div
+          className="mb-5 flex items-start gap-2.5 rounded-none p-3 border-l-4"
+          style={{
+            backgroundColor: statusMessage.type === "error" ? "#fef2f2" : "#ecfdf5",
+            borderColor: statusMessage.type === "error" ? "#fca5a5" : "#6ee7b7",
+            borderLeftColor: statusMessage.type === "error" ? "#dc2626" : "#059669",
+          }}
+        >
+          <AlertTriangle
+            style={{
+              width: 15, height: 15, marginTop: 1, flexShrink: 0,
+              color: statusMessage.type === "error" ? "#dc2626" : "#059669",
+            }}
+          />
+          <span style={{ fontSize: 12, color: statusMessage.type === "error" ? "#991b1b" : "#065f46", fontWeight: 600, lineHeight: "18px" }}>
+            {statusMessage.text}
+          </span>
         </div>
       )}
 
       {/* STEP 1 - VERIFY IDENTITY */}
       {step === 1 && (
-        <div className="space-y-5">
+        <div className="flex flex-col gap-5">
           <div className="text-center">
-            <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center mx-auto mb-3 border border-indigo-100 text-indigo-600 shadow-sm">
-              <Unlock size={18} />
+            <div className="w-12 h-12 rounded-none bg-[#4A6A8A]/10 border border-[#4A6A8A]/20 text-[#4A6A8A] flex items-center justify-center mx-auto mb-2.5">
+              <Unlock size={20} />
             </div>
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Identity Check</h3>
-            <p className="text-slate-500 text-[9px] mt-1.5 uppercase tracking-wider font-extrabold">Provide your details to unlock</p>
+            <h1
+              className="m-0 text-lg font-extrabold text-slate-900 tracking-tight"
+              style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
+            >
+              Identity Check
+            </h1>
+            <p className="mt-1 m-0 text-xs text-slate-500 font-medium">
+              Provide your employee details to unlock your account
+            </p>
           </div>
 
-          <form onSubmit={handleVerifyIdentity} className="space-y-4">
+          <form onSubmit={handleVerifyIdentity} className="flex flex-col gap-4">
             <div>
-              <label htmlFor="unlockUserId" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">User ID</label>
+              <label
+                htmlFor="unlockUserId"
+                className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+              >
+                User ID
+              </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                  <User size={14} />
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                  <User size={15} />
                 </span>
                 <input
                   id="unlockUserId"
@@ -214,18 +251,22 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                     setStatusMessage(null);
                   }}
                   disabled={loading}
-                  className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner"
-                  style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
                   required
+                  className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="doj" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Joining</label>
+              <label
+                htmlFor="doj"
+                className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+              >
+                Date of Joining
+              </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                  <Calendar size={14} />
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                  <Calendar size={15} />
                 </span>
                 <input
                   id="doj"
@@ -236,18 +277,22 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                     setStatusMessage(null);
                   }}
                   disabled={loading}
-                  className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
-                  style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
                   required
+                  className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all [color-scheme:light]"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="dob" className="text-slate-500 font-extrabold uppercase tracking-widest text-[9px] mb-1.5 block">Date of Birth</label>
+              <label
+                htmlFor="dob"
+                className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+              >
+                Date of Birth
+              </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                  <Calendar size={14} />
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                  <Calendar size={15} />
                 </span>
                 <input
                   id="dob"
@@ -258,48 +303,47 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                     setStatusMessage(null);
                   }}
                   disabled={loading}
-                  className="w-full bg-white border border-slate-200 rounded-xl py-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-semibold shadow-inner [color-scheme:light]"
-                  style={{ paddingLeft: '2.75rem', paddingRight: '0.875rem' }}
                   required
+                  className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all [color-scheme:light]"
                 />
               </div>
             </div>
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/25 flex items-center justify-center gap-2 border-0 cursor-pointer text-xs"
-              >
-                {loading ? (
-                  <>
-                    <PremiumSpinner />
-                    <span>Verifying identity...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Verify & Send OTP</span>
-                    <ArrowRight size={14} />
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 mt-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
+            >
+              {loading ? (
+                <><Spinner /><span className="normal-case">Verifying identity...</span></>
+              ) : (
+                <><span>Verify & Send OTP</span><ArrowRight size={15} /></>
+              )}
+            </button>
           </form>
         </div>
       )}
 
       {/* STEP 2 - ENTER OTP */}
       {step === 2 && (
-        <div className="space-y-5">
+        <div className="flex flex-col gap-5">
           <div className="text-center">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Enter Verification Code</h3>
-            <p className="text-slate-550 text-[10px] mt-1.5 leading-relaxed font-semibold">
-              We sent a 6-digit OTP code to your registered email address <strong className="text-slate-800 font-bold">{maskedEmail}</strong>.
+            <div className="w-12 h-12 rounded-none bg-[#4A6A8A]/10 border border-[#4A6A8A]/20 text-[#4A6A8A] flex items-center justify-center mx-auto mb-2.5">
+              <ShieldCheck size={20} />
+            </div>
+            <h1
+              className="m-0 text-lg font-extrabold text-slate-900 tracking-tight"
+              style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
+            >
+              Enter Verification Code
+            </h1>
+            <p className="mt-1 m-0 text-xs text-slate-500 font-medium leading-relaxed">
+              We sent a 6-digit OTP code to your registered email <strong className="text-slate-800 font-bold">{maskedEmail}</strong>
             </p>
           </div>
 
-          <form onSubmit={handleVerifyOtpAndUnlock} className="space-y-4">
-            <div className="flex justify-between gap-2 max-w-xs mx-auto">
+          <form onSubmit={handleVerifyOtpAndUnlock} className="flex flex-col gap-4">
+            <div className="flex justify-between gap-1.5 max-w-xs mx-auto w-full">
               {otp.map((digit, idx) => (
                 <input
                   key={idx}
@@ -309,89 +353,82 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   ref={(el) => (otpInputsRef.current[idx] = el as HTMLInputElement)}
                   onChange={(e) => handleOtpChange(e.target, idx)}
                   onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                  className="w-10 h-10 bg-white border border-slate-350 rounded-xl text-center text-lg text-slate-800 font-bold focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 shadow-inner"
                   disabled={loading}
+                  className="w-10 h-11 bg-white border border-slate-300 rounded-none text-center text-lg font-black text-slate-900 focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
                 />
               ))}
             </div>
 
-            <div className="text-center space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-              <p className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
-                OTP Expiration: <span className="font-black text-rose-600">{formatTime(timeLeft)}</span>
+            <div className="text-center space-y-1.5 bg-slate-50 p-3 border border-slate-200 text-xs">
+              <p className="m-0 text-[11px] text-slate-600 font-bold">
+                OTP Validity: <span className="font-mono font-black text-rose-600">{formatTime(timeLeft)}</span>
               </p>
               
-              <div className="text-[10px]">
+              <div className="text-[11px]">
                 {resendCooldown === 0 ? (
                   <button
                     type="button"
                     onClick={handleResendOtp}
-                    className="text-primary-600 hover:text-primary-700 font-extrabold uppercase tracking-wider border-0 bg-transparent cursor-pointer outline-none"
                     disabled={loading}
+                    className="border-0 bg-transparent cursor-pointer font-bold text-[#4A6A8A] hover:underline"
                   >
-                    Resend Code
+                    Resend OTP Code
                   </button>
                 ) : (
-                  <span className="text-slate-500 font-extrabold uppercase tracking-wider">
-                    Resend in <span className="font-black text-slate-600">{resendCooldown}s</span>
+                  <span className="text-slate-500 font-medium">
+                    Resend in <span className="font-mono font-bold text-slate-700">{resendCooldown}s</span>
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/25 flex items-center justify-center gap-2 border-0 cursor-pointer text-xs"
-              >
-                {loading ? (
-                  <>
-                    <PremiumSpinner />
-                    <span>Unlocking...</span>
-                  </>
-                ) : (
-                  <span>Verify & Unlock Account</span>
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 mt-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
+            >
+              {loading ? (
+                <><Spinner /><span className="normal-case">Unlocking Account...</span></>
+              ) : (
+                <><span>Verify & Unlock Account</span><ArrowRight size={15} /></>
+              )}
+            </button>
           </form>
         </div>
       )}
 
       {/* STEP 3 - SUCCESS */}
       {step === 3 && (
-        <div className="space-y-5 text-center py-4">
-          <div className={`h-12 w-12 rounded-xl border flex items-center justify-center mx-auto ${
-            isAlreadyActive 
-              ? "bg-primary-50 border border-primary-100 text-primary-600"
-              : "bg-emerald-50 border border-emerald-100 text-emerald-650"
-          }`}>
+        <div className="flex flex-col gap-4 text-center py-4">
+          <div className="w-12 h-12 rounded-none bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center mx-auto">
             {isAlreadyActive ? (
-              <Unlock size={18} className="animate-pulse text-indigo-600" />
+              <Unlock size={24} className="animate-pulse text-[#4A6A8A]" />
             ) : (
-              <CheckCircle2 size={18} className="animate-pulse text-emerald-600" />
+              <CheckCircle2 size={24} className="animate-pulse text-emerald-700" />
             )}
           </div>
-          
-          <div className="space-y-2">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">
+
+          <div className="space-y-1">
+            <h1
+              className="m-0 text-lg font-extrabold text-slate-900 tracking-tight"
+              style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
+            >
               {isAlreadyActive ? "Account Already Active" : "Account Unlocked Successfully"}
-            </h3>
-            <p className="text-slate-500 text-[10px] leading-relaxed font-semibold px-2">
+            </h1>
+            <p className="text-xs text-slate-600 font-medium px-2">
               {isAlreadyActive 
-                ? "Your account is already active and unlocked. You can sign in directly."
-                : "Your Expense Management Account has been unlocked. You can now sign in using your credentials."}
+                ? "Your account is active and unlocked. You can sign in directly using your password."
+                : "Your Cyrix Field Ops account has been unlocked. You can now sign in using your credentials."}
             </p>
           </div>
 
-          <div className="pt-3">
-            <button
-              onClick={onBackToLogin}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold uppercase tracking-wider rounded-xl transition-all text-[10px] border-0 cursor-pointer shadow-md shadow-indigo-600/10"
-            >
-              {isAlreadyActive ? "Go to Sign In" : "Back to Sign In"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onBackToLogin}
+            className="w-full h-11 mt-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer"
+          >
+            {isAlreadyActive ? "Go to Sign In" : "Back to Sign In"}
+          </button>
         </div>
       )}
     </div>
