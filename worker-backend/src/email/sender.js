@@ -48,19 +48,21 @@ import {
  * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
  */
 async function sendViaCloudflareMail(env, opts) {
-  const { to, toName, subject, html } = opts;
+  const { to, toName, subject, html, text } = opts;
 
   const fromEmail = env.EMAIL_FROM_ADDRESS || "noreply@indrae.in";
   const fromName  = env.EMAIL_FROM_NAME   || "Cyrix Field Connect";
+  const textBody  = text || "Cyrix Field Connect Security Verification Email.";
 
   // ── Primary: Cloudflare Email Workers binding ─────────────────────────────
   if (env.EMAIL_SENDER) {
     try {
       const { EmailMessage } = await import("cloudflare:email");
 
-      const msgId   = `<${Date.now()}.${Math.random().toString(36).slice(2)}@indrae.in>`;
-      const dateStr = new Date().toUTCString();
+      const msgId    = `<${Date.now()}.${Math.random().toString(36).slice(2)}@indrae.in>`;
+      const dateStr  = new Date().toUTCString();
       const toHeader = toName ? `${toName} <${to}>` : to;
+      const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
       const rawMessage = [
         `MIME-Version: 1.0`,
@@ -72,11 +74,21 @@ async function sendViaCloudflareMail(env, opts) {
         `X-Auto-Response-Suppress: All`,
         `X-Report-Abuse: Please report abuse to abuse@indrae.in`,
         `X-Entity-ID: Cyrix-HealthCare-FieldConnect`,
-        `Precedence: bulk`,
+        `Content-Type: multipart/alternative; boundary="${boundary}"`,
+        ``,
+        `--${boundary}`,
+        `Content-Type: text/plain; charset=UTF-8`,
+        `Content-Transfer-Encoding: 7bit`,
+        ``,
+        textBody,
+        ``,
+        `--${boundary}`,
         `Content-Type: text/html; charset=UTF-8`,
         `Content-Transfer-Encoding: 7bit`,
         ``,
         html,
+        ``,
+        `--${boundary}--`
       ].join("\r\n");
 
       const message = new EmailMessage(fromEmail, to, rawMessage);
@@ -96,7 +108,10 @@ async function sendViaCloudflareMail(env, opts) {
       personalizations: [{ to: [{ email: to, name: toName || to }] }],
       from: { email: fromEmail, name: fromName },
       subject: subject,
-      content: [{ type: "text/html", value: html }]
+      content: [
+        { type: "text/plain", value: textBody },
+        { type: "text/html", value: html }
+      ]
     };
     const mcRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
       method: "POST",
@@ -120,7 +135,7 @@ async function sendViaCloudflareMail(env, opts) {
       const gasRes = await fetch(env.GAS_DASHBOARD_URL, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "send_email", to, subject, html })
+        body: JSON.stringify({ action: "send_email", to, subject, html, text: textBody })
       });
       if (gasRes.ok) {
         const msgId = `gas_${Date.now()}`;
@@ -236,14 +251,14 @@ export async function queueEmail(env, opts) {
  * Send immediately without queueing.
  * Called by the queue processor and as direct fallback.
  */
-export async function sendEmailDirect(env, { to, toName, subject, html, emailLogId }) {
+export async function sendEmailDirect(env, { to, toName, subject, html, text, emailLogId }) {
   if (env.ENABLE_EMAIL === "false") {
     staticLog.info("Email disabled by ENABLE_EMAIL flag", { to });
     await updateEmailLog(env, emailLogId, "disabled", null, null);
     return false;
   }
 
-  const result = await sendViaCloudflareMail(env, { to, toName, subject, html });
+  const result = await sendViaCloudflareMail(env, { to, toName, subject, html, text });
 
   if (result.success) {
     await updateEmailLog(env, emailLogId, "sent", null, result.messageId);
@@ -272,14 +287,14 @@ export async function processEmailBatch(batch, env) {
 
 // ─── Convenience Wrappers ─────────────────────────────────────────────────────
 
-export async function sendOTPEmail(env, { to, name, otp, userId, purpose = "Account Unlock Verification" }) {
+export async function sendOTPEmail(env, { to, name, otp, userId, purpose = "Account Unlock" }) {
   const tmpl = otpTemplate({ name, otp, userId, purpose });
   const emailLogId = await logEmailIntent(env, {
     to, toName: name, userId, subject: tmpl.subject,
     templateName: "otp", priority: 1
   });
   return sendEmailDirect(env, {
-    to, toName: name, subject: tmpl.subject, html: tmpl.html, emailLogId
+    to, toName: name, subject: tmpl.subject, html: tmpl.html, text: tmpl.text, emailLogId
   });
 }
 
@@ -290,7 +305,7 @@ export async function sendPasswordResetEmail(env, { to, name, otp, userId }) {
     templateName: "password_reset", priority: 1
   });
   return sendEmailDirect(env, {
-    to, toName: name, subject: tmpl.subject, html: tmpl.html, emailLogId
+    to, toName: name, subject: tmpl.subject, html: tmpl.html, text: tmpl.text, emailLogId
   });
 }
 
