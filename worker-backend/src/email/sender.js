@@ -376,12 +376,12 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
           : Promise.resolve(null),
 
         // ALL approvers for this expense (L1, L2, L3... every level)
-        // Join approvals → users to get mail_id for each approver_id
+        // approvals.approver_id stores numeric users.id (NOT users.user_id string)
         (expNumId)
           ? env.DB.prepare(
               `SELECT DISTINCT u.mail_id, u.name, a.level_number
                FROM approvals a
-               INNER JOIN users u ON u.user_id = a.approver_id
+               INNER JOIN users u ON u.id = CAST(a.approver_id AS INTEGER)
                WHERE a.expense_id = ?
                  AND u.mail_id IS NOT NULL AND u.mail_id != ''
                ORDER BY a.level_number ASC`

@@ -565,6 +565,16 @@ export default {
               (expense.other_expense_amount || 0) +
               (expense.local_purchase_amount || 0);
 
+            // Format: dd-mmm-yy HH:mm:ss (e.g. 06-Aug-26 00:20:02)
+            const _now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+            const _dd  = String(_now.getDate()).padStart(2, "0");
+            const _mmm = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][_now.getMonth()];
+            const _yy  = String(_now.getFullYear()).slice(-2);
+            const _hh  = String(_now.getHours()).padStart(2, "0");
+            const _min = String(_now.getMinutes()).padStart(2, "0");
+            const _ss  = String(_now.getSeconds()).padStart(2, "0");
+            const rejectedAt = `${_dd}-${_mmm}-${_yy} ${_hh}:${_min}:${_ss}`;
+
             await sendExpenseStatusEmail(env, {
               to: employee.mail_id,
               name: employee.name,
@@ -578,7 +588,7 @@ export default {
               approverName: user.name,
               approvedBy: user.name,
               rejectionReason: comments,
-              rejectedAt: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST",
+              rejectedAt,
             });
           } catch (emailErr) {
             staticLog.error("Post-reject email failed", { error: emailErr.message });

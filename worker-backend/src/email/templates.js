@@ -51,13 +51,18 @@ const emailWrapper = (content, previewText = "") => `<!DOCTYPE html>
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="background-color:#f8fafc;padding:16px 28px;text-align:center;border-top:1px solid #e2e8f0;">
-              <p style="margin:0 0 4px 0;color:#64748b;font-size:12px;font-weight:600;">
-                Cyrix HealthCare Private Limited
-              </p>
-              <p style="margin:0;color:#94a3b8;font-size:11px;">
-                This is an automated message from Cyrix Field Connect system.
-              </p>
+            <td style="background-color:#0f172a;padding:18px 28px;text-align:center;border-top:3px solid #2563eb;">
+              <!-- Logo badge -->
+              <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto 10px;">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:8px;padding:8px 16px;">
+                    <span style="color:#ffffff;font-size:13px;font-weight:800;letter-spacing:1px;">&#x2605; CYRIX</span>
+                    <span style="color:#93c5fd;font-size:13px;font-weight:400;letter-spacing:0.5px;"> Field Connect</span>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 4px 0;color:#94a3b8;font-size:12px;font-weight:600;">Cyrix HealthCare Private Limited</p>
+              <p style="margin:0;color:#64748b;font-size:11px;">This is an automated notification. Please do not reply to this email.</p>
             </td>
           </tr>
         </table>
@@ -322,7 +327,7 @@ export function expenseRejectedTemplate({
     <p style="margin:0 0 6px 0;font-size:15px;color:#1e293b;line-height:1.6;">Dear <strong>${employeeName}</strong>,</p>
     <p style="margin:0 0 22px 0;font-size:13px;color:#475569;line-height:1.6;">
       Your expense claim <strong>${expenseCode}</strong> has been reviewed and rejected by
-      <strong>${approverName || "your reporting manager"}${approverDesig ? `, ${approverDesig}` : ""}</strong>.
+      <strong>${approverName || "your reporting manager"}</strong>.
       The complete details of the rejected claim are provided below for your reference.
     </p>
 
@@ -400,9 +405,9 @@ export function expenseRejectedTemplate({
     <div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:14px 18px;margin-bottom:24px;">
       <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px;">ACTION REQUIRED</div>
       <div style="font-size:13px;color:#78350f;line-height:1.6;">
-        Please review the rejection reason carefully, make the necessary corrections, and resubmit your expense claim through the
-        <a href="https://indrae.in" style="color:#1d4ed8;font-weight:600;">Field Connect portal</a>.
-        If you believe this rejection was made in error, please reach out to ${approverName || "your manager"} directly.
+        Please review the rejection reason carefully and contact
+        <strong>${approverName || "your reporting manager"}</strong> for further guidance or corrections.
+        If you have any questions, please reach out to your manager or the HR/Accounts team directly.
       </div>
     </div>
 
