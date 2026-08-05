@@ -15,87 +15,190 @@ const SUCCESS_COLOR = "#27ae60";
 const DANGER_COLOR = "#e74c3c";
 const LIGHT_BG = "#f5f7fa";
 
-const emailWrapper = (content, previewText = "") => `
-<!DOCTYPE html>
-<html lang="en">
+const emailWrapper = (content, previewText = "") => `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="x-apple-disable-message-reformatting"/>
-  <title>Cyrix Field Connect</title>
-  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  <meta name="format-detection" content="telephone=no,address=no,email=no,date=no,url=no"/>
+  <title>Cyrix HealthCare Private Limited</title>
 </head>
-<body style="margin:0;padding:0;background:${LIGHT_BG};font-family:Arial,sans-serif;">
-  ${previewText ? `<div style="display:none;max-height:0;overflow:hidden;">${previewText}</div>` : ""}
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:${LIGHT_BG};padding:24px 0;">
-    <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        <!-- Header -->
-        <tr>
-          <td style="background:${BRAND_COLOR};padding:20px 32px;text-align:left;">
-            <span style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.5px;">⚡ Cyrix Field Connect</span>
-          </td>
-        </tr>
-        <!-- Content -->
-        <tr><td style="padding:32px;">
-          ${content}
-        </td></tr>
-        <!-- Footer -->
-        <tr>
-          <td style="background:#f0f0f0;padding:16px 32px;text-align:center;border-top:1px solid #e0e0e0;">
-            <p style="margin:0;color:#888;font-size:12px;">
-              This is an automated message from Cyrix Field Connect.<br/>
-              If you did not request this, please ignore this email.
-            </p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;">
+  ${previewText ? `<div style="display:none;font-size:1px;color:#f1f5f9;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${previewText}</div>` : ""}
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#f1f5f9;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#0f172a;padding:24px 32px;text-align:left;border-bottom:3px solid #0284c7;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td>
+                    <div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.5px;line-height:1.2;">CYRIX HEALTHCARE PRIVATE LIMITED</div>
+                    <div style="color:#94a3b8;font-size:12px;margin-top:4px;font-weight:500;">Enterprise Field Operations & Authentication Portal</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Content Body -->
+          <tr>
+            <td style="padding:32px;background-color:#ffffff;">
+              ${content}
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #e2e8f0;">
+              <p style="margin:0 0 6px 0;color:#64748b;font-size:12px;font-weight:600;">
+                Cyrix HealthCare Private Limited
+              </p>
+              <p style="margin:0 0 8px 0;color:#94a3b8;font-size:11px;line-height:1.4;">
+                This is an automated system notification. Please do not reply to this email.<br/>
+                For support inquiries, contact your system administrator or support team.
+              </p>
+              <p style="margin:0;color:#cbd5e1;font-size:10px;">
+                &copy; ${new Date().getFullYear()} Cyrix HealthCare Pvt. Ltd. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
   </table>
 </body>
 </html>`;
 
 // ─── Template 1: OTP ─────────────────────────────────────────────────────────
 
-export function otpTemplate({ name, otp, expiryMinutes = 10 }) {
+export function otpTemplate({ name, otp, userId, purpose = "Account Unlock Verification", expiryMinutes = 10 }) {
   const content = `
-    <h2 style="margin:0 0 8px;color:${BRAND_COLOR};">Your One-Time Password</h2>
-    <p style="color:#555;margin:0 0 24px;">Hello ${name || "there"},</p>
-    <p style="color:#555;margin:0 0 16px;">Your OTP for Cyrix Field Connect login is:</p>
-    <div style="text-align:center;margin:24px 0;">
-      <div style="display:inline-block;background:${LIGHT_BG};border:2px solid ${ACCENT_COLOR};border-radius:8px;padding:16px 40px;">
-        <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:${BRAND_COLOR};">${otp}</span>
+    <div style="margin-bottom:20px;">
+      <h2 style="margin:0 0 6px 0;color:#0f172a;font-size:20px;font-weight:700;">Security Verification Code</h2>
+      <p style="margin:0;color:#64748b;font-size:14px;">Use the verification code below to complete your authentication request.</p>
+    </div>
+
+    <!-- Recipient & Details Table -->
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:24px;">
+      <tr>
+        <td style="font-size:13px;color:#334155;line-height:1.7;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+              <td width="140" style="color:#64748b;font-weight:600;">Recipient Name:</td>
+              <td style="color:#0f172a;font-weight:600;">${name || "User"}</td>
+            </tr>
+            ${userId ? `
+            <tr>
+              <td style="color:#64748b;font-weight:600;">User / Employee ID:</td>
+              <td style="color:#0f172a;font-weight:600;">${userId}</td>
+            </tr>` : ""}
+            <tr>
+              <td style="color:#64748b;font-weight:600;">Request Type:</td>
+              <td style="color:#0f172a;font-weight:600;">${purpose}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-weight:600;">Issued At:</td>
+              <td style="color:#0f172a;">${new Date().toUTCString()}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color:#334155;font-size:14px;margin:0 0 16px 0;line-height:1.5;">
+      Hello <strong>${name || "User"}</strong>,<br/>
+      Your official One-Time Password (OTP) for account verification is:
+    </p>
+
+    <!-- OTP Code Display Card -->
+    <div style="text-align:center;margin:28px 0;">
+      <div style="display:inline-block;background-color:#f1f5f9;border:2px solid #0284c7;border-radius:8px;padding:16px 36px;">
+        <span style="font-family:'Courier New', Courier, monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:#0f172a;">${otp}</span>
+      </div>
+      <div style="margin-top:10px;color:#475569;font-size:12px;font-weight:600;">
+        This code is valid for ${expiryMinutes} minutes.
       </div>
     </div>
-    <p style="color:#e74c3c;font-weight:bold;text-align:center;margin:0 0 24px;">
-      ⏰ This OTP expires in ${expiryMinutes} minutes.
-    </p>
-    <p style="color:#555;font-size:13px;">Never share this OTP with anyone. Cyrix support will never ask for your OTP.</p>
+
+    <!-- Security Instructions -->
+    <div style="background-color:#fffbe0;border-left:4px solid #d97706;padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:24px;">
+      <p style="margin:0;color:#92400e;font-size:12px;line-height:1.5;">
+        <strong>Security Notice:</strong> Do not share this OTP with anyone. Cyrix support or IT personnel will never request your verification code or password. If you did not initiate this request, please contact IT Security immediately.
+      </p>
+    </div>
   `;
+
   return {
-    subject: `${otp} — Your OTP for Cyrix Field Connect`,
-    html: emailWrapper(content, `Your OTP is ${otp}`),
+    subject: `Security Verification Code: ${purpose} — Cyrix HealthCare`,
+    html: emailWrapper(content, `Verification code: ${otp}`),
   };
 }
 
 // ─── Template 2: Password Reset ───────────────────────────────────────────────
 
-export function passwordResetTemplate({ name, otp }) {
+export function passwordResetTemplate({ name, otp, userId, expiryMinutes = 10 }) {
   const content = `
-    <h2 style="margin:0 0 8px;color:${BRAND_COLOR};">Password Reset Request</h2>
-    <p style="color:#555;margin:0 0 16px;">Hello ${name || "there"},</p>
-    <p style="color:#555;margin:0 0 16px;">We received a request to reset your password. Use the OTP below:</p>
-    <div style="text-align:center;margin:24px 0;">
-      <div style="display:inline-block;background:${LIGHT_BG};border:2px solid ${DANGER_COLOR};border-radius:8px;padding:16px 40px;">
-        <span style="font-size:36px;font-weight:bold;letter-spacing:8px;color:${DANGER_COLOR};">${otp}</span>
+    <div style="margin-bottom:20px;">
+      <h2 style="margin:0 0 6px 0;color:#0f172a;font-size:20px;font-weight:700;">Password Reset Authorization</h2>
+      <p style="margin:0;color:#64748b;font-size:14px;">We received a request to reset your Cyrix Field Connect account password.</p>
+    </div>
+
+    <!-- Recipient & Details Table -->
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;margin-bottom:24px;">
+      <tr>
+        <td style="font-size:13px;color:#334155;line-height:1.7;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+              <td width="140" style="color:#64748b;font-weight:600;">Recipient Name:</td>
+              <td style="color:#0f172a;font-weight:600;">${name || "User"}</td>
+            </tr>
+            ${userId ? `
+            <tr>
+              <td style="color:#64748b;font-weight:600;">User / Employee ID:</td>
+              <td style="color:#0f172a;font-weight:600;">${userId}</td>
+            </tr>` : ""}
+            <tr>
+              <td style="color:#64748b;font-weight:600;">Request Type:</td>
+              <td style="color:#0f172a;font-weight:600;">Password Reset Request</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-weight:600;">Issued At:</td>
+              <td style="color:#0f172a;">${new Date().toUTCString()}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="color:#334155;font-size:14px;margin:0 0 16px 0;line-height:1.5;">
+      Hello <strong>${name || "User"}</strong>,<br/>
+      Use the official verification code below to authorize your password reset:
+    </p>
+
+    <!-- OTP Code Display Card -->
+    <div style="text-align:center;margin:28px 0;">
+      <div style="display:inline-block;background-color:#fef2f2;border:2px solid #ef4444;border-radius:8px;padding:16px 36px;">
+        <span style="font-family:'Courier New', Courier, monospace;font-size:34px;font-weight:700;letter-spacing:10px;color:#991b1b;">${otp}</span>
+      </div>
+      <div style="margin-top:10px;color:#475569;font-size:12px;font-weight:600;">
+        This code is valid for ${expiryMinutes} minutes.
       </div>
     </div>
-    <p style="color:#e74c3c;font-weight:bold;text-align:center;">⏰ This OTP expires in 10 minutes.</p>
-    <p style="color:#555;font-size:13px;">If you did not request a password reset, your account may be at risk. Contact your administrator immediately.</p>
+
+    <!-- Security Warning -->
+    <div style="background-color:#fef2f2;border-left:4px solid #ef4444;padding:12px 16px;border-radius:0 6px 6px 0;margin-bottom:24px;">
+      <p style="margin:0;color:#991b1b;font-size:12px;line-height:1.5;">
+        <strong>Security Warning:</strong> If you did not request a password reset, someone may be attempting to access your account. Please notify your IT Security administrator immediately.
+      </p>
+    </div>
   `;
+
   return {
-    subject: "Password Reset — Cyrix Field Connect",
-    html: emailWrapper(content, "Reset your Cyrix Field Connect password"),
+    subject: `Password Reset Verification Code — Cyrix HealthCare`,
+    html: emailWrapper(content, `Password reset authorization code: ${otp}`),
   };
 }
 

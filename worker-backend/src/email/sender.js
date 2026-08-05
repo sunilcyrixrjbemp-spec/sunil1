@@ -69,6 +69,10 @@ async function sendViaCloudflareMail(env, opts) {
         `From: ${fromName} <${fromEmail}>`,
         `To: ${toHeader}`,
         `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
+        `X-Auto-Response-Suppress: All`,
+        `X-Report-Abuse: Please report abuse to abuse@indrae.in`,
+        `X-Entity-ID: Cyrix-HealthCare-FieldConnect`,
+        `Precedence: bulk`,
         `Content-Type: text/html; charset=UTF-8`,
         `Content-Transfer-Encoding: 7bit`,
         ``,
@@ -268,8 +272,8 @@ export async function processEmailBatch(batch, env) {
 
 // ─── Convenience Wrappers ─────────────────────────────────────────────────────
 
-export async function sendOTPEmail(env, { to, name, otp, userId }) {
-  const tmpl = otpTemplate({ name, otp });
+export async function sendOTPEmail(env, { to, name, otp, userId, purpose = "Account Unlock Verification" }) {
+  const tmpl = otpTemplate({ name, otp, userId, purpose });
   const emailLogId = await logEmailIntent(env, {
     to, toName: name, userId, subject: tmpl.subject,
     templateName: "otp", priority: 1
@@ -280,7 +284,7 @@ export async function sendOTPEmail(env, { to, name, otp, userId }) {
 }
 
 export async function sendPasswordResetEmail(env, { to, name, otp, userId }) {
-  const tmpl = passwordResetTemplate({ name, otp });
+  const tmpl = passwordResetTemplate({ name, otp, userId });
   const emailLogId = await logEmailIntent(env, {
     to, toName: name, userId, subject: tmpl.subject,
     templateName: "password_reset", priority: 1

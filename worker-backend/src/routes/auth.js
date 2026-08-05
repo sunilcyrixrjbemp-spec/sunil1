@@ -411,10 +411,12 @@ export async function handleForgotPassword(request, env) {
       await env.OTPS_KV.put(`otp:${user_id}:forgot_password`, otp, { expirationTtl: 600 });
     }
 
-    try {
-      await sendOTPEmail(env, { to: email, name: user.name, otp, userId: user_id });
-    } catch (emailErr) {
-      console.error("[ForgotPassword] Email failed:", emailErr.message);
+    const emailPromise = sendOTPEmail(env, {
+      to: email, name: user.name, otp, userId: user_id, purpose: "Password Reset Request"
+    }).catch(emailErr => console.error("[ForgotPassword] Email dispatch error:", emailErr.message));
+
+    if (env.ctx && typeof env.ctx.waitUntil === "function") {
+      env.ctx.waitUntil(emailPromise);
     }
 
     const [namePart, domainPart] = email.split("@");
@@ -546,34 +548,38 @@ export async function handleUnlockAccount(request, env) {
 
     if (!user) return jsonResponse({ error: "No user found with that User ID" }, 404);
 
-    if (user.user_status !== "locked")
-      return jsonResponse({ error: "Account is not locked. Please contact admin if you are having issues." }, 400);
+    if (user.user_status && user.user_status !== "locked")
+      return jsonResponse({ error: "Account is active and not locked. You can log in directly.", is_already_active: true }, 400);
 
-    // Verify DOJ + DOB
-    const dojInput  = String(date_of_joining).trim().replace(/\//g, "-");
-    const dojStored = user.date_of_joining ? String(user.date_of_joining).trim() : "";
-    const dojMatch  = dojInput === dojStored || dojInput.split("-").reverse().join("-") === dojStored;
+    // Verify DOJ + DOB with date normalization
+    const dojNormInput  = normalizeDateStr(date_of_joining);
+    const dojNormStored = normalizeDateStr(user.date_of_joining);
+    const dojMatch      = dojNormInput === dojNormStored || dojNormInput.split("-").reverse().join("-") === dojNormStored;
 
-    const dobInput  = String(date_of_birth).trim().replace(/\//g, "-");
-    const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
-    const dobMatch  = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
+    const dobNormInput  = normalizeDateStr(date_of_birth);
+    const dobNormStored = normalizeDateStr(user.date_of_birth);
+    const dobMatch      = dobNormInput === dobNormStored || dobNormInput.split("-").reverse().join("-") === dobNormStored;
 
     if (!dojMatch || !dobMatch)
       return jsonResponse({ error: "Date of joining or date of birth does not match our records" }, 400);
+
+    const email = (user.mail_id || "").trim();
+    if (!email) {
+      return jsonResponse({ error: "No registered email address found for this user. Please contact admin." }, 400);
+    }
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     if (env.OTPS_KV) {
       await env.OTPS_KV.put(`otp:${user_id}:unlock_account`, otp, { expirationTtl: 600 });
     }
 
-    // ✅ Send via Cloudflare MailChannels (NOT Gmail/GAS)
-    const email = user.mail_id || "";
-    if (email) {
-      try {
-        await sendOTPEmail(env, { to: email, name: user.name, otp, userId: user_id });
-      } catch (emailErr) {
-        console.error("[UnlockAccount] Email failed:", emailErr.message);
-      }
+    // Non-blocking async email dispatch (Instant HTTP Response)
+    const emailPromise = sendOTPEmail(env, {
+      to: email, name: user.name, otp, userId: user_id, purpose: "Account Unlock Authorization"
+    }).catch(emailErr => console.error("[UnlockAccount] Email dispatch error:", emailErr.message));
+
+    if (env.ctx && typeof env.ctx.waitUntil === "function") {
+      env.ctx.waitUntil(emailPromise);
     }
 
     const [namePart, domainPart] = email.split("@");
