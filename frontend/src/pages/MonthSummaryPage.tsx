@@ -311,8 +311,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   const isCallOrPmsReport = (label: string = "", billType: string = ""): boolean => {
     const l = (label || "").toLowerCase();
     const b = (billType || "").toLowerCase();
-    return l.includes("pms") || l.includes("call") || l.includes("service report") || l.includes("calibration") ||
-           b.includes("pms") || b.includes("call") || b.includes("service_report") || b.includes("calibration");
+    if (l.includes("hotel") || l.includes("purchase") || l.includes("ticket") || l.includes("receipt") || l.includes("bill") || l.includes("fare") || l.includes("travel")) {
+      return false;
+    }
+    return l.includes("pms report") || l.includes("service report sheet") || l.includes("breakdown call report") ||
+           b.includes("pms_report") || b.includes("service_report_sheet") || b === "service_report";
   };
 
   // Collect ALL financial bill attachments (excluding Call Service Reports & PMS Reports)
@@ -364,7 +367,14 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         { key: "attachment_url", label: "Expense Bill Attachment" },
         { key: "file_url", label: "Expense Bill Attachment" },
         { key: "bill_copy", label: "Expense Bill Copy" },
-        { key: "receipt", label: "Bill Receipt" }
+        { key: "receipt", label: "Bill Receipt" },
+        { key: "ticket_attachment", label: "Train / Bus Ticket" },
+        { key: "main_bill_file", label: "Travel Ticket Receipt" },
+        { key: "sub_bill_file", label: "Sub-connection Ticket" },
+        { key: "hotel_bill_file", label: "Hotel Bill" },
+        { key: "lp_bill_file", label: "Local Purchase Bill" },
+        { key: "oth_bill_file", label: "Other Expense Bill" },
+        { key: "other_attachment", label: "Other Bill Attachment" }
       ];
 
       candidateFields.forEach(field => {
@@ -926,9 +936,13 @@ export default function MonthSummaryPage() {
         });
 
         claims.forEach((claim: any) => {
+          const claimDate = claim.date || "";
+
           const cAtts = [
             ...(Array.isArray(claim.attachments) ? claim.attachments : []),
-            ...(Array.isArray(claim.attachments_detailed) ? claim.attachments_detailed : [])
+            ...(Array.isArray(claim.attachments_detailed) ? claim.attachments_detailed : []),
+            ...(Array.isArray(claim.attachment_urls) ? claim.attachment_urls : []),
+            ...(typeof claim.attachments === "string" ? (() => { try { return JSON.parse(claim.attachments); } catch { return [claim.attachments]; } })() : [])
           ];
           cAtts.forEach((att: any) => {
             const url = typeof att === "string" ? att : (att.file_url || att.url);
@@ -936,8 +950,55 @@ export default function MonthSummaryPage() {
               rawAttachmentsMap.set(url, {
                 file_url: url,
                 url: url,
-                date: claim.date || "",
-                bill_type: (typeof att === "object" && att.bill_type) ? att.bill_type : "Bill Attachment"
+                date: claimDate,
+                bill_type: (typeof att === "object" && (att.bill_type || att.billType)) ? (att.bill_type || att.billType) : "Bill Attachment"
+              });
+            }
+          });
+
+          (claim.legs || []).forEach((leg: any) => {
+            const legCandidateFields = [
+              { key: "hotel_receipt", label: "Hotel Bill Receipt" },
+              { key: "local_purchase_bill", label: "Local Purchase Bill" },
+              { key: "other_bill", label: "Other Expense Bill" },
+              { key: "receipt_url", label: "Travel / Bill Receipt" },
+              { key: "bill_url", label: "Travel Ticket" },
+              { key: "attachment_url", label: "Expense Bill Attachment" },
+              { key: "file_url", label: "Expense Bill Attachment" },
+              { key: "bill_copy", label: "Expense Bill Copy" },
+              { key: "receipt", label: "Bill Receipt" },
+              { key: "ticket_attachment", label: "Train / Bus Ticket" },
+              { key: "main_bill_file", label: "Travel Ticket Receipt" },
+              { key: "sub_bill_file", label: "Sub-connection Ticket" },
+              { key: "hotel_bill_file", label: "Hotel Bill" },
+              { key: "lp_bill_file", label: "Local Purchase Bill" },
+              { key: "oth_bill_file", label: "Other Expense Bill" },
+              { key: "other_attachment", label: "Other Bill Attachment" }
+            ];
+
+            legCandidateFields.forEach(field => {
+              const u = leg[field.key];
+              if (u && typeof u === "string" && u.trim() && !rawAttachmentsMap.has(u)) {
+                rawAttachmentsMap.set(u, {
+                  file_url: u,
+                  url: u,
+                  date: claimDate,
+                  bill_type: field.label
+                });
+              }
+            });
+
+            if (Array.isArray(leg.attachments)) {
+              leg.attachments.forEach((aItem: any) => {
+                const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
+                if (aUrl && !rawAttachmentsMap.has(aUrl)) {
+                  rawAttachmentsMap.set(aUrl, {
+                    file_url: aUrl,
+                    url: aUrl,
+                    date: claimDate,
+                    bill_type: (typeof aItem === "object" && aItem.bill_type) ? aItem.bill_type : "Bill Attachment"
+                  });
+                }
               });
             }
           });
@@ -965,6 +1026,13 @@ export default function MonthSummaryPage() {
             if (leg.bill_url) leg.bill_url = await convertImageUrlToBase64(leg.bill_url);
             if (leg.attachment_url) leg.attachment_url = await convertImageUrlToBase64(leg.attachment_url);
             if (leg.file_url) leg.file_url = await convertImageUrlToBase64(leg.file_url);
+            if (leg.ticket_attachment) leg.ticket_attachment = await convertImageUrlToBase64(leg.ticket_attachment);
+            if (leg.main_bill_file) leg.main_bill_file = await convertImageUrlToBase64(leg.main_bill_file);
+            if (leg.sub_bill_file) leg.sub_bill_file = await convertImageUrlToBase64(leg.sub_bill_file);
+            if (leg.hotel_bill_file) leg.hotel_bill_file = await convertImageUrlToBase64(leg.hotel_bill_file);
+            if (leg.lp_bill_file) leg.lp_bill_file = await convertImageUrlToBase64(leg.lp_bill_file);
+            if (leg.oth_bill_file) leg.oth_bill_file = await convertImageUrlToBase64(leg.oth_bill_file);
+            if (leg.other_attachment) leg.other_attachment = await convertImageUrlToBase64(leg.other_attachment);
           }
         }
 
