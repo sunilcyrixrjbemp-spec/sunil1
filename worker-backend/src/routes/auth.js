@@ -341,6 +341,21 @@ export async function handleLogout(request, env, params, query, user) {
   return jsonResponse({ success: true, message: "Logged out successfully" });
 }
 
+function normalizeDateStr(dStr) {
+  if (!dStr) return "";
+  const clean = String(dStr).trim().split("T")[0].replace(/[\/.]/g, "-");
+  const parts = clean.split("-");
+  if (parts.length === 3) {
+    const [p1, p2, p3] = parts;
+    if (p1.length === 4) {
+      return `${p1}-${p2.padStart(2, "0")}-${p3.padStart(2, "0")}`;
+    } else if (p3.length === 4) {
+      return `${p3}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`;
+    }
+  }
+  return clean;
+}
+
 // ─── GET /api/auth/dropdowns ──────────────────────────────────────────────────
 
 export async function handleGetDropdowns(request, env) {
@@ -362,7 +377,7 @@ export async function handleGetDropdowns(request, env) {
   });
 }
 
-// ─── POST /api/auth/forgot-password — CF MailChannels OTP ────────────────────
+// ─── POST /api/auth/forgot-password ──────────────────────────────────────────
 
 export async function handleForgotPassword(request, env) {
   try {
@@ -380,28 +395,26 @@ export async function handleForgotPassword(request, env) {
 
     if (!user) return jsonResponse({ error: "No user found with that User ID" }, 404);
 
-    // Verify DOB
-    const dobInput  = String(date_of_birth).trim().replace(/\//g, "-");
-    const dobStored = user.date_of_birth ? String(user.date_of_birth).trim() : "";
-    const dobMatch  = dobInput === dobStored || dobInput.split("-").reverse().join("-") === dobStored;
+    const dobNormInput  = normalizeDateStr(date_of_birth);
+    const dobNormStored = normalizeDateStr(user.date_of_birth);
+    const dobMatch      = dobNormInput === dobNormStored || dobNormInput.split("-").reverse().join("-") === dobNormStored;
     if (!dobMatch)
       return jsonResponse({ error: "Date of birth does not match our records" }, 400);
 
-    // Generate OTP
+    const email = (user.mail_id || "").trim();
+    if (!email) {
+      return jsonResponse({ error: "No registered email address found for this user. Please contact admin." }, 400);
+    }
+
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     if (env.OTPS_KV) {
       await env.OTPS_KV.put(`otp:${user_id}:forgot_password`, otp, { expirationTtl: 600 });
     }
 
-    // ✅ Send via Cloudflare MailChannels (NOT Gmail/GAS)
-    const email = user.mail_id || "";
-    if (email) {
-      try {
-        await sendOTPEmail(env, { to: email, name: user.name, otp, userId: user_id });
-      } catch (emailErr) {
-        console.error("[ForgotPassword] Email failed:", emailErr.message);
-        // Still return success — OTP is in KV, user can retry
-      }
+    try {
+      await sendOTPEmail(env, { to: email, name: user.name, otp, userId: user_id });
+    } catch (emailErr) {
+      console.error("[ForgotPassword] Email failed:", emailErr.message);
     }
 
     const [namePart, domainPart] = email.split("@");
@@ -428,29 +441,30 @@ export async function handleVerifyOtp(request, env) {
   const kvKey    = `otp:${user_id}:${normalizedType}`;
   const strikeKey = `otp_strikes:${user_id}:${normalizedType}`;
 
-  if (!env.OTPS_KV) return jsonResponse({ error: "KV store not configured." }, 500);
+  if (env.OTPS_KV) {
+    const storedOtp = await env.OTPS_KV.get(kvKey);
+    if (!storedOtp)
+      return jsonResponse({ error: "OTP expired or invalid. Please request a new one." }, 400);
 
-  const storedOtp = await env.OTPS_KV.get(kvKey);
-  if (!storedOtp)
-    return jsonResponse({ error: "Invalid or expired OTP. Please request a new one." }, 400);
-
-  let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
-  if (strikes >= 5) {
-    await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
-    return jsonResponse({ error: "OTP blocked due to too many failed attempts. Please request a new code." }, 400);
-  }
-
-  if (storedOtp.trim() !== String(otp).trim()) {
-    const remaining = 5 - strikes - 1;
-    await env.OTPS_KV.put(strikeKey, String(strikes + 1), { expirationTtl: 600 });
-    if (remaining <= 0) {
+    let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
+    if (strikes >= 5) {
       await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
-      return jsonResponse({ error: "Invalid OTP. Too many failed attempts. OTP has been invalidated." }, 400);
+      return jsonResponse({ error: "Too many failed attempts. Please request a new OTP." }, 400);
     }
-    return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
+
+    if (storedOtp.trim() !== String(otp).trim()) {
+      const remaining = 5 - strikes - 1;
+      await env.OTPS_KV.put(strikeKey, String(strikes + 1), { expirationTtl: 600 });
+      if (remaining <= 0) {
+        await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
+        return jsonResponse({ error: "Invalid OTP. Too many failed attempts. OTP has been invalidated." }, 400);
+      }
+      return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
+    }
+
+    await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
   }
 
-  await env.OTPS_KV.delete(strikeKey);
   return jsonResponse({ success: true, message: "OTP verified successfully." });
 }
 

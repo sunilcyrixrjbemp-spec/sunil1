@@ -58,7 +58,6 @@ async function sendViaCloudflareMail(env, opts) {
     try {
       const { EmailMessage } = await import("cloudflare:email");
 
-      // Build RFC 2822 MIME message (no external packages needed)
       const msgId   = `<${Date.now()}.${Math.random().toString(36).slice(2)}@indrae.in>`;
       const dateStr = new Date().toUTCString();
       const toHeader = toName ? `${toName} <${to}>` : to;
@@ -83,16 +82,56 @@ async function sendViaCloudflareMail(env, opts) {
       return { success: true, messageId: msgId };
 
     } catch (e) {
-      staticLog.error("CF Email Workers send failed", { to, error: e.message });
-      return { success: false, error: `CF Email Workers error: ${e.message}` };
+      staticLog.error("CF Email Workers send failed, attempting MailChannels fallback", { to, error: e.message });
     }
   }
 
-  // ── Fallback: No binding configured ──────────────────────────────────────
-  staticLog.error("EMAIL_SENDER binding not found — add [[send_email]] to wrangler.toml", { to });
+  // ── Secondary Fallback: MailChannels direct send (Free Cloudflare Integration) ──
+  try {
+    const mcPayload = {
+      personalizations: [{ to: [{ email: to, name: toName || to }] }],
+      from: { email: fromEmail, name: fromName },
+      subject: subject,
+      content: [{ type: "text/html", value: html }]
+    };
+    const mcRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(mcPayload)
+    });
+    if (mcRes.ok || mcRes.status === 202) {
+      const msgId = `mc_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      staticLog.info("Email sent via MailChannels API", { to, subject: subject.slice(0, 50), msgId });
+      return { success: true, messageId: msgId };
+    }
+    const mcErrText = await mcRes.text();
+    staticLog.warn("MailChannels API send non-200", { status: mcRes.status, text: mcErrText });
+  } catch (mcErr) {
+    staticLog.warn("MailChannels API exception", { error: mcErr.message });
+  }
+
+  // ── Tertiary Fallback: Google Apps Script Webhook ─────────────────────────
+  if (env.GAS_DASHBOARD_URL) {
+    try {
+      const gasRes = await fetch(env.GAS_DASHBOARD_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "send_email", to, subject, html })
+      });
+      if (gasRes.ok) {
+        const msgId = `gas_${Date.now()}`;
+        staticLog.info("Email sent via GAS Webhook fallback", { to, subject: subject.slice(0, 50) });
+        return { success: true, messageId: msgId };
+      }
+    } catch (gasErr) {
+      staticLog.warn("GAS Webhook send failed", { error: gasErr.message });
+    }
+  }
+
+  staticLog.error("All email providers failed", { to });
   return {
     success: false,
-    error: "EMAIL_SENDER binding not configured. Enable Email Routing in Cloudflare Dashboard and add [[send_email]] to wrangler.toml",
+    error: "All email delivery methods (CF Email Workers, MailChannels API, GAS Webhook) failed.",
   };
 }
 
@@ -231,17 +270,23 @@ export async function processEmailBatch(batch, env) {
 
 export async function sendOTPEmail(env, { to, name, otp, userId }) {
   const tmpl = otpTemplate({ name, otp });
-  return queueEmail(env, {
-    to, toName: name, userId, ...tmpl,
-    templateName: "otp", priority: 1, bypassRateLimit: true,
+  const emailLogId = await logEmailIntent(env, {
+    to, toName: name, userId, subject: tmpl.subject,
+    templateName: "otp", priority: 1
+  });
+  return sendEmailDirect(env, {
+    to, toName: name, subject: tmpl.subject, html: tmpl.html, emailLogId
   });
 }
 
 export async function sendPasswordResetEmail(env, { to, name, otp, userId }) {
   const tmpl = passwordResetTemplate({ name, otp });
-  return queueEmail(env, {
-    to, toName: name, userId, ...tmpl,
-    templateName: "password_reset", priority: 1, bypassRateLimit: true,
+  const emailLogId = await logEmailIntent(env, {
+    to, toName: name, userId, subject: tmpl.subject,
+    templateName: "password_reset", priority: 1
+  });
+  return sendEmailDirect(env, {
+    to, toName: name, subject: tmpl.subject, html: tmpl.html, emailLogId
   });
 }
 
