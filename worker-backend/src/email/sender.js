@@ -66,6 +66,10 @@ async function sendViaCloudflareMail(env, opts) {
       const toHeader = toName ? `${toName} <${to}>` : to;
       const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
+      // Base64 encode HTML body to avoid 998-character SMTP line length violations (causes Outlook Spam)
+      const b64Html = btoa(unescape(encodeURIComponent(html))).match(/.{1,76}/g).join("\r\n");
+      const b64Text = btoa(unescape(encodeURIComponent(textBody))).match(/.{1,76}/g).join("\r\n");
+
       // Only Base64 encode subject if it contains non-ASCII characters
       const hasNonAscii = /[^\x00-\x7F]/.test(subject);
       const formattedSubject = hasNonAscii
@@ -81,21 +85,24 @@ async function sendViaCloudflareMail(env, opts) {
         `Reply-To: ${fromName} <${replyTo}>`,
         ...(ccHeader ? [`Cc: ${ccHeader}`] : []),
         `Subject: ${formattedSubject}`,
+        `Organization: Cyrix HealthCare Private Limited`,
+        `X-Mailer: Cyrix FieldConnect Mail Engine`,
         `Auto-Submitted: auto-generated`,
         `X-Auto-Response-Suppress: All`,
+        `List-Unsubscribe: <mailto:${replyTo}?subject=unsubscribe>`,
         `Content-Type: multipart/alternative; boundary="${boundary}"`,
         ``,
         `--${boundary}`,
         `Content-Type: text/plain; charset=UTF-8`,
-        `Content-Transfer-Encoding: 7bit`,
+        `Content-Transfer-Encoding: base64`,
         ``,
-        textBody,
+        b64Text,
         ``,
         `--${boundary}`,
         `Content-Type: text/html; charset=UTF-8`,
-        `Content-Transfer-Encoding: 7bit`,
+        `Content-Transfer-Encoding: base64`,
         ``,
-        html,
+        b64Html,
         ``,
         `--${boundary}--`
       ];
