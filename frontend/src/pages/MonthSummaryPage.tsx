@@ -87,16 +87,49 @@ const convertPdfBlobToJpgBase64 = async (blob: Blob | ArrayBuffer): Promise<stri
     canvas.width = viewport.width;
 
     await page.render({ canvasContext: context, viewport }).promise;
-    return canvas.toDataURL("image/jpeg", 0.95);
+    return canvas.toDataURL("image/jpeg", 0.85);
   } catch (e) {
     console.warn("Failed to render PDF blob to JPG via pdf.js:", e);
     return "";
   }
 };
 
-const convertImageUrlToBase64 = async (url: string): Promise<string> => {
-  if (!url) return "";
+// Generate fallback placeholder canvas image when a bill fails to fetch or render
+const generatePlaceholderImage = (fileName = ""): string => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 800;
+  canvas.height = 600;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
+
+  ctx.fillStyle = "#64748b";
+  ctx.font = "bold 26px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("📄 Bill Attachment Not Available", canvas.width / 2, canvas.height / 2 - 40);
+
+  ctx.font = "16px Arial, sans-serif";
+  ctx.fillStyle = "#475569";
+  ctx.fillText(fileName || "Unable to load file attachment", canvas.width / 2, canvas.height / 2 + 15);
+
+  ctx.font = "14px Arial, sans-serif";
+  ctx.fillStyle = "#94a3b8";
+  ctx.fillText("(File may be restricted, deleted, or in an unsupported format)", canvas.width / 2, canvas.height / 2 + 50);
+
+  return canvas.toDataURL("image/jpeg", 0.85);
+};
+
+const convertImageUrlToBase64WithFallback = async (url: string, fileName = ""): Promise<string> => {
+  if (!url) return generatePlaceholderImage(fileName);
   if (url.startsWith("data:image/")) return url;
+
   try {
     const absUrl = getAbsoluteUrl(url);
     const cleanUrl = url.toLowerCase().split("?")[0];
@@ -108,7 +141,10 @@ const convertImageUrlToBase64 = async (url: string): Promise<string> => {
     }
 
     const response = await fetch(absUrl);
-    if (!response.ok) return absUrl;
+    if (!response.ok) {
+      console.warn(`HTTP ${response.status} for bill attachment: ${absUrl}`);
+      return generatePlaceholderImage(fileName);
+    }
 
     const contentType = (response.headers.get("content-type") || "").toLowerCase();
     const blob = await response.blob();
@@ -116,17 +152,23 @@ const convertImageUrlToBase64 = async (url: string): Promise<string> => {
     if (contentType.includes("pdf") || blob.type.includes("pdf")) {
       const jpgBase64 = await convertPdfBlobToJpgBase64(blob);
       if (jpgBase64 && jpgBase64.startsWith("data:image/")) return jpgBase64;
+      return generatePlaceholderImage(fileName);
     }
 
     return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onloadend = () => resolve((reader.result as string) || absUrl);
-      reader.onerror = () => resolve(absUrl);
+      reader.onloadend = () => resolve((reader.result as string) || generatePlaceholderImage(fileName));
+      reader.onerror = () => resolve(generatePlaceholderImage(fileName));
       reader.readAsDataURL(blob);
     });
-  } catch (e) {
-    return getAbsoluteUrl(url);
+  } catch (e: any) {
+    console.error(`Bill fetch failed: ${e?.message || e}`, url);
+    return generatePlaceholderImage(fileName);
   }
+};
+
+const convertImageUrlToBase64 = async (url: string, fileName = ""): Promise<string> => {
+  return convertImageUrlToBase64WithFallback(url, fileName);
 };
 
 const MONTHS = [
@@ -817,16 +859,53 @@ export default function MonthSummaryPage() {
     iDoc.write(html);
     iDoc.close();
 
-    // Wait for all embedded images / attachments to load
+    // Wait for all embedded images / attachments to load (with load, error, & 10s timeout handlers)
     await new Promise<void>((resolve) => {
       const imgs = Array.from(iDoc.getElementsByTagName("img"));
-      if (imgs.length === 0) { setTimeout(resolve, 500); return; }
-      let done = 0;
-      const check = () => { done++; if (done >= imgs.length) setTimeout(resolve, 500); };
+      if (imgs.length === 0) { setTimeout(resolve, 300); return; }
+      let loadedCount = 0;
+      let failedCount = 0;
+      let isResolved = false;
+
+      const finish = () => {
+        if (!isResolved) {
+          isResolved = true;
+          console.log(`📸 Starting canvas capture (${loadedCount} loaded, ${failedCount} failed)...`);
+          setTimeout(resolve, 300);
+        }
+      };
+
+      const check = () => {
+        if (loadedCount + failedCount >= imgs.length) {
+          finish();
+        }
+      };
+
       imgs.forEach((img) => {
-        if ((img as HTMLImageElement).complete) check();
-        else { img.onload = check; img.onerror = check; }
+        const imageEl = img as HTMLImageElement;
+        if (imageEl.complete) {
+          loadedCount++;
+          check();
+        } else {
+          imageEl.addEventListener("load", () => {
+            loadedCount++;
+            check();
+          });
+          imageEl.addEventListener("error", () => {
+            failedCount++;
+            console.warn(`⚠️ Image failed to load in PDF frame: ${imageEl.src.substring(0, 80)}`);
+            check();
+          });
+        }
       });
+
+      // 10 second fallback timeout per rendering run
+      setTimeout(() => {
+        if (!isResolved) {
+          console.warn("⏱️ Image loading timeout in PDF iframe. Proceeding to render canvas.");
+          finish();
+        }
+      }, 10000);
     });
 
     // Query ALL summary pages (Page 1 of N, Page 2 of N, Page 3 of N...) + ALL attachment pages (1 page per bill)
