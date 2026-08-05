@@ -126,7 +126,6 @@ export default function DashboardLayout() {
   if (!user) return <ProgressLoader message="Loading System..." fullPage />;
 
   const userRole = user.role || "Engineer";
-  const isAdmin = ["Admin", "admin", "Super Admin", "super_admin"].includes(userRole);
 
   let allowedWindows: string[] = ["home", "expense", "help", "profile"];
   try {
