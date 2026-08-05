@@ -76,7 +76,7 @@ const emailWrapper = (content, previewText = "") => `<!DOCTYPE html>
                 Cyrix HealthCare Private Limited
               </p>
               <p style="margin:0;color:#94a3b8;font-size:11px;" class="dm-label">
-                This is an automated notification. Please do not reply to this email.
+                This is an automated notification. For further support, contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;text-decoration:none;font-weight:600;">sunil.vishnoi@indrae.in</a>
               </p>
             </td>
           </tr>
@@ -112,7 +112,7 @@ export function otpTemplate({ name, otp, userId, purpose = "Account Unlock", exp
     </div>
 
     <p style="margin:20px 0 0 0;font-size:13px;color:#94a3b8;line-height:1.6;border-top:1px solid #e2e8f0;padding-top:16px;">
-      Do not share this code with anyone. If you did not make this request, please contact your system administrator immediately.
+      Do not share this code with anyone. If you did not make this request or need assistance, please contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;font-weight:600;">sunil.vishnoi@indrae.in</a> immediately.
     </p>
 
     <p style="margin:20px 0 0 0;font-size:14px;color:#1e293b;line-height:1.6;">
@@ -155,7 +155,7 @@ export function passwordResetTemplate({ name, otp, userId, expiryMinutes = 10 })
     </div>
 
     <p style="margin:20px 0 0 0;font-size:13px;color:#94a3b8;line-height:1.6;border-top:1px solid #e2e8f0;padding-top:16px;">
-      If you did not request a password reset, please ignore this email and contact IT Security immediately.
+      If you did not request a password reset, please ignore this email and contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#ea580c;font-weight:600;">sunil.vishnoi@indrae.in</a> immediately.
     </p>
 
     <p style="margin:20px 0 0 0;font-size:14px;color:#1e293b;line-height:1.6;">
@@ -226,7 +226,7 @@ export function expenseSubmittedTemplate({ employeeName, expenseCode, totalAmoun
       <tr><td style="padding:6px 0;"><strong style="color:${BRAND_COLOR};">Total Amount:</strong></td><td style="color:#333;font-weight:bold;">₹${(totalAmount || 0).toLocaleString("en-IN")}</td></tr>
       <tr><td style="padding:6px 0;"><strong style="color:${BRAND_COLOR};">Submitted At:</strong></td><td style="color:#333;">${submittedAt}</td></tr>
     </table>
-    <p style="color:#555;font-size:13px;">You will receive another email once your claim is approved or returned.</p>
+    <p style="color:#555;font-size:13px;">You will receive another email once your claim is approved or returned. For further support, contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;font-weight:600;">sunil.vishnoi@indrae.in</a>.</p>
   `;
   return {
     subject: `Expense Submitted: ${expenseCode} — ₹${(totalAmount || 0).toLocaleString("en-IN")}`,
@@ -247,7 +247,7 @@ export function expenseApprovedTemplate({ employeeName, expenseCode, totalAmount
       <tr><td style="padding:6px 0;"><strong>Approved By:</strong></td><td>${approverName}</td></tr>
       <tr><td style="padding:6px 0;"><strong>Approved At:</strong></td><td>${approvedAt}</td></tr>
     </table>
-    <p style="color:#555;font-size:13px;">Your reimbursement will be processed as per your company's payment cycle.</p>
+    <p style="color:#555;font-size:13px;">Your reimbursement will be processed as per your company's payment cycle. For further support, contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;font-weight:600;">sunil.vishnoi@indrae.in</a>.</p>
   `;
   return {
     subject: `✓ Approved: ${expenseCode} — ₹${(totalAmount || 0).toLocaleString("en-IN")}`,
@@ -409,8 +409,9 @@ export function expenseRejectedTemplate({
       <div class="dm-amber-title" style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px;">ACTION REQUIRED</div>
       <div class="dm-amber-text" style="font-size:13px;color:#78350f;line-height:1.6;">
         Please review the rejection reason carefully and contact
-        <strong class="dm-val">${approverName || "your reporting manager"}</strong> for further guidance or corrections.
-        If you have any questions, please reach out to your manager or the HR/Accounts team directly.
+        <strong class="dm-val">${approverName || "your reporting manager"}</strong> for further guidance.
+        For any questions or further support, please reach out to <strong>Sunil Vishnoi</strong> at
+        <a href="mailto:sunil.vishnoi@indrae.in" style="color:#1d4ed8;font-weight:700;text-decoration:underline;">sunil.vishnoi@indrae.in</a>.
       </div>
     </div>
 
