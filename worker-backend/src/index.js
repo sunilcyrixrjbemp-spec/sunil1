@@ -511,6 +511,61 @@ export default {
         log.warn("Slow request detected", { method, path: pathname, durationMs });
       }
 
+      // ── Post-rejection email hook ────────────────────────────────────────
+      // Intercept successful reject calls and fire email in background.
+      // approval.js is locked so we hook here instead.
+      const isRejectRoute = method === "POST" &&
+        (/\/api\/approvals?\/(-?\d+)\/reject$/.test(pathname));
+
+      if (isRejectRoute && response.status === 200 && user && env.ctx) {
+        env.ctx.waitUntil((async () => {
+          try {
+            const { sendExpenseStatusEmail } = await import("./email/sender.js");
+            const expenseId = parseInt(
+              (pathname.match(/\/api\/approvals?\/(-?\d+)\/reject$/) || [])[1], 10
+            );
+            // Only for standard expenses (positive id)
+            if (!expenseId || expenseId <= 0) return;
+
+            const expense = await env.DB.prepare(
+              "SELECT * FROM expenses WHERE id = ? LIMIT 1"
+            ).bind(expenseId).first();
+            if (!expense) return;
+
+            const employee = await env.DB.prepare(
+              "SELECT * FROM users WHERE id = ? LIMIT 1"
+            ).bind(expense.user_id).first();
+            if (!employee || !employee.mail_id) return;
+
+            // Parse body for rejection comments
+            let comments = "";
+            try {
+              const clonedReq = request.clone();
+              const body = await clonedReq.json();
+              comments = body?.comments || "";
+            } catch (_) {}
+
+            await sendExpenseStatusEmail(env, {
+              to: employee.mail_id,
+              name: employee.name,
+              userId: employee.user_id,
+              action: "rejected",
+              expenseCode: expense.expense_code || String(expenseId),
+              travelName: expense.travel_name || expense.name || "",
+              expenseMonth: expense.month || expense.expense_month || "",
+              claimedAmount: expense.total_amount || 0,
+              approverName: user.name,
+              approvedBy: user.name,
+              rejectionReason: comments,
+              rejectedAt: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST",
+            });
+          } catch (emailErr) {
+            staticLog.error("Post-reject email failed", { error: emailErr.message });
+          }
+        })());
+      }
+      // ── End rejection email hook ─────────────────────────────────────────
+
       return injectResponseHeaders(response, requestId, origin);
     } catch (error) {
       log.error("Unhandled route error", {
