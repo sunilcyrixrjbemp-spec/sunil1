@@ -51,18 +51,13 @@ const emailWrapper = (content, previewText = "") => `<!DOCTYPE html>
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="background-color:#0f172a;padding:18px 28px;text-align:center;border-top:3px solid #2563eb;">
-              <!-- Logo badge -->
-              <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 auto 10px;">
-                <tr>
-                  <td style="background:linear-gradient(135deg,#1d4ed8,#2563eb);border-radius:8px;padding:8px 16px;">
-                    <span style="color:#ffffff;font-size:13px;font-weight:800;letter-spacing:1px;">&#x2605; CYRIX</span>
-                    <span style="color:#93c5fd;font-size:13px;font-weight:400;letter-spacing:0.5px;"> Field Connect</span>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin:0 0 4px 0;color:#94a3b8;font-size:12px;font-weight:600;">Cyrix HealthCare Private Limited</p>
-              <p style="margin:0;color:#64748b;font-size:11px;">This is an automated notification. Please do not reply to this email.</p>
+            <td style="background-color:#f8fafc;padding:16px 28px;text-align:center;border-top:1px solid #e2e8f0;">
+              <p style="margin:0 0 4px 0;color:#64748b;font-size:12px;font-weight:600;">
+                Cyrix HealthCare Private Limited
+              </p>
+              <p style="margin:0;color:#94a3b8;font-size:11px;">
+                This is an automated notification. Please do not reply to this email.
+              </p>
             </td>
           </tr>
         </table>
@@ -275,8 +270,8 @@ export function expenseRejectedTemplate({
 
   const legRowsHtml = legs.length > 0
     ? legs.map((leg, idx) => {
-        const from    = dash(leg.from_district || leg.from_location);
-        const to      = dash(leg.to_district   || leg.to_location);
+        const from    = dash(leg.from_location || leg.from_district);
+        const to      = dash(leg.to_location   || leg.to_district);
         const purpose = dash(leg.visit_purpose || leg.activity_details);
         const mode    = dash(leg.travel_mode);
         const subMode = leg.sub_mode ? ` (${leg.sub_mode})` : "";
@@ -341,14 +336,12 @@ export function expenseRejectedTemplate({
       <tr style="background:#f8fafc;">
         <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;width:25%;">EXPENSE ID</td>
         <td style="padding:10px 16px;font-size:13px;color:#1e293b;font-weight:700;width:25%;">${expenseCode}</td>
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;width:25%;">PERIOD</td>
+        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;width:25%;">DATE OF EXPENSE</td>
         <td style="padding:10px 16px;font-size:13px;color:#1e293b;width:25%;">${expenseMonth || "—"}</td>
       </tr>
       <tr>
         <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">EMPLOYEE</td>
-        <td style="padding:10px 16px;font-size:13px;color:#1e293b;">${employeeName}${designation ? `, ${designation}` : ""}${employeeId ? ` — ${employeeId}` : ""}</td>
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">DESCRIPTION</td>
-        <td style="padding:10px 16px;font-size:13px;color:#1e293b;">${travelName || "—"}</td>
+        <td colspan="3" style="padding:10px 16px;font-size:13px;color:#1e293b;">${employeeName}${designation ? `, ${designation}` : ""}${employeeId ? ` — ${employeeId}` : ""}</td>
       </tr>
       <tr style="background:#f8fafc;">
         <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">TOTAL CLAIMED</td>

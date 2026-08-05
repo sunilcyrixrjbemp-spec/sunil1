@@ -575,6 +575,17 @@ export default {
             const _ss  = String(_now.getSeconds()).padStart(2, "0");
             const rejectedAt = `${_dd}-${_mmm}-${_yy} ${_hh}:${_min}:${_ss}`;
 
+            // Format expense date: dd-mmm-yyyy from created_at
+            let expenseDate = period;
+            if (expense.created_at) {
+              try {
+                const ed = new Date(expense.created_at);
+                const edDay = String(ed.getDate()).padStart(2, "0");
+                const edMon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][ed.getMonth()];
+                expenseDate = `${edDay}-${edMon}-${ed.getFullYear()}`;
+              } catch (_) {}
+            }
+
             await sendExpenseStatusEmail(env, {
               to: employee.mail_id,
               name: employee.name,
@@ -583,7 +594,7 @@ export default {
               expenseCode: expense.expense_code || `EXP-${expenseId}`,
               expenseNumericId: expenseId,
               travelName: expense.description || "",
-              expenseMonth: period,
+              expenseMonth: expenseDate,
               claimedAmount: totalAmt,
               approverName: user.name,
               approvedBy: user.name,
