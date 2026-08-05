@@ -343,13 +343,15 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
 
   // ── Parallel DB fetch: all queries fire at once ───────────────────────────
   const expId = data.expenseCode || data.expenseId;
+  const expNumId = data.expenseNumericId;   // numeric PK from expenses table
   const rejectorName = data.approverName || data.approvedBy;
 
   if (env.DB) {
     try {
-      // Round 1 — all parallel: legs (if expId), employee CC info, rejector designation
-      const [legRows, emp, appr] = await Promise.all([
-        (env.DB && expId)
+      // Round 1 — all parallel: legs, employee extra info, rejector designation, all approvers
+      const [legRows, emp, appr, approverRows] = await Promise.all([
+        // Leg-wise itinerary
+        (expId)
           ? env.DB.prepare(
               `SELECT leg_number, from_district, to_district, from_location, to_location,
                       travel_mode, sub_mode, distance_km, travel_amount, sub_km, sub_amount,
@@ -358,53 +360,62 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
                FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC, id ASC`
             ).bind(expId).all()
           : Promise.resolve({ results: [] }),
-        // Lookup employee by user_id (string e-code like "E2049")
+
+        // Employee's own designation (for display in email)
         userId
           ? env.DB.prepare(
-              `SELECT designation, manager, coordinator FROM users WHERE user_id = ? LIMIT 1`
+              `SELECT designation FROM users WHERE user_id = ? LIMIT 1`
             ).bind(userId).first()
           : Promise.resolve(null),
+
+        // Rejector's designation
         rejectorName
-          ? env.DB.prepare(`SELECT designation FROM users WHERE name = ? LIMIT 1`).bind(rejectorName).first()
+          ? env.DB.prepare(
+              `SELECT designation FROM users WHERE name = ? LIMIT 1`
+            ).bind(rejectorName).first()
           : Promise.resolve(null),
+
+        // ALL approvers for this expense (L1, L2, L3... every level)
+        // Join approvals → users to get mail_id for each approver_id
+        (expNumId)
+          ? env.DB.prepare(
+              `SELECT DISTINCT u.mail_id, u.name, a.level_number
+               FROM approvals a
+               INNER JOIN users u ON u.user_id = a.approver_id
+               WHERE a.expense_id = ?
+                 AND u.mail_id IS NOT NULL AND u.mail_id != ''
+               ORDER BY a.level_number ASC`
+            ).bind(expNumId).all()
+          : Promise.resolve({ results: [] }),
       ]);
 
       legs = legRows?.results || [];
       approverDesig = appr?.designation || null;
+      employeeExtra.designation = emp?.designation || "";
 
-      if (emp) {
-        employeeExtra.designation = emp.designation || "";
+      // Build CC list from all approvers
+      const approvers = approverRows?.results || [];
+      const ccEmails = approvers
+        .map(a => a.mail_id)
+        .filter(email => email && email !== to);
+      // Deduplicate
+      const uniqueCC = [...new Set(ccEmails)];
 
-        // Round 2: manager email + coordinator email — both parallel
-        // Lookup by exact name match in users table
-        const [mgr, coord] = await Promise.all([
-          emp.manager
-            ? env.DB.prepare(
-                `SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`
-              ).bind(emp.manager).first()
-            : Promise.resolve(null),
-          emp.coordinator
-            ? env.DB.prepare(
-                `SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`
-              ).bind(emp.coordinator).first()
-            : Promise.resolve(null),
-        ]);
+      // Set managerEmail as the first approver (for compatibility), rest go via ccList
+      if (uniqueCC.length > 0) managerEmail = uniqueCC[0];
+      if (uniqueCC.length > 1) coordinatorEmail = uniqueCC[1];
 
-        managerEmail = mgr?.mail_id || null;
-        coordinatorEmail = coord?.mail_id || null;
+      // Store full list for later use
+      employeeExtra._allApproverEmails = uniqueCC;
 
-        staticLog.info("Rejection email CC lookup", {
-          userId,
-          managerName: emp.manager,
-          coordinatorName: emp.coordinator,
-          managerEmail,
-          coordinatorEmail,
-        });
-      } else {
-        staticLog.warn("Rejection email: employee not found in users table for CC lookup", { userId });
-      }
+      staticLog.info("Rejection email CC from approvals table", {
+        userId, expNumId,
+        approversFound: approvers.length,
+        ccList: uniqueCC,
+      });
+
     } catch (e) {
-      staticLog.error("Rejection email CC lookup failed", { error: e.message });
+      staticLog.error("Rejection email DB fetch failed", { error: e.message });
     }
   }
 
@@ -426,10 +437,8 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
     legs,
   });
 
-  // Build CC list: manager + coordinator (exclude duplicates and primary To)
-  const ccList = [];
-  if (managerEmail && managerEmail !== to) ccList.push(managerEmail);
-  if (coordinatorEmail && coordinatorEmail !== to && coordinatorEmail !== managerEmail) ccList.push(coordinatorEmail);
+  // CC list = all approvers fetched from approvals table (already deduped, primary To excluded)
+  const ccList = employeeExtra._allApproverEmails || [];
 
   // Log intent and dispatch — use waitUntil so API returns instantly
   const emailLogId = await logEmailIntent(env, {

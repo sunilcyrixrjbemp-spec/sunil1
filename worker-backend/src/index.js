@@ -571,6 +571,7 @@ export default {
               userId: employee.user_id,
               action: "rejected",
               expenseCode: expense.expense_code || `EXP-${expenseId}`,
+              expenseNumericId: expenseId,
               travelName: expense.description || "",
               expenseMonth: period,
               claimedAmount: totalAmt,
