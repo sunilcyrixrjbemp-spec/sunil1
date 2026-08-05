@@ -383,7 +383,7 @@ export function expenseRejectedTemplate({
       <tr>
         <td style="padding:12px 16px;font-size:12px;color:#64748b;font-weight:600;width:35%;vertical-align:top;">REJECTED BY</td>
         <td style="padding:12px 16px;font-size:13px;color:#1e293b;vertical-align:top;">
-          <strong>${approverName || "—"}</strong>${approverDesig ? `<br/><span style="font-size:12px;color:#64748b;">${approverDesig}</span>` : ""}
+          <strong>${approverName || "—"}</strong>
         </td>
       </tr>
       <tr style="background:#fff8f8;">
