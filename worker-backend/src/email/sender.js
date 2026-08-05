@@ -101,11 +101,12 @@ async function sendViaCloudflareMail(env, opts) {
       const b64Html = btoa(unescape(encodeURIComponent(html))).match(/.{1,76}/g).join("\r\n");
       const b64Text = btoa(unescape(encodeURIComponent(textBody))).match(/.{1,76}/g).join("\r\n");
 
-      // Only Base64 encode subject if it contains non-ASCII characters
-      const hasNonAscii = /[^\x00-\x7F]/.test(subject);
-      const formattedSubject = hasNonAscii
-        ? `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`
-        : subject;
+      // Sanitize subject to pure ASCII to prevent Base64 subject encoding (which Outlook flags as SPAM)
+      const cleanSubject = String(subject || "")
+        .replace(/[\u2014\u2013]/g, "-")
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[^\x20-\x7E]/g, "");
 
       const headers = [
         `MIME-Version: 1.0`,
@@ -115,7 +116,7 @@ async function sendViaCloudflareMail(env, opts) {
         `To: ${toHeader}`,
         `Reply-To: ${fromName} <${replyTo}>`,
         ...(ccHeader ? [`Cc: ${ccHeader}`] : []),
-        `Subject: ${formattedSubject}`,
+        `Subject: ${cleanSubject}`,
         `Organization: Cyrix HealthCare Private Limited`,
         `X-Mailer: Cyrix FieldConnect Mail Engine`,
         `Auto-Submitted: auto-generated`,

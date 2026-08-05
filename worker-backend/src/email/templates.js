@@ -461,7 +461,7 @@ Cyrix Field Connect — Operations Team
 Cyrix HealthCare Pvt. Ltd.`;
 
   return {
-    subject: `Expense Claim Rejected: ${expenseCode} — Action Taken`,
+    subject: `Expense Claim Rejected: ${expenseCode} - Action Taken`,
     html: emailWrapper(content, `Your expense ${expenseCode} has been rejected`),
     text: textPlain,
   };
