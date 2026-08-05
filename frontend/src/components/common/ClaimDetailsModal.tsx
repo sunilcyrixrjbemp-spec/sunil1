@@ -1588,15 +1588,26 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       }, 0)
     : null;
 
-  const systemDeductionAmt = isClaimRejected
+  // Deduction Auditor Details (WHO deducted & WHY)
+  const editHistory = Array.isArray(c.edit_history) ? c.edit_history : (Array.isArray(c.history) ? c.history : []);
+  const humanEditor = editHistory.find((el: any) => el.editor_name && el.editor_name.toUpperCase() !== "SYSTEM");
+  const hasHumanDeduction = !!humanEditor || (editHistory.length > 0) || isValidText(c.deduction_remark) || isValidText(c.manager_remark);
+
+  const rawDeductionAmt = isClaimRejected
     ? originalClaimedTotal
     : ((c.deduction_amount ?? c.deduction_amt ?? 0) > 0
         ? (c.deduction_amount ?? c.deduction_amt ?? 0)
         : (originalClaimedTotal > rawApprovedAmt ? (originalClaimedTotal - rawApprovedAmt) : 0));
 
-  const managerDeductionAmt = liveEditedTotalSum !== null
+  const savedSystemDeductionAmt = hasHumanDeduction ? 0 : rawDeductionAmt;
+  const savedManagerDeductionAmt = hasHumanDeduction ? rawDeductionAmt : 0;
+
+  const activeLiveManagerDeduction = liveEditedTotalSum !== null
     ? (rawApprovedAmt > liveEditedTotalSum ? (rawApprovedAmt - liveEditedTotalSum) : 0)
     : 0;
+
+  const systemDeductionAmt = savedSystemDeductionAmt;
+  const managerDeductionAmt = savedManagerDeductionAmt + activeLiveManagerDeduction;
 
   const currentApprovedNet = liveEditedTotalSum !== null ? liveEditedTotalSum : (isClaimRejected ? 0 : rawApprovedAmt);
   const totalCombinedDeduction = systemDeductionAmt + managerDeductionAmt;
@@ -1605,9 +1616,6 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const overallBaseLocationReason = c.base_location_deduction_reason || c.base_location_reason || c.base_location_policy || c.location_policy_reason || "";
   const overallSystemReason = c.system_deduction_reason || c.policy_deduction_reason || c.policy_reason || "";
 
-  // Deduction Auditor Details (WHO deducted & WHY)
-  const editHistory = Array.isArray(c.edit_history) ? c.edit_history : (Array.isArray(c.history) ? c.history : []);
-  const humanEditor = editHistory.find((el: any) => el.editor_name && el.editor_name.toUpperCase() !== "SYSTEM");
   const latestEditor = humanEditor || (editHistory.length > 0 ? editHistory[0] : null);
 
   const approvedSteps = approvals.filter((a: any) => a.status === "approved" || a.status === "Approved");
