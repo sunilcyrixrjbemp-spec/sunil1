@@ -196,6 +196,37 @@ export async function runMigrations(db) {
     console.error("Failed to execute equipment_type update query:", err.message);
   }
 
+  // Self-healing query: Update role for Shivam Bhardwaj and Khushwant Gahlot to Manager
+  try {
+    await db.prepare(`
+      UPDATE users 
+      SET role = 'Manager' 
+      WHERE lower(name) LIKE '%shivam%bhardwaj%' OR lower(name) LIKE '%khushwant%gahlot%'
+    `).run();
+    await db.prepare(`
+      UPDATE user_roles 
+      SET role = 'Manager' 
+      WHERE user_id IN (
+        SELECT user_id FROM users WHERE lower(name) LIKE '%shivam%bhardwaj%' OR lower(name) LIKE '%khushwant%gahlot%'
+      )
+    `).run();
+    await db.prepare(`
+      INSERT INTO user_roles (user_id, role, assigned_at)
+      SELECT user_id, 'Manager', CURRENT_TIMESTAMP FROM users
+      WHERE (lower(name) LIKE '%shivam%bhardwaj%' OR lower(name) LIKE '%khushwant%gahlot%')
+        AND user_id NOT IN (SELECT user_id FROM user_roles)
+    `).run();
+    await db.prepare(`
+      UPDATE users 
+      SET allowed_windows = 'home,approval,expense,help,profile' 
+      WHERE (lower(name) LIKE '%shivam%bhardwaj%' OR lower(name) LIKE '%khushwant%gahlot%')
+        AND (allowed_windows IS NULL OR allowed_windows = '' OR allowed_windows NOT LIKE '%approval%')
+    `).run();
+    console.log("Successfully updated role to Manager for Shivam Bhardwaj and Khushwant Gahlot.");
+  } catch (err) {
+    console.error("Failed to update Manager role for target users:", err.message);
+  }
+
   // ─── Performance Indexes ────────────────────────────────────────────────────
   // These indexes dramatically reduce query time for the most common operations.
   const indexes = [
