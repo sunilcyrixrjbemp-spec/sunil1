@@ -22,14 +22,34 @@ const emailWrapper = (content, previewText = "") => `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
   <meta name="x-apple-disable-message-reformatting"/>
+  <meta name="color-scheme" content="light dark"/>
+  <meta name="supported-color-schemes" content="light dark"/>
   <title>Cyrix HealthCare Private Limited</title>
+  <style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    @media (prefers-color-scheme: dark) {
+      body, .email-bg { background-color: #0f172a !important; }
+      .email-card { background-color: #1e293b !important; border-color: #334155 !important; }
+      .dark-text, p, td, th { color: #f1f5f9 !important; }
+      .dm-label { color: #cbd5e1 !important; }
+      .dm-val { color: #ffffff !important; }
+      .dm-bg-alt { background-color: #0f172a !important; }
+      .dm-bg-main { background-color: #1e293b !important; }
+      .dm-border { border-color: #334155 !important; }
+      .dm-box-red { background-color: #2d1215 !important; border-color: #991b1b !important; }
+      .dm-reason { color: #fca5a5 !important; }
+      .dm-box-amber { background-color: #2e1d0c !important; border-color: #92400e !important; }
+      .dm-amber-title { color: #fbbf24 !important; }
+      .dm-amber-text { color: #fde68a !important; }
+    }
+  </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;">
+<body class="email-bg" style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;">
   ${previewText ? `<div style="display:none;font-size:1px;color:#f1f5f9;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">${previewText}</div>` : ""}
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#f1f5f9;padding:24px 12px;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" class="email-bg" style="background-color:#f1f5f9;padding:24px 12px;">
     <tr>
       <td align="center">
-        <table width="560" cellpadding="0" cellspacing="0" role="presentation" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #cbd5e1;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <table width="100%" cellpadding="0" cellspacing="0" role="presentation" class="email-card" style="max-width:720px;width:100%;background-color:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #cbd5e1;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
           <!-- Header -->
           <tr>
             <td style="background-color:#0f172a;padding:20px 28px;text-align:left;border-bottom:3px solid #2563eb;">
@@ -45,17 +65,17 @@ const emailWrapper = (content, previewText = "") => `<!DOCTYPE html>
           </tr>
           <!-- Body -->
           <tr>
-            <td style="padding:28px 28px;background-color:#ffffff;">
+            <td style="padding:28px 28px;background-color:#ffffff;" class="email-card">
               ${content}
             </td>
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="background-color:#f8fafc;padding:16px 28px;text-align:center;border-top:1px solid #e2e8f0;">
-              <p style="margin:0 0 4px 0;color:#64748b;font-size:12px;font-weight:600;">
+            <td style="background-color:#f8fafc;padding:16px 28px;text-align:center;border-top:1px solid #e2e8f0;" class="dm-bg-alt">
+              <p style="margin:0 0 4px 0;color:#64748b;font-size:12px;font-weight:600;" class="dm-label">
                 Cyrix HealthCare Private Limited
               </p>
-              <p style="margin:0;color:#94a3b8;font-size:11px;">
+              <p style="margin:0;color:#94a3b8;font-size:11px;" class="dm-label">
                 This is an automated notification. Please do not reply to this email.
               </p>
             </td>
@@ -287,21 +307,21 @@ export function expenseRejectedTemplate({
         legTotalHotel  += hotel;
         legTotalOther  += other;
         const bg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+        const bgClass = idx % 2 === 0 ? "dm-bg-main" : "dm-bg-alt";
         return `
-          <tr style="background:${bg};">
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${idx + 1}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${from}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${to}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${purpose}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${mode}${subMode}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${km > 0 ? km + " km" : "—"}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${(travel + sub) > 0 ? fmt(travel + sub) : "—"}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${da > 0 ? fmt(da) : "—"}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${hotel > 0 ? fmt(hotel) : "—"}</td>
-            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">${legTotal > 0 ? fmt(legTotal) : "—"}</td>
+          <tr class="${bgClass}" style="background:${bg};">
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${idx + 1}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${from}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${to}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${purpose}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${mode}${subMode}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${km > 0 ? km + " km" : "—"}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${(travel + sub) > 0 ? fmt(travel + sub) : "—"}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${da > 0 ? fmt(da) : "—"}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${hotel > 0 ? fmt(hotel) : "—"}</td>
+            <td class="dm-val" style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">${legTotal > 0 ? fmt(legTotal) : "—"}</td>
           </tr>`;
       }).join("") +
-      // Total row
       `<tr style="background:#0f172a;">
         <td colspan="6" style="padding:9px 10px;font-size:12px;color:#94a3b8;font-weight:600;text-align:right;letter-spacing:0.3px;">TOTAL</td>
         <td style="padding:9px 10px;font-size:12px;color:#ffffff;font-weight:700;text-align:right;">${fmt(legTotalTravel)}</td>
@@ -312,49 +332,41 @@ export function expenseRejectedTemplate({
     : `<tr><td colspan="10" style="padding:16px;text-align:center;color:#94a3b8;font-size:13px;font-style:italic;">No leg-wise travel data found for this claim.</td></tr>`;
 
   const content = `
-    <!-- Rejection Banner -->
-    <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:6px;padding:14px 18px;margin-bottom:24px;">
-      <div style="font-size:13px;font-weight:700;color:#dc2626;letter-spacing:0.3px;margin-bottom:2px;">EXPENSE CLAIM REJECTED</div>
-      <div style="font-size:12px;color:#6b7280;">Please review the rejection reason below and make the necessary corrections before resubmitting.</div>
+    <div class="dm-box-red" style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:6px;padding:14px 18px;margin-bottom:24px;">
+      <div class="dm-reason" style="font-size:13px;font-weight:700;color:#dc2626;letter-spacing:0.3px;margin-bottom:2px;">EXPENSE CLAIM REJECTED</div>
+      <div class="dm-label" style="font-size:12px;color:#6b7280;">Please review the rejection reason below and make the necessary corrections before resubmitting.</div>
     </div>
 
-    <!-- Greeting -->
-    <p style="margin:0 0 6px 0;font-size:15px;color:#1e293b;line-height:1.6;">Dear <strong>${employeeName}</strong>,</p>
-    <p style="margin:0 0 22px 0;font-size:13px;color:#475569;line-height:1.6;">
+    <p style="margin:0 0 6px 0;font-size:15px;color:#1e293b;line-height:1.6;" class="dm-val">Dear <strong>${employeeName}</strong>,</p>
+    <p style="margin:0 0 22px 0;font-size:13px;color:#475569;line-height:1.6;" class="dm-label">
       Your expense claim <strong>${expenseCode}</strong> has been reviewed and rejected by
-      <strong>${approverName || "your reporting manager"}</strong>.
+      <strong class="dm-val">${approverName || "your reporting manager"}</strong>.
       The complete details of the rejected claim are provided below for your reference.
     </p>
 
-    <!-- Claim Summary Block -->
-    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:24px;overflow:hidden;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" class="dm-border" style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:24px;overflow:hidden;">
       <tr style="background:#0f172a;">
         <td colspan="4" style="padding:10px 16px;">
           <span style="color:#ffffff;font-size:13px;font-weight:700;letter-spacing:0.3px;">CLAIM SUMMARY</span>
         </td>
       </tr>
-      <tr style="background:#f8fafc;">
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;width:25%;">EXPENSE ID</td>
-        <td style="padding:10px 16px;font-size:13px;color:#1e293b;font-weight:700;width:25%;">${expenseCode}</td>
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;width:25%;">DATE OF EXPENSE</td>
-        <td style="padding:10px 16px;font-size:13px;color:#1e293b;width:25%;">${expenseMonth || "—"}</td>
+      <tr class="dm-bg-alt" style="background:#f8fafc;">
+        <td class="dm-label" style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;width:25%;">EXPENSE ID</td>
+        <td class="dm-val" style="padding:10px 16px;font-size:13px;color:#1e293b;font-weight:700;width:25%;">${expenseCode}</td>
+        <td class="dm-label" style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;width:25%;">DATE OF EXPENSE</td>
+        <td class="dm-val" style="padding:10px 16px;font-size:13px;color:#1e293b;width:25%;">${expenseMonth || "—"}</td>
       </tr>
-      <tr>
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">EMPLOYEE</td>
-        <td colspan="3" style="padding:10px 16px;font-size:13px;color:#1e293b;">${employeeName}${designation ? `, ${designation}` : ""}${employeeId ? ` — ${employeeId}` : ""}</td>
-      </tr>
-      <tr style="background:#f8fafc;">
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">TOTAL CLAIMED</td>
-        <td style="padding:10px 16px;font-size:13px;color:#dc2626;font-weight:700;">${fmt(claimedAmount)}</td>
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">REJECTED ON</td>
-        <td style="padding:10px 16px;font-size:13px;color:#1e293b;">${rejectedAt || "—"}</td>
+      <tr class="dm-bg-main" style="background:#ffffff;">
+        <td class="dm-label" style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">TOTAL CLAIMED</td>
+        <td class="dm-reason" style="padding:10px 16px;font-size:13px;color:#dc2626;font-weight:700;">${fmt(claimedAmount)}</td>
+        <td class="dm-label" style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">REJECTED ON</td>
+        <td class="dm-val" style="padding:10px 16px;font-size:13px;color:#1e293b;">${rejectedAt || "—"}</td>
       </tr>
     </table>
 
-    <!-- Leg-wise Travel Details -->
-    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;letter-spacing:0.3px;">TRAVEL DETAILS (LEG-WISE)</div>
+    <div class="dm-val" style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;letter-spacing:0.3px;">TRAVEL DETAILS (LEG-WISE)</div>
     <div style="overflow-x:auto;margin-bottom:24px;">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e2e8f0;border-radius:8px;border-collapse:collapse;min-width:680px;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" class="dm-border" style="border:1px solid #e2e8f0;border-radius:8px;border-collapse:collapse;min-width:680px;">
         <thead>
           <tr style="background:#1e293b;">
             <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:center;border-bottom:1px solid #334155;">#</th>
@@ -373,33 +385,31 @@ export function expenseRejectedTemplate({
       </table>
     </div>
 
-    <!-- Rejection Details -->
-    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #fecaca;border-radius:8px;background:#fff5f5;margin-bottom:24px;overflow:hidden;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" class="dm-box-red" style="border:1px solid #fecaca;border-radius:8px;background:#fff5f5;margin-bottom:24px;overflow:hidden;">
       <tr style="background:#dc2626;">
         <td colspan="2" style="padding:10px 16px;">
           <span style="color:#ffffff;font-size:13px;font-weight:700;letter-spacing:0.3px;">REJECTION DETAILS</span>
         </td>
       </tr>
-      <tr>
-        <td style="padding:12px 16px;font-size:12px;color:#64748b;font-weight:600;width:35%;vertical-align:top;">REJECTED BY</td>
-        <td style="padding:12px 16px;font-size:13px;color:#1e293b;vertical-align:top;">
+      <tr class="dm-bg-main" style="background:#ffffff;">
+        <td class="dm-label" style="padding:12px 16px;font-size:12px;color:#64748b;font-weight:600;width:35%;vertical-align:top;">REJECTED BY</td>
+        <td class="dm-val" style="padding:12px 16px;font-size:13px;color:#1e293b;vertical-align:top;">
           <strong>${approverName || "—"}</strong>
         </td>
       </tr>
-      <tr style="background:#fff8f8;">
-        <td style="padding:12px 16px;font-size:12px;color:#64748b;font-weight:600;vertical-align:top;">REASON FOR REJECTION</td>
-        <td style="padding:12px 16px;font-size:13px;color:#dc2626;line-height:1.7;vertical-align:top;">
+      <tr class="dm-bg-alt" style="background:#fff8f8;">
+        <td class="dm-label" style="padding:12px 16px;font-size:12px;color:#64748b;font-weight:600;vertical-align:top;">REASON FOR REJECTION</td>
+        <td class="dm-reason" style="padding:12px 16px;font-size:13px;color:#dc2626;font-weight:600;line-height:1.7;vertical-align:top;">
           ${rejectionReason || "No specific reason provided. Please contact your manager for clarification."}
         </td>
       </tr>
     </table>
 
-    <!-- Action Required -->
-    <div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:14px 18px;margin-bottom:24px;">
-      <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px;">ACTION REQUIRED</div>
-      <div style="font-size:13px;color:#78350f;line-height:1.6;">
+    <div class="dm-box-amber" style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:14px 18px;margin-bottom:24px;">
+      <div class="dm-amber-title" style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px;">ACTION REQUIRED</div>
+      <div class="dm-amber-text" style="font-size:13px;color:#78350f;line-height:1.6;">
         Please review the rejection reason carefully and contact
-        <strong>${approverName || "your reporting manager"}</strong> for further guidance or corrections.
+        <strong class="dm-val">${approverName || "your reporting manager"}</strong> for further guidance or corrections.
         If you have any questions, please reach out to your manager or the HR/Accounts team directly.
       </div>
     </div>
@@ -451,7 +461,7 @@ Cyrix Field Connect — Operations Team
 Cyrix HealthCare Pvt. Ltd.`;
 
   return {
-    subject: `Expense Claim Rejected: ${expenseCode} — Action Required`,
+    subject: `Expense Claim Rejected: ${expenseCode} — Action Taken`,
     html: emailWrapper(content, `Your expense ${expenseCode} has been rejected`),
     text: textPlain,
   };
