@@ -51,6 +51,7 @@ async function sendViaCloudflareMail(env, opts) {
   const { to, toName, subject, html, text, cc = [] } = opts;
 
   const fromEmail = env.EMAIL_FROM_ADDRESS || "noreply@indrae.in";
+  const replyTo   = env.EMAIL_REPLY_TO     || "support@indrae.in";
   const fromName  = env.EMAIL_FROM_NAME   || "Cyrix Field Connect";
   const textBody  = text || "Cyrix Field Connect Security Verification Email.";
   const ccHeader  = cc.length > 0 ? cc.join(", ") : null;
@@ -77,7 +78,7 @@ async function sendViaCloudflareMail(env, opts) {
         `Message-ID: ${msgId}`,
         `From: ${fromName} <${fromEmail}>`,
         `To: ${toHeader}`,
-        `Reply-To: ${fromName} <${fromEmail}>`,
+        `Reply-To: ${fromName} <${replyTo}>`,
         ...(ccHeader ? [`Cc: ${ccHeader}`] : []),
         `Subject: ${formattedSubject}`,
         `Auto-Submitted: auto-generated`,
@@ -127,6 +128,7 @@ async function sendViaCloudflareMail(env, opts) {
         ...(cc.length > 0 ? { cc: cc.map(e => ({ email: e })) } : {})
       }],
       from: { email: fromEmail, name: fromName },
+      reply_to: { email: replyTo, name: fromName },
       subject: subject,
       content: [
         { type: "text/plain", value: textBody },
