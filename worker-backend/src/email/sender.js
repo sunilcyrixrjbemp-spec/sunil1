@@ -345,17 +345,25 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
   const expId = data.expenseCode || data.expenseId;
   const rejectorName = data.approverName || data.approvedBy;
 
-  if (env.DB && expId) {
+  if (env.DB) {
     try {
-      // Round 1: legs + employee info + rejector designation — all parallel
+      // Round 1 — all parallel: legs (if expId), employee CC info, rejector designation
       const [legRows, emp, appr] = await Promise.all([
-        env.DB.prepare(
-          `SELECT date, \`from\`, \`to\`, activity, activity_type, mode, km, amount, sub_amount, da
-           FROM expense_itineraries WHERE exp_id = ? ORDER BY date ASC, id ASC`
-        ).bind(expId).all(),
-        env.DB.prepare(
-          `SELECT designation, manager, coordinator FROM users WHERE user_id = ? LIMIT 1`
-        ).bind(userId).first(),
+        (env.DB && expId)
+          ? env.DB.prepare(
+              `SELECT leg_number, from_district, to_district, from_location, to_location,
+                      travel_mode, sub_mode, distance_km, travel_amount, sub_km, sub_amount,
+                      da_amount, hotel_amount, other_amount, other_desc, local_purchase,
+                      visit_purpose, activity_details, calls_assigned, calls_completed
+               FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC, id ASC`
+            ).bind(expId).all()
+          : Promise.resolve({ results: [] }),
+        // Lookup employee by user_id (string e-code like "E2049")
+        userId
+          ? env.DB.prepare(
+              `SELECT designation, manager, coordinator FROM users WHERE user_id = ? LIMIT 1`
+            ).bind(userId).first()
+          : Promise.resolve(null),
         rejectorName
           ? env.DB.prepare(`SELECT designation FROM users WHERE name = ? LIMIT 1`).bind(rejectorName).first()
           : Promise.resolve(null),
@@ -368,19 +376,36 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
         employeeExtra.designation = emp.designation || "";
 
         // Round 2: manager email + coordinator email — both parallel
+        // Lookup by exact name match in users table
         const [mgr, coord] = await Promise.all([
           emp.manager
-            ? env.DB.prepare(`SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`).bind(emp.manager).first()
+            ? env.DB.prepare(
+                `SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`
+              ).bind(emp.manager).first()
             : Promise.resolve(null),
           emp.coordinator
-            ? env.DB.prepare(`SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`).bind(emp.coordinator).first()
+            ? env.DB.prepare(
+                `SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`
+              ).bind(emp.coordinator).first()
             : Promise.resolve(null),
         ]);
 
         managerEmail = mgr?.mail_id || null;
         coordinatorEmail = coord?.mail_id || null;
+
+        staticLog.info("Rejection email CC lookup", {
+          userId,
+          managerName: emp.manager,
+          coordinatorName: emp.coordinator,
+          managerEmail,
+          coordinatorEmail,
+        });
+      } else {
+        staticLog.warn("Rejection email: employee not found in users table for CC lookup", { userId });
       }
-    } catch (_) {}
+    } catch (e) {
+      staticLog.error("Rejection email CC lookup failed", { error: e.message });
+    }
   }
 
   const rejectedAt = data.rejectedAt || new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST";

@@ -498,6 +498,17 @@ export default {
       log.setContext({ userId: user.user_id, role: user.role, name: user.name });
     }
 
+    // ── Pre-read body for rejection hook (before handler consumes it) ────────
+    let preReadBody = null;
+    const isRejectRoute = method === "POST" &&
+      (/\/api\/approvals?\/(-?\d+)\/reject$/.test(pathname));
+    if (isRejectRoute) {
+      try {
+        const cloned = request.clone();
+        preReadBody = await cloned.json();
+      } catch (_) {}
+    }
+
     // ── Route Handler Execution ──────────────────────────────────────────────
     try {
       const startMs = Date.now();
@@ -512,11 +523,6 @@ export default {
       }
 
       // ── Post-rejection email hook ────────────────────────────────────────
-      // Intercept successful reject calls and fire email in background.
-      // approval.js is locked so we hook here instead.
-      const isRejectRoute = method === "POST" &&
-        (/\/api\/approvals?\/(-?\d+)\/reject$/.test(pathname));
-
       if (isRejectRoute && response.status === 200 && user && env.ctx) {
         env.ctx.waitUntil((async () => {
           try {
@@ -524,12 +530,15 @@ export default {
             const expenseId = parseInt(
               (pathname.match(/\/api\/approvals?\/(-?\d+)\/reject$/) || [])[1], 10
             );
-            // Only for standard expenses (positive id)
             if (!expenseId || expenseId <= 0) return;
 
-            const expense = await env.DB.prepare(
-              "SELECT * FROM expenses WHERE id = ? LIMIT 1"
-            ).bind(expenseId).first();
+            const comments = preReadBody?.comments || "";
+
+            // Fetch expense + employee in parallel
+            const [expense, approvalRow] = await Promise.all([
+              env.DB.prepare("SELECT * FROM expenses WHERE id = ? LIMIT 1").bind(expenseId).first(),
+              env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY id DESC LIMIT 1").bind(expenseId).first(),
+            ]);
             if (!expense) return;
 
             const employee = await env.DB.prepare(
@@ -537,23 +546,34 @@ export default {
             ).bind(expense.user_id).first();
             if (!employee || !employee.mail_id) return;
 
-            // Parse body for rejection comments
-            let comments = "";
-            try {
-              const clonedReq = request.clone();
-              const body = await clonedReq.json();
-              comments = body?.comments || "";
-            } catch (_) {}
+            // Build period string: "August 2026"
+            const monthNames = ["January","February","March","April","May","June",
+              "July","August","September","October","November","December"];
+            const monthNum = parseInt(expense.month, 10);
+            const monthLabel = (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12)
+              ? monthNames[monthNum - 1]
+              : (expense.month || "");
+            const period = expense.year
+              ? `${monthLabel} ${expense.year}`
+              : monthLabel;
+
+            // Total amount: amount + da_amount + hotel_amount + other_expense_amount
+            const totalAmt =
+              (expense.amount || 0) +
+              (expense.da_amount || 0) +
+              (expense.hotel_amount || 0) +
+              (expense.other_expense_amount || 0) +
+              (expense.local_purchase_amount || 0);
 
             await sendExpenseStatusEmail(env, {
               to: employee.mail_id,
               name: employee.name,
               userId: employee.user_id,
               action: "rejected",
-              expenseCode: expense.expense_code || String(expenseId),
-              travelName: expense.travel_name || expense.name || "",
-              expenseMonth: expense.month || expense.expense_month || "",
-              claimedAmount: expense.total_amount || 0,
+              expenseCode: expense.expense_code || `EXP-${expenseId}`,
+              travelName: expense.description || "",
+              expenseMonth: period,
+              claimedAmount: totalAmt,
               approverName: user.name,
               approvedBy: user.name,
               rejectionReason: comments,

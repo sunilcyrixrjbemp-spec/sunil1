@@ -263,44 +263,67 @@ export function expenseRejectedTemplate({
   legs = []
 }) {
   const fmt = (v) => `₹${parseFloat(v || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const dash = (v) => (v !== null && v !== undefined && v !== "" ? v : "—");
 
-  // ── Leg rows ─────────────────────────────────────────────────────────────────
-  const legRows = legs.length > 0
+  // ── Leg rows (correct column names from expense_itineraries) ───────────────
+  let legTotalTravel = 0, legTotalDA = 0, legTotalHotel = 0, legTotalOther = 0;
+
+  const legRowsHtml = legs.length > 0
     ? legs.map((leg, idx) => {
-        const date   = leg.date   || "—";
-        const from   = leg.from   || leg.from_location || "—";
-        const to     = leg.to     || leg.to_location   || "—";
-        const work   = leg.activity || leg.activity_type || leg.work_done || leg.purpose || "—";
-        const mode   = leg.mode   || "—";
-        const km     = leg.km     || leg.distance || "—";
-        const amount = parseFloat(leg.amount || leg.total || 0);
-        const bg     = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+        const from    = dash(leg.from_district || leg.from_location);
+        const to      = dash(leg.to_district   || leg.to_location);
+        const purpose = dash(leg.visit_purpose || leg.activity_details);
+        const mode    = dash(leg.travel_mode);
+        const subMode = leg.sub_mode ? ` (${leg.sub_mode})` : "";
+        const km      = parseFloat(leg.distance_km || leg.sub_km || 0);
+        const travel  = parseFloat(leg.travel_amount || 0);
+        const sub     = parseFloat(leg.sub_amount || 0);
+        const da      = parseFloat(leg.da_amount || 0);
+        const hotel   = parseFloat(leg.hotel_amount || 0);
+        const other   = parseFloat(leg.other_amount || 0);
+        const legTotal = travel + sub + da + hotel + other;
+        legTotalTravel += (travel + sub);
+        legTotalDA     += da;
+        legTotalHotel  += hotel;
+        legTotalOther  += other;
+        const bg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
         return `
           <tr style="background:${bg};">
-            <td style="padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;white-space:nowrap;">${idx + 1}</td>
-            <td style="padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;white-space:nowrap;">${date}</td>
-            <td style="padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${from}</td>
-            <td style="padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${to}</td>
-            <td style="padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${work}</td>
-            <td style="padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${mode}</td>
-            <td style="padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${km !== "—" ? km + " km" : "—"}</td>
-            <td style="padding:9px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${amount > 0 ? fmt(amount) : "—"}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${idx + 1}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${from}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${to}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;">${purpose}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${mode}${subMode}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:center;">${km > 0 ? km + " km" : "—"}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${(travel + sub) > 0 ? fmt(travel + sub) : "—"}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${da > 0 ? fmt(da) : "—"}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;">${hotel > 0 ? fmt(hotel) : "—"}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#334155;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">${legTotal > 0 ? fmt(legTotal) : "—"}</td>
           </tr>`;
-      }).join("")
-    : `<tr><td colspan="8" style="padding:16px;text-align:center;color:#94a3b8;font-size:13px;">No leg details available</td></tr>`;
+      }).join("") +
+      // Total row
+      `<tr style="background:#0f172a;">
+        <td colspan="6" style="padding:9px 10px;font-size:12px;color:#94a3b8;font-weight:600;text-align:right;letter-spacing:0.3px;">TOTAL</td>
+        <td style="padding:9px 10px;font-size:12px;color:#ffffff;font-weight:700;text-align:right;">${fmt(legTotalTravel)}</td>
+        <td style="padding:9px 10px;font-size:12px;color:#ffffff;font-weight:700;text-align:right;">${fmt(legTotalDA)}</td>
+        <td style="padding:9px 10px;font-size:12px;color:#ffffff;font-weight:700;text-align:right;">${fmt(legTotalHotel)}</td>
+        <td style="padding:9px 10px;font-size:12px;color:#fbbf24;font-weight:700;text-align:right;">${fmt(legTotalTravel + legTotalDA + legTotalHotel + legTotalOther)}</td>
+      </tr>`
+    : `<tr><td colspan="10" style="padding:16px;text-align:center;color:#94a3b8;font-size:13px;font-style:italic;">No leg-wise travel data found for this claim.</td></tr>`;
 
   const content = `
     <!-- Rejection Banner -->
     <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:6px;padding:14px 18px;margin-bottom:24px;">
       <div style="font-size:13px;font-weight:700;color:#dc2626;letter-spacing:0.3px;margin-bottom:2px;">EXPENSE CLAIM REJECTED</div>
-      <div style="font-size:12px;color:#6b7280;">Please review the reason below and make necessary corrections.</div>
+      <div style="font-size:12px;color:#6b7280;">Please review the rejection reason below and make the necessary corrections before resubmitting.</div>
     </div>
 
     <!-- Greeting -->
     <p style="margin:0 0 6px 0;font-size:15px;color:#1e293b;line-height:1.6;">Dear <strong>${employeeName}</strong>,</p>
     <p style="margin:0 0 22px 0;font-size:13px;color:#475569;line-height:1.6;">
-      Your expense claim has been reviewed and rejected by your reporting manager.
-      The details of the rejected claim are provided below for your reference.
+      Your expense claim <strong>${expenseCode}</strong> has been reviewed and rejected by
+      <strong>${approverName || "your reporting manager"}${approverDesig ? `, ${approverDesig}` : ""}</strong>.
+      The complete details of the rejected claim are provided below for your reference.
     </p>
 
     <!-- Claim Summary Block -->
@@ -318,13 +341,13 @@ export function expenseRejectedTemplate({
       </tr>
       <tr>
         <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">EMPLOYEE</td>
-        <td style="padding:10px 16px;font-size:13px;color:#1e293b;">${employeeName}${designation ? ` (${designation})` : ""}${employeeId ? ` — ${employeeId}` : ""}</td>
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">TRAVEL NAME</td>
+        <td style="padding:10px 16px;font-size:13px;color:#1e293b;">${employeeName}${designation ? `, ${designation}` : ""}${employeeId ? ` — ${employeeId}` : ""}</td>
+        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">DESCRIPTION</td>
         <td style="padding:10px 16px;font-size:13px;color:#1e293b;">${travelName || "—"}</td>
       </tr>
       <tr style="background:#f8fafc;">
-        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">CLAIMED AMOUNT</td>
-        <td style="padding:10px 16px;font-size:13px;color:#334155;font-weight:600;">${fmt(claimedAmount)}</td>
+        <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">TOTAL CLAIMED</td>
+        <td style="padding:10px 16px;font-size:13px;color:#dc2626;font-weight:700;">${fmt(claimedAmount)}</td>
         <td style="padding:10px 16px;font-size:12px;color:#64748b;font-weight:600;">REJECTED ON</td>
         <td style="padding:10px 16px;font-size:13px;color:#1e293b;">${rejectedAt || "—"}</td>
       </tr>
@@ -333,20 +356,22 @@ export function expenseRejectedTemplate({
     <!-- Leg-wise Travel Details -->
     <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px;letter-spacing:0.3px;">TRAVEL DETAILS (LEG-WISE)</div>
     <div style="overflow-x:auto;margin-bottom:24px;">
-      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e2e8f0;border-radius:8px;border-collapse:collapse;min-width:580px;">
+      <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e2e8f0;border-radius:8px;border-collapse:collapse;min-width:680px;">
         <thead>
           <tr style="background:#1e293b;">
-            <th style="padding:10px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:left;border-bottom:1px solid #334155;">#</th>
-            <th style="padding:10px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:left;border-bottom:1px solid #334155;">DATE</th>
-            <th style="padding:10px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:left;border-bottom:1px solid #334155;">FROM</th>
-            <th style="padding:10px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:left;border-bottom:1px solid #334155;">TO</th>
-            <th style="padding:10px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:left;border-bottom:1px solid #334155;">WORK DONE</th>
-            <th style="padding:10px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:center;border-bottom:1px solid #334155;">MODE</th>
-            <th style="padding:10px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:center;border-bottom:1px solid #334155;">KM</th>
-            <th style="padding:10px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:right;border-bottom:1px solid #334155;">AMOUNT</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:center;border-bottom:1px solid #334155;">#</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:left;border-bottom:1px solid #334155;">FROM</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:left;border-bottom:1px solid #334155;">TO</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:left;border-bottom:1px solid #334155;">PURPOSE / WORK</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:center;border-bottom:1px solid #334155;">MODE</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:center;border-bottom:1px solid #334155;">KM</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:right;border-bottom:1px solid #334155;">TRAVEL</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:right;border-bottom:1px solid #334155;">DA</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:right;border-bottom:1px solid #334155;">HOTEL</th>
+            <th style="padding:9px 10px;font-size:11px;color:#e2e8f0;font-weight:600;text-align:right;border-bottom:1px solid #334155;">TOTAL</th>
           </tr>
         </thead>
-        <tbody>${legRows}</tbody>
+        <tbody>${legRowsHtml}</tbody>
       </table>
     </div>
 
@@ -365,7 +390,7 @@ export function expenseRejectedTemplate({
       </tr>
       <tr style="background:#fff8f8;">
         <td style="padding:12px 16px;font-size:12px;color:#64748b;font-weight:600;vertical-align:top;">REASON FOR REJECTION</td>
-        <td style="padding:12px 16px;font-size:13px;color:#dc2626;line-height:1.6;vertical-align:top;">
+        <td style="padding:12px 16px;font-size:13px;color:#dc2626;line-height:1.7;vertical-align:top;">
           ${rejectionReason || "No specific reason provided. Please contact your manager for clarification."}
         </td>
       </tr>
@@ -374,33 +399,44 @@ export function expenseRejectedTemplate({
     <!-- Action Required -->
     <div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:14px 18px;margin-bottom:24px;">
       <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px;">ACTION REQUIRED</div>
-      <div style="font-size:13px;color:#78350f;line-height:1.6;">Please review the rejection reason, make the necessary corrections, and resubmit your expense claim through the Field Connect portal.</div>
+      <div style="font-size:13px;color:#78350f;line-height:1.6;">
+        Please review the rejection reason carefully, make the necessary corrections, and resubmit your expense claim through the
+        <a href="https://indrae.in" style="color:#1d4ed8;font-weight:600;">Field Connect portal</a>.
+        If you believe this rejection was made in error, please reach out to ${approverName || "your manager"} directly.
+      </div>
     </div>
-
-    <p style="margin:0;font-size:13px;color:#475569;line-height:1.6;">
-      For any queries, please contact your reporting manager or the HR/Accounts team directly.
-    </p>
 
     <p style="margin:20px 0 0 0;font-size:14px;color:#1e293b;line-height:1.6;">
       Regards,<br/>
-      <strong>Cyrix HealthCare Team</strong><br/>
-      <span style="font-size:12px;color:#64748b;">Field Connect — Expense Management System</span>
+      <strong>Cyrix Field Connect — Operations Team</strong><br/>
+      <span style="font-size:12px;color:#64748b;">Cyrix HealthCare Pvt. Ltd. | Expense Management System</span>
     </p>
   `;
 
   const textLegs = legs.length > 0
-    ? legs.map((leg, i) => `  ${i+1}. ${leg.date || "—"} | ${leg.from || "—"} → ${leg.to || "—"} | ${leg.activity || leg.work_done || "—"} | ${leg.mode || "—"} | ${leg.km || "—"} km | ₹${parseFloat(leg.amount || 0).toFixed(2)}`).join("\n")
+    ? legs.map((leg, i) => {
+        const from   = leg.from_district || leg.from_location || "—";
+        const to     = leg.to_district   || leg.to_location   || "—";
+        const purp   = leg.visit_purpose || leg.activity_details || "—";
+        const mode   = leg.travel_mode   || "—";
+        const km     = leg.distance_km   || leg.sub_km || "—";
+        const travel = parseFloat(leg.travel_amount || 0) + parseFloat(leg.sub_amount || 0);
+        const da     = parseFloat(leg.da_amount     || 0);
+        const hotel  = parseFloat(leg.hotel_amount  || 0);
+        const total  = travel + da + hotel + parseFloat(leg.other_amount || 0);
+        return `  ${i+1}. ${from} → ${to} | ${purp} | ${mode} | ${km} km | Travel: ₹${travel.toFixed(2)} | DA: ₹${da.toFixed(2)} | Hotel: ₹${hotel.toFixed(2)} | Total: ₹${total.toFixed(2)}`;
+      }).join("\n")
     : "  No leg details available.";
 
   const textPlain = `Dear ${employeeName},
 
-Your expense claim has been REJECTED. Details are as follows:
+Your expense claim ${expenseCode} has been REJECTED by ${approverName || "your reporting manager"}${approverDesig ? ` (${approverDesig})` : ""}.
 
-EXPENSE SUMMARY
+CLAIM SUMMARY
   Expense ID    : ${expenseCode}
-  Travel Name   : ${travelName || "—"}
   Period        : ${expenseMonth || "—"}
-  Claimed Amount: ₹${parseFloat(claimedAmount || 0).toFixed(2)}
+  Employee      : ${employeeName}${employeeId ? ` (${employeeId})` : ""}
+  Total Claimed : ₹${parseFloat(claimedAmount || 0).toFixed(2)}
   Rejected On   : ${rejectedAt || "—"}
 
 TRAVEL DETAILS (LEG-WISE)
@@ -408,13 +444,13 @@ ${textLegs}
 
 REJECTION DETAILS
   Rejected By   : ${approverName || "—"}${approverDesig ? ` (${approverDesig})` : ""}
-  Reason        : ${rejectionReason || "No specific reason provided."}
+  Reason        : ${rejectionReason || "No specific reason provided. Please contact your manager."}
 
-Please review the above, make necessary corrections, and resubmit through the Field Connect portal.
+Please review the above, make the necessary corrections, and resubmit through the Field Connect portal at https://indrae.in
 
 Regards,
-Cyrix HealthCare Team
-Field Connect — Expense Management System`;
+Cyrix Field Connect — Operations Team
+Cyrix HealthCare Pvt. Ltd.`;
 
   return {
     subject: `Expense Claim Rejected: ${expenseCode} — Action Required`,
