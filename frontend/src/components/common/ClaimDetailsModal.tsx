@@ -1623,23 +1623,23 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
     ? approvedSteps[approvedSteps.length - 1]
     : (approvals.find((a: any) => a.approver_name || a.approver_code) || null);
 
-  const isActivelyEditing = canEditAmounts && liveEditedTotalSum !== null;
+  const hasLiveModification = activeLiveManagerDeduction > 0;
 
-  const managerDeductorName = (isActivelyEditing && user?.name ? user.name : null)
+  const managerDeductorName = (hasLiveModification && user?.name ? user.name : null)
     || latestEditor?.editor_name
     || c.approved_by_name
     || c.edited_by_name
     || approverStep?.approver_name
     || (user?.name ? user.name : "Manager / Approver");
 
-  const managerDeductorCode = (isActivelyEditing && (user?.user_id || user?.e_code) ? (user.user_id || user.e_code) : null)
+  const managerDeductorCode = (hasLiveModification && (user?.user_id || user?.e_code) ? (user.user_id || user.e_code) : null)
     || latestEditor?.editor_code
     || c.approved_by_code
     || c.edited_by_code
     || approverStep?.approver_code
     || (user?.user_id || user?.e_code || "");
 
-  const managerDeductorRole = (isActivelyEditing && user?.role ? user.role : null)
+  const managerDeductorRole = (hasLiveModification && user?.role ? user.role : null)
     || latestEditor?.editor_role
     || c.approved_by_role
     || c.edited_by_role
