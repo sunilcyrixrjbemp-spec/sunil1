@@ -48,11 +48,12 @@ import {
  * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
  */
 async function sendViaCloudflareMail(env, opts) {
-  const { to, toName, subject, html, text } = opts;
+  const { to, toName, subject, html, text, cc = [] } = opts;
 
   const fromEmail = env.EMAIL_FROM_ADDRESS || "noreply@indrae.in";
   const fromName  = env.EMAIL_FROM_NAME   || "Cyrix Field Connect";
   const textBody  = text || "Cyrix Field Connect Security Verification Email.";
+  const ccHeader  = cc.length > 0 ? cc.join(", ") : null;
 
   // ── Primary: Cloudflare Email Workers binding ─────────────────────────────
   if (env.EMAIL_SENDER) {
@@ -64,12 +65,13 @@ async function sendViaCloudflareMail(env, opts) {
       const toHeader = toName ? `${toName} <${to}>` : to;
       const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-      const rawMessage = [
+      const headers = [
         `MIME-Version: 1.0`,
         `Date: ${dateStr}`,
         `Message-ID: ${msgId}`,
         `From: ${fromName} <${fromEmail}>`,
         `To: ${toHeader}`,
+        ...(ccHeader ? [`Cc: ${ccHeader}`] : []),
         `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
         `X-Auto-Response-Suppress: All`,
         `X-Report-Abuse: Please report abuse to abuse@indrae.in`,
@@ -89,12 +91,21 @@ async function sendViaCloudflareMail(env, opts) {
         html,
         ``,
         `--${boundary}--`
-      ].join("\r\n");
+      ];
 
+      const rawMessage = headers.join("\r\n");
       const message = new EmailMessage(fromEmail, to, rawMessage);
       await env.EMAIL_SENDER.send(message);
 
-      staticLog.info("Email sent via CF Email Workers", { to, subject: subject.slice(0, 50), msgId });
+      // If CC recipients exist, send individually via EMAIL_SENDER (CF doesn't support multi-RCPT natively)
+      for (const ccEmail of cc) {
+        try {
+          const ccMsg = new EmailMessage(fromEmail, ccEmail, rawMessage);
+          await env.EMAIL_SENDER.send(ccMsg);
+        } catch (_) {}
+      }
+
+      staticLog.info("Email sent via CF Email Workers", { to, cc, subject: subject.slice(0, 50), msgId });
       return { success: true, messageId: msgId };
 
     } catch (e) {
@@ -102,10 +113,13 @@ async function sendViaCloudflareMail(env, opts) {
     }
   }
 
-  // ── Secondary Fallback: MailChannels direct send (Free Cloudflare Integration) ──
+  // ── Secondary Fallback: MailChannels direct send ────────────────────────────
   try {
     const mcPayload = {
-      personalizations: [{ to: [{ email: to, name: toName || to }] }],
+      personalizations: [{
+        to: [{ email: to, name: toName || to }],
+        ...(cc.length > 0 ? { cc: cc.map(e => ({ email: e })) } : {})
+      }],
       from: { email: fromEmail, name: fromName },
       subject: subject,
       content: [
@@ -251,14 +265,14 @@ export async function queueEmail(env, opts) {
  * Send immediately without queueing.
  * Called by the queue processor and as direct fallback.
  */
-export async function sendEmailDirect(env, { to, toName, subject, html, text, emailLogId }) {
+export async function sendEmailDirect(env, { to, toName, subject, html, text, cc, emailLogId }) {
   if (env.ENABLE_EMAIL === "false") {
     staticLog.info("Email disabled by ENABLE_EMAIL flag", { to });
     await updateEmailLog(env, emailLogId, "disabled", null, null);
     return false;
   }
 
-  const result = await sendViaCloudflareMail(env, { to, toName, subject, html, text });
+  const result = await sendViaCloudflareMail(env, { to, toName, subject, html, text, cc: cc || [] });
 
   if (result.success) {
     await updateEmailLog(env, emailLogId, "sent", null, result.messageId);
@@ -310,15 +324,108 @@ export async function sendPasswordResetEmail(env, { to, name, otp, userId }) {
 }
 
 export async function sendExpenseStatusEmail(env, { to, name, userId, action, ...data }) {
-  const tmpl = action === "approved"
-    ? expenseApprovedTemplate({ employeeName: name, ...data })
-    : expenseRejectedTemplate({ employeeName: name, ...data });
-  return queueEmail(env, {
-    to, toName: name, userId, ...tmpl,
-    templateName: action === "approved" ? "expense_approved" : "expense_rejected",
-    priority: 3,
-    relatedEntityType: "expense",
-    relatedEntityId: data.expenseCode,
+  // ── Approved path: simple, no changes ──────────────────────────────────────
+  if (action === "approved") {
+    const tmpl = expenseApprovedTemplate({ employeeName: name, ...data });
+    return queueEmail(env, {
+      to, toName: name, userId, ...tmpl,
+      templateName: "expense_approved", priority: 3,
+      relatedEntityType: "expense", relatedEntityId: data.expenseCode,
+    });
+  }
+
+  // ── Rejected path: enrich with leg details + CC manager + coordinator ─────
+  let legs = [];
+  let employeeExtra = {};
+  let managerEmail = null;
+  let coordinatorEmail = null;
+  let approverDesig = null;
+
+  if (env.DB && (data.expenseCode || data.expenseId)) {
+    try {
+      // Fetch itinerary legs (no attachments — just travel details)
+      const expId = data.expenseCode || data.expenseId;
+      const legRows = await env.DB.prepare(
+        `SELECT date, \`from\`, \`to\`, activity, activity_type, mode, km, amount, sub_amount, da
+         FROM expense_itineraries WHERE exp_id = ? ORDER BY date ASC, id ASC`
+      ).bind(expId).all();
+      legs = legRows?.results || [];
+    } catch (_) {}
+
+    try {
+      // Fetch employee extra info: designation, manager name, coordinator name
+      const emp = await env.DB.prepare(
+        `SELECT designation, manager, coordinator FROM users WHERE user_id = ? LIMIT 1`
+      ).bind(userId).first();
+      if (emp) {
+        employeeExtra.designation = emp.designation || "";
+        // Lookup manager email for CC
+        if (emp.manager) {
+          const mgr = await env.DB.prepare(
+            `SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`
+          ).bind(emp.manager).first();
+          managerEmail = mgr?.mail_id || null;
+        }
+        // Lookup coordinator email for CC
+        if (emp.coordinator) {
+          const coord = await env.DB.prepare(
+            `SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`
+          ).bind(emp.coordinator).first();
+          coordinatorEmail = coord?.mail_id || null;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      // Fetch rejector's (approver's) designation
+      const rejectorName = data.approverName || data.approvedBy;
+      if (rejectorName) {
+        const appr = await env.DB.prepare(
+          `SELECT designation FROM users WHERE name = ? LIMIT 1`
+        ).bind(rejectorName).first();
+        approverDesig = appr?.designation || null;
+      }
+    } catch (_) {}
+  }
+
+  const rejectedAt = data.rejectedAt || new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) + " IST";
+
+  const tmpl = expenseRejectedTemplate({
+    employeeName: name,
+    employeeId: userId,
+    designation: employeeExtra.designation,
+    expenseCode: data.expenseCode,
+    travelName: data.travelName,
+    expenseMonth: data.expenseMonth,
+    claimedAmount: data.claimedAmount || data.totalAmount,
+    approvedAmount: data.approvedAmount || 0,
+    approverName: data.approverName,
+    approverDesig,
+    rejectionReason: data.rejectionReason || data.managerComments || data.comments,
+    rejectedAt,
+    legs,
+  });
+
+  // Build CC list: manager + coordinator (exclude duplicates and primary To)
+  const ccList = [];
+  if (managerEmail && managerEmail !== to) ccList.push(managerEmail);
+  if (coordinatorEmail && coordinatorEmail !== to && coordinatorEmail !== managerEmail) ccList.push(coordinatorEmail);
+
+  const emailLogId = await logEmailIntent(env, {
+    to, toName: name, userId,
+    subject: tmpl.subject,
+    templateName: "expense_rejected", priority: 2,
+    relatedEntityType: "expense", relatedEntityId: data.expenseCode,
+  });
+
+  // Send directly (not queued) so CC header is properly applied
+  return sendEmailDirect(env, {
+    to, toName: name,
+    subject: tmpl.subject,
+    html: tmpl.html,
+    text: tmpl.text,
+    cc: ccList,
+    emailLogId,
   });
 }
 
