@@ -171,6 +171,94 @@ const convertImageUrlToBase64 = async (url: string, fileName = ""): Promise<stri
   return convertImageUrlToBase64WithFallback(url, fileName);
 };
 
+const prepareConvertedAttachments = async (claims: any[]) => {
+  const rawAttachmentsMap = new Map<string, any>();
+  
+  (claims || []).forEach((claim: any) => {
+    const claimDate = claim.date || "N/A";
+    const claimAtts = [
+      ...(Array.isArray(claim.attachments) ? claim.attachments : []),
+      ...(Array.isArray(claim.attachments_detailed) ? claim.attachments_detailed : []),
+      ...(Array.isArray(claim.attachment_urls) ? claim.attachment_urls : []),
+      ...(typeof claim.attachments === "string" ? (() => { try { return JSON.parse(claim.attachments); } catch { return [claim.attachments]; } })() : [])
+    ];
+
+    claimAtts.forEach((cItem: any, cIdx: number) => {
+      const cUrl = typeof cItem === "string" ? cItem : (cItem.file_url || cItem.url);
+      const label = (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`;
+      if (cUrl && typeof cUrl === "string" && cUrl.trim() && !rawAttachmentsMap.has(cUrl)) {
+        rawAttachmentsMap.set(cUrl, {
+          file_url: cUrl,
+          url: cUrl,
+          date: claimDate,
+          bill_type: label
+        });
+      }
+    });
+
+    (claim.legs || []).forEach((leg: any) => {
+      const legCandidateFields = [
+        { key: "hotel_receipt", label: "Hotel Bill Receipt" },
+        { key: "local_purchase_bill", label: "Local Purchase Bill" },
+        { key: "other_bill", label: "Other Expense Bill" },
+        { key: "receipt_url", label: "Travel / Bill Receipt" },
+        { key: "bill_url", label: "Travel Ticket" },
+        { key: "attachment_url", label: "Expense Bill Attachment" },
+        { key: "file_url", label: "Expense Bill Attachment" },
+        { key: "bill_copy", label: "Expense Bill Copy" },
+        { key: "receipt", label: "Bill Receipt" },
+        { key: "ticket_attachment", label: "Train / Bus Ticket" },
+        { key: "main_bill_file", label: "Travel Ticket Receipt" },
+        { key: "sub_bill_file", label: "Sub-connection Ticket" },
+        { key: "hotel_bill_file", label: "Hotel Bill" },
+        { key: "lp_bill_file", label: "Local Purchase Bill" },
+        { key: "oth_bill_file", label: "Other Expense Bill" },
+        { key: "other_attachment", label: "Other Bill Attachment" }
+      ];
+
+      legCandidateFields.forEach(field => {
+        const u = leg[field.key];
+        if (u && typeof u === "string" && u.trim() && !rawAttachmentsMap.has(u)) {
+          rawAttachmentsMap.set(u, {
+            file_url: u,
+            url: u,
+            date: claimDate,
+            bill_type: field.label
+          });
+        }
+      });
+
+      if (Array.isArray(leg.attachments)) {
+        leg.attachments.forEach((aItem: any) => {
+          const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
+          if (aUrl && !rawAttachmentsMap.has(aUrl)) {
+            rawAttachmentsMap.set(aUrl, {
+              file_url: aUrl,
+              url: aUrl,
+              date: claimDate,
+              bill_type: (typeof aItem === "object" && aItem.bill_type) ? aItem.bill_type : "Bill Attachment"
+            });
+          }
+        });
+      }
+    });
+  });
+
+  const rawAttachments = Array.from(rawAttachmentsMap.values());
+  return await Promise.all(
+    rawAttachments.map(async (att: any) => {
+      const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
+      const base64Url = rawUrl ? await convertImageUrlToBase64(rawUrl) : "";
+      return {
+        ...att,
+        original_url: rawUrl,
+        file_url: base64Url || rawUrl,
+        url: base64Url || rawUrl
+      };
+    })
+  );
+};
+
 const MONTHS = [
   "", "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -360,15 +448,29 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
            b.includes("pms_report") || b.includes("service_report_sheet") || b === "service_report";
   };
 
+  // Helper to get normalized deduplication key from attachment URL
+  const getAttachmentNormKey = (urlStr: string): string => {
+    if (!urlStr) return "";
+    if (urlStr.startsWith("data:")) return urlStr.slice(0, 120);
+    const clean = urlStr.split("?")[0].replace(/^https?:\/\/[^\/]+/, "").replace(/^\//, "");
+    const base = clean.split("/").pop() || clean;
+    return base.toLowerCase().replace(/\.[^/.]+$/, "");
+  };
+
   // Collect ALL financial bill attachments (excluding Call Service Reports & PMS Reports)
   const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
+  const seenNormKeys = new Set<string>();
 
-  // 1. Top-level attachments array from backend
+  // 1. Top-level attachments array from backend / prepareConvertedAttachments
   (attachments || []).forEach((att: any, idx: number) => {
     const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
+    const origUrl = att.original_url || rawUrl;
+    const normKey = getAttachmentNormKey(origUrl) || getAttachmentNormKey(rawUrl);
     const label = att.bill_type || att.billType || "Expense Bill Attachment";
-    if (rawUrl && !isCallOrPmsReport(label, att.bill_type) && !allAttachmentsMap.has(rawUrl)) {
-      allAttachmentsMap.set(rawUrl, {
+
+    if (rawUrl && normKey && !isCallOrPmsReport(label, att.bill_type) && !seenNormKeys.has(normKey)) {
+      seenNormKeys.add(normKey);
+      allAttachmentsMap.set(normKey, {
         url: rawUrl,
         date: att.date ? fmtDate(att.date) : `Bill #${idx + 1}`,
         label: label
@@ -389,9 +491,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
     claimAtts.forEach((cItem: any, cIdx: number) => {
       const cUrl = typeof cItem === "string" ? cItem : (cItem.file_url || cItem.url);
+      const normKey = getAttachmentNormKey(cUrl);
       const label = (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`;
-      if (cUrl && typeof cUrl === "string" && cUrl.trim() && !isCallOrPmsReport(label, (cItem.bill_type || "")) && !allAttachmentsMap.has(cUrl)) {
-        allAttachmentsMap.set(cUrl, {
+      if (cUrl && normKey && !isCallOrPmsReport(label, (cItem.bill_type || "")) && !seenNormKeys.has(normKey)) {
+        seenNormKeys.add(normKey);
+        allAttachmentsMap.set(normKey, {
           url: cUrl,
           date: claimDate,
           label: label
@@ -421,22 +525,39 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
       candidateFields.forEach(field => {
         const u = leg[field.key];
-        if (u && typeof u === 'string' && u.trim() && !isCallOrPmsReport(field.label, "") && !allAttachmentsMap.has(u)) {
-          allAttachmentsMap.set(u, { url: u, date: claimDate, label: field.label });
+        const normKey = getAttachmentNormKey(u);
+        if (u && normKey && !isCallOrPmsReport(field.label, "") && !seenNormKeys.has(normKey)) {
+          seenNormKeys.add(normKey);
+          allAttachmentsMap.set(normKey, { url: u, date: claimDate, label: field.label });
         }
       });
 
       if (Array.isArray(leg.attachments)) {
         leg.attachments.forEach((aItem: any, aIdx: number) => {
           const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
+          const normKey = getAttachmentNormKey(aUrl);
           const label = aItem.bill_type || `Bill Attachment #${aIdx + 1}`;
-          if (aUrl && !isCallOrPmsReport(label, aItem.bill_type || "") && !allAttachmentsMap.has(aUrl)) {
-            allAttachmentsMap.set(aUrl, { url: aUrl, date: claimDate, label: label });
+          if (aUrl && normKey && !isCallOrPmsReport(label, aItem.bill_type || "") && !seenNormKeys.has(normKey)) {
+            seenNormKeys.add(normKey);
+            allAttachmentsMap.set(normKey, { url: aUrl, date: claimDate, label: label });
           }
         });
       }
     });
   });
+
+  // Build a lookup map of originalUrl -> base64Url from attachments parameter
+  const base64Lookup = new Map<string, string>();
+  if (Array.isArray(attachments)) {
+    attachments.forEach((item: any) => {
+      const orig = item.original_url || item.raw_url || item.url || item.file_url;
+      const b64 = item.file_url || item.url;
+      if (orig && b64) {
+        base64Lookup.set(orig, b64);
+        base64Lookup.set(getAbsoluteUrl(orig), b64);
+      }
+    });
+  }
 
   const finalAttachments = Array.from(allAttachmentsMap.values());
 
@@ -445,7 +566,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   if (finalAttachments.length > 0) {
     attachmentsSection = finalAttachments.map((att: any, index) => {
       const rawUrl = att.url;
-      const absoluteUrl = getAbsoluteUrl(rawUrl);
+      const base64OrUrl = base64Lookup.get(rawUrl) || base64Lookup.get(getAbsoluteUrl(rawUrl)) || rawUrl;
+      const absoluteUrl = base64OrUrl.startsWith("data:") ? base64OrUrl : getAbsoluteUrl(base64OrUrl);
       const dateStr = att.date || `Receipt #${index + 1}`;
       const attLabel = att.label || "Expense Bill Attachment";
 
@@ -739,6 +861,8 @@ export default function MonthSummaryPage() {
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
+  const cancelZipRef = useRef(false);
+
   // Modal states
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [advanceModalConfig, setAdvanceModalConfig] = useState<{
@@ -823,8 +947,6 @@ export default function MonthSummaryPage() {
     });
   };
 
-  // Renders a full HTML document inside a hidden iframe, captures it with
-  // html2canvas + jsPDF, and returns the PDF as a Blob.
   // Renders a full HTML document inside a hidden iframe, captures all pages (summary sheet + bill attachments),
   // converts with html2canvas + jsPDF, and returns a genuine multi-page A4 Landscape PDF Blob.
   const renderHTMLToPDFBlob = async (html: string): Promise<Blob> => {
@@ -835,7 +957,7 @@ export default function MonthSummaryPage() {
     const h2c = (window as any).html2canvas;
 
     const A4_W_CSS = 1122; // A4 landscape width at 96dpi
-    const SCALE = 2;
+    const SCALE = 1.5; // Fast rendering scale
 
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
@@ -859,10 +981,10 @@ export default function MonthSummaryPage() {
     iDoc.write(html);
     iDoc.close();
 
-    // Wait for all embedded images / attachments to load (with load, error, & 10s timeout handlers)
+    // Fast image load check with 2.5s fallback timeout
     await new Promise<void>((resolve) => {
       const imgs = Array.from(iDoc.getElementsByTagName("img"));
-      if (imgs.length === 0) { setTimeout(resolve, 300); return; }
+      if (imgs.length === 0) { setTimeout(resolve, 100); return; }
       let loadedCount = 0;
       let failedCount = 0;
       let isResolved = false;
@@ -870,8 +992,7 @@ export default function MonthSummaryPage() {
       const finish = () => {
         if (!isResolved) {
           isResolved = true;
-          console.log(`📸 Starting canvas capture (${loadedCount} loaded, ${failedCount} failed)...`);
-          setTimeout(resolve, 300);
+          setTimeout(resolve, 100);
         }
       };
 
@@ -893,22 +1014,19 @@ export default function MonthSummaryPage() {
           });
           imageEl.addEventListener("error", () => {
             failedCount++;
-            console.warn(`⚠️ Image failed to load in PDF frame: ${imageEl.src.substring(0, 80)}`);
             check();
           });
         }
       });
 
-      // 10 second fallback timeout per rendering run
+      // 2.5 second fallback timeout per rendering run for speed
       setTimeout(() => {
         if (!isResolved) {
-          console.warn("⏱️ Image loading timeout in PDF iframe. Proceeding to render canvas.");
           finish();
         }
-      }, 10000);
+      }, 2500);
     });
 
-    // Query ALL summary pages (Page 1 of N, Page 2 of N, Page 3 of N...) + ALL attachment pages (1 page per bill)
     const pagesToRender: HTMLElement[] = [];
     const summaryPages = Array.from(iDoc.querySelectorAll(".summary-page, .wrap")) as HTMLElement[];
     const uniqueSummaryPages = Array.from(new Set(summaryPages));
@@ -943,7 +1061,7 @@ export default function MonthSummaryPage() {
         windowHeight: el.offsetHeight || 793,
       });
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const imgData = canvas.toDataURL("image/jpeg", 0.90);
       if (i > 0) {
         pdf.addPage("a4", "landscape");
       }
@@ -989,7 +1107,6 @@ export default function MonthSummaryPage() {
           return;
         }
 
-        // Fetch detailed attachment data for each claim to ensure no receipts are missed
         await Promise.all(
           claims.map(async (claim: any) => {
             try {
@@ -1008,112 +1125,7 @@ export default function MonthSummaryPage() {
           })
         );
 
-        const rawAttachmentsMap = new Map<string, any>();
-        (res.attachments || []).forEach((att: any) => {
-          const url = att.file_url || att.url || (typeof att === "string" ? att : "");
-          if (url) rawAttachmentsMap.set(url, att);
-        });
-
-        claims.forEach((claim: any) => {
-          const claimDate = claim.date || "";
-
-          const cAtts = [
-            ...(Array.isArray(claim.attachments) ? claim.attachments : []),
-            ...(Array.isArray(claim.attachments_detailed) ? claim.attachments_detailed : []),
-            ...(Array.isArray(claim.attachment_urls) ? claim.attachment_urls : []),
-            ...(typeof claim.attachments === "string" ? (() => { try { return JSON.parse(claim.attachments); } catch { return [claim.attachments]; } })() : [])
-          ];
-          cAtts.forEach((att: any) => {
-            const url = typeof att === "string" ? att : (att.file_url || att.url);
-            if (url && !rawAttachmentsMap.has(url)) {
-              rawAttachmentsMap.set(url, {
-                file_url: url,
-                url: url,
-                date: claimDate,
-                bill_type: (typeof att === "object" && (att.bill_type || att.billType)) ? (att.bill_type || att.billType) : "Bill Attachment"
-              });
-            }
-          });
-
-          (claim.legs || []).forEach((leg: any) => {
-            const legCandidateFields = [
-              { key: "hotel_receipt", label: "Hotel Bill Receipt" },
-              { key: "local_purchase_bill", label: "Local Purchase Bill" },
-              { key: "other_bill", label: "Other Expense Bill" },
-              { key: "receipt_url", label: "Travel / Bill Receipt" },
-              { key: "bill_url", label: "Travel Ticket" },
-              { key: "attachment_url", label: "Expense Bill Attachment" },
-              { key: "file_url", label: "Expense Bill Attachment" },
-              { key: "bill_copy", label: "Expense Bill Copy" },
-              { key: "receipt", label: "Bill Receipt" },
-              { key: "ticket_attachment", label: "Train / Bus Ticket" },
-              { key: "main_bill_file", label: "Travel Ticket Receipt" },
-              { key: "sub_bill_file", label: "Sub-connection Ticket" },
-              { key: "hotel_bill_file", label: "Hotel Bill" },
-              { key: "lp_bill_file", label: "Local Purchase Bill" },
-              { key: "oth_bill_file", label: "Other Expense Bill" },
-              { key: "other_attachment", label: "Other Bill Attachment" }
-            ];
-
-            legCandidateFields.forEach(field => {
-              const u = leg[field.key];
-              if (u && typeof u === "string" && u.trim() && !rawAttachmentsMap.has(u)) {
-                rawAttachmentsMap.set(u, {
-                  file_url: u,
-                  url: u,
-                  date: claimDate,
-                  bill_type: field.label
-                });
-              }
-            });
-
-            if (Array.isArray(leg.attachments)) {
-              leg.attachments.forEach((aItem: any) => {
-                const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
-                if (aUrl && !rawAttachmentsMap.has(aUrl)) {
-                  rawAttachmentsMap.set(aUrl, {
-                    file_url: aUrl,
-                    url: aUrl,
-                    date: claimDate,
-                    bill_type: (typeof aItem === "object" && aItem.bill_type) ? aItem.bill_type : "Bill Attachment"
-                  });
-                }
-              });
-            }
-          });
-        });
-
-        const rawAttachments = Array.from(rawAttachmentsMap.values());
-        const attachments = await Promise.all(
-          rawAttachments.map(async (att: any) => {
-            const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
-            const base64Url = rawUrl ? await convertImageUrlToBase64(rawUrl) : "";
-            return {
-              ...att,
-              file_url: base64Url || rawUrl,
-              url: base64Url || rawUrl
-            };
-          })
-        );
-
-        for (const claim of claims) {
-          for (const leg of (claim.legs || [])) {
-            if (leg.hotel_receipt) leg.hotel_receipt = await convertImageUrlToBase64(leg.hotel_receipt);
-            if (leg.local_purchase_bill) leg.local_purchase_bill = await convertImageUrlToBase64(leg.local_purchase_bill);
-            if (leg.other_bill) leg.other_bill = await convertImageUrlToBase64(leg.other_bill);
-            if (leg.receipt_url) leg.receipt_url = await convertImageUrlToBase64(leg.receipt_url);
-            if (leg.bill_url) leg.bill_url = await convertImageUrlToBase64(leg.bill_url);
-            if (leg.attachment_url) leg.attachment_url = await convertImageUrlToBase64(leg.attachment_url);
-            if (leg.file_url) leg.file_url = await convertImageUrlToBase64(leg.file_url);
-            if (leg.ticket_attachment) leg.ticket_attachment = await convertImageUrlToBase64(leg.ticket_attachment);
-            if (leg.main_bill_file) leg.main_bill_file = await convertImageUrlToBase64(leg.main_bill_file);
-            if (leg.sub_bill_file) leg.sub_bill_file = await convertImageUrlToBase64(leg.sub_bill_file);
-            if (leg.hotel_bill_file) leg.hotel_bill_file = await convertImageUrlToBase64(leg.hotel_bill_file);
-            if (leg.lp_bill_file) leg.lp_bill_file = await convertImageUrlToBase64(leg.lp_bill_file);
-            if (leg.oth_bill_file) leg.oth_bill_file = await convertImageUrlToBase64(leg.oth_bill_file);
-            if (leg.other_attachment) leg.other_attachment = await convertImageUrlToBase64(leg.other_attachment);
-          }
-        }
+        const attachments = await prepareConvertedAttachments(claims);
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
         const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Expense_Summary_${row.month}_${row.year}.pdf`;
@@ -1395,29 +1407,116 @@ export default function MonthSummaryPage() {
     }
   };
 
+  const [zipProgress, setZipProgress] = useState<{
+    active: boolean;
+    stage: "fetching" | "rendering" | "compressing" | "complete" | "error";
+    current: number;
+    total: number;
+    currentName: string;
+    percent: number;
+    message: string;
+  } | null>(null);
+
+  const handleCancelZIP = () => {
+    cancelZipRef.current = true;
+    setZipProgress(null);
+    toast("ZIP generation cancelled", { icon: "ℹ️" });
+  };
+
   const generateZIPBlob = async (fetched: any[], advancesMap: Record<string, number>) => {
-    const tid = toast.loading("Generating Images and packing ZIP...");
+    const totalEngineers = fetched.length;
+    setZipProgress({
+      active: true,
+      stage: "rendering",
+      current: 0,
+      total: totalEngineers,
+      currentName: "Starting PDF generation...",
+      percent: 30,
+      message: `Preparing to render ${totalEngineers} report PDFs...`
+    });
+
     try {
       const zip = new (window as any).JSZip();
+      let completedPdfs = 0;
       
-      for (const item of fetched) {
+      for (let i = 0; i < fetched.length; i++) {
+        if (cancelZipRef.current) {
+          setZipProgress(null);
+          toast("ZIP generation cancelled", { icon: "ℹ️" });
+          return;
+        }
+
+        const item = fetched[i];
         const userObj = item.res.user || item.row;
         const claims = item.res.claims || [];
         const attachments = item.res.attachments || [];
         if (claims.length === 0) continue;
 
+        const engName = userObj.name || "Engineer";
+        const engCode = userObj.e_code || userObj.user_id || "";
+        const renderPct = 30 + Math.round(((i + 1) / totalEngineers) * 55);
+
+        setZipProgress({
+          active: true,
+          stage: "rendering",
+          current: i + 1,
+          total: totalEngineers,
+          currentName: `${engName} (${engCode})`,
+          percent: renderPct,
+          message: `Rendering PDF ${i + 1} of ${totalEngineers}: ${engName}`
+        });
+
         const key = `${item.row.user_id}-${item.row.month}-${item.row.year}`;
         const advance = advancesMap[key] || 0;
 
         const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
-        const safeName = (userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_");
+        const safeName = engName.replace(/[^a-zA-Z0-9]/g, "_");
         const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
-        const fileName = `${safeName}_${userObj.e_code || userObj.user_id}_${safeMonth}_${userObj.year}.pdf`;
+        const fileName = `${safeName}_${engCode}_${safeMonth}_${userObj.year}.pdf`;
         const pdfBlob = await renderHTMLToPDFBlob(html);
         zip.file(fileName, pdfBlob);
+        completedPdfs++;
       }
 
-      const zipBlob = await zip.generateAsync({ type: "blob" });
+      if (cancelZipRef.current) {
+        setZipProgress(null);
+        toast("ZIP generation cancelled", { icon: "ℹ️" });
+        return;
+      }
+
+      setZipProgress({
+        active: true,
+        stage: "compressing",
+        current: totalEngineers,
+        total: totalEngineers,
+        currentName: "Packaging ZIP archive...",
+        percent: 85,
+        message: "Compressing PDFs into ZIP package..."
+      });
+
+      const zipBlob = await zip.generateAsync(
+        { type: "blob" },
+        (metadata: any) => {
+          if (cancelZipRef.current) return;
+          const compPercent = 85 + Math.round((metadata.percent / 100) * 15);
+          setZipProgress({
+            active: true,
+            stage: "compressing",
+            current: totalEngineers,
+            total: totalEngineers,
+            currentName: metadata.currentFile ? `Compressing ${metadata.currentFile}` : "Finalizing ZIP file...",
+            percent: Math.min(compPercent, 99),
+            message: `Compressing ZIP file (${Math.round(metadata.percent)}%)...`
+          });
+        }
+      );
+
+      if (cancelZipRef.current) {
+        setZipProgress(null);
+        toast("ZIP generation cancelled", { icon: "ℹ️" });
+        return;
+      }
+
       const link = document.createElement("a");
       link.href = URL.createObjectURL(zipBlob);
       link.download = `Claims_Reports_${appliedFilters.month || "Selected"}_${appliedFilters.year || "2026"}.zip`;
@@ -1425,18 +1524,57 @@ export default function MonthSummaryPage() {
       link.click();
       document.body.removeChild(link);
 
-      toast.dismiss(tid);
-      toast.success("ZIP folder downloaded successfully!");
+      setZipProgress({
+        active: true,
+        stage: "complete",
+        current: totalEngineers,
+        total: totalEngineers,
+        currentName: "Download Ready",
+        percent: 100,
+        message: `ZIP folder containing ${completedPdfs} reports downloaded successfully!`
+      });
+
+      toast.success(`ZIP package downloaded (${completedPdfs} reports)!`);
+
+      setTimeout(() => {
+        setZipProgress(null);
+      }, 2500);
+
     } catch (e) {
-      toast.dismiss(tid);
+      if (cancelZipRef.current) {
+        setZipProgress(null);
+        toast("ZIP generation cancelled", { icon: "ℹ️" });
+        return;
+      }
+      setZipProgress({
+        active: true,
+        stage: "error",
+        current: 0,
+        total: totalEngineers,
+        currentName: "Failed",
+        percent: 0,
+        message: "Failed to generate ZIP package."
+      });
       toast.error("Failed to generate ZIP");
       console.error(e);
+      setTimeout(() => setZipProgress(null), 3000);
     }
   };
 
   const handleBulkDownloadZIP = async () => {
     if (selectedKeys.length === 0) return;
-    const tid = toast.loading(`Preparing ZIP package and fetching claims data...`);
+    cancelZipRef.current = false;
+
+    setZipProgress({
+      active: true,
+      stage: "fetching",
+      current: 0,
+      total: selectedKeys.length,
+      currentName: "Starting data fetch...",
+      percent: 5,
+      message: `Fetching claim records for ${selectedKeys.length} selected engineers...`
+    });
+
     try {
       await Promise.all([
         loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
@@ -1446,32 +1584,58 @@ export default function MonthSummaryPage() {
       const fetched: any[] = [];
       const advancesMap: Record<string, number> = {};
 
-      const promises = selectedKeys.map(async (key) => {
-        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
-        if (!row) return;
-        try {
-          const [claimRes, advRes] = await Promise.all([
-            expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
-            expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
-          ]);
-          fetched.push({ row, res: claimRes });
-          advancesMap[key] = advRes?.advance_amount || 0;
-        } catch (e) {
-          console.error(e);
+      let completedFetch = 0;
+      for (const key of selectedKeys) {
+        if (cancelZipRef.current) {
+          setZipProgress(null);
+          toast("ZIP generation cancelled", { icon: "ℹ️" });
+          return;
         }
-      });
 
-      await Promise.all(promises);
-      toast.dismiss(tid);
+        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
+        if (row) {
+          completedFetch++;
+          const fetchPercent = Math.round((completedFetch / selectedKeys.length) * 25);
+          const engName = row.name || row.user_id || "Engineer";
+
+          setZipProgress({
+            active: true,
+            stage: "fetching",
+            current: completedFetch,
+            total: selectedKeys.length,
+            currentName: engName,
+            percent: fetchPercent,
+            message: `Fetched data for ${engName} (${completedFetch}/${selectedKeys.length})`
+          });
+
+          try {
+            const [claimRes, advRes] = await Promise.all([
+              expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
+              expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
+            ]);
+            fetched.push({ row, res: claimRes });
+            advancesMap[key] = advRes?.advance_amount || 0;
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+
+      if (cancelZipRef.current) {
+        setZipProgress(null);
+        toast("ZIP generation cancelled", { icon: "ℹ️" });
+        return;
+      }
 
       if (fetched.length === 0) {
+        setZipProgress(null);
         toast.error("Failed to load claims for selected engineers");
         return;
       }
 
       generateZIPBlob(fetched, advancesMap);
     } catch (err) {
-      toast.dismiss(tid);
+      setZipProgress(null);
       toast.error("Bulk ZIP generation failed");
     }
   };
@@ -1743,27 +1907,27 @@ export default function MonthSummaryPage() {
                         </td>
                         <td className="py-2.5 px-3 border-r border-slate-200">
                           <span className="font-mono font-extrabold text-xs text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200">
-                            {row.e_code}
+                            {row.e_code || row.user_id || "—"}
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-slate-800 font-bold border-r border-slate-200">{row.district || "—"}</td>
                         <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 border-r border-slate-200">
-                          {fmt(row.claimed_amount)}
+                          {fmt(row.claimed_amount != null ? row.claimed_amount : (row.total_amount || 0))}
                         </td>
                         <td className="py-2.5 px-3 text-right font-mono font-black text-emerald-700 bg-emerald-50/40 border-r border-slate-200">
-                          {fmt(row.total_amount)}
+                          {fmt(row.approved_amount != null ? row.approved_amount : (row.total_amount || 0))}
                         </td>
                         <td className="py-2.5 px-3 text-right font-mono font-black text-rose-700 bg-rose-50/30 border-r border-slate-200">
                           {row.rejected_amount > 0 ? fmt(row.rejected_amount) : <span className="text-slate-300">—</span>}
                         </td>
                         <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
-                          {row.calls_assigned > 0 ? `${row.calls_completed}/${row.calls_assigned}` : <span className="text-slate-300">—</span>}
+                          {row.calls_assigned > 0 ? `${row.calls_completed || 0}/${row.calls_assigned}` : <span className="text-slate-300">—</span>}
                         </td>
                         <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
                           {row.pms_count || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
-                          {row.asset_tagging_count || <span className="text-slate-300">—</span>}
+                          {row.tagging_count || row.asset_tagging || row.asset_tagging_count || <span className="text-slate-300">—</span>}
                         </td>
                         <td className="py-2.5 px-3 border-r border-slate-200 text-center">
                           <span className="text-[10px] font-bold text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200 whitespace-nowrap">
@@ -1951,6 +2115,84 @@ export default function MonthSummaryPage() {
                 Save &amp; Proceed
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= LIVE ZIP GENERATION PROGRESS MODAL ================= */}
+      {zipProgress && zipProgress.active && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn font-sans">
+          <div className="bg-white border border-slate-400 rounded-none shadow-2xl w-full max-w-md overflow-hidden text-left">
+            {/* Modal Header */}
+            <div className="bg-[#1565C0] text-white px-4 py-3 flex justify-between items-center rounded-none">
+              <h3 className="text-xs font-extrabold tracking-wider uppercase m-0 flex items-center gap-2 text-white">
+                <FileText className="w-4 h-4 text-sky-200" />
+                <span>ZIP Download Progress</span>
+              </h3>
+              <div className="flex items-center gap-2">
+                <div className="text-[11px] font-mono font-bold bg-white/20 px-2 py-0.5 rounded text-white">
+                  {zipProgress.percent}%
+                </div>
+                {zipProgress.stage !== "complete" && (
+                  <button
+                    type="button"
+                    onClick={handleCancelZIP}
+                    className="text-[10px] font-black uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded-none border-0 cursor-pointer transition-colors flex items-center gap-1 shadow-2xs"
+                    title="Cancel Download"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Cancel</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 space-y-3.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700 truncate max-w-[260px]">
+                  {zipProgress.stage === "fetching" && "📥 Step 1/3: Fetching Data"}
+                  {zipProgress.stage === "rendering" && "📄 Step 2/3: Generating PDFs"}
+                  {zipProgress.stage === "compressing" && "📦 Step 3/3: Packing ZIP Archive"}
+                  {zipProgress.stage === "complete" && "✅ Step 3/3: Download Ready"}
+                  {zipProgress.stage === "error" && "❌ Error"}
+                </span>
+                <span className="font-extrabold text-[#1565C0] font-mono">
+                  {zipProgress.current} / {zipProgress.total} Ready
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-slate-100 h-4 border border-slate-300 rounded-none p-0.5 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-[#1565C0] to-[#1E88E5] h-full transition-all duration-300 ease-out"
+                  style={{ width: `${zipProgress.percent}%` }}
+                />
+              </div>
+
+              {/* Current Status Log */}
+              <div className="bg-slate-50 border border-slate-200 p-3 rounded-none space-y-1">
+                <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Current Activity</div>
+                <div className="font-semibold text-slate-800 break-words font-mono text-[11px]">
+                  {zipProgress.message}
+                </div>
+                {zipProgress.stage === "rendering" && zipProgress.total > 0 && (
+                  <div className="text-[10.5px] text-slate-500 font-sans pt-1 border-t border-slate-200 mt-1 flex justify-between">
+                    <span>Remaining: <strong className="text-slate-800">{zipProgress.total - zipProgress.current} PDFs</strong></span>
+                    <span className="font-mono text-[#1565C0] font-bold">{Math.round((zipProgress.current / zipProgress.total) * 100)}% PDFs Done</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer / Completion Notification */}
+            {zipProgress.stage === "complete" && (
+              <div className="bg-emerald-50 px-4 py-2.5 border-t border-emerald-200 text-center">
+                <span className="text-xs font-extrabold text-emerald-800 flex items-center justify-center gap-1.5">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" /> ZIP Folder Downloaded Successfully!
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

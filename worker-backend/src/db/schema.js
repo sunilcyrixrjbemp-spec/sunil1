@@ -361,3 +361,198 @@ export const noTaDaHospitals = sqliteTable("no_ta_da_hospitals", {
   createdAt: text("created_at"),
 });
 
+// ─── ENTERPRISE TABLES (v2.0.0) ──────────────────────────────────────────────
+
+// 25. File Metadata Table — R2 Storage Tracking
+// Every file uploaded to R2 gets a row here with full metadata.
+// Linked to expenses, approvals, and the user who uploaded it.
+export const fileMetadata = sqliteTable("file_metadata", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  // Links
+  expenseId: integer("expense_id"),
+  expenseCode: text("expense_code"),
+  itineraryId: text("itinerary_id"),
+  travelName: text("travel_name"),
+  employeeId: text("employee_id"),
+  employeeName: text("employee_name"),
+  // File Info
+  originalFilename: text("original_filename").notNull(),
+  safeFilename: text("safe_filename").notNull(),
+  fileHash: text("file_hash"),         // SHA-256 of file bytes — for duplicate detection
+  fileSize: integer("file_size"),       // Bytes
+  contentType: text("content_type"),
+  imageWidth: integer("image_width"),   // px (null for non-images)
+  imageHeight: integer("image_height"), // px (null for non-images)
+  // R2 Storage
+  r2ObjectKey: text("r2_object_key"),
+  r2Url: text("r2_url"),
+  r2Bucket: text("r2_bucket"),
+  r2FolderPath: text("r2_folder_path"),
+  thumbnailKey: text("thumbnail_key"),  // R2 key for thumbnail (images only)
+  thumbnailUrl: text("thumbnail_url"),
+  // Source / Migration
+  uploadSource: text("upload_source").default("r2"),  // "r2" or "gdrive"
+  gdriveFileId: text("gdrive_file_id"),               // Original GDrive file ID (if migrated)
+  migratedAt: text("migrated_at"),                    // When migrated from GDrive to R2
+  // Category & Context
+  category: text("category"),           // "expense_photo", "service_report", "profile", "asset"
+  tripDate: text("trip_date"),
+  uploadDate: text("upload_date").notNull(),
+  uploadedBy: text("uploaded_by").notNull(),
+  hospital: text("hospital"),
+  // Lifecycle
+  isDeleted: integer("is_deleted").default(0),
+  deletedAt: text("deleted_at"),
+  deletedBy: text("deleted_by"),
+  isArchived: integer("is_archived").default(0),
+  archivedAt: text("archived_at"),
+  // Version tracking
+  versionNumber: integer("version_number").default(1),
+  parentFileId: integer("parent_file_id"),   // FK to previous version
+  // Extended metadata (JSON blob)
+  metadataJson: text("metadata_json"),
+  // Timestamps
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+}, (table) => ({
+  expenseIdx:  index("idx_file_metadata_expense_id").on(table.expenseId),
+  hashIdx:     index("idx_file_metadata_hash").on(table.fileHash),
+  employeeIdx: index("idx_file_metadata_employee").on(table.employeeId),
+  categoryIdx: index("idx_file_metadata_category").on(table.category),
+  sourceIdx:   index("idx_file_metadata_source").on(table.uploadSource),
+  deletedIdx:  index("idx_file_metadata_deleted").on(table.isDeleted),
+}));
+
+// 26. Audit Logs Table — Enterprise Compliance & Security
+// Immutable record of every significant action in the system.
+export const auditLogs = sqliteTable("audit_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  // What happened
+  action: text("action").notNull(),           // "expense.submit", "user.delete", "approval.approve"
+  entityType: text("entity_type"),            // "expense", "user", "approval", "file"
+  entityId: text("entity_id"),
+  // Who did it
+  performedById: text("performed_by_id"),
+  performedByName: text("performed_by_name"),
+  performedByRole: text("performed_by_role"),
+  // What changed
+  oldValue: text("old_value"),                // JSON string of previous state
+  newValue: text("new_value"),                // JSON string of new state
+  // Request context
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  requestId: text("request_id"),
+  // Outcome
+  success: integer("success").default(1),
+  errorMessage: text("error_message"),
+  durationMs: integer("duration_ms"),
+  // Timestamp
+  createdAt: text("created_at").notNull(),
+}, (table) => ({
+  entityIdx:   index("idx_audit_entity").on(table.entityType, table.entityId),
+  userIdx:     index("idx_audit_user").on(table.performedById),
+  actionIdx:   index("idx_audit_action").on(table.action),
+  createdIdx:  index("idx_audit_created").on(table.createdAt),
+}));
+
+// 27. Analytics Events Table — Usage Analytics
+// Tracks user behavior, navigation, feature usage, performance.
+export const analyticsEvents = sqliteTable("analytics_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  eventType: text("event_type").notNull(),   // "auth", "expense", "upload", "navigation"
+  eventName: text("event_name").notNull(),   // "login_success", "expense_submitted"
+  userId: text("user_id"),
+  sessionId: text("session_id"),
+  // Request context
+  pageUrl: text("page_url"),
+  referrer: text("referrer"),
+  // Device / Environment
+  deviceType: text("device_type"),           // "mobile", "desktop", "tablet"
+  browser: text("browser"),
+  os: text("os"),
+  country: text("country"),
+  ipHash: text("ip_hash"),                   // Hashed IP for privacy
+  // Performance
+  durationMs: integer("duration_ms"),
+  // Extended payload (JSON)
+  metadataJson: text("metadata_json"),
+  // Timestamp
+  createdAt: text("created_at").notNull(),
+}, (table) => ({
+  userDateIdx:  index("idx_analytics_user_date").on(table.userId, table.createdAt),
+  eventIdx:     index("idx_analytics_event").on(table.eventType, table.eventName),
+  sessionIdx:   index("idx_analytics_session").on(table.sessionId),
+  createdIdx:   index("idx_analytics_created").on(table.createdAt),
+}));
+
+// 28. Email Logs Table — Email Delivery Tracking
+export const emailLogs = sqliteTable("email_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  // Recipient
+  recipientEmail: text("recipient_email").notNull(),
+  recipientName: text("recipient_name"),
+  recipientUserId: text("recipient_user_id"),
+  // Email content
+  subject: text("subject").notNull(),
+  templateName: text("template_name"),
+  // Delivery tracking
+  status: text("status").default("queued"),   // "queued", "sent", "failed", "bounced", "opened"
+  attempts: integer("attempts").default(0),
+  lastAttemptAt: text("last_attempt_at"),
+  sentAt: text("sent_at"),
+  openedAt: text("opened_at"),
+  // Error info
+  errorMessage: text("error_message"),
+  // Provider info
+  messageId: text("message_id"),              // Provider's message ID
+  provider: text("provider").default("cloudflare"), // "cloudflare", "gas"
+  // Priority
+  priority: integer("priority").default(5),   // 1 (high) to 10 (low)
+  // Related entity
+  relatedEntityType: text("related_entity_type"),
+  relatedEntityId: text("related_entity_id"),
+  // Timestamps
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+}, (table) => ({
+  statusIdx:    index("idx_email_status").on(table.status),
+  recipientIdx: index("idx_email_recipient").on(table.recipientEmail),
+  createdIdx:   index("idx_email_created").on(table.createdAt),
+}));
+
+// 29. System Metrics Table — Performance & Billing Estimation
+// Stores periodic snapshots of system usage for the admin dashboard.
+export const systemMetrics = sqliteTable("system_metrics", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  metricType: text("metric_type").notNull(), // "d1_reads", "r2_class_a", "worker_requests"
+  metricName: text("metric_name").notNull(),
+  metricValue: real("metric_value").notNull(),
+  unit: text("unit"),                        // "count", "bytes", "ms", "percent"
+  tagsJson: text("tags_json"),               // Additional context (JSON)
+  recordedAt: text("recorded_at").notNull(),
+}, (table) => ({
+  typeIdx:    index("idx_metrics_type").on(table.metricType),
+  dateIdx:    index("idx_metrics_date").on(table.recordedAt),
+}));
+
+// 30. Approval Tokens Table — One-Click Email Approval Security
+// Stores single-use tokens for passwordless manager approvals via email links.
+export const approvalTokens = sqliteTable("approval_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  expenseId: integer("expense_id").notNull(),
+  expenseCode: text("expense_code"),
+  approverId: text("approver_id").notNull(),
+  approverEmail: text("approver_email"),
+  action: text("action").notNull(),          // "approve" or "reject"
+  tokenHash: text("token_hash").notNull(),   // SHA-256 of the JWT token (for lookup)
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+  usedFromIp: text("used_from_ip"),
+  isRevoked: integer("is_revoked").default(0),
+  createdAt: text("created_at").notNull(),
+}, (table) => ({
+  tokenIdx:    index("idx_approval_tokens_hash").on(table.tokenHash),
+  expenseIdx:  index("idx_approval_tokens_expense").on(table.expenseId),
+  approverIdx: index("idx_approval_tokens_approver").on(table.approverId),
+}));
+

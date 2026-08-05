@@ -1,0 +1,331 @@
+/**
+ * ============================================================
+ * Enterprise Email Sender — Cloudflare Email Workers API
+ * Cyrix Field Connect — Worker Backend
+ * ============================================================
+ * Uses ONLY Cloudflare Email Workers (MailChannels integration).
+ * API Token: CF_EMAIL_API_TOKEN (secret)
+ * From Address: EMAIL_FROM_ADDRESS (e.g. noreply@indrae.in)
+ *
+ * REMOVED: Google Apps Script email fallback (GAS)
+ * 
+ * Priority Queue:
+ *   1 = OTP / Auth (instant, bypass rate limit)
+ *   2 = Approval Actions (high)
+ *   3 = Expense Status Updates (normal)
+ *   4 = Manager Digest (low)
+ *   5 = Reports / Bulk (background)
+ * ============================================================
+ */
+
+import { staticLog } from "../utils/logger.js";
+import { nowISO } from "../utils/timestamp.js";
+import {
+  otpTemplate,
+  passwordResetTemplate,
+  managerDigestTemplate,
+  expenseSubmittedTemplate,
+  expenseApprovedTemplate,
+  expenseRejectedTemplate,
+  welcomeTemplate,
+  emailActionConfirmationTemplate,
+} from "./templates.js";
+
+// ─── Cloudflare Email Workers (Native) ───────────────────────────────────────
+
+/**
+ * Send email via Cloudflare Email Workers binding (env.EMAIL_SENDER).
+ * This is the native Cloudflare solution — no third-party API needed.
+ * Docs: https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
+ *
+ * Requirements:
+ *   - [[send_email]] binding in wrangler.toml
+ *   - Email Routing enabled on domain (Cloudflare Dashboard → Email → Email Routing)
+ *   - From address verified in Email Routing
+ *
+ * @param {Object} env
+ * @param {Object} opts - { to, toName, subject, html }
+ * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+ */
+async function sendViaCloudflareMail(env, opts) {
+  const { to, toName, subject, html } = opts;
+
+  const fromEmail = env.EMAIL_FROM_ADDRESS || "noreply@indrae.in";
+  const fromName  = env.EMAIL_FROM_NAME   || "Cyrix Field Connect";
+
+  // ── Primary: Cloudflare Email Workers binding ─────────────────────────────
+  if (env.EMAIL_SENDER) {
+    try {
+      const { EmailMessage } = await import("cloudflare:email");
+
+      // Build RFC 2822 MIME message (no external packages needed)
+      const msgId   = `<${Date.now()}.${Math.random().toString(36).slice(2)}@indrae.in>`;
+      const dateStr = new Date().toUTCString();
+      const toHeader = toName ? `${toName} <${to}>` : to;
+
+      const rawMessage = [
+        `MIME-Version: 1.0`,
+        `Date: ${dateStr}`,
+        `Message-ID: ${msgId}`,
+        `From: ${fromName} <${fromEmail}>`,
+        `To: ${toHeader}`,
+        `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
+        `Content-Type: text/html; charset=UTF-8`,
+        `Content-Transfer-Encoding: 7bit`,
+        ``,
+        html,
+      ].join("\r\n");
+
+      const message = new EmailMessage(fromEmail, to, rawMessage);
+      await env.EMAIL_SENDER.send(message);
+
+      staticLog.info("Email sent via CF Email Workers", { to, subject: subject.slice(0, 50), msgId });
+      return { success: true, messageId: msgId };
+
+    } catch (e) {
+      staticLog.error("CF Email Workers send failed", { to, error: e.message });
+      return { success: false, error: `CF Email Workers error: ${e.message}` };
+    }
+  }
+
+  // ── Fallback: No binding configured ──────────────────────────────────────
+  staticLog.error("EMAIL_SENDER binding not found — add [[send_email]] to wrangler.toml", { to });
+  return {
+    success: false,
+    error: "EMAIL_SENDER binding not configured. Enable Email Routing in Cloudflare Dashboard and add [[send_email]] to wrangler.toml",
+  };
+}
+
+
+// ─── Email Log Helpers ────────────────────────────────────────────────────────
+
+async function logEmailIntent(env, { to, toName, userId, subject, templateName, priority, relatedEntityType, relatedEntityId }) {
+  if (!env.DB) return null;
+  try {
+    const r = await env.DB.prepare(`
+      INSERT INTO email_logs (
+        recipient_email, recipient_name, recipient_user_id, subject,
+        template_name, status, attempts, priority,
+        related_entity_type, related_entity_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?, ?)
+    `).bind(
+      to, toName || null, userId || null, subject,
+      templateName || null, priority || 5,
+      relatedEntityType || null, relatedEntityId || null,
+      nowISO(), nowISO(),
+    ).run();
+    return r.meta?.last_row_id || null;
+  } catch (e) {
+    staticLog.error("Failed to log email intent", { error: e.message });
+    return null;
+  }
+}
+
+async function updateEmailLog(env, id, status, error, messageId) {
+  if (!env.DB || !id) return;
+  try {
+    await env.DB.prepare(`
+      UPDATE email_logs
+      SET status = ?, error_message = ?, message_id = ?,
+          sent_at = CASE WHEN ? = 'sent' THEN ? ELSE sent_at END,
+          attempts = attempts + 1, last_attempt_at = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(
+      status, error || null, messageId || null,
+      status, status === "sent" ? nowISO() : null,
+      nowISO(), nowISO(), id,
+    ).run();
+  } catch (_) {}
+}
+
+// ─── Core Send Function ───────────────────────────────────────────────────────
+
+/**
+ * Queue an email for async delivery (non-blocking).
+ * Logs intent to DB, then sends to EMAIL_QUEUE.
+ *
+ * @param {Object} env
+ * @param {Object} opts - { to, toName, userId, subject, html, templateName, priority, bypassRateLimit, relatedEntityType, relatedEntityId }
+ * @returns {Promise<boolean>}
+ */
+export async function queueEmail(env, opts) {
+  const {
+    to, toName, userId, subject, html, templateName,
+    priority = 5, bypassRateLimit = false,
+    relatedEntityType, relatedEntityId,
+  } = opts;
+
+  if (!to || !subject || !html) {
+    staticLog.warn("queueEmail: missing required fields", { to: !!to, subject: !!subject });
+    return false;
+  }
+
+  // Rate limit: max 10 emails/hour per user (OTPs bypass)
+  if (!bypassRateLimit && userId && env.OTPS_KV) {
+    const rlKey = `email_rl:${userId}`;
+    const count = parseInt(await env.OTPS_KV.get(rlKey) || "0");
+    const limit = parseInt(env.RATE_LIMIT_EMAIL || "10");
+    if (count >= limit) {
+      staticLog.warn("Email rate limit hit", { userId, count });
+      return false;
+    }
+    await env.OTPS_KV.put(rlKey, String(count + 1), { expirationTtl: 3600 });
+  }
+
+  // Log intent to DB
+  const emailLogId = await logEmailIntent(env, { to, toName, userId, subject, templateName, priority, relatedEntityType, relatedEntityId });
+
+  // Queue for async delivery (non-blocking)
+  if (env.EMAIL_QUEUE && env.ENABLE_QUEUES !== "false") {
+    try {
+      await env.EMAIL_QUEUE.send({ emailLogId, to, toName, subject, html, templateName, priority, queuedAt: nowISO() });
+      return true;
+    } catch (e) {
+      staticLog.warn("EMAIL_QUEUE send failed — sending directly", { error: e.message });
+    }
+  }
+
+  // Direct send (fallback: queue unavailable or dev mode)
+  return await sendEmailDirect(env, { to, toName, subject, html, emailLogId });
+}
+
+/**
+ * Send immediately without queueing.
+ * Called by the queue processor and as direct fallback.
+ */
+export async function sendEmailDirect(env, { to, toName, subject, html, emailLogId }) {
+  if (env.ENABLE_EMAIL === "false") {
+    staticLog.info("Email disabled by ENABLE_EMAIL flag", { to });
+    await updateEmailLog(env, emailLogId, "disabled", null, null);
+    return false;
+  }
+
+  const result = await sendViaCloudflareMail(env, { to, toName, subject, html });
+
+  if (result.success) {
+    await updateEmailLog(env, emailLogId, "sent", null, result.messageId);
+    return true;
+  }
+
+  await updateEmailLog(env, emailLogId, "failed", result.error, null);
+  return false;
+}
+
+// ─── Queue Consumer ───────────────────────────────────────────────────────────
+
+export async function processEmailBatch(batch, env) {
+  for (const message of batch.messages) {
+    try {
+      const { to, toName, subject, html, emailLogId } = message.body;
+      const ok = await sendEmailDirect(env, { to, toName, subject, html, emailLogId });
+      if (ok) message.ack();
+      else message.retry();
+    } catch (e) {
+      staticLog.error("Email queue processor error", { error: e.message });
+      message.retry();
+    }
+  }
+}
+
+// ─── Convenience Wrappers ─────────────────────────────────────────────────────
+
+export async function sendOTPEmail(env, { to, name, otp, userId }) {
+  const tmpl = otpTemplate({ name, otp });
+  return queueEmail(env, {
+    to, toName: name, userId, ...tmpl,
+    templateName: "otp", priority: 1, bypassRateLimit: true,
+  });
+}
+
+export async function sendPasswordResetEmail(env, { to, name, otp, userId }) {
+  const tmpl = passwordResetTemplate({ name, otp });
+  return queueEmail(env, {
+    to, toName: name, userId, ...tmpl,
+    templateName: "password_reset", priority: 1, bypassRateLimit: true,
+  });
+}
+
+export async function sendExpenseStatusEmail(env, { to, name, userId, action, ...data }) {
+  const tmpl = action === "approved"
+    ? expenseApprovedTemplate({ employeeName: name, ...data })
+    : expenseRejectedTemplate({ employeeName: name, ...data });
+  return queueEmail(env, {
+    to, toName: name, userId, ...tmpl,
+    templateName: action === "approved" ? "expense_approved" : "expense_rejected",
+    priority: 3,
+    relatedEntityType: "expense",
+    relatedEntityId: data.expenseCode,
+  });
+}
+
+export async function sendExpenseSubmittedEmail(env, { to, name, userId, ...data }) {
+  const tmpl = expenseSubmittedTemplate({ employeeName: name, ...data });
+  return queueEmail(env, {
+    to, toName: name, userId, ...tmpl,
+    templateName: "expense_submitted", priority: 3,
+  });
+}
+
+export async function sendWelcomeEmail(env, { to, name, userId, temporaryPassword }) {
+  const tmpl = welcomeTemplate({ name, userId, temporaryPassword });
+  return queueEmail(env, {
+    to, toName: name, userId, ...tmpl,
+    templateName: "welcome", priority: 2, bypassRateLimit: true,
+  });
+}
+
+// ─── Manager Daily Digest (Cron: 10:00 AM IST daily) ─────────────────────────
+
+export async function sendManagerDigests(env) {
+  if (!env.DB || env.ENABLE_EMAIL_DIGESTS !== "true") return;
+
+  try {
+    const managers = await env.DB.prepare(`
+      SELECT DISTINCT u.user_id, u.name, u.mail_id, COUNT(e.id) as pending_count
+      FROM users u
+      INNER JOIN expenses e ON (
+        e.pending_manager = u.user_id OR
+        e.pending_zonal_manager = u.user_id OR
+        e.pending_coordinator = u.user_id
+      )
+      WHERE e.status IN ('submitted', 'pending_approval')
+        AND u.mail_id IS NOT NULL AND u.mail_id != ''
+      GROUP BY u.user_id HAVING pending_count > 0
+    `).all();
+
+    for (const manager of (managers?.results || [])) {
+      const pending = await env.DB.prepare(`
+        SELECT e.expense_code, e.total_amount, u.name as employee_name
+        FROM expenses e
+        LEFT JOIN users u ON e.employee_id = u.user_id
+        WHERE (e.pending_manager = ? OR e.pending_zonal_manager = ? OR e.pending_coordinator = ?)
+          AND e.status IN ('submitted', 'pending_approval')
+        LIMIT 20
+      `).bind(manager.user_id, manager.user_id, manager.user_id).all();
+
+      const tmpl = managerDigestTemplate({
+        managerName: manager.name,
+        pendingApprovals: (pending?.results || []).map(e => ({
+          ...e,
+          approveToken: "SEE_PORTAL",
+          rejectToken: "SEE_PORTAL",
+        })),
+        approvalBaseUrl: "https://indrae.in",
+      });
+
+      await queueEmail(env, {
+        to: manager.mail_id,
+        toName: manager.name,
+        userId: manager.user_id,
+        ...tmpl,
+        templateName: "manager_digest",
+        priority: 4,
+        bypassRateLimit: true,
+      });
+
+      staticLog.info("Manager digest queued", { managerId: manager.user_id, pending: manager.pending_count });
+    }
+  } catch (e) {
+    staticLog.error("Manager digest generation failed", { error: e.message });
+  }
+}

@@ -16,6 +16,8 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
+  Zap,
+  Activity,
 } from "lucide-react";
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
@@ -45,6 +47,8 @@ export const MENU_ITEMS: MenuItem[] = [
   { id: "penalty_report",     name: "Penalty Audit",        path: "/penalty-report",     icon: ShieldAlert,   roles: ["Admin","Manager","Division Manager","Accountant","MIS","VP","Travel Desk"],                                               gradientFrom: "from-red-500",     gradientTo: "to-rose-700",   shadowColor: "rgba(239,68,68,0.35)" },
   { id: "attendance",         name: "Attendance Roster",    path: "/attendance",         icon: Calendar,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-indigo-500",  gradientTo: "to-cyan-600",   shadowColor: "rgba(99,102,241,0.35)" },
   { id: "admin",              name: "Admin Console",        path: "/admin",              icon: Settings,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-slate-600",   gradientTo: "to-slate-800",  shadowColor: "rgba(100,116,139,0.35)" },
+  { id: "admin_enterprise",   name: "Enterprise Panel",     path: "/admin/enterprise",   icon: Zap,           roles: ["Admin"],                                                                                                                  gradientFrom: "from-violet-600",  gradientTo: "to-purple-800", shadowColor: "rgba(139,92,246,0.35)" },
+  { id: "admin_analytics",    name: "CF Analytics",         path: "/admin/analytics",    icon: Activity,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-orange-500",  gradientTo: "to-amber-600",  shadowColor: "rgba(249,115,22,0.35)" },
   { id: "asset_upload",       name: "Asset Master",         path: "/asset-upload",       icon: Package,       roles: ["Admin","Coordinator","MIS","Engineer"],                                                                                   gradientFrom: "from-pink-500",    gradientTo: "to-rose-600",   shadowColor: "rgba(236,72,153,0.35)" },
   { id: "profile",            name: "My Profile",           path: "/profile",            icon: User,          roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","Travel Desk","MIS","VP"], gradientFrom: "from-blue-500",    gradientTo: "to-indigo-600", shadowColor: "rgba(96,165,250,0.35)" },
   { id: "help",               name: "Support & Help",       path: "/help-center",        icon: HelpCircle,    roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","Travel Desk","MIS","VP"], gradientFrom: "from-purple-500",  gradientTo: "to-violet-600", shadowColor: "rgba(167,139,250,0.35)" },
@@ -54,7 +58,7 @@ const NAV_GROUPS = [
   { label: "Workspace",          ids: ["home", "new_dashboard"] },
   { label: "Claims & Approvals", ids: ["expense", "approval"] },
   { label: "Reports & Analytics",ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report"] },
-  { label: "Management & Config",ids: ["admin", "asset_upload"] },
+  { label: "Management & Config",ids: ["admin", "admin_enterprise", "admin_analytics", "asset_upload"] },
   { label: "Account",            ids: ["profile", "help"] },
 ];
 

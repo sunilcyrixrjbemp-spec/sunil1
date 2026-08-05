@@ -1,10 +1,22 @@
 /**
- * Database Utility Module for Cloudflare Workers
- * Handles local queries (via native binding) and schedules background replication
- * to the Primary D1 database via Cloudflare REST API.
+ * ============================================================
+ * Simplified Database Utility — Single Primary D1 Only
+ * Cyrix Field Connect — Worker Backend
+ * ============================================================
+ * ARCHITECTURE CHANGE (v2.1.0):
+ *   - REMOVED: Secondary DB replication, round-robin read routing,
+ *     PRIMARY_CLOUDFLARE_API_TOKEN fetch calls for DB writes.
+ *   - NOW: All reads/writes go directly to env.DB (the one bound D1).
+ *   - KEPT: In-memory query cache (same TTL logic — huge performance win).
+ *   - KEPT: Cache invalidation on writes.
+ *   - KEPT: Notification table guard (legacy).
+ *
+ * This eliminates ~150ms of network latency per write that
+ * was previously added by the replication REST call.
+ * ============================================================
  */
 
-// ─── Global Query Cache for Ultrafast Reads ──────────────────────────────────
+// ─── In-Memory Query Cache ────────────────────────────────────────────────────
 const MEMORY_CACHE = new Map();
 
 const ALL_KNOWN_TABLES = [
@@ -12,19 +24,15 @@ const ALL_KNOWN_TABLES = [
   "expense_itineraries", "expense_asset_taggings", "approvals", "approval_hierarchies",
   "hierarchy_requesters", "hierarchy_approvers", "limit_approval_requests",
   "allowance_master", "facility_details", "login_logs", "otps",
-  "kpi_appraisals", "rj_penalties", "assets_inventory", "asset_value_master"
+  "kpi_appraisals", "rj_penalties", "assets_inventory", "asset_value_master",
+  // V2 enterprise tables
+  "file_metadata", "audit_logs", "analytics_events", "email_logs",
+  "system_metrics", "approval_tokens",
 ];
 
 function extractTables(sql) {
   const sqlLower = sql.toLowerCase();
-  const found = [];
-  for (const t of ALL_KNOWN_TABLES) {
-    const regex = new RegExp(`\\b${t}\\b`);
-    if (regex.test(sqlLower)) {
-      found.push(t);
-    }
-  }
-  return found;
+  return ALL_KNOWN_TABLES.filter(t => new RegExp(`\\b${t}\\b`).test(sqlLower));
 }
 
 function getCacheKey(sql, params) {
@@ -34,338 +42,152 @@ function getCacheKey(sql, params) {
 function getCachedResult(sql, params) {
   const key = getCacheKey(sql, params);
   const cached = MEMORY_CACHE.get(key);
-  if (cached) {
-    if (Date.now() < cached.expiresAt) {
-      return cached.data;
-    } else {
-      MEMORY_CACHE.delete(key);
-    }
-  }
+  if (cached && Date.now() < cached.expiresAt) return cached.data;
+  if (cached) MEMORY_CACHE.delete(key);
   return null;
 }
 
 function setCachedResult(sql, params, data) {
   const sqlLower = sql.toLowerCase();
-  let ttl = 30000; // Default: 30 seconds cache for all read queries!
-  
-  if (sqlLower.includes("allowance_master") || sqlLower.includes("facility_details") || sqlLower.includes("asset_value_master")) {
-    ttl = 3600000; // 1 hour for static tables
-  } else if (sqlLower.includes("login_logs") || sqlLower.includes("notifications") || sqlLower.includes("otps")) {
-    ttl = 5000; // 5 seconds for volatile status tables
+  let ttl = 30_000; // 30s default
+
+  if (sqlLower.includes("allowance_master") || sqlLower.includes("facility_details") || sqlLower.includes("asset_value_master") || sqlLower.includes("system_settings")) {
+    ttl = 3_600_000; // 1 hour — static/config tables
+  } else if (sqlLower.includes("login_logs") || sqlLower.includes("otps") || sqlLower.includes("approval_tokens")) {
+    ttl = 5_000; // 5s — security-sensitive
+  } else if (sqlLower.includes("audit_logs") || sqlLower.includes("analytics_events")) {
+    ttl = 60_000; // 1 min — write-heavy analytics
   }
 
-  const key = getCacheKey(sql, params);
-  const tables = extractTables(sql);
-  
-  MEMORY_CACHE.set(key, {
+  MEMORY_CACHE.set(getCacheKey(sql, params), {
     data,
-    tables,
-    expiresAt: Date.now() + ttl
+    tables: extractTables(sql),
+    expiresAt: Date.now() + ttl,
   });
 }
 
 function invalidateCacheOnWrite(sql) {
   const writeTables = extractTables(sql);
   if (writeTables.length === 0) return;
-
   for (const [key, cached] of MEMORY_CACHE.entries()) {
-    const hasOverlap = (cached.tables || []).some(t => writeTables.includes(t));
-    if (hasOverlap) {
+    if ((cached.tables || []).some(t => writeTables.includes(t))) {
       MEMORY_CACHE.delete(key);
     }
   }
 }
 
+// ─── Single DB Accessor ────────────────────────────────────────────────────────
+
+function getDB(env) {
+  return env.DB; // One database. Full stop.
+}
+
+// ─── Exported Functions (same API surface — backward compatible) ───────────────
+
 /**
- * Execute a single write query (INSERT/UPDATE/DELETE) locally and replicate to primary DB.
+ * Execute a SELECT / WITH read query.
+ * Uses in-memory cache for performance.
+ * @param {Object} env
+ * @param {string} sql
+ * @param {Array} params
+ * @returns {Promise<D1Result>}
+ */
+export async function runRead(env, sql, params = []) {
+  const cached = getCachedResult(sql, params);
+  if (cached) return cached;
+
+  const db = getDB(env);
+  try {
+    const result = await db.prepare(sql).bind(...params).all();
+    setCachedResult(sql, params, result);
+    return result;
+  } catch (err) {
+    throw new Error(`DB Read Error: ${err.message} | SQL: ${sql.slice(0, 120)}`);
+  }
+}
+
+/**
+ * Execute a single INSERT / UPDATE / DELETE write.
+ * Invalidates related cache entries.
+ * @param {Object} env
+ * @param {string} sql
+ * @param {Array} params
+ * @returns {Promise<D1Result>}
  */
 export async function runWrite(env, sql, params = []) {
-  const sqlLower = sql.toLowerCase();
-  if (sqlLower.includes("notifications")) {
-    console.log("Ignored write to deleted notifications table:", sql.slice(0, 100));
+  // Legacy guard: skip writes to removed notifications table
+  if (sql.toLowerCase().includes("notifications")) {
     return { success: true, meta: { last_row_id: 1, changes: 0 } };
   }
 
-  const originalDB = env._originalDB || env.DB;
-  
-  // Invalidate any relevant query cache entries before writing
   invalidateCacheOnWrite(sql);
-
+  const db = getDB(env);
   try {
-    // 1. Prepare local write promise
-    const localWritePromise = originalDB.prepare(sql).bind(...params).run();
-
-    // 2. Prepare primary replication write promise (if credentials available)
-    const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
-    const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
-    const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN ? env.PRIMARY_CLOUDFLARE_API_TOKEN.trim() : "";
-    const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL ? env.PRIMARY_CLOUDFLARE_EMAIL.trim() : "";
-
-    const shouldReplicate = env.SKIP_PRIMARY_SYNC !== "true" && primaryAccount && primaryDb && primaryToken;
-
-    if (shouldReplicate) {
-      const replicationPromise = replicateToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
-      
-      // Execute both in parallel (sath-sath) and wait for both to complete
-      const [localResult] = await Promise.all([localWritePromise, replicationPromise]);
-      return localResult;
-    } else {
-      return await localWritePromise;
-    }
+    return await db.prepare(sql).bind(...params).run();
   } catch (err) {
-    throw new Error(`${err.message} | SQL: ${sql} | Params: ${JSON.stringify(params)}`);
+    throw new Error(`DB Write Error: ${err.message} | SQL: ${sql.slice(0, 120)}`);
   }
 }
 
 /**
- * Execute a batch of write queries locally and replicate them to primary DB.
+ * Execute a batch of write statements atomically.
+ * More efficient than multiple runWrite calls.
+ * @param {Object} env
+ * @param {Array<{sql: string, params: Array}>} statements
+ * @returns {Promise<D1Result[]>}
  */
 export async function runBatchWrite(env, statements) {
-  if (statements.length === 0) return [];
-  
-  // Filter out any notification statements to avoid crashes
-  const activeStatements = statements.filter(s => {
-    const sqlLower = (s.sql || "").toLowerCase();
-    if (sqlLower.includes("notifications")) {
-      console.log("Ignored batch write to deleted notifications table:", s.sql.slice(0, 100));
-      return false;
-    }
+  if (!statements || statements.length === 0) return [];
+
+  // Filter out legacy notifications table writes
+  const active = statements.filter(s => {
+    if ((s.sql || "").toLowerCase().includes("notifications")) return false;
     return true;
   });
 
-  if (activeStatements.length === 0) {
+  if (active.length === 0) {
     return statements.map(() => ({ success: true, meta: { last_row_id: 1, changes: 0 } }));
   }
 
-  const originalDB = env._originalDB || env.DB;
+  // Invalidate cache
+  for (const s of active) invalidateCacheOnWrite(s.sql);
 
-  // Invalidate any relevant query cache entries
-  for (const s of activeStatements) {
-    invalidateCacheOnWrite(s.sql);
-  }
-
-  // 1. Prepare local batch promise
-  const batch = activeStatements.map(s => {
-    return originalDB.prepare(s.sql).bind(...(s.params || []));
-  });
-  const localBatchPromise = originalDB.batch(batch);
-
-  // 2. Prepare primary batch replication promise (if credentials available)
-  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
-  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
-  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN ? env.PRIMARY_CLOUDFLARE_API_TOKEN.trim() : "";
-  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL ? env.PRIMARY_CLOUDFLARE_EMAIL.trim() : "";
-
-  const shouldReplicate = env.SKIP_PRIMARY_SYNC !== "true" && primaryAccount && primaryDb && primaryToken;
-
-  let localResults;
-  if (shouldReplicate) {
-    const replicationPromise = replicateBatchToPrimary(primaryAccount, primaryDb, primaryToken, primaryEmail, activeStatements);
-    [localResults] = await Promise.all([localBatchPromise, replicationPromise]);
-  } else {
-    localResults = await localBatchPromise;
-  }
-
-  // Re-assemble results to match the original statements array length and indices
-  let activeIndex = 0;
-  return statements.map(s => {
-    const sqlLower = (s.sql || "").toLowerCase();
-    if (sqlLower.includes("notifications")) {
-      return { success: true, meta: { last_row_id: 1, changes: 0 } };
-    }
-    return localResults[activeIndex++];
-  });
-}
-
-/**
- * Helper to build auth headers for D1 REST API
- */
-function buildAuthHeaders(token, email) {
-  const headers = {
-    "Content-Type": "application/json"
-  };
-  
-  if (token.startsWith("cfk_")) {
-    headers["X-Auth-Key"] = token;
-    headers["X-Auth-Email"] = email || "Sunil.cyrixrjbemp@gmail.com";
-  } else {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  
-  return headers;
-}
-
-/**
- * Async fetch call to replicate a single statement to the Primary D1 Database
- */
-async function replicateToPrimary(accountId, dbId, token, email, sql, params) {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbId}/query`;
-  const headers = buildAuthHeaders(token, email);
-
-  const payload = {
-    sql: sql,
-    params: params || []
-  };
+  const db = getDB(env);
+  const batch = active.map(s => db.prepare(s.sql).bind(...(s.params || [])));
 
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (!data.success) {
-      console.error("Replication failed on Primary D1:", data.errors);
-    }
-  } catch (e) {
-    console.error("Replication connection failed:", e);
-  }
-}
-
-/**
- * Async fetch call to replicate a batch of statements to the Primary D1 Database
- */
-async function replicateBatchToPrimary(accountId, dbId, token, email, statements) {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbId}/query`;
-  const headers = buildAuthHeaders(token, email);
-
-  const payload = statements.map(s => ({
-    sql: s.sql,
-    params: s.params || []
-  }));
-
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (!data.success) {
-      console.error("Batch replication failed on Primary D1:", data.errors);
-    }
-  } catch (e) {
-    console.error("Batch replication connection failed:", e);
-  }
-}
-
-let readCounter = 0;
-const ROUND_ROBIN_START_DATE = new Date("2026-08-03T00:00:00+05:30"); // IST
-
-/**
- * Execute a read query (SELECT/WITH) with smart routing between Primary and Secondary D1.
- * Matches Python backend date-based round-robin routing logic.
- */
-export async function runRead(env, sql, params = [], request = null) {
-  // Check memory cache first
-  const cached = getCachedResult(sql, params);
-  if (cached) {
-    return cached;
-  }
-
-  const primaryAccount = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID ? env.PRIMARY_CLOUDFLARE_ACCOUNT_ID.trim() : "";
-  const primaryDb = env.PRIMARY_CLOUDFLARE_DATABASE_ID ? env.PRIMARY_CLOUDFLARE_DATABASE_ID.trim() : "";
-  const primaryToken = env.PRIMARY_CLOUDFLARE_API_TOKEN ? env.PRIMARY_CLOUDFLARE_API_TOKEN.trim() : "";
-  const primaryEmail = env.PRIMARY_CLOUDFLARE_EMAIL ? env.PRIMARY_CLOUDFLARE_EMAIL.trim() : "";
-
-  const hasPrimary = !!(primaryAccount && primaryDb && primaryToken);
-  let usePrimary = false;
-
-  // 1. Date check (Current IST Date/Time)
-  const now = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
-  if (hasPrimary) {
-    if (now < ROUND_ROBIN_START_DATE) {
-      // Until August 3, 2026: permanently route all reads to secondary database
-      usePrimary = false;
-    } else {
-      // After August 3, 2026: split 50/50 split round robin
-      readCounter = (readCounter + 1) % 2;
-      usePrimary = (readCounter === 1);
-    }
-  }
-
-  // 2. Header-based override (for debugging and test execution)
-  if (request && hasPrimary) {
-    const headerVal = request.headers.get("x-read-db");
-    if (headerVal === "primary") {
-      usePrimary = true;
-    } else if (headerVal === "secondary") {
-      usePrimary = false;
-    }
-  }
-
-  // 3. Env variable override
-  if (request && request.headers.get("x-read-db") === null) {
-    if (env.READ_DATABASE === "primary" && hasPrimary) {
-      usePrimary = true;
-    } else if (env.READ_DATABASE === "secondary") {
-      usePrimary = false;
-    }
-  }
-
-  const originalDB = env._originalDB || env.DB;
-  let result;
-
-  try {
-    if (usePrimary) {
-      try {
-        result = await fetchPrimaryD1(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
-      } catch (e) {
-        console.warn("Primary D1 read failed, falling back to local Secondary D1:", e);
-        result = await originalDB.prepare(sql).bind(...params).all();
+    const results = await db.batch(batch);
+    // Re-assemble to match original indices (accounting for filtered notifications stmts)
+    let ri = 0;
+    return statements.map(s => {
+      if ((s.sql || "").toLowerCase().includes("notifications")) {
+        return { success: true, meta: { last_row_id: 1, changes: 0 } };
       }
-    } else {
-      try {
-        result = await originalDB.prepare(sql).bind(...params).all();
-      } catch (e) {
-        if (hasPrimary) {
-          console.warn("Local Secondary D1 read failed, falling back to Primary:", e);
-          try {
-            result = await fetchPrimaryD1(primaryAccount, primaryDb, primaryToken, primaryEmail, sql, params);
-          } catch (err) {
-            console.error("Both Secondary and Primary D1 reads failed:", err);
-            throw e;
-          }
-        } else {
-          throw e;
-        }
-      }
-    }
+      return results[ri++];
+    });
   } catch (err) {
-    throw new Error(`${err.message} | SQL: ${sql} | Params: ${JSON.stringify(params)}`);
+    throw new Error(`DB Batch Write Error: ${err.message}`);
   }
-
-  // Save the result to cache before returning
-  setCachedResult(sql, params, result);
-  return result;
 }
 
-async function fetchPrimaryD1(accountId, dbId, token, email, sql, params) {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${dbId}/query`;
-  const headers = buildAuthHeaders(token, email);
+/**
+ * Clear the entire in-memory cache.
+ * Useful after bulk imports or migrations.
+ */
+export function clearCache() {
+  MEMORY_CACHE.clear();
+}
 
-  const payload = {
-    sql: sql,
-    params: params || []
-  };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload)
-  });
-  
-  if (!res.ok) {
-    throw new Error(`HTTP error ${res.status} from Primary D1: ${await res.text()}`);
+/**
+ * Get cache stats (for admin dashboard).
+ */
+export function getCacheStats() {
+  const now = Date.now();
+  let live = 0;
+  let expired = 0;
+  for (const [, v] of MEMORY_CACHE) {
+    if (now < v.expiresAt) live++;
+    else expired++;
   }
-
-  const data = await res.json();
-  if (!data.success) {
-    throw new Error(`Primary D1 returned query errors: ${JSON.stringify(data.errors)}`);
-  }
-
-  if (data.result && data.result[0]) {
-    return data.result[0];
-  }
-  return { results: [], success: true };
+  return { total: MEMORY_CACHE.size, live, expired };
 }

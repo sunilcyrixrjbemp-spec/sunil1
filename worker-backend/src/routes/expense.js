@@ -3736,18 +3736,30 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   // Fetch new-style expense summaries
   const result = await env.DB.prepare(`
     SELECT 
-      u.user_id, u.name, u.district, u.zone, u.designation, u.grade,
+      u.user_id, COALESCE(u.e_code, u.user_id) as e_code, u.name, u.district, u.zone, u.designation, u.grade,
       e.month as month, e.year,
-      COUNT(e.id) as total_claims,
-      SUM(e.amount) as total_amount,
-      SUM(e.amount) as approved_amount,
-      0 as pending_amount,
-      0 as rejected_count,
-      COUNT(e.id) as approved_count
+      COUNT(DISTINCT e.id) as total_claims,
+      COUNT(DISTINCT e.id) as claims_count,
+      COUNT(DISTINCT CASE WHEN LOWER(e.status) IN ('approved', 'auto_approved', 'auto-approved') THEN e.id END) as approved_count,
+      SUM(COALESCE(e.original_amount, e.amount, 0)) as claimed_amount,
+      SUM(CASE WHEN LOWER(e.status) IN ('approved', 'auto_approved', 'auto-approved') THEN e.amount ELSE 0 END) as total_amount,
+      SUM(CASE WHEN LOWER(e.status) IN ('approved', 'auto_approved', 'auto-approved') THEN e.amount ELSE 0 END) as approved_amount,
+      SUM(CASE WHEN LOWER(e.status) = 'rejected' THEN COALESCE(e.original_amount, e.amount, 0) ELSE 0 END) as rejected_amount,
+      SUM(COALESCE(e.calls_assigned, 0)) as calls_assigned,
+      SUM(COALESCE(e.calls_completed, 0)) as calls_completed,
+      SUM(COALESCE(e.pms_count, 0)) as pms_count,
+      SUM(COALESCE(e.asset_tagging, 0)) as tagging_count,
+      (
+        SELECT COALESCE(SUM(i.distance_km), 0)
+        FROM expense_itineraries i
+        JOIN expenses e2 ON i.exp_id = e2.expense_code
+        WHERE e2.user_id = u.id AND UPPER(e2.month) = UPPER(e.month) AND e2.year = e.year
+          AND LOWER(e2.status) IN ('approved', 'auto_approved', 'auto-approved')
+      ) as total_km
     FROM expenses e
     JOIN users u ON e.user_id = u.id
-    WHERE ${whereStr} AND LOWER(e.status) = 'approved'
-    GROUP BY u.user_id, u.name, e.month, e.year
+    WHERE ${whereStr}
+    GROUP BY u.user_id, u.e_code, u.name, e.month, e.year
     ORDER BY u.name ASC
   `).bind(...bindings).all();
 
@@ -3819,17 +3831,23 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
 
     const legacyRes = await env.DB.prepare(`
       SELECT 
-        m.user_id, u.name, u.district, u.zone, u.designation, u.grade,
+        m.user_id, COALESCE(u.e_code, m.user_id) as e_code, u.name, u.district, u.zone, u.designation, u.grade,
         COUNT(*) as total_claims,
+        COUNT(*) as claims_count,
+        COUNT(*) as approved_count,
+        SUM(COALESCE(m.total_amount, 0)) as claimed_amount,
         SUM(m.total_amount) as total_amount,
         SUM(m.total_amount) as approved_amount,
-        0 as pending_amount,
-        0 as rejected_count,
-        COUNT(*) as approved_count
+        0 as rejected_amount,
+        0 as calls_assigned,
+        0 as calls_completed,
+        0 as pms_count,
+        0 as tagging_count,
+        0 as total_km
       FROM expense_master m
       JOIN users u ON LOWER(m.user_id) = LOWER(u.user_id)
       WHERE ${legacyWhereClauses.join(" AND ")} AND LOWER(m.status) = 'approved'
-      GROUP BY m.user_id, u.name, u.district, u.zone
+      GROUP BY m.user_id, u.e_code, u.name, u.district, u.zone
       ORDER BY u.name ASC
     `).bind(...legacyBindings).all();
     legacyRows = legacyRes.results || [];
@@ -3848,9 +3866,9 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
       summaryMap[row.user_id] = { ...row, month: month || "", year };
     } else {
       summaryMap[row.user_id].total_claims += row.total_claims || 0;
+      summaryMap[row.user_id].claimed_amount = (parseFloat(summaryMap[row.user_id].claimed_amount) || 0) + (parseFloat(row.claimed_amount) || 0);
       summaryMap[row.user_id].total_amount = (parseFloat(summaryMap[row.user_id].total_amount) || 0) + (parseFloat(row.total_amount) || 0);
       summaryMap[row.user_id].approved_amount = (parseFloat(summaryMap[row.user_id].approved_amount) || 0) + (parseFloat(row.approved_amount) || 0);
-      summaryMap[row.user_id].pending_amount = (parseFloat(summaryMap[row.user_id].pending_amount) || 0) + (parseFloat(row.pending_amount) || 0);
     }
   }
 
@@ -4252,8 +4270,8 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
               isApprovedAmountZero = (parseFloat(leg.local_purchase) || 0) === 0;
             } else if (billType === "other" || billType === "other_expense") {
               isApprovedAmountZero = (parseFloat(leg.other_amount) || 0) === 0;
-            } else if (leg.travel_mode && billType === leg.travel_mode.toLowerCase()) {
-              isApprovedAmountZero = (parseFloat(leg.travel_amount) || 0) === 0;
+            } else if (billType === "bus" || billType === "train" || billType === "travel" || (leg.travel_mode && billType === leg.travel_mode.toLowerCase())) {
+              isApprovedAmountZero = (parseFloat(leg.ta_amount || leg.travel_amount) || 0) === 0;
             } else if (leg.sub_mode && billType === leg.sub_mode.toLowerCase()) {
               isApprovedAmountZero = (parseFloat(leg.sub_amount) || 0) === 0;
             }
@@ -4266,9 +4284,22 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
 
           validAttachments.push({
             file_url: a.file_url,
+            url: a.file_url,
+            bill_type: a.bill_type || "Expense Bill Attachment",
             date: expenseDateMap[a.exp_id] || ""
           });
         }
+      }
+
+      // Attach attachments to claims array as well
+      for (const c of claims) {
+        c.attachments = (attachRes.results || [])
+          .filter(a => a.exp_id === c.expense_code && a.file_url)
+          .map(a => ({
+            file_url: a.file_url,
+            url: a.file_url,
+            bill_type: a.bill_type || "Expense Bill Attachment"
+          }));
       }
     } catch (e) {
       console.warn("Attachments fetch failed:", e.message);

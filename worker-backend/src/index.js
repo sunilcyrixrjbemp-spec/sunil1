@@ -1,13 +1,33 @@
 /**
- * FieldOps Secondary API Server — Cloudflare Worker (JavaScript)
- * Zero-dependency Modular High-Performance Backend
- * Complete Implementation — All Endpoints Matching Python Backend
+ * ============================================================
+ * Cyrix Field Connect — Cloudflare Worker Backend
+ * Single-Server Architecture — Cloudflare Only
+ * ============================================================
+ * Enterprise-grade zero-dependency modular backend.
+ *
+ * Architecture:
+ *   Request → Rate Limiter → CORS/Security Headers
+ *           → Route Match → JWT Auth → Handler
+ *           → Response (with security headers injected)
+ *
+ * v2.1.0 — Single-Server Cloudflare Edition
+ * ============================================================
  */
+
 import { verifyJwt } from "./utils/security.js";
 import { runRead } from "./utils/db.js";
 import { runMigrations } from "./utils/db-migrate.js";
+import {
+  jsonResponse, errorResponse, unauthorizedResponse, forbiddenResponse,
+  notFoundResponse, preflightResponse, corsHeaders, securityHeaders,
+  getAllowedOrigin
+} from "./utils/http.js";
+import { globalIPRateLimit, loginRateLimit, getClientIP } from "./utils/rateLimit.js";
+import { Logger, generateRequestId } from "./utils/logger.js";
 
-// Import Auth handlers
+// ─── Route Handler Imports ────────────────────────────────────────────────────
+
+// Auth handlers
 import {
   handleLogin, handleRefresh, handleBootstrap,
   handleLogout, handleGetDropdowns, handleForgotPassword,
@@ -15,16 +35,19 @@ import {
   handleUnlockAccount, handleUnlockVerifyOtp
 } from "./routes/auth.js";
 
-// Import User handlers
+// User profile handlers
 import {
   handleGetProfile, handleUpdateProfile, handleChangePassword,
   handleUploadProfilePhoto, handleDeleteProfilePhoto
 } from "./routes/users.js";
 
-// Import Approval handlers
-import { handleGetApprovals, handleApprove, handleReject, handleReturnToDraft, handleAutoApprovalExpiry, handleBulkApprove } from "./routes/approval.js";
+// Approval handlers
+import {
+  handleGetApprovals, handleApprove, handleReject,
+  handleReturnToDraft, handleAutoApprovalExpiry, handleBulkApprove
+} from "./routes/approval.js";
 
-// Import Admin handlers
+// Admin handlers
 import {
   handleListUsers, handleSaveUser, handleDeleteUser,
   handleListHierarchies, handleSaveHierarchy,
@@ -33,93 +56,91 @@ import {
   handleExportHierarchies, handleBulkImportHierarchies, handleRepairStuckApprovals,
   handleGetSystemSettings, handleSaveSystemSettings,
   handleSearchRejectedExpenses, handleResubmitRejectedExpense,
-  handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates, handleTestTime, handleRevertClaimDeductions
+  handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates,
+  handleTestTime, handleRevertClaimDeductions
 } from "./routes/admin.js";
 
-
-
-// Import Tickets handlers
+// Ticket handlers
 import {
   handleGetTickets, handleCreateTicket, handleAddComment,
   handleCloseTicket, handleReopenTicket, handleToggleFollowup,
   handleGetTicketStats, handleAssignTicket, handleUpdateTicketStatus
 } from "./routes/ticket.js";
 
-// Import Uploads handlers
-import { handleUploadImage, handleUploadDocument, handleServeFile } from "./routes/upload.js";
-
-// Import Reports handlers
+// Upload handlers
 import {
-  handleGetMisDashboard, handleGetAssetsInventory, handleGetAssetsFilters, handleGetAssetsStats,
-  handleUploadAssetsCSV, handleUploadAssetsChunk, handleGetAssetsCsvTemplate,
-  handleGetDistrictFacilitiesSummary
+  handleUploadImage, handleUploadDocument, handleServeFile
+} from "./routes/upload.js";
+
+// Reports handlers
+import {
+  handleGetMisDashboard, handleGetAssetsInventory, handleGetAssetsFilters,
+  handleGetAssetsStats, handleUploadAssetsCSV, handleUploadAssetsChunk,
+  handleGetAssetsCsvTemplate, handleGetDistrictFacilitiesSummary
 } from "./routes/reports.js";
 
-// Import Expense handlers
+// Expense handlers
 import {
-  handleListExpenses, handleExpenseInit, handleCreateLimitRequest, handleSubmitExpense,
-  handleGetTeamExpenses, handleVerifyBarcode, handleGetAssetValueMaster,
-  handleGetEngineerAdvance, handleSaveEngineerAdvance, handleGetExpenseDetails, handleDeleteExpense,
-  handleGetMonthSummary, handleGetEngineerMonthClaims, handleGetConsolidatedReport,
-  handleServeExpenseAttachment, handleGetTeamUsers, handleGetKpiAppraisal, handleSaveKpiAppraisal,
-  handleGetPolicyRules, handleRetroactiveBasePolicyCheck, handleBulkRetroactivePolicyCheck, handleReverseExpense, handleEvaluatePolicy
+  handleListExpenses, handleExpenseInit, handleCreateLimitRequest,
+  handleSubmitExpense, handleGetTeamExpenses, handleVerifyBarcode,
+  handleGetAssetValueMaster, handleGetEngineerAdvance, handleSaveEngineerAdvance,
+  handleGetExpenseDetails, handleDeleteExpense, handleGetMonthSummary,
+  handleGetEngineerMonthClaims, handleGetConsolidatedReport,
+  handleServeExpenseAttachment, handleGetTeamUsers, handleGetKpiAppraisal,
+  handleSaveKpiAppraisal, handleGetPolicyRules, handleRetroactiveBasePolicyCheck,
+  handleBulkRetroactivePolicyCheck, handleReverseExpense, handleEvaluatePolicy
 } from "./routes/expense.js";
 
-// Import Attendance handlers
+// Attendance handlers
 import {
   handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies
 } from "./routes/attendance.js";
 
-// CORS Headers Configuration
-function corsHeaders(origin) {
-  return {
-    "Access-Control-Allow-Origin": origin || "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "*",
-    "Access-Control-Max-Age": "86400",
-  };
-}
+// ─── Enterprise Route Handlers (Direct Imports) ───────────────────────────────
+import {
+  handleMigrateGdrive, handleMigrationStatus,
+  handleAnalyticsDashboard, handleAnalyticsBilling,
+  handleFileHealth, handleStorageReport, handleRunMigrationsV2,
+} from "./routes/adminEnterprise.js";
 
-function jsonResponse(data, status = 200, origin = "*") {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      ...corsHeaders(origin),
-    },
-  });
-}
+import { handleEmailAction } from "./routes/emailAction.js";
 
-// Custom Zero-Dependency Router — HashMap-based for O(1) method filtering
+import {
+  handleDeleteFile, handleListFiles,
+} from "./routes/upload.js";
+
+// ─── Router — O(1) Method-Grouped Hash Map Router ────────────────────────────
 class Router {
   constructor() {
-    // Separate route arrays per HTTP method — avoids scanning unrelated methods
     this.routes = { GET: [], POST: [], PUT: [], DELETE: [] };
   }
 
-  _add(method, path, handler, requiresAuth) {
+  _add(method, path, handler, requiresAuth, requiredRoles = null) {
     const isWildcard = path.endsWith("/*");
     const wildcardPrefix = isWildcard ? path.slice(0, -2) : null;
     const parts = isWildcard ? [] : path.split("/");
-    this.routes[method].push({ path, handler, requiresAuth, isWildcard, wildcardPrefix, parts });
+    this.routes[method].push({
+      path, handler, requiresAuth, isWildcard, wildcardPrefix, parts, requiredRoles
+    });
   }
-  get(path, handler, requiresAuth = false) { this._add("GET", path, handler, requiresAuth); }
-  post(path, handler, requiresAuth = false) { this._add("POST", path, handler, requiresAuth); }
-  put(path, handler, requiresAuth = false) { this._add("PUT", path, handler, requiresAuth); }
-  delete(path, handler, requiresAuth = false) { this._add("DELETE", path, handler, requiresAuth); }
+
+  get(path, handler, requiresAuth = false, roles = null) { this._add("GET", path, handler, requiresAuth, roles); }
+  post(path, handler, requiresAuth = false, roles = null) { this._add("POST", path, handler, requiresAuth, roles); }
+  put(path, handler, requiresAuth = false, roles = null) { this._add("PUT", path, handler, requiresAuth, roles); }
+  delete(path, handler, requiresAuth = false, roles = null) { this._add("DELETE", path, handler, requiresAuth, roles); }
 
   match(method, pathname) {
     const methodRoutes = this.routes[method] || [];
     const pathParts = pathname.split("/");
 
     for (const route of methodRoutes) {
-      // Handle wildcard route like /api/upload/file/*
       if (route.isWildcard) {
         if (pathname.startsWith(route.wildcardPrefix)) {
           const wildcardVal = pathname.substring(route.wildcardPrefix.length);
           return {
             handler: route.handler,
             requiresAuth: route.requiresAuth,
+            requiredRoles: route.requiredRoles,
             params: { "*": wildcardVal, filename: wildcardVal }
           };
         }
@@ -130,7 +151,6 @@ class Router {
 
       const params = {};
       let matched = true;
-
       for (let i = 0; i < route.parts.length; i++) {
         if (route.parts[i].startsWith(":")) {
           params[route.parts[i].slice(1)] = pathParts[i];
@@ -139,8 +159,7 @@ class Router {
           break;
         }
       }
-
-      if (matched) return { handler: route.handler, requiresAuth: route.requiresAuth, params };
+      if (matched) return { handler: route.handler, requiresAuth: route.requiresAuth, requiredRoles: route.requiredRoles, params };
     }
     return null;
   }
@@ -148,29 +167,29 @@ class Router {
 
 const router = new Router();
 
-// --- Root Welcome ---
-router.get("/", async (req, env, params, query) => {
+// ─── Health Check ─────────────────────────────────────────────────────────────
+router.get("/", async (req, env) => {
   return jsonResponse({
     status: "ok",
-    message: "Welcome to FieldOps Secondary API Server (Cloudflare Worker)",
-    version: "1.0.0",
-    docs: "/api/health"
+    message: "Cyrix Field Connect — Worker Backend v2.0.0",
+    server: "cloudflare-worker-enterprise",
+    timestamp: new Date().toISOString(),
   });
 });
 
-// --- Health Check ---
-router.get("/api/health", async (req, env, params, query) => {
+router.get("/api/health", async (req, env) => {
   const result = await env.DB.prepare("SELECT COUNT(*) as cnt FROM users").first();
   return jsonResponse({
     status: "ok",
-    server: "cloudflare-worker-secondary",
+    server: "cloudflare-worker-enterprise",
+    version: "2.0.0",
     database: "connected",
     users_count: result?.cnt || 0,
     timestamp: new Date().toISOString(),
   });
 });
 
-// ─── Auth Endpoints ────────────────────────────────────────────────────────────
+// ─── Auth Endpoints ───────────────────────────────────────────────────────────
 router.post("/api/auth/login", handleLogin);
 router.post("/api/auth/refresh", handleRefresh);
 router.get("/api/auth/bootstrap", handleBootstrap, true);
@@ -182,59 +201,118 @@ router.post("/api/auth/reset-password", handleResetPassword);
 router.post("/api/auth/unlock-account", handleUnlockAccount);
 router.post("/api/auth/unlock-verify-otp", handleUnlockVerifyOtp);
 
-// ─── User Profile Endpoints (Requires Auth) ────────────────────────────────────
+// ─── User Profile Endpoints ───────────────────────────────────────────────────
 router.get("/api/users/profile", handleGetProfile, true);
 router.put("/api/users/profile", handleUpdateProfile, true);
 router.post("/api/users/profile/photo", handleUploadProfilePhoto, true);
 router.delete("/api/users/profile/photo", handleDeleteProfilePhoto, true);
 router.post("/api/users/change-password", handleChangePassword, true);
 
-// ─── Approval Endpoints — Two path aliases for compatibility ───────────────────
-// Frontend calls /api/approval/ (Python backend prefix)
+// ─── Approval Endpoints — Two path aliases for compatibility ──────────────────
 router.get("/api/approval", handleGetApprovals, true);
 router.post("/api/approval/bulk-approve", handleBulkApprove, true);
 router.post("/api/approval/:expense_id/approve", handleApprove, true);
 router.post("/api/approval/:expense_id/reject", handleReject, true);
 router.post("/api/approval/:expense_id/return-to-draft", handleReturnToDraft, true);
-// Also handle /api/approvals (worker-style)
 router.get("/api/approvals", handleGetApprovals, true);
 router.post("/api/approvals/bulk-approve", handleBulkApprove, true);
 router.post("/api/approvals/:expense_id/approve", handleApprove, true);
 router.post("/api/approvals/:expense_id/reject", handleReject, true);
 router.post("/api/approvals/:expense_id/return-to-draft", handleReturnToDraft, true);
 
-// ─── Admin Endpoints (Requires Auth) ──────────────────────────────────────────
-// NOTE: Specific routes BEFORE wildcard :user_id routes to avoid conflicts
-router.get("/api/admin/allowance-rates", handleGetAllowanceRates, true);
-router.post("/api/admin/allowance-rates", handleSaveAllowanceRates, true);
-router.get("/api/admin/settings", handleGetSystemSettings, true);
-router.post("/api/admin/settings", handleSaveSystemSettings, true);
+// ─── Admin Endpoints ──────────────────────────────────────────────────────────
+router.get("/api/admin/allowance-rates", handleGetAllowanceRates, true, ["Admin"]);
+router.post("/api/admin/allowance-rates", handleSaveAllowanceRates, true, ["Admin"]);
+router.get("/api/admin/settings", handleGetSystemSettings, true, ["Admin"]);
+router.post("/api/admin/settings", handleSaveSystemSettings, true, ["Admin"]);
 router.get("/api/admin/expenses/rejected", handleSearchRejectedExpenses, true);
-router.post("/api/admin/expenses/:expense_id/resubmit", handleResubmitRejectedExpense, true);
-router.post("/api/admin/one-time-adjust", handleOneTimeAdjust, true);
-router.get("/api/admin/users", handleListUsers, true);
-router.post("/api/admin/users/bulk", handleBulkCreateUsers, true);   // MUST be before /api/admin/users/:user_id
-router.post("/api/admin/users", handleSaveUser, true);
-router.put("/api/admin/users/:user_id", handleUpdateUser, true);
-router.delete("/api/admin/users/:user_id", handleDeleteUser, true);
-router.get("/api/admin/eligible-approvers", handleGetEligibleApprovers, true);
-// Hierarchies — specific routes first
-router.get("/api/admin/hierarchies/export", handleExportHierarchies, true);   // BEFORE /:id
-router.post("/api/admin/hierarchies/bulk", handleBulkImportHierarchies, true);
-router.post("/api/admin/approvals/repair-stuck", handleRepairStuckApprovals, true);
-router.get("/api/admin/hierarchies", handleListHierarchies, true);
-router.post("/api/admin/hierarchies", handleSaveHierarchy, true);
-router.delete("/api/admin/hierarchies/:id", handleDeleteHierarchy, true);
-// Time verification test endpoints
+router.post("/api/admin/expenses/:expense_id/resubmit", handleResubmitRejectedExpense, true, ["Admin"]);
+router.post("/api/admin/one-time-adjust", handleOneTimeAdjust, true, ["Admin"]);
+router.get("/api/admin/users", handleListUsers, true, ["Admin"]);
+router.post("/api/admin/users/bulk", handleBulkCreateUsers, true, ["Admin"]);
+router.post("/api/admin/users", handleSaveUser, true, ["Admin"]);
+router.put("/api/admin/users/:user_id", handleUpdateUser, true, ["Admin"]);
+router.delete("/api/admin/users/:user_id", handleDeleteUser, true, ["Admin"]);
+router.get("/api/admin/eligible-approvers", handleGetEligibleApprovers, true, ["Admin"]);
+router.get("/api/admin/hierarchies/export", handleExportHierarchies, true, ["Admin"]);
+router.post("/api/admin/hierarchies/bulk", handleBulkImportHierarchies, true, ["Admin"]);
+router.post("/api/admin/approvals/repair-stuck", handleRepairStuckApprovals, true, ["Admin"]);
+router.get("/api/admin/hierarchies", handleListHierarchies, true, ["Admin"]);
+router.post("/api/admin/hierarchies", handleSaveHierarchy, true, ["Admin"]);
+router.delete("/api/admin/hierarchies/:id", handleDeleteHierarchy, true, ["Admin"]);
+router.post("/api/admin/logout-all", handleLogoutAllUsers, true, ["Admin"]);
+router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true, ["Admin"]);
+
+// Admin migrations
+router.post("/api/admin/run-migrations", async (req, env, params, query, user) => {
+  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
+  try {
+    await runMigrations(env._originalDB || env.DB);
+    return jsonResponse({ success: true, message: "Migrations v1 completed successfully" });
+  } catch (e) {
+    return errorResponse("Migration error: " + e.message, 500);
+  }
+}, true, ["Admin"]);
+
+// Enterprise admin routes (Sprint 2+)
+router.post("/api/admin/migrate-gdrive", async (req, env, params, query, user) => {
+  if (!handleMigrateGdrive) return errorResponse("Migration engine not yet available", 503);
+  return handleMigrateGdrive(req, env, params, query, user);
+}, true, ["Admin"]);
+
+router.get("/api/admin/migration-status", async (req, env, params, query, user) => {
+  if (!handleMigrationStatus) return errorResponse("Migration engine not yet available", 503);
+  return handleMigrationStatus(req, env, params, query, user);
+}, true, ["Admin"]);
+
+router.get("/api/admin/analytics/dashboard", async (req, env, params, query, user) => {
+  if (!handleAnalyticsDashboard) return errorResponse("Analytics dashboard not yet available", 503);
+  return handleAnalyticsDashboard(req, env, params, query, user);
+}, true, ["Admin"]);
+
+router.get("/api/admin/analytics/billing", async (req, env, params, query, user) => {
+  if (!handleAnalyticsBilling) return errorResponse("Billing analytics not yet available", 503);
+  return handleAnalyticsBilling(req, env, params, query, user);
+}, true, ["Admin"]);
+
+router.get("/api/admin/files/health", async (req, env, params, query, user) => {
+  if (!handleFileHealth) return errorResponse("File management not yet available", 503);
+  return handleFileHealth(req, env, params, query, user);
+}, true, ["Admin"]);
+
+router.get("/api/admin/files/storage-report", async (req, env, params, query, user) => {
+  if (!handleStorageReport) return errorResponse("Storage report not yet available", 503);
+  return handleStorageReport(req, env, params, query, user);
+}, true, ["Admin"]);
+
+router.post("/api/admin/run-migrations-v2", async (req, env, params, query, user) => {
+  if (!handleRunMigrationsV2) return errorResponse("V2 migrations not yet available", 503);
+  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
+  return handleRunMigrationsV2(req, env, params, query, user);
+}, true, ["Admin"]);
+
+// ─── File Management (Sprint 6) ───────────────────────────────────────────────
+router.post("/api/files/:id/archive", async (req, env, params, query, user) => {
+  if (!handleArchiveFile) return errorResponse("File management not yet available", 503);
+  return handleArchiveFile(req, env, params, query, user);
+}, true);
+router.post("/api/files/:id/restore", async (req, env, params, query, user) => {
+  if (!handleRestoreFile) return errorResponse("File management not yet available", 503);
+  return handleRestoreFile(req, env, params, query, user);
+}, true);
+
+// ─── Email One-Click Action (Sprint 4) ───────────────────────────────────────
+// Public endpoint — no auth required (uses signed token in query)
+router.get("/api/expense/email-action", async (req, env, params, query, user) => {
+  if (!handleEmailAction) return errorResponse("Email action not yet available", 503);
+  return handleEmailAction(req, env, params, query, user);
+}, false);
+
+// ─── Test/Dev Endpoints ───────────────────────────────────────────────────────
 router.get("/api/test/time", handleTestTime, false);
 router.get("/api/admin/test/time", handleTestTime, true);
 
-// Session management
-router.post("/api/admin/logout-all", handleLogoutAllUsers, true);
-router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true);
-
-// ─── Tickets Endpoints — Two path aliases for compatibility ────────────────────
-// Frontend calls /api/ticket/ (Python backend prefix)
+// ─── Ticket Endpoints — Two path aliases ─────────────────────────────────────
 router.get("/api/ticket/stats", handleGetTicketStats, true);
 router.get("/api/ticket", handleGetTickets, true);
 router.post("/api/ticket", handleCreateTicket, true);
@@ -244,7 +322,6 @@ router.post("/api/ticket/:ticket_id/comment", handleAddComment, true);
 router.post("/api/ticket/:ticket_id/close", handleCloseTicket, true);
 router.post("/api/ticket/:ticket_id/reopen", handleReopenTicket, true);
 router.post("/api/ticket/:ticket_id/followup", handleToggleFollowup, true);
-// Also handle /api/tickets (worker-style)
 router.get("/api/tickets/stats", handleGetTicketStats, true);
 router.get("/api/tickets", handleGetTickets, true);
 router.post("/api/tickets", handleCreateTicket, true);
@@ -255,15 +332,22 @@ router.post("/api/tickets/:ticket_id/close", handleCloseTicket, true);
 router.post("/api/tickets/:ticket_id/reopen", handleReopenTicket, true);
 router.post("/api/tickets/:ticket_id/followup", handleToggleFollowup, true);
 
-// ─── Uploads Endpoints (Requires Auth) ────────────────────────────────────────
+// ─── Upload Endpoints ─────────────────────────────────────────────────────────
 router.post("/api/upload/image", handleUploadImage, true);
 router.post("/api/upload/document", handleUploadDocument, true);
+// R2 file serving (primary path & aliases)
+router.get("/api/r2/file/*", handleServeFile, false);
+router.get("/api/r2/file/:key", handleServeFile, false);
+router.get("/api/files/*", handleServeFile, false);
+router.get("/api/files/:key", handleServeFile, false);
+router.get("/api/files/list", handleListFiles, true);
+router.delete("/api/files/:key", handleDeleteFile, true);
+// Legacy paths (kept for backward compat)
 router.get("/api/upload/file/images/:filename", handleServeFile, false);
 router.get("/api/upload/file/documents/:filename", handleServeFile, false);
-router.get("/api/upload/file/gdrive/:filename", handleServeFile, false);
 router.get("/uploads/expense_attachments/:filename", handleServeExpenseAttachment, false);
 
-// ─── Reports Endpoints (Requires Auth) ────────────────────────────────────────
+// ─── Reports Endpoints ────────────────────────────────────────────────────────
 router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);
 router.get("/api/reports/assets-inventory", handleGetAssetsInventory, true);
 router.get("/api/reports/assets-filters", handleGetAssetsFilters, true);
@@ -273,14 +357,12 @@ router.get("/api/reports/assets-csv-template", handleGetAssetsCsvTemplate, true)
 router.post("/api/reports/upload-assets-csv", handleUploadAssetsCSV, true);
 router.post("/api/reports/upload-assets-chunk", handleUploadAssetsChunk, true);
 
-// ─── Attendance Endpoints (Requires Auth) ──────────────────────────────────────
+// ─── Attendance Endpoints ─────────────────────────────────────────────────────
 router.get("/api/attendance/summary", handleGetAttendanceSummary, true);
 router.get("/api/attendance/discrepancies", handleGetAttendanceDiscrepancies, true);
 router.get("/api/attendance", handleGetAttendance, true);
 
-
-// ─── Expense Endpoints (Requires Auth) ────────────────────────────────────────
-// NOTE: Specific named routes BEFORE wildcard :id routes to avoid conflicts
+// ─── Expense Endpoints ────────────────────────────────────────────────────────
 router.get("/api/expense/init", handleExpenseInit, true);
 router.post("/api/expense/limit-request", handleCreateLimitRequest, true);
 router.get("/api/expense/team", handleGetTeamExpenses, true);
@@ -304,162 +386,233 @@ router.get("/api/expense/:id", handleGetExpenseDetails, true);
 router.delete("/api/expense/:id", handleDeleteExpense, true);
 router.post("/api/expense/:id/reverse", handleReverseExpense, true);
 
+// ─── No DB Proxy Needed — Single D1, direct env.DB ───────────────────────────
+// wrapDB removed in v2.1.0 (single-server architecture)
 
-
-// Dedicated migration endpoint — call once after deployment, not on every request
-router.post("/api/admin/run-migrations", async (req, env, params, query, user) => {
-  if (!user || user.role !== "Admin") {
-    return jsonResponse({ error: "Access denied" }, 403);
-  }
-  try {
-    await runMigrations(env._originalDB || env.DB);
-    return jsonResponse({ success: true, message: "Migrations completed successfully" });
-  } catch (e) {
-    return jsonResponse({ error: "Migration error: " + e.message }, 500);
-  }
-}, true);
-
-
-// --- Main Entry point ---
+// ─── Main Fetch Handler ───────────────────────────────────────────────────────
 export default {
   async fetch(request, env, ctx) {
-    // Store ctx on env for background tasks access (e.g. replication)
+    // Store ctx for background tasks (waitUntil)
     env.ctx = ctx;
-
-    // Intercept D1 database connection for read control routing
-    if (env.DB && !env._originalDB) {
-      env._originalDB = env.DB;
-      const originalDB = env.DB;
-      
-      env.DB = {
-        prepare(sql) {
-          const stmt = originalDB.prepare(sql);
-          const sqlTrimLower = sql.trim().toLowerCase();
-          const isSelect = sqlTrimLower.startsWith("select") || sqlTrimLower.startsWith("with");
-          
-          function wrapStmt(nativeStmt, params) {
-            return new Proxy(nativeStmt, {
-              get(target, prop, receiver) {
-                if (prop === "all") {
-                  return async function() {
-                    if (isSelect) {
-                      return await runRead(env, sql, params, request);
-                    }
-                    return await target.all();
-                  };
-                }
-                
-                if (prop === "first") {
-                  return async function(column) {
-                    if (isSelect) {
-                      const res = await runRead(env, sql, params, request);
-                      const row = res.results && res.results[0];
-                      if (!row) return null;
-                      if (column) return row[column];
-                      return row;
-                    }
-                    return await target.first(column);
-                  };
-                }
-                
-                if (prop === "run") {
-                  return async function() {
-                    return await target.run();
-                  };
-                }
-                
-                if (prop === "bind") {
-                  return function(...newParams) {
-                    const newNativeStmt = target.bind(...newParams);
-                    return wrapStmt(newNativeStmt, newParams);
-                  };
-                }
-                
-                const val = target[prop];
-                if (typeof val === "function") {
-                  return val.bind(target);
-                }
-                return val;
-              }
-            });
-          }
-          
-          return wrapStmt(stmt, []);
-        },
-        batch(statements) {
-          return originalDB.batch(statements);
-        },
-        exec(sql) {
-          return originalDB.exec(sql);
-        }
-      };
-    }
 
     const url = new URL(request.url);
     let pathname = url.pathname;
-    if (pathname.endsWith("/") && pathname !== "/") {
-      pathname = pathname.slice(0, -1);
-    }
+    if (pathname.endsWith("/") && pathname !== "/") pathname = pathname.slice(0, -1);
     const { searchParams } = url;
     const method = request.method;
-    const origin = request.headers.get("Origin") || "*";
+    const origin = request.headers.get("Origin") || null;
+    const requestId = request.headers.get("X-Request-ID") || generateRequestId();
 
-    // Handle OPTIONS Preflight
+    // Initialize request logger
+    const log = new Logger(env, requestId);
+
+    // ── OPTIONS Preflight ────────────────────────────────────────────────────
     if (method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders(origin) });
+      return preflightResponse(origin);
     }
 
-    // Match route
+    // ── Global IP Rate Limit (check before ANYTHING else) ────────────────────
+    // Skip rate limiting for static file serving
+    const isFileServing = pathname.startsWith("/api/upload/file/") || pathname.startsWith("/uploads/");
+    if (!isFileServing && env.OTPS_KV) {
+      const rateLimitResponse = await globalIPRateLimit(request, env, origin);
+      if (rateLimitResponse) {
+        log.security("Global IP rate limit exceeded", { ip: getClientIP(request), path: pathname });
+        return injectResponseHeaders(rateLimitResponse, requestId, origin);
+      }
+    }
+
+    // ── Special: Login endpoint rate limiting (login only, NOT forgot-password) ─
+    if (pathname === "/api/auth/login" && method === "POST") {
+      const loginLimit = await loginRateLimit(request, env, origin);
+      if (loginLimit) {
+        log.security("Login rate limit exceeded", { ip: getClientIP(request) });
+        return injectResponseHeaders(loginLimit, requestId, origin);
+      }
+    }
+
+    // ── Route Matching ───────────────────────────────────────────────────────
     const route = router.match(method, pathname);
     if (!route) {
-      return jsonResponse({ error: "Endpoint not found", path: pathname }, 404, origin);
+      return injectResponseHeaders(
+        notFoundResponse(`Endpoint not found: ${method} ${pathname}`, origin),
+        requestId, origin
+      );
     }
 
-    // Verify auth if route requires it
+    // ── Authentication ───────────────────────────────────────────────────────
     let user = null;
     if (route.requiresAuth) {
       const authHeader = request.headers.get("Authorization");
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return jsonResponse({ error: "Missing or invalid authorization header" }, 401, origin);
-      }
-      const token = authHeader.split(" ")[1];
-      const payload = await verifyJwt(token, env.API_SECRET);
-      if (!payload || payload.type !== "access") {
-        return jsonResponse({ error: "Session expired or invalid token" }, 401, origin);
+        return injectResponseHeaders(
+          unauthorizedResponse("Missing or invalid authorization header", origin),
+          requestId, origin
+        );
       }
 
-      // Fetch user + their admin-assigned role from user_roles (overrides users.role column)
+      const token = authHeader.split(" ")[1];
+      const payload = await verifyJwt(token, env.API_SECRET, env);
+      if (!payload || payload.type !== "access") {
+        return injectResponseHeaders(
+          unauthorizedResponse("Session expired or invalid token", origin),
+          requestId, origin
+        );
+      }
+
+      // Fetch user with effective role (admin-assigned role overrides users.role)
       user = await env.DB.prepare(`
         SELECT u.*, COALESCE(r.role, u.role) as role, u.allowed_windows
         FROM users u
         LEFT JOIN user_roles r ON u.user_id = r.user_id
         WHERE u.user_id = ?
       `).bind(payload.sub).first();
+
       if (!user) {
-        return jsonResponse({ error: "Invalid session" }, 401, origin);
+        return injectResponseHeaders(
+          unauthorizedResponse("Invalid session — user not found", origin),
+          requestId, origin
+        );
       }
+
       if (user.user_status !== "active") {
-        return jsonResponse({ error: "Account status is inactive or locked" }, 403, origin);
+        return injectResponseHeaders(
+          forbiddenResponse(`Account is ${user.user_status}. Please contact admin.`, origin),
+          requestId, origin
+        );
       }
+
+      // Role-based access control (if route specifies required roles)
+      if (route.requiredRoles && route.requiredRoles.length > 0) {
+        const userRole = (user.role || "").trim();
+        if (!route.requiredRoles.includes(userRole)) {
+          log.security("RBAC access denied", { userId: user.user_id, role: userRole, required: route.requiredRoles, path: pathname });
+          return injectResponseHeaders(
+            forbiddenResponse("Insufficient permissions for this action", origin),
+            requestId, origin
+          );
+        }
+      }
+
+      // Set logger context after auth
+      log.setContext({ userId: user.user_id, role: user.role, name: user.name });
     }
 
+    // ── Route Handler Execution ──────────────────────────────────────────────
     try {
-      // Execute route handler
+      const startMs = Date.now();
       const response = await route.handler(request, env, route.params, searchParams, user);
+      const durationMs = Date.now() - startMs;
 
-      // Centralized CORS injection
-      const newResponse = new Response(response.body, response);
-      const cors = corsHeaders(origin);
-      for (const [key, value] of Object.entries(cors)) {
-        newResponse.headers.set(key, value);
+      log.apiComplete(method, pathname, response.status, { durationMs });
+
+      // Warn on slow requests (>2000ms)
+      if (durationMs > 2000) {
+        log.warn("Slow request detected", { method, path: pathname, durationMs });
       }
-      return newResponse;
+
+      return injectResponseHeaders(response, requestId, origin);
     } catch (error) {
-      console.error(`Route error [${method} ${pathname}]:`, error);
-      return jsonResponse({ error: "Internal server error", detail: error.message }, 500, origin);
+      log.error("Unhandled route error", {
+        method, path: pathname,
+        error: error.message, stack: error.stack
+      });
+      return injectResponseHeaders(
+        errorResponse("Internal server error", 500, error.message, origin, requestId),
+        requestId, origin
+      );
     }
   },
+
+  // ─── Scheduled Handler (Cron Jobs) ──────────────────────────────────────────
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(handleAutoApprovalExpiry(env));
-  }
+    const { staticLog } = await import("./utils/logger.js");
+    staticLog.info("Scheduled cron triggered", { cron: event.cron, scheduledTime: event.scheduledTime });
+
+    // Auto-approval expiry (existing — always runs)
+    ctx.waitUntil(handleAutoApprovalExpiry(env).catch(e =>
+      staticLog.error("Auto-approval expiry failed", { error: e.message })
+    ));
+
+    // Manager daily digest (10:00 AM IST = 04:30 UTC)
+    if (event.cron === "30 4 * * *") {
+      const { sendManagerDigests } = await import("./email/sender.js").catch(() => ({ sendManagerDigests: null }));
+      if (sendManagerDigests) {
+        ctx.waitUntil(sendManagerDigests(env).catch(e =>
+          staticLog.error("Manager digest failed", { error: e.message })
+        ));
+      }
+    }
+
+    // Daily report generation (11:30 PM IST = 18:00 UTC)
+    if (event.cron === "0 18 * * *") {
+      const { generateDailyReport } = await import("./queues/reportGenerator.js").catch(() => ({ generateDailyReport: null }));
+      if (generateDailyReport) {
+        ctx.waitUntil(generateDailyReport(env).catch(e =>
+          staticLog.error("Daily report failed", { error: e.message })
+        ));
+      }
+    }
+  },
+
+  // ─── Queue Handler (Cloudflare Queues) ──────────────────────────────────────
+  async queue(batch, env) {
+    const { staticLog } = await import("./utils/logger.js");
+    const queueName = batch.queue;
+
+    staticLog.info("Queue batch received", { queue: queueName, messageCount: batch.messages.length });
+
+    try {
+      if (queueName.includes("upload")) {
+        const { processUploadBatch } = await import("./queues/uploadProcessor.js").catch(() => ({ processUploadBatch: null }));
+        if (processUploadBatch) await processUploadBatch(batch, env);
+        else batch.ackAll();
+      } else if (queueName.includes("email")) {
+        // Import directly from email/sender.js — no separate emailProcessor file needed
+        const { processEmailBatch } = await import("./email/sender.js").catch(() => ({ processEmailBatch: null }));
+        if (processEmailBatch) await processEmailBatch(batch, env);
+        else batch.ackAll();
+      } else if (queueName.includes("analytics")) {
+        const { processAnalyticsBatch } = await import("./queues/analyticsProcessor.js").catch(() => ({ processAnalyticsBatch: null }));
+        if (processAnalyticsBatch) await processAnalyticsBatch(batch, env);
+        else batch.ackAll();
+      } else {
+        batch.ackAll();
+      }
+    } catch (e) {
+      staticLog.error("Queue processing failed", { queue: queueName, error: e.message });
+      batch.retryAll();
+    }
+  },
 };
+
+// ─── Response Header Injection ────────────────────────────────────────────────
+/**
+ * Inject security + request ID headers into an existing Response.
+ * Called on every final response — ensures headers are always present.
+ */
+function injectResponseHeaders(response, requestId, origin) {
+  const newHeaders = new Headers(response.headers);
+
+  // Always inject security headers
+  const secHeaders = securityHeaders();
+  for (const [key, value] of Object.entries(secHeaders)) {
+    newHeaders.set(key, value);
+  }
+
+  // Inject CORS headers (origin-aware)
+  const cors = corsHeaders(origin);
+  for (const [key, value] of Object.entries(cors)) {
+    newHeaders.set(key, value);
+  }
+
+  // Request correlation ID
+  newHeaders.set("X-Request-ID", requestId);
+  newHeaders.set("X-Worker-Version", "2.1.0");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
+}

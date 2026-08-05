@@ -2,35 +2,9 @@ import { runWrite, runBatchWrite } from "../utils/db.js";
 import { deleteFromGoogleDrive } from "./upload.js";
 import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
 import { computeDistrictType, computeDistrictInfo } from "../utils/districtHelper.js";
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json" }
-  });
-}
-
-function parseClientTimestamp(raw) {
-  if (!raw) return new Date().toISOString();
-  let str = String(raw).trim();
-  
-  if (str.endsWith("Z") || str.includes("+") || /T\d{2}:\d{2}:\d{2}.*-/.test(str)) {
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) return d.toISOString();
-  }
-
-  if (str.includes(" ") && !str.includes("T")) {
-    str = str.replace(" ", "T") + "+05:30";
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) return d.toISOString();
-  }
-
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    return d.toISOString();
-  }
-  return new Date().toISOString();
-}
+// Enterprise: shared utilities (replaces local duplicates)
+import { jsonResponse } from "../utils/http.js";
+import { parseClientTimestamp } from "../utils/timestamp.js";
 
 async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
   let allResults = [];

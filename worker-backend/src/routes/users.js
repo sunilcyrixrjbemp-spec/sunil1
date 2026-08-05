@@ -1,15 +1,12 @@
-import { verifyPassword, getPasswordHash } from "../utils/security.js";
-import { uploadToGoogleDrive, deleteFromGoogleDrive } from "./upload.js";
-import { getDrizzleDb } from "../db/client.js";
-import { users, userRoles, passwordHistories } from "../db/schema.js";
-import { eq, desc } from "drizzle-orm";
+/**
+ * User Profile Routes — Cloudflare D1 (direct binding)
+ * Rewritten in v2.1.0: Removed Drizzle ORM, GDrive, GAS.
+ * Profile photos now stored in R2.
+ */
 
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json" }
-  });
-}
+import { verifyPassword, getPasswordHash } from "../utils/security.js";
+import { enterpriseUpload, deleteFromR2 } from "../utils/r2Storage.js";
+import { jsonResponse, errorResponse } from "../utils/http.js";
 
 function validatePasswordStrength(password) {
   const errors = [];
@@ -18,27 +15,15 @@ function validatePasswordStrength(password) {
   if (!/[a-z]/.test(password)) errors.push("Password must contain at least one lowercase letter");
   if (!/\d/.test(password)) errors.push("Password must contain at least one digit");
   if (!/[@$!%*?&#]/.test(password)) errors.push("Password must contain at least one special character (@$!%*?&#)");
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
+  return { isValid: errors.length === 0, errors };
 }
 
 /**
  * GET /api/users/profile
  */
 export async function handleGetProfile(request, env, params, query, user) {
-  const db = getDrizzleDb(env, request);
-  
-  const [roleRow] = await db.select({ role: userRoles.role })
-    .from(userRoles)
-    .where(eq(userRoles.userId, user.user_id))
-    .limit(1);
-
   const profile = { ...user };
   delete profile.hashed_password;
-  profile.role = roleRow?.role || "user";
-  
   return jsonResponse(profile);
 }
 
@@ -46,213 +31,170 @@ export async function handleGetProfile(request, env, params, query, user) {
  * PUT /api/users/profile
  */
 export async function handleUpdateProfile(request, env, params, query, user) {
-  const db = getDrizzleDb(env, request);
   let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return jsonResponse({ error: "Invalid JSON body" }, 400);
-  }
+  try { body = await request.json(); }
+  catch { return errorResponse("Invalid JSON body", 400); }
 
   const { mobile_number, mail_id } = body;
-  const updatePayload = {};
+  const sets = [];
+  const binds = [];
 
   if (mobile_number !== undefined) {
     const mobile = (mobile_number || "").trim();
     if (mobile && !/^\+?[0-9\- \(\)]{7,20}$/.test(mobile)) {
-      return jsonResponse({ error: "Invalid mobile number format" }, 400);
+      return errorResponse("Invalid mobile number format", 400);
     }
-    updatePayload.mobileNumber = mobile || null;
+    sets.push("mobile_number = ?");
+    binds.push(mobile || null);
   }
 
   if (mail_id !== undefined) {
     const email = (mail_id || "").trim();
     if (email && !/^[\w\.-]+@[\w\.-]+\.\w+$/.test(email)) {
-      return jsonResponse({ error: "Invalid email address format" }, 400);
+      return errorResponse("Invalid email address format", 400);
     }
-    updatePayload.mailId = email || null;
+    sets.push("mail_id = ?");
+    binds.push(email || null);
   }
 
-  if (Object.keys(updatePayload).length > 0) {
-    updatePayload.updatedAt = new Date().toISOString();
-    await db.update(users)
-      .set(updatePayload)
-      .where(eq(users.id, user.id));
+  if (sets.length > 0) {
+    binds.push(user.user_id);
+    await env.DB.prepare(
+      `UPDATE users SET ${sets.join(", ")} WHERE user_id = ?`
+    ).bind(...binds).run();
   }
 
-  const [updatedUser] = await db.select()
-    .from(users)
-    .where(eq(users.id, user.id))
-    .limit(1);
+  const updated = await env.DB.prepare(
+    `SELECT u.*, COALESCE(r.role, u.role) as role FROM users u
+     LEFT JOIN user_roles r ON u.user_id = r.user_id
+     WHERE u.user_id = ?`
+  ).bind(user.user_id).first();
 
-  const [roleRow] = await db.select({ role: userRoles.role })
-    .from(userRoles)
-    .where(eq(userRoles.userId, user.user_id))
-    .limit(1);
-
-  return jsonResponse({
-    ...updatedUser,
-    role: roleRow?.role || "user"
-  });
+  if (updated) delete updated.hashed_password;
+  return jsonResponse(updated || user);
 }
 
 /**
  * POST /api/users/change-password
  */
 export async function handleChangePassword(request, env, params, query, user) {
-  const db = getDrizzleDb(env, request);
   let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return jsonResponse({ error: "Invalid JSON body" }, 400);
-  }
+  try { body = await request.json(); }
+  catch { return errorResponse("Invalid JSON body", 400); }
 
   const { old_password, new_password, confirm_password } = body;
   if (!old_password || !new_password || !confirm_password) {
-    return jsonResponse({ error: "All fields are required" }, 400);
+    return errorResponse("All fields are required", 400);
   }
 
   // 1. Verify old password
   const oldCorrect = await verifyPassword(old_password, user.hashed_password);
-  if (!oldCorrect) {
-    return jsonResponse({ error: "Current password is incorrect" }, 400);
-  }
+  if (!oldCorrect) return errorResponse("Current password is incorrect", 400);
 
-  // 2. Match check
+  // 2. Same as old?
   if (new_password === old_password) {
-    return jsonResponse({ error: "New password must be different from current password" }, 400);
+    return errorResponse("New password must be different from current password", 400);
   }
 
+  // 3. Confirm match
   if (new_password !== confirm_password) {
-    return jsonResponse({ error: "New password and confirmation password do not match" }, 400);
+    return errorResponse("New password and confirmation do not match", 400);
   }
 
-  // 3. Password strength
+  // 4. Strength
   const strength = validatePasswordStrength(new_password);
-  if (!strength.isValid) {
-    return jsonResponse({ error: strength.errors.join("; ") }, 400);
-  }
+  if (!strength.isValid) return errorResponse(strength.errors.join("; "), 400);
 
-  // 4. Check password history (last 5)
-  const history = await db.select({ hashedPassword: passwordHistories.hashedPassword })
-    .from(passwordHistories)
-    .where(eq(passwordHistories.userId, user.id))
-    .orderBy(desc(passwordHistories.createdAt))
-    .limit(5);
+  // 5. Password history (last 5)
+  const history = await env.DB.prepare(
+    `SELECT hashed_password FROM password_histories WHERE user_id = ? ORDER BY created_at DESC LIMIT 5`
+  ).bind(user.user_id).all();
 
-  const historyHashes = history.map(r => r.hashedPassword);
-  for (const histHash of historyHashes) {
-    if (await verifyPassword(new_password, histHash)) {
-      return jsonResponse({ error: "You cannot reuse any of your last 5 passwords." }, 400);
+  for (const row of (history?.results || [])) {
+    if (await verifyPassword(new_password, row.hashed_password)) {
+      return errorResponse("You cannot reuse any of your last 5 passwords.", 400);
     }
   }
 
-  // 5. Update password & history
+  // 6. Update
   const newHash = await getPasswordHash(new_password);
-  const timestamp = new Date().toISOString();
+  const now = new Date().toISOString();
 
-  await db.batch([
-    db.update(users).set({ hashedPassword: newHash }).where(eq(users.id, user.id)),
-    db.insert(passwordHistories).values({ userId: user.id, hashedPassword: newHash, createdAt: timestamp })
+  await env.DB.batch([
+    env.DB.prepare(`UPDATE users SET hashed_password = ? WHERE user_id = ?`).bind(newHash, user.user_id),
+    env.DB.prepare(`INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)`).bind(user.user_id, newHash, now),
   ]);
 
-  return jsonResponse({ status: "success", message: "Password has been updated successfully." });
+  return jsonResponse({ status: "success", message: "Password updated successfully." });
 }
 
 /**
  * POST /api/users/profile/photo
- * Upload a profile photo to Google Drive
+ * Upload profile photo to R2
  */
 export async function handleUploadProfilePhoto(request, env, params, query, user) {
-  const db = getDrizzleDb(env, request);
   try {
     const formData = await request.formData();
     const file = formData.get("file");
 
-    if (!file) {
-      return jsonResponse({ error: "No file provided" }, 400);
+    if (!file) return errorResponse("No file provided", 400);
+
+    const fileBuffer = await file.arrayBuffer();
+    if (fileBuffer.byteLength > 5 * 1024 * 1024) {
+      return errorResponse("Profile photo must be under 5MB", 400);
     }
 
-    const timestamp = new Date().toISOString();
     const ext = (file.name || "photo.jpg").split(".").pop().toLowerCase() || "jpg";
     const filename = `profile_${user.user_id}_${Date.now()}.${ext}`;
 
-    let photoUrl = null;
-    try {
-      const fileId = await uploadToGoogleDrive(env, file, "Profile_Pictures", filename);
-      photoUrl = `/api/upload/file/gdrive/${fileId}`;
-    } catch (e) {
-      console.error("Profile photo upload failed:", e);
-      return jsonResponse({ error: "Failed to upload photo to Google Drive: " + e.message }, 500);
+    const result = await enterpriseUpload(env, fileBuffer, {
+      category: "profile_photos",
+      originalFilename: filename,
+      contentType: file.type || "image/jpeg",
+      uploadedBy: user.user_id,
+      employeeId: user.user_id,
+      employeeName: user.name,
+    });
+
+    if (!result.success) return errorResponse("Upload failed: " + result.error, 500);
+
+    const photoUrl = result.url;
+    const now = new Date().toISOString();
+
+    // Delete old photo from R2 if exists
+    const oldUser = await env.DB.prepare(`SELECT profile_pic_url FROM users WHERE user_id = ?`).bind(user.user_id).first();
+    if (oldUser?.profile_pic_url && oldUser.profile_pic_url.startsWith("/api/files/")) {
+      const oldKey = decodeURIComponent(oldUser.profile_pic_url.replace("/api/files/", ""));
+      await deleteFromR2(env, oldKey).catch(() => {});
     }
 
-    // Update user record
-    await db.update(users)
-      .set({ profilePicUrl: photoUrl, updatedAt: timestamp })
-      .where(eq(users.id, user.id));
+    // Save to DB
+    await env.DB.prepare(
+      `UPDATE users SET profile_pic_url = ? WHERE user_id = ?`
+    ).bind(photoUrl, user.user_id).run();
 
-    const [updatedUser] = await db.select()
-      .from(users)
-      .where(eq(users.id, user.id))
-      .limit(1);
-
-    const [roleRow] = await db.select({ role: userRoles.role })
-      .from(userRoles)
-      .where(eq(userRoles.userId, user.user_id))
-      .limit(1);
-
-    const result = {
-      ...updatedUser,
-      role: roleRow?.role || "user",
+    return jsonResponse({
+      status: "success",
       profile_pic_url: photoUrl,
-      profile_photo: photoUrl
-    };
-    delete result.hashed_password;
-
-    return jsonResponse({ status: "success", profile_pic_url: photoUrl, profile_photo: photoUrl, user: result });
+      profile_photo: photoUrl,
+    });
   } catch (e) {
-    return jsonResponse({ error: "Failed to upload photo: " + e.message }, 500);
+    return errorResponse("Failed to upload photo: " + e.message, 500);
   }
 }
 
 /**
  * DELETE /api/users/profile/photo
- * Remove profile photo from Google Drive
  */
 export async function handleDeleteProfilePhoto(request, env, params, query, user) {
-  const db = getDrizzleDb(env, request);
-  const timestamp = new Date().toISOString();
+  const currentUser = await env.DB.prepare(`SELECT profile_pic_url FROM users WHERE user_id = ?`).bind(user.user_id).first();
 
-  const currentPhoto = user.profile_pic_url || user.profile_photo;
-  // Try to delete from Google Drive if it exists
-  if (currentPhoto && currentPhoto.includes("/gdrive/")) {
-    const fileId = currentPhoto.split("/gdrive/").pop();
-    await deleteFromGoogleDrive(env, fileId).catch(() => {});
+  if (currentUser?.profile_pic_url && currentUser.profile_pic_url.startsWith("/api/files/")) {
+    const key = decodeURIComponent(currentUser.profile_pic_url.replace("/api/files/", ""));
+    await deleteFromR2(env, key).catch(() => {});
   }
 
-  // Clear from DB
-  await db.update(users)
-    .set({ profilePicUrl: null, updatedAt: timestamp })
-    .where(eq(users.id, user.id));
+  await env.DB.prepare(`UPDATE users SET profile_pic_url = NULL WHERE user_id = ?`).bind(user.user_id).run();
 
-  const [updatedUser] = await db.select()
-    .from(users)
-    .where(eq(users.id, user.id))
-    .limit(1);
-
-  const [roleRow] = await db.select({ role: userRoles.role })
-    .from(userRoles)
-    .where(eq(userRoles.userId, user.user_id))
-    .limit(1);
-
-  const result = {
-    ...updatedUser,
-    role: roleRow?.role || "user",
-    profile_pic_url: null,
-    profile_photo: null
-  };
-  delete result.hashed_password;
-
-  return jsonResponse({ status: "success", message: "Profile photo removed successfully", user: result });
+  return jsonResponse({ status: "success", message: "Profile photo removed successfully" });
 }

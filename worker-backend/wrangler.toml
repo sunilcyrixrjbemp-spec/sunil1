@@ -1,28 +1,133 @@
-name = "fieldops-secondary-api"
+########################################################################
+#  Cyrix Field Connect — Cloudflare Worker (Single-Server Architecture)
+#  $5 Pro Plan — Maximum Feature Utilization
+########################################################################
+
+name = "fieldops-api"
 main = "src/index.js"
 compatibility_date = "2024-09-25"
 
+# ─── D1 Database (Single Primary — All reads & writes) ───────────────
 [[d1_databases]]
 binding = "DB"
 database_name = "expense_management_db"
 database_id = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
 
-[vars]
-CORS_ORIGIN = "https://indrae.in"
-SKIP_PRIMARY_SYNC = "true"
-GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"
-GAS_WEB_APP_URLS = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec,https://script.google.com/macros/s/AKfycbwrK97nxv0aXpL5whXzn6CBiXschDpVju6smu4_Wx7-qrF7ljbU6Qom9lVKHr5veNCh/exec,https://script.google.com/macros/s/AKfycbyFRbkKZfvXBEAzB1BVyKSER_n99ONSyLSpygFVkrpyhjQnYzJAM0HdbIgH02_BAY9DSQ/exec"
-
-
-# Primary DB sync credentials (replicate writes back to Primary)
-PRIMARY_CLOUDFLARE_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
-PRIMARY_CLOUDFLARE_DATABASE_ID = "34e085d8-c078-4f2f-b240-9bf8f4cf9301"
-
+# ─── KV Namespaces ─────────────────────────────────────────────────────
+# OTPs, Rate Limiting, Session Cache, Migration State
 [[kv_namespaces]]
 binding = "OTPS_KV"
 id = "7a00b8d26638473384d2d99f92417fee"
 preview_id = "7a00b8d26638473384d2d99f92417fee"
 
-[triggers]
-crons = ["0 0 * * *"]
+# ─── Cloudflare Email Workers (Native email sending) ───────────────────────
+# Docs: https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
+# Enable: Cloudflare Dashboard → Email → Email Routing → Enable
+[[send_email]]
+name = "EMAIL_SENDER"
 
+# ─── R2 Bucket (Primary File Storage) ─────────────────────────────────────
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "fieldops-uploads"
+
+[[r2_buckets]]
+binding = "CYRIXAPP_BUCKET"
+bucket_name = "cyrixapp"
+
+# ─── Cloudflare Queues (Async Job Processing — Pro Plan) ──────────────
+# Run once to create queues:
+#   wrangler queues create fieldops-uploads-queue
+#   wrangler queues create fieldops-email-queue
+#   wrangler queues create fieldops-analytics-queue
+#   wrangler queues create fieldops-dlq
+
+[[queues.producers]]
+binding = "UPLOADS_QUEUE"
+queue = "fieldops-uploads-queue"
+
+[[queues.producers]]
+binding = "EMAIL_QUEUE"
+queue = "fieldops-email-queue"
+
+[[queues.producers]]
+binding = "ANALYTICS_QUEUE"
+queue = "fieldops-analytics-queue"
+
+[[queues.consumers]]
+queue = "fieldops-uploads-queue"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "fieldops-dlq"
+
+[[queues.consumers]]
+queue = "fieldops-email-queue"
+max_batch_size = 5
+max_batch_timeout = 10
+max_retries = 3
+dead_letter_queue = "fieldops-dlq"
+
+[[queues.consumers]]
+queue = "fieldops-analytics-queue"
+max_batch_size = 50
+max_batch_timeout = 30
+max_retries = 2
+dead_letter_queue = "fieldops-dlq"
+
+# ─── Environment Variables ─────────────────────────────────────────────
+[vars]
+# App
+CORS_ORIGIN = "https://indrae.in"
+APP_ENV = "production"
+
+# Cloudflare Account (for Email API calls only — NOT for DB replication)
+CF_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
+
+# Email — Cloudflare Email Workers
+# From address must be verified in Cloudflare Email Routing
+EMAIL_FROM_ADDRESS = "noreply@indrae.in"
+EMAIL_FROM_NAME = "Cyrix Field Connect"
+
+# Google Drive — ONLY used by NewDashboard page (legacy data source)
+# All other GAS calls removed
+GAS_DASHBOARD_URL = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"
+
+# Storage
+R2_BUCKET_NAME = "cyrixapp"
+
+# Feature Flags
+ENABLE_R2_UPLOADS = "true"
+ENABLE_QUEUES = "true"
+ENABLE_EMAIL = "true"
+ENABLE_ANALYTICS_TRACKING = "true"
+ENABLE_EMAIL_DIGESTS = "true"
+
+# Rate Limiting
+RATE_LIMIT_IP_GLOBAL = "60"
+RATE_LIMIT_LOGIN = "5"
+RATE_LIMIT_OTP = "3"
+RATE_LIMIT_EMAIL = "10"
+
+# ─── SECRETS (set with: wrangler secret put NAME) ─────────────────────
+#
+#  wrangler secret put API_SECRET
+#  → Your JWT signing key (strong, 32+ chars)
+#
+#  wrangler secret put CF_EMAIL_API_TOKEN
+#  → YOUR_CLOUDFLARE_API_TOKEN_HERE
+#  → Used ONLY for Cloudflare Email Workers API sends
+#
+#  wrangler secret put APPROVAL_SECRET
+#  → For signing one-click email approval tokens
+
+# ─── Cron Triggers ────────────────────────────────────────────────────────────
+# NOTE: Re-enable from Cloudflare Dashboard → Workers → fieldops-api → Triggers
+# [triggers]
+# crons = [
+#   "0 0 * * *",      # 05:30 AM IST — Auto-approval expiry check
+#   "30 4 * * *",     # 10:00 AM IST — Manager daily digest emails
+#   "0 18 * * *",     # 11:30 PM IST — Daily cleanup & system metrics
+#   "0 18 * * 0",     # Sunday 11:30 PM IST — Weekly report
+#   "30 18 1 * *",    # 1st of month midnight IST — Monthly report
+# ]
