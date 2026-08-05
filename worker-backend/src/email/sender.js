@@ -56,7 +56,38 @@ async function sendViaCloudflareMail(env, opts) {
   const textBody  = text || "Cyrix Field Connect Security Verification Email.";
   const ccHeader  = cc.length > 0 ? cc.join(", ") : null;
 
-  // ── Primary: Cloudflare Email Workers binding ─────────────────────────────
+  // ── Primary: MailChannels API (Sends TO + CC in 1 single transaction — no multi-send count) ──
+  try {
+    const mcPayload = {
+      personalizations: [{
+        to: [{ email: to, name: toName || to }],
+        ...(cc.length > 0 ? { cc: cc.map(e => ({ email: e })) } : {})
+      }],
+      from: { email: fromEmail, name: fromName },
+      reply_to: { email: replyTo, name: fromName },
+      subject: subject,
+      content: [
+        { type: "text/plain", value: textBody },
+        { type: "text/html", value: html }
+      ]
+    };
+    const mcRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(mcPayload)
+    });
+    if (mcRes.ok || mcRes.status === 202) {
+      const msgId = `mc_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      staticLog.info("Email sent via MailChannels (single transaction)", { to, cc, subject: subject.slice(0, 50), msgId });
+      return { success: true, messageId: msgId };
+    }
+    const mcErrText = await mcRes.text();
+    staticLog.warn("MailChannels API send non-200, attempting CF Email Workers fallback", { status: mcRes.status, text: mcErrText });
+  } catch (mcErr) {
+    staticLog.warn("MailChannels API exception, attempting CF Email Workers fallback", { error: mcErr.message });
+  }
+
+  // ── Secondary Fallback: Cloudflare Email Workers binding ──────────────────
   if (env.EMAIL_SENDER) {
     try {
       const { EmailMessage } = await import("cloudflare:email");
@@ -66,7 +97,7 @@ async function sendViaCloudflareMail(env, opts) {
       const toHeader = toName ? `${toName} <${to}>` : to;
       const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-      // Base64 encode HTML body to avoid 998-character SMTP line length violations (causes Outlook Spam)
+      // Base64 encode HTML body to avoid 998-character SMTP line length violations
       const b64Html = btoa(unescape(encodeURIComponent(html))).match(/.{1,76}/g).join("\r\n");
       const b64Text = btoa(unescape(encodeURIComponent(textBody))).match(/.{1,76}/g).join("\r\n");
 
@@ -111,7 +142,7 @@ async function sendViaCloudflareMail(env, opts) {
       const message = new EmailMessage(fromEmail, to, rawMessage);
       await env.EMAIL_SENDER.send(message);
 
-      // If CC recipients exist, send individually via EMAIL_SENDER (CF doesn't support multi-RCPT natively)
+      // Send CC recipients
       for (const ccEmail of cc) {
         try {
           const ccMsg = new EmailMessage(fromEmail, ccEmail, rawMessage);
@@ -123,39 +154,8 @@ async function sendViaCloudflareMail(env, opts) {
       return { success: true, messageId: msgId };
 
     } catch (e) {
-      staticLog.error("CF Email Workers send failed, attempting MailChannels fallback", { to, error: e.message });
+      staticLog.error("CF Email Workers send failed", { to, error: e.message });
     }
-  }
-
-  // ── Secondary Fallback: MailChannels direct send ────────────────────────────
-  try {
-    const mcPayload = {
-      personalizations: [{
-        to: [{ email: to, name: toName || to }],
-        ...(cc.length > 0 ? { cc: cc.map(e => ({ email: e })) } : {})
-      }],
-      from: { email: fromEmail, name: fromName },
-      reply_to: { email: replyTo, name: fromName },
-      subject: subject,
-      content: [
-        { type: "text/plain", value: textBody },
-        { type: "text/html", value: html }
-      ]
-    };
-    const mcRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(mcPayload)
-    });
-    if (mcRes.ok || mcRes.status === 202) {
-      const msgId = `mc_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      staticLog.info("Email sent via MailChannels API", { to, subject: subject.slice(0, 50), msgId });
-      return { success: true, messageId: msgId };
-    }
-    const mcErrText = await mcRes.text();
-    staticLog.warn("MailChannels API send non-200", { status: mcRes.status, text: mcErrText });
-  } catch (mcErr) {
-    staticLog.warn("MailChannels API exception", { error: mcErr.message });
   }
 
   // ── Tertiary Fallback: Google Apps Script Webhook ─────────────────────────
