@@ -65,17 +65,23 @@ async function sendViaCloudflareMail(env, opts) {
       const toHeader = toName ? `${toName} <${to}>` : to;
       const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
+      // Only Base64 encode subject if it contains non-ASCII characters
+      const hasNonAscii = /[^\x00-\x7F]/.test(subject);
+      const formattedSubject = hasNonAscii
+        ? `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`
+        : subject;
+
       const headers = [
         `MIME-Version: 1.0`,
         `Date: ${dateStr}`,
         `Message-ID: ${msgId}`,
         `From: ${fromName} <${fromEmail}>`,
         `To: ${toHeader}`,
+        `Reply-To: ${fromName} <${fromEmail}>`,
         ...(ccHeader ? [`Cc: ${ccHeader}`] : []),
-        `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
+        `Subject: ${formattedSubject}`,
+        `Auto-Submitted: auto-generated`,
         `X-Auto-Response-Suppress: All`,
-        `X-Report-Abuse: Please report abuse to abuse@indrae.in`,
-        `X-Entity-ID: Cyrix-HealthCare-FieldConnect`,
         `Content-Type: multipart/alternative; boundary="${boundary}"`,
         ``,
         `--${boundary}`,
