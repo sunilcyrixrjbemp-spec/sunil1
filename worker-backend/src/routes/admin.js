@@ -565,12 +565,7 @@ export async function handleBulkCreateUsers(request, env, params, query, adminUs
       const roleCl = String(item.role || "").trim();
       const typeCl = String(item.type || "Employee").trim();
 
-      const roleLower = roleCl.toLowerCase();
-      const autoWindows = roleLower === "engineer"
-        ? "home,expense,help,profile"
-        : roleLower === "manager" || roleLower === "coordinator" || roleLower === "division manager"
-          ? "home,approval,expense,help,profile"
-          : "home,approval,expense,analysis,report,consolidated_report,mis_report,kpi,penalty_report,help,profile";
+      const autoWindows = "home,expense,help,profile";
 
       try {
         if (existing) {
@@ -637,7 +632,7 @@ export async function handleBulkCreateUsers(request, env, params, query, adminUs
             fieldUpdates.push("type = ?"); fieldBinds.push(typeCl);
           }
 
-          const targetWindows = item.allowed_windows ? String(item.allowed_windows).trim() : (roleCl ? autoWindows : existing.allowed_windows);
+          const targetWindows = item.allowed_windows !== undefined ? String(item.allowed_windows).trim() : existing.allowed_windows;
           if (targetWindows !== undefined && isDiff(targetWindows, existing.allowed_windows)) {
             fieldUpdates.push("allowed_windows = ?"); fieldBinds.push(targetWindows);
           }

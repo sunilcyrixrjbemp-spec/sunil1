@@ -316,7 +316,7 @@ export default function AdminPage() {
   const [eUpkaranId, setEUpkaranId] = useState("");
   const [baseReportingLocation, setBaseReportingLocation] = useState("");
   const [allowedWindows, setAllowedWindows] = useState<string[]>([
-    "home", "approval", "expense", "analysis", "report", "help", "profile"
+    "home", "expense", "help", "profile"
   ]);
   const [singleUserLoading, setSingleUserLoading] = useState(false);
   const [singleUserError, setSingleUserError] = useState<string | null>(null);
@@ -386,15 +386,7 @@ export default function AdminPage() {
 
 
 
-  useEffect(() => {
-    if (role === "Engineer") {
-      setAllowedWindows(["home", "expense", "help", "profile"]);
-    } else if (role === "Manager") {
-      setAllowedWindows(["home", "approval", "expense", "help", "profile"]);
-    } else {
-      setAllowedWindows(["home", "approval", "expense", "analysis", "report", "help", "profile"]);
-    }
-  }, [role]);
+  // No auto-population of allowedWindows by role. By default no window is mapped unless explicitly checked.
 
   const fetchInitialData = async () => {
     const cachedUsers = localStorage.getItem("cache_admin_users");
@@ -582,7 +574,7 @@ export default function AdminPage() {
       setBaseReportingLocation("");
       setDateOfJoining("");
       setDateOfBirth("");
-      setAllowedWindows(["home", "approval", "expense", "analysis", "report", "help", "profile"]);
+      setAllowedWindows(["home", "expense", "help", "profile"]);
       
       await fetchInitialData();
     } catch (err: any) {
@@ -889,11 +881,7 @@ export default function AdminPage() {
           date_of_joining: record.date_of_joining,
           date_of_birth: record.date_of_birth,
           e_upkaran_id: record.e_upkaran_id,
-          allowed_windows: record.role?.trim().toLowerCase() === "engineer"
-            ? "home,expense,help,profile"
-            : record.role?.trim().toLowerCase() === "manager"
-            ? "home,approval,expense,help,profile"
-            : "home,approval,expense,analysis,report,help,profile"
+          allowed_windows: record.allowed_windows || ""
         });
       }
     }

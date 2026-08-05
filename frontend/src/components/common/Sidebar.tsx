@@ -100,21 +100,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
 
   const currentUser = authService.getCurrentUser();
-  let windowPerms: string[] | null = null;
-  if (currentUser?.window_permissions) {
+  let allowedWindows: string[] = ["home", "expense", "help", "profile"];
+  if (currentUser?.allowed_windows !== undefined && currentUser?.allowed_windows !== null) {
+    if (Array.isArray(currentUser.allowed_windows)) {
+      allowedWindows = currentUser.allowed_windows.map((w: any) => String(w).trim().toLowerCase()).filter(Boolean);
+    } else if (typeof currentUser.allowed_windows === "string") {
+      allowedWindows = currentUser.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase()).filter(Boolean);
+    }
+  } else if (currentUser?.window_permissions) {
     try {
-      windowPerms = typeof currentUser.window_permissions === "string"
+      const perms = typeof currentUser.window_permissions === "string"
         ? JSON.parse(currentUser.window_permissions)
         : currentUser.window_permissions;
+      if (Array.isArray(perms)) {
+        allowedWindows = perms.map((w: any) => String(w).trim().toLowerCase()).filter(Boolean);
+      }
     } catch (e) {}
   }
 
+  // Strictly map accessible menu items to user's assigned allowed_windows. No role fallback or auto-grant.
   const accessibleItems = MENU_ITEMS.filter((item) => {
-    if (userRole === "Admin") return true;
-    if (Array.isArray(windowPerms) && windowPerms.length > 0) {
-      return windowPerms.includes(item.id);
-    }
-    return item.roles.includes("All") || item.roles.includes(userRole);
+    return allowedWindows.includes(item.id.toLowerCase());
   });
 
   return (

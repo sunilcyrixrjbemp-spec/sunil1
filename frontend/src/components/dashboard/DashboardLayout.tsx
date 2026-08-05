@@ -128,35 +128,18 @@ export default function DashboardLayout() {
   const userRole = user.role || "Engineer";
   const isAdmin = ["Admin", "admin", "Super Admin", "super_admin"].includes(userRole);
 
-  let allowedWindows: string[] = [];
+  let allowedWindows: string[] = ["home", "expense", "help", "profile"];
   try {
-    if (user?.allowed_windows) {
+    if (user?.allowed_windows !== undefined && user?.allowed_windows !== null) {
       if (Array.isArray(user.allowed_windows)) {
         allowedWindows = user.allowed_windows.map((w: any) => String(w).trim().toLowerCase()).filter(Boolean);
       } else if (typeof user.allowed_windows === "string") {
         allowedWindows = user.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase()).filter(Boolean);
       }
-    } else {
-      if (isAdmin) {
-        allowedWindows = MENU_ITEMS.map((item) => item.id.toLowerCase());
-      } else {
-        allowedWindows = ["home", "profile", "help", "expense"];
-      }
     }
   } catch (_) {
-    allowedWindows = ["home", "profile", "help", "expense"];
+    allowedWindows = ["home", "expense", "help", "profile"];
   }
-
-  if (isAdmin) {
-    MENU_ITEMS.forEach((item) => {
-      const id = item.id.toLowerCase();
-      if (!allowedWindows.includes(id)) allowedWindows.push(id);
-    });
-  }
-
-  ["home", "profile", "help", "expense"].forEach((w) => {
-    if (!allowedWindows.includes(w)) allowedWindows.push(w);
-  });
 
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
     if (isMobileScreen && ["report", "consolidated_report", "mis_report"].includes(item.id.toLowerCase())) {
@@ -429,53 +412,61 @@ export default function DashboardLayout() {
 
         {/* Mobile Bottom Navigation Bar - Replaces 3-Line Top Hamburger Menu */}
         <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1 px-2 flex items-center justify-around lg:hidden shadow-lg">
-          <Link
-            to="/home"
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-              location.pathname === "/home"
-                ? "text-blue-600 bg-blue-50"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <Home className="w-4 h-4" />
-            <span>Home</span>
-          </Link>
+          {allowedWindows.includes("home") && (
+            <Link
+              to="/home"
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                location.pathname === "/home"
+                  ? "text-blue-600 bg-blue-50"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              <span>Home</span>
+            </Link>
+          )}
 
-          <Link
-            to="/submit-expense"
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-              location.pathname.startsWith("/submit-expense")
-                ? "text-emerald-600 bg-emerald-50"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <FilePlus className="w-4 h-4" />
-            <span>Expense</span>
-          </Link>
+          {allowedWindows.includes("expense") && (
+            <Link
+              to="/submit-expense"
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                location.pathname.startsWith("/submit-expense")
+                  ? "text-emerald-600 bg-emerald-50"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <FilePlus className="w-4 h-4" />
+              <span>Expense</span>
+            </Link>
+          )}
 
-          <Link
-            to="/approval-center"
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-              location.pathname.startsWith("/approval-center")
-                ? "text-amber-600 bg-amber-50"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <CheckSquare className="w-4 h-4" />
-            <span>Approval</span>
-          </Link>
+          {allowedWindows.includes("approval") && (
+            <Link
+              to="/approval-center"
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                location.pathname.startsWith("/approval-center")
+                  ? "text-amber-600 bg-amber-50"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <CheckSquare className="w-4 h-4" />
+              <span>Approval</span>
+            </Link>
+          )}
 
-          <Link
-            to="/profile"
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-              location.pathname.startsWith("/profile")
-                ? "text-purple-600 bg-purple-50"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span>Profile</span>
-          </Link>
+          {allowedWindows.includes("profile") && (
+            <Link
+              to="/profile"
+              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                location.pathname.startsWith("/profile")
+                  ? "text-purple-600 bg-purple-50"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span>Profile</span>
+            </Link>
+          )}
 
           {/* 9-Dot Bento Grid "More" Button to Open All Menus */}
           <button
