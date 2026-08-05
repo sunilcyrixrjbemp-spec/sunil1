@@ -341,49 +341,44 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
   let coordinatorEmail = null;
   let approverDesig = null;
 
-  if (env.DB && (data.expenseCode || data.expenseId)) {
-    try {
-      // Fetch itinerary legs (no attachments — just travel details)
-      const expId = data.expenseCode || data.expenseId;
-      const legRows = await env.DB.prepare(
-        `SELECT date, \`from\`, \`to\`, activity, activity_type, mode, km, amount, sub_amount, da
-         FROM expense_itineraries WHERE exp_id = ? ORDER BY date ASC, id ASC`
-      ).bind(expId).all();
-      legs = legRows?.results || [];
-    } catch (_) {}
+  // ── Parallel DB fetch: all queries fire at once ───────────────────────────
+  const expId = data.expenseCode || data.expenseId;
+  const rejectorName = data.approverName || data.approvedBy;
 
+  if (env.DB && expId) {
     try {
-      // Fetch employee extra info: designation, manager name, coordinator name
-      const emp = await env.DB.prepare(
-        `SELECT designation, manager, coordinator FROM users WHERE user_id = ? LIMIT 1`
-      ).bind(userId).first();
+      // Round 1: legs + employee info + rejector designation — all parallel
+      const [legRows, emp, appr] = await Promise.all([
+        env.DB.prepare(
+          `SELECT date, \`from\`, \`to\`, activity, activity_type, mode, km, amount, sub_amount, da
+           FROM expense_itineraries WHERE exp_id = ? ORDER BY date ASC, id ASC`
+        ).bind(expId).all(),
+        env.DB.prepare(
+          `SELECT designation, manager, coordinator FROM users WHERE user_id = ? LIMIT 1`
+        ).bind(userId).first(),
+        rejectorName
+          ? env.DB.prepare(`SELECT designation FROM users WHERE name = ? LIMIT 1`).bind(rejectorName).first()
+          : Promise.resolve(null),
+      ]);
+
+      legs = legRows?.results || [];
+      approverDesig = appr?.designation || null;
+
       if (emp) {
         employeeExtra.designation = emp.designation || "";
-        // Lookup manager email for CC
-        if (emp.manager) {
-          const mgr = await env.DB.prepare(
-            `SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`
-          ).bind(emp.manager).first();
-          managerEmail = mgr?.mail_id || null;
-        }
-        // Lookup coordinator email for CC
-        if (emp.coordinator) {
-          const coord = await env.DB.prepare(
-            `SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`
-          ).bind(emp.coordinator).first();
-          coordinatorEmail = coord?.mail_id || null;
-        }
-      }
-    } catch (_) {}
 
-    try {
-      // Fetch rejector's (approver's) designation
-      const rejectorName = data.approverName || data.approvedBy;
-      if (rejectorName) {
-        const appr = await env.DB.prepare(
-          `SELECT designation FROM users WHERE name = ? LIMIT 1`
-        ).bind(rejectorName).first();
-        approverDesig = appr?.designation || null;
+        // Round 2: manager email + coordinator email — both parallel
+        const [mgr, coord] = await Promise.all([
+          emp.manager
+            ? env.DB.prepare(`SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`).bind(emp.manager).first()
+            : Promise.resolve(null),
+          emp.coordinator
+            ? env.DB.prepare(`SELECT mail_id FROM users WHERE name = ? AND mail_id IS NOT NULL AND mail_id != '' LIMIT 1`).bind(emp.coordinator).first()
+            : Promise.resolve(null),
+        ]);
+
+        managerEmail = mgr?.mail_id || null;
+        coordinatorEmail = coord?.mail_id || null;
       }
     } catch (_) {}
   }
@@ -411,6 +406,7 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
   if (managerEmail && managerEmail !== to) ccList.push(managerEmail);
   if (coordinatorEmail && coordinatorEmail !== to && coordinatorEmail !== managerEmail) ccList.push(coordinatorEmail);
 
+  // Log intent and dispatch — use waitUntil so API returns instantly
   const emailLogId = await logEmailIntent(env, {
     to, toName: name, userId,
     subject: tmpl.subject,
@@ -418,8 +414,7 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
     relatedEntityType: "expense", relatedEntityId: data.expenseCode,
   });
 
-  // Send directly (not queued) so CC header is properly applied
-  return sendEmailDirect(env, {
+  const sendPromise = sendEmailDirect(env, {
     to, toName: name,
     subject: tmpl.subject,
     html: tmpl.html,
@@ -427,6 +422,13 @@ export async function sendExpenseStatusEmail(env, { to, name, userId, action, ..
     cc: ccList,
     emailLogId,
   });
+
+  // Non-blocking: if ctx.waitUntil available, return immediately
+  if (env.ctx?.waitUntil) {
+    env.ctx.waitUntil(sendPromise);
+    return true;
+  }
+  return sendPromise;
 }
 
 export async function sendExpenseSubmittedEmail(env, { to, name, userId, ...data }) {
