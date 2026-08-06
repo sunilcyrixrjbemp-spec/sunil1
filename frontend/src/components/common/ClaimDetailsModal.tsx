@@ -2260,7 +2260,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   <div className="text-[9.5px] text-amber-900 leading-normal bg-white p-1.5 rounded border border-amber-200 mt-1">
                     <b className="text-amber-950 block mb-0.5">Exact Reason / Rule:</b>
                     <span className="text-slate-900 font-semibold">
-                      {overallBaseLocationReason || overallSystemReason || c.km_deduction_reason || c.da_deduction_reason || c.policy_rule_name || "Base Reporting Location (Case 5): Same District Travel — Travel TA/DA is ₹0 as per policy."}
+                      Base Location Deduction
                     </span>
                   </div>
                 </div>
