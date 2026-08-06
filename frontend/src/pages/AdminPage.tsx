@@ -2497,14 +2497,19 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Submit Action Bar */}
-              <div className="flex justify-end pt-2">
+              {/* Modern Enterprise Submit Action Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200/90 mt-4">
+                <span className="text-[10.5px] font-bold text-slate-500 flex items-center gap-1.5 font-mono">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Settings Auto-Applied Globally Across All Workflows
+                </span>
                 <button
                   type="submit"
                   disabled={savingSettings}
-                  className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none py-2.5 px-8 border-0 cursor-pointer shadow-2xs transition-colors disabled:opacity-60"
+                  className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-xs uppercase tracking-wider rounded-xl py-2.5 px-6 shadow-md hover:shadow-lg transition-all active:scale-95 border border-blue-400/30 flex items-center gap-2 cursor-pointer disabled:opacity-60"
                 >
-                  {savingSettings ? "Saving Settings..." : "Save System Settings"}
+                  <Zap className="w-4 h-4 text-amber-300" />
+                  <span>{savingSettings ? "Saving Settings..." : "Save System Settings"}</span>
                 </button>
               </div>
             </form>
