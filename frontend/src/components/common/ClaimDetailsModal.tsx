@@ -2103,6 +2103,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
         {/* ─── ULTRA-COMPACT 1-LINE DAILY SUMMARY STRIP (FOR REGULAR TRAVEL CLAIMS ONLY) ─── */}
         {!isLimitRequest && (
+        <>
         <div className="bg-[#4A6A8A]/5 border-2 border-[#4A6A8A] rounded-lg p-2 shadow-2xs space-y-1">
           <div className="flex items-center justify-between border-b border-[#4A6A8A]/20 pb-1 flex-wrap gap-1">
             <div className="flex items-center gap-1.5">
@@ -2255,6 +2256,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   <div className="mt-0.5 text-slate-800 font-semibold">{overallOtherReason}</div>
                 </div>
               </div>
+            )}
           </div>
         )}
         </>
