@@ -2146,19 +2146,24 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       bill_type: a.bill_type
     })),
     itineraries: itineraryRows.map(i => {
+      const userFromLoc = (i.from_location && i.from_location.trim() !== "" && i.from_location !== "N/A" && i.from_location !== "NA") ? i.from_location : null;
+      const userToLoc = (i.to_location && i.to_location.trim() !== "" && i.to_location !== "N/A" && i.to_location !== "NA") ? i.to_location : null;
+      const userFromDist = (i.from_district && i.from_district.trim() !== "" && i.from_district !== "N/A" && i.from_district !== "NA") ? i.from_district : null;
+      const userToDist = (i.to_district && i.to_district.trim() !== "" && i.to_district !== "N/A" && i.to_district !== "NA") ? i.to_district : null;
+
       const empDist = submitter?.district || expense.district || submitter?.base_reporting_location || "";
-      const fallbackDist = (empDist && empDist !== "N/A" && empDist !== "NA") ? empDist : "Base District";
-      const cleanFromDist = (i.from_district && i.from_district !== "N/A" && i.from_district !== "NA") ? i.from_district : fallbackDist;
-      const cleanToDist = (i.to_district && i.to_district !== "N/A" && i.to_district !== "NA") ? i.to_district : fallbackDist;
-      const cleanFromLoc = (i.from_location && i.from_location !== "N/A" && i.from_location !== "NA") ? i.from_location : (cleanFromDist !== "Base District" ? cleanFromDist : "Local Duty");
-      const cleanToLoc = (i.to_location && i.to_location !== "N/A" && i.to_location !== "NA") ? i.to_location : (cleanToDist !== "Base District" ? cleanToDist : "Local Duty");
+
+      const finalFromDist = userFromDist || empDist || "—";
+      const finalToDist = userToDist || empDist || "—";
+      const finalFromLoc = userFromLoc || finalFromDist;
+      const finalToLoc = userToLoc || finalToDist;
 
       return {
         leg: i.leg_number,
-        from_district: cleanFromDist,
-        to_district: cleanToDist,
-        from: cleanFromLoc,
-        to: cleanToLoc,
+        from_district: finalFromDist,
+        to_district: finalToDist,
+        from: finalFromLoc,
+        to: finalToLoc,
       mode: i.travel_mode,
       km: parseFloat(i.distance_km || 0.0),
       amount: parseFloat(i.travel_amount || 0.0),
@@ -2971,8 +2976,10 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const iti = itineraries[idx];
     const legNum = parseInt(iti.leg || (idx + 1), 10);
     const itiId = `${expenseCode}-${legNum}`;
-    const fromDist = iti.district_from || user.district || "Jodhpur";
-    const toDist = iti.district || "Jodhpur";
+    const fromDist = iti.district_from || iti.from_district || user.district || user.base_reporting_location || "—";
+    const toDist = iti.district || iti.to_district || user.district || user.base_reporting_location || "—";
+    const fromLoc = iti.from || iti.from_location || fromDist;
+    const toLoc = iti.to || iti.to_location || toDist;
     const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     
     dbBatchStatements.push({
@@ -2987,7 +2994,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
-        itiId, expenseCode, legNum, fromDist, toDist, iti.from || "", iti.to || "",
+        itiId, expenseCode, legNum, fromDist, toDist, fromLoc, toLoc,
         iti.mode || "Bike", parseFloat(iti.km || "0.0"),
         isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
         iti.sub_mode || null,
