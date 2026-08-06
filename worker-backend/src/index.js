@@ -376,6 +376,12 @@ router.get("/api/upload/file/documents/:filename", handleServeFile, false);
 router.get("/uploads/expense_attachments/:filename", handleServeExpenseAttachment, false);
 router.get("/uploads/*", handleServeFile, false);
 router.get("/uploads/:key", handleServeFile, false);
+router.get("/expenses/*", handleServeFile, false);
+router.get("/expenses/:key", handleServeFile, false);
+router.get("/gdrive/*", handleServeFile, false);
+router.get("/gdrive/:key", handleServeFile, false);
+router.get("/profiles/*", handleServeFile, false);
+router.get("/profiles/:key", handleServeFile, false);
 
 // ─── Reports Endpoints ────────────────────────────────────────────────────────
 router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);

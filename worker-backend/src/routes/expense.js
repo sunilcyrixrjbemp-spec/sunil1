@@ -1,7 +1,7 @@
 import { runWrite, runBatchWrite, runRead } from "../utils/db.js";
 import { getLegacyExpenseHashId } from "./approval.js";
 import { resolveLegacyExpenseId } from "../utils/legacy-resolver.js";
-import { uploadFileWithFallback } from "./upload.js";
+import { uploadFileWithFallback, handleServeFile } from "./upload.js";
 import { MONTH_NAMES } from "../utils/constants.js";
 import { computeDistrictType, computeDistrictInfo } from "../utils/districtHelper.js";
 
@@ -4949,74 +4949,7 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 }
 
 export async function handleServeExpenseAttachment(request, env, params, query, user) {
-  const filename = params.filename;
-  if (!filename) {
-    return new Response("Filename is required", { status: 400 });
-  }
-
-  const key = `expense_attachments/${filename}`;
-
-  const keysToTry = [key, filename, `uploads/${filename}`, `uploads/expense_attachments/${filename}`];
-  const buckets = [env.R2_BUCKET, env.CYRIXAPP_BUCKET, env.BUCKET].filter(Boolean);
-
-  for (const bucket of buckets) {
-    try {
-      for (const k of keysToTry) {
-        const object = await bucket.get(k);
-        if (object) {
-          const headers = new Headers();
-          object.writeHttpMetadata(headers);
-          if (object.httpEtag) headers.set("etag", object.httpEtag);
-          headers.set("Cache-Control", "public, max-age=31536000");
-          return new Response(object.body, { headers });
-        }
-      }
-    } catch (e) {
-      console.error("Error reading from R2 bucket:", e);
-    }
-  }
-
-  // 2. Fallback: If BUCKET is not bound directly but PRIMARY_CLOUDFLARE_ACCOUNT_ID is available (REST API)
-  if (env.PRIMARY_CLOUDFLARE_ACCOUNT_ID) {
-    const accountId = env.PRIMARY_CLOUDFLARE_ACCOUNT_ID;
-    const bucketName = "fieldops-uploads";
-    const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/r2/buckets/${bucketName}/objects/${key}`;
-
-    try {
-      const token = env.PRIMARY_CLOUDFLARE_API_TOKEN;
-      const email = env.PRIMARY_CLOUDFLARE_EMAIL;
-      const headers = {};
-
-      if (token && token.startsWith("cfk_")) {
-        headers["X-Auth-Key"] = token;
-        headers["X-Auth-Email"] = email || "Sunil.cyrixrjbemp@gmail.com";
-      } else if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const res = await fetch(url, {
-        method: "GET",
-        headers: headers
-      });
-
-      if (res.status === 200) {
-        const contentType = res.headers.get("Content-Type") || "application/octet-stream";
-        return new Response(res.body, {
-          status: 200,
-          headers: {
-            "Content-Type": contentType,
-            "Cache-Control": "public, max-age=31536000"
-          }
-        });
-      } else {
-        return new Response("File not found in fallback R2", { status: 404 });
-      }
-    } catch (e) {
-      console.error("Error serving R2 object via fallback:", e);
-    }
-  }
-
-  return new Response("Storage not configured", { status: 500 });
+  return handleServeFile(request, env, params, query);
 }
 
 /**

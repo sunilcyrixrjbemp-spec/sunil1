@@ -12,7 +12,7 @@ import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsPdf } from "../utils/pdf";
 import { getISTDate, getISTMonth } from "../utils/dateUtils";
 import { ALL_INDIAN_STATES, getDistrictsForState } from "../utils/indianStatesDistricts";
-import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
+import ClaimDetailsModal, { formatImageUrl } from "../components/common/ClaimDetailsModal";
 import { 
   Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
@@ -642,15 +642,21 @@ export default function ExpensePage() {
       return;
     }
 
-    document.body.style.overflow = 'hidden';
+    // IMMEDIATELY set image URL synchronously for 0ms instant display!
+    const formattedUrl = formatImageUrl(lightboxImage);
+    if (!formattedUrl) {
+      setImageLoadError(true);
+      setDisplayImageUrl(null);
+      return;
+    }
+    setDisplayImageUrl(formattedUrl);
 
-    const isPdfUrl = lightboxImage.toLowerCase().includes(".pdf") || 
-                     lightboxImage.toLowerCase().includes("pdf") || 
-                     lightboxImage.includes("gdrive/");
+    const isPdfUrl = formattedUrl.toLowerCase().includes(".pdf") || 
+                     formattedUrl.toLowerCase().includes(".pdf?");
 
     if (isPdfUrl) {
       setIsLoadingPdf(true);
-      fetch(lightboxImage)
+      fetch(formattedUrl)
         .then(async (res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const blob = await res.blob();
@@ -663,7 +669,7 @@ export default function ExpensePage() {
         .catch((err) => {
           console.warn("Failed to fetch PDF blob, falling back to direct URL:", err);
           if (active) {
-            setDisplayImageUrl(lightboxImage);
+            setDisplayImageUrl(formattedUrl);
             setIsLoadingPdf(false);
           }
         });
@@ -674,30 +680,30 @@ export default function ExpensePage() {
       };
     }
 
-    checkIsHeic(lightboxImage).then(isHeicImg => {
-      if (!active) return;
-      if (isHeicImg) {
-        setIsConvertingHeic(true);
-        convertHeicToJpegUrl(lightboxImage)
-          .then((url) => {
-            if (!active) {
-              URL.revokeObjectURL(url);
-              return;
-            }
-            localUrl = url;
-            setDisplayImageUrl(url);
-            setIsConvertingHeic(false);
-          })
-          .catch(() => {
-            if (active) {
-              setDisplayImageUrl(lightboxImage);
+    if (formattedUrl.toLowerCase().endsWith(".heic") || formattedUrl.toLowerCase().endsWith(".heif")) {
+      checkIsHeic(formattedUrl).then(isHeicImg => {
+        if (!active) return;
+        if (isHeicImg) {
+          setIsConvertingHeic(true);
+          convertHeicToJpegUrl(formattedUrl)
+            .then((url) => {
+              if (!active) {
+                URL.revokeObjectURL(url);
+                return;
+              }
+              localUrl = url;
+              setDisplayImageUrl(url);
               setIsConvertingHeic(false);
-            }
-          });
-      } else {
-        setDisplayImageUrl(lightboxImage);
-      }
-    });
+            })
+            .catch(() => {
+              if (active) {
+                setDisplayImageUrl(formattedUrl);
+                setIsConvertingHeic(false);
+              }
+            });
+        }
+      });
+    }
 
     return () => {
       active = false;
@@ -4244,7 +4250,7 @@ export default function ExpensePage() {
                                     {leg.calls_photo_url ? (
                                       <div className="flex gap-1 h-8 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
                                         <span className="text-blue-700 cursor-pointer underline truncate max-w-[60px]" onClick={() => {
-                                          const fullUrl = `${API_BASE}${leg.calls_photo_url}`;
+                                          const fullUrl = formatImageUrl(leg.calls_photo_url);
                                           setLightboxImage(fullUrl);
                                         }}>View</span>
                                         <button 
@@ -4351,7 +4357,7 @@ export default function ExpensePage() {
                                               <button
                                                 type="button"
                                                 onClick={() => {
-                                                  const fullUrl = `${API_BASE}${item.photo_url}`;
+                                                  const fullUrl = formatImageUrl(item.photo_url);
                                                   setLightboxImage(fullUrl);
                                                 }}
                                                 className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
@@ -4447,7 +4453,7 @@ export default function ExpensePage() {
                                     {leg.pms_photo_url ? (
                                       <div className="flex gap-1 h-8 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
                                         <span className="text-blue-700 cursor-pointer underline truncate max-w-[60px]" onClick={() => {
-                                          const fullUrl = `${API_BASE}${leg.pms_photo_url}`;
+                                          const fullUrl = formatImageUrl(leg.pms_photo_url);
                                           setLightboxImage(fullUrl);
                                         }}>View</span>
                                         <button 
@@ -4544,7 +4550,7 @@ export default function ExpensePage() {
                                               <button
                                                 type="button"
                                                 onClick={() => {
-                                                  const fullUrl = `${API_BASE}${item.photo_url}`;
+                                                  const fullUrl = formatImageUrl(item.photo_url);
                                                   setLightboxImage(fullUrl);
                                                 }}
                                                 className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
@@ -6062,7 +6068,7 @@ export default function ExpensePage() {
                                                     </div>
                                                     {c.photo_url && (
                                                       <button 
-                                                        onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
+                                                        onClick={() => setLightboxImage(formatImageUrl(c.photo_url))}
                                                         className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
                                                       >
                                                         View Photo
@@ -6092,7 +6098,7 @@ export default function ExpensePage() {
                                                     </div>
                                                     {p.photo_url && (
                                                       <button 
-                                                        onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
+                                                        onClick={() => setLightboxImage(formatImageUrl(p.photo_url))}
                                                         className="mt-1.5 w-full bg-slate-50 hover:bg-slate-100 py-1 text-center font-bold text-slate-700 rounded border border-gray-300 cursor-pointer text-[8px] uppercase"
                                                       >
                                                         View Photo
@@ -6356,14 +6362,14 @@ export default function ExpensePage() {
                                               <span className="text-slate-500 text-xs uppercase font-bold block mb-1.5">Attachment Photo</span>
                                               <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
                                                 <img
-                                                  src={`${API_BASE}${c.photo_url}`}
+                                                  src={formatImageUrl(c.photo_url)}
                                                   alt="Call verification"
                                                   className="w-full h-full object-contain cursor-pointer"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
+                                                  onClick={() => setLightboxImage(formatImageUrl(c.photo_url))}
                                                 />
                                                 <button
                                                   type="button"
-                                                  onClick={() => setLightboxImage(`${API_BASE}${c.photo_url}`)}
+                                                  onClick={() => setLightboxImage(formatImageUrl(c.photo_url))}
                                                   className="absolute bottom-2 right-2 bg-slate-900/80 text-white font-extrabold text-xs px-3 py-1 rounded-lg cursor-pointer border border-white/20 backdrop-blur-md"
                                                 >
                                                   Full View
@@ -6414,7 +6420,7 @@ export default function ExpensePage() {
                                               <span className="text-slate-500 text-xs uppercase font-bold block mb-1.5">Attachment Verification Photo</span>
                                               <div className="relative rounded-xl overflow-hidden bg-slate-900 border border-slate-700 min-h-[220px] max-h-[360px] flex items-center justify-center p-2">
                                                 <img
-                                                  src={p.photo_url ? `${API_BASE}${p.photo_url}` : undefined}
+                                                  src={p.photo_url ? formatImageUrl(p.photo_url) : undefined}
                                                   alt="PMS verification"
                                                   className="w-full h-full object-contain cursor-pointer"
                                                   onClick={() => setLightboxImage(`${API_BASE}${p.photo_url}`)}
@@ -6563,7 +6569,7 @@ export default function ExpensePage() {
                           else if (url.includes("_Hotel_")) cleanType = "Hotel Invoice";
                           else if (url.includes("_Communication_Mail_")) cleanType = "Approval Mail";
                           else if (url.includes("_Other_Expense_")) cleanType = "Purchase Bill";
-                          const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
+                          const fullUrl = formatImageUrl(url);
                           return (
                             <div key={attIdx} className="inline-flex items-center gap-2 p-2 bg-gray-50 border border-gray-200 rounded text-xs">
                               <span className="font-bold text-gray-700">{cleanType}</span>

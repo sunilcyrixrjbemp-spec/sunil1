@@ -47,6 +47,11 @@ export const formatImageUrl = (url: any): string => {
     return "";
   }
 
+  // Clean duplicate API_BASE prefix if present
+  while (str.startsWith(`${API_BASE}${API_BASE}`)) {
+    str = str.replace(`${API_BASE}${API_BASE}`, API_BASE);
+  }
+
   // 1. Google Drive direct stream & R2 auto-transfer proxy
   if (str.includes("drive.google.com") || str.includes("docs.google.com")) {
     const matchD = str.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -67,13 +72,9 @@ export const formatImageUrl = (url: any): string => {
     return str;
   }
 
-  // 4. Relative paths -> prepend API_BASE only if valid upload/api path or has image extension
-  if (str.startsWith("/") || str.includes("uploads") || str.includes("api") || /\.(jpg|jpeg|png|webp|gif|pdf|avif)$/i.test(str)) {
-    const cleanPath = str.startsWith("/") ? str : `/${str}`;
-    return `${API_BASE}${cleanPath}`;
-  }
-
-  return "";
+  // 4. Relative paths -> prepend API_BASE
+  const cleanPath = str.startsWith("/") ? str : `/${str}`;
+  return `${API_BASE}${cleanPath}`;
 };
 
 const getAttachmentsArray = (attachments: any): any[] => {
@@ -485,10 +486,7 @@ const LegDetailCard = ({
 
   // Strict URL Normalizer
   const toFullUrl = (u: any) => {
-    if (!u || typeof u !== "string") return "";
-    const clean = u.trim();
-    if (!clean) return "";
-    return clean.startsWith("http") || clean.startsWith("data:") ? clean : `${API_BASE}${clean}`;
+    return formatImageUrl(u);
   };
 
   // ─── HIGH-PRECISION BILL TO LEG ATTACHMENT MATCHER ─────────────────────────
@@ -1346,8 +1344,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
     attachments.forEach((att: any) => {
       const url = typeof att === "string" ? att : (att.file_url || att.url || "");
       if (url) {
-        const fullUrl = url.startsWith("http") || url.startsWith("data:") ? url : `${API_BASE}${url}`;
-        if (!fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+        const fullUrl = formatImageUrl(url);
+        if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
       }
     });
 
@@ -1367,8 +1365,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
       candidateUrls.forEach((u: any) => {
         if (u && typeof u === "string") {
-          const fullUrl = u.startsWith("http") || u.startsWith("data:") ? u : `${API_BASE}${u}`;
-          if (!fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+          const fullUrl = formatImageUrl(u);
+          if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
         }
       });
 
@@ -1376,8 +1374,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         act.callsList.forEach((cItem: any) => {
           const u = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url;
           if (u && typeof u === "string") {
-            const fullUrl = u.startsWith("http") || u.startsWith("data:") ? u : `${API_BASE}${u}`;
-            if (!fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+            const fullUrl = formatImageUrl(u);
+            if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
           }
         });
       }
@@ -1386,8 +1384,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         act.pmsList.forEach((pItem: any) => {
           const u = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url;
           if (u && typeof u === "string") {
-            const fullUrl = u.startsWith("http") || u.startsWith("data:") ? u : `${API_BASE}${u}`;
-            if (!fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+            const fullUrl = formatImageUrl(u);
+            if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
           }
         });
       }

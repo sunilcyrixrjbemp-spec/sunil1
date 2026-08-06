@@ -145,45 +145,64 @@ export async function handleUploadDocument(request, env, params, query, user) {
  */
 export async function handleServeFile(request, env, params, query) {
   const urlObj = new URL(request.url);
-  let fileKey = params?.key || query?.get("key");
+  let fileKey = params?.key || params?.["*"] || query?.get("key");
 
-  if (!fileKey && urlObj.pathname.includes("/api/r2/file/")) {
-    fileKey = urlObj.pathname.split("/api/r2/file/")[1];
-  } else if (!fileKey && urlObj.pathname.includes("/api/files/")) {
-    fileKey = urlObj.pathname.split("/api/files/")[1];
-  } else if (!fileKey && urlObj.pathname.includes("/api/upload/file/images/")) {
-    fileKey = urlObj.pathname.split("/api/upload/file/images/")[1];
-  } else if (!fileKey && urlObj.pathname.includes("/api/upload/file/documents/")) {
-    fileKey = urlObj.pathname.split("/api/upload/file/documents/")[1];
-  } else if (!fileKey && urlObj.pathname.includes("/uploads/")) {
-    fileKey = urlObj.pathname.split("/uploads/")[1];
+  if (!fileKey) {
+    const p = urlObj.pathname;
+    const prefixes = [
+      "/api/r2/file/",
+      "/api/files/",
+      "/api/upload/file/images/",
+      "/api/upload/file/documents/",
+      "/uploads/",
+      "/expenses/",
+      "/gdrive/",
+      "/profiles/"
+    ];
+    for (const prefix of prefixes) {
+      if (p.includes(prefix)) {
+        fileKey = p.split(prefix)[1];
+        if (prefix === "/expenses/") {
+          fileKey = `expenses/${fileKey}`;
+        } else if (prefix === "/gdrive/") {
+          fileKey = `gdrive/${fileKey}`;
+        } else if (prefix === "/profiles/") {
+          fileKey = `profiles/${fileKey}`;
+        }
+        break;
+      }
+    }
   }
 
   if (!fileKey) return errorResponse("Missing file key", 400);
 
-  const fileKeyDecoded = decodeURIComponent(fileKey);
+  const fileKeyDecoded = decodeURIComponent(fileKey).replace(/^\/+/, "");
 
-  // ── Thumbnail mode (?thumb=1) ───────────────────────────────────────────────
-  // Generates / serves a 320x320 WebP thumbnail from R2.
-  // Thumbnail is cached at key: thumb/<original-key>
   const wantThumb = query?.get("thumb") === "1";
-  const resizeWidth = parseInt(query?.get("w") || "0") || 0;
-
-  // ── Format negotiation via Accept header ───────────────────────────────────
-  // Detect if client supports WebP or AVIF (browsers send this in Accept header)
-  const acceptHeader = request.headers.get("Accept") || "";
-  const supportsAvif = acceptHeader.includes("image/avif");
-  const supportsWebp = acceptHeader.includes("image/webp");
 
   const buckets = [env.R2_BUCKET, env.CYRIXAPP_BUCKET].filter(Boolean);
+
+  // Generate all candidate R2 keys to try
+  const baseName = fileKeyDecoded.split("/").pop() || "";
+  const bareId = baseName.replace(/\.[^/.]+$/, "");
+
+  const keysToTry = [
+    fileKeyDecoded,
+    fileKeyDecoded.replace(/^uploads\//, ""),
+    fileKeyDecoded.replace(/^api\/r2\/file\//, "").replace(/^api\/files\//, ""),
+    fileKeyDecoded.startsWith("expenses/") ? fileKeyDecoded : `expenses/${fileKeyDecoded}`,
+    fileKeyDecoded.startsWith("gdrive/") ? fileKeyDecoded : `gdrive/${fileKeyDecoded}`,
+    `gdrive/${bareId}.jpg`,
+    `gdrive/${bareId}`,
+    baseName
+  ];
+  const uniqueKeys = [...new Set(keysToTry.filter(Boolean))];
 
   for (const bucket of buckets) {
     try {
       // ── THUMBNAIL SERVING ─────────────────────────────────────────────────
       if (wantThumb) {
         const thumbKey = `thumb/${fileKeyDecoded}`;
-
-        // 1. Try to serve pre-cached thumbnail from R2
         let thumbObj = await bucket.get(thumbKey);
         if (thumbObj) {
           return new Response(thumbObj.body, {
@@ -191,155 +210,123 @@ export async function handleServeFile(request, env, params, query) {
             headers: {
               "Content-Type": "image/webp",
               "Cache-Control": "public, max-age=3600, s-maxage=86400",
+              "Access-Control-Allow-Origin": "*",
               "Vary": "Accept",
-              "X-Thumb": "cached",
-              "X-Frame-Options": "DENY",
-              "X-Content-Type-Options": "nosniff",
+              "X-Thumb": "cached"
             }
           });
         }
+      }
 
-        // 2. No cached thumbnail — fetch original and serve directly (frontend will lazy-load)
-        //    In a real-time scenario, thumbnail generation would be done async via queue.
-        //    For now, serve the full image with a smaller Cache-Control so it can be replaced.
-        let origObj = await bucket.get(fileKeyDecoded);
-        if (!origObj && fileKey !== fileKeyDecoded) origObj = await bucket.get(fileKey);
-        if (origObj) {
-          const contentType = origObj.httpMetadata?.contentType || "image/jpeg";
-          const isImage = contentType.startsWith("image/");
-          if (!isImage) {
-            // Non-image files don't get thumbnails — just serve directly
-            return new Response(origObj.body, {
-              status: 200,
+      // ── FULL FILE SERVING ─────────────────────────────────────────────────
+      for (const k of uniqueKeys) {
+        let obj = await bucket.get(k);
+        if (obj) {
+          let contentType = obj.httpMetadata?.contentType;
+          if (!contentType || contentType === "application/octet-stream") {
+            const lowerKey = k.toLowerCase();
+            if (lowerKey.endsWith(".png")) contentType = "image/png";
+            else if (lowerKey.endsWith(".webp")) contentType = "image/webp";
+            else if (lowerKey.endsWith(".gif")) contentType = "image/gif";
+            else if (lowerKey.endsWith(".pdf")) contentType = "application/pdf";
+            else contentType = "image/jpeg";
+          }
+
+          const etag = obj.etag || obj.httpEtag;
+          const isPdf = contentType.includes("pdf");
+
+          const ifNoneMatch = request.headers.get("If-None-Match");
+          if (etag && ifNoneMatch && (ifNoneMatch === etag || ifNoneMatch === `"${etag}"`)) {
+            return new Response(null, {
+              status: 304,
               headers: {
-                "Content-Type": contentType,
-                "Cache-Control": "public, max-age=3600",
-                "X-Thumb": "passthrough",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS"
               }
             });
           }
-          // Serve the full image in the thumbnail slot with short cache
-          // Browser will display it in a small container; no visible difference
-          return new Response(origObj.body, {
+
+          return new Response(obj.body, {
             status: 200,
             headers: {
               "Content-Type": contentType,
-              "Cache-Control": "public, max-age=1800, s-maxage=3600",
-              "Vary": "Accept",
-              "X-Thumb": "original-fallback",
-              "X-Frame-Options": "DENY",
-              "X-Content-Type-Options": "nosniff",
-            }
-          });
-        }
-        // Thumbnail not found, fall through to 404
-        continue;
-      }
-
-      // ── FULL FILE SERVING (default path) ──────────────────────────────────
-      let obj = await bucket.get(fileKeyDecoded);
-      if (!obj && fileKey !== fileKeyDecoded) {
-        obj = await bucket.get(fileKey);
-      }
-      if (!obj && fileKeyDecoded.startsWith("/")) {
-        obj = await bucket.get(fileKeyDecoded.slice(1));
-      }
-      if (!obj && fileKeyDecoded.includes("/")) {
-        const lastPart = fileKeyDecoded.split("/").pop();
-        if (lastPart) obj = await bucket.get(lastPart);
-      }
-      if (!obj && fileKey.includes("/")) {
-        const lastPart = fileKey.split("/").pop();
-        if (lastPart) obj = await bucket.get(lastPart);
-      }
-      if (obj) {
-        let contentType = obj.httpMetadata?.contentType;
-        if (!contentType || contentType === "application/octet-stream") {
-          const lowerKey = fileKeyDecoded.toLowerCase();
-          if (lowerKey.endsWith(".png")) contentType = "image/png";
-          else if (lowerKey.endsWith(".webp")) contentType = "image/webp";
-          else if (lowerKey.endsWith(".gif")) contentType = "image/gif";
-          else if (lowerKey.endsWith(".pdf")) contentType = "application/pdf";
-          else contentType = "image/jpeg";
-        }
-
-        const etag = obj.etag || obj.httpEtag;
-        const isImage = contentType.startsWith("image/");
-        const isPdf = contentType.includes("pdf");
-
-        // ── ETag / 304 Not Modified ──────────────────────────────────────────
-        const ifNoneMatch = request.headers.get("If-None-Match");
-        if (etag && ifNoneMatch && (ifNoneMatch === etag || ifNoneMatch === `"${etag}"`)) {
-          return new Response(null, {
-            status: 304,
-            headers: {
+              "Content-Length": String(obj.size),
+              "Cache-Control": "public, max-age=31536000, immutable",
+              "ETag": etag ? `"${etag}"` : "",
+              "Content-Disposition": isPdf ? 'inline; filename="document.pdf"' : "inline",
               "Access-Control-Allow-Origin": "*",
-              "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS"
-            }
+              "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+              "X-Source": "r2-direct"
+            },
           });
         }
-
-        return new Response(obj.body, {
-          status: 200,
-          headers: {
-            "Content-Type": contentType,
-            "Content-Length": String(obj.size),
-            "Cache-Control": "public, max-age=31536000, immutable",
-            "ETag": etag ? `"${etag}"` : "",
-            "Vary": isImage ? "Accept" : "",
-            "Content-Disposition": isPdf ? 'inline; filename="document.pdf"' : "inline",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-            "X-Content-Type-Options": "nosniff",
-            "X-Source": "r2-direct"
-          },
-        });
       }
     } catch (_) {}
   }
 
-  // Fallback: Check file_metadata table in D1 for gdrive_file_id
-  if (env.DB) {
+  // Fallback 1: Database lookup in D1 file_metadata
+  if (env.DB && bareId) {
     try {
-      const baseName = fileKeyDecoded.split("/").pop().replace(/\.[^/.]+$/, "");
       const meta = await env.DB.prepare(`
-        SELECT gdrive_file_id, content_type FROM file_metadata 
-        WHERE r2_object_key LIKE ? OR r2_url LIKE ? OR safe_filename LIKE ? 
+        SELECT r2_object_key, gdrive_file_id, content_type FROM file_metadata 
+        WHERE r2_object_key LIKE ? OR r2_url LIKE ? OR safe_filename LIKE ? OR original_filename LIKE ? OR gdrive_file_id LIKE ?
         LIMIT 1
-      `).bind(`%${baseName}%`, `%${baseName}%`, `%${baseName}%`).first();
+      `).bind(`%${bareId}%`, `%${bareId}%`, `%${bareId}%`, `%${bareId}%`, `%${bareId}%`).first();
 
-      if (meta && meta.gdrive_file_id) {
-        const gdriveUrl = `https://drive.google.com/uc?export=view&id=${meta.gdrive_file_id}`;
-        let gdriveRes = await fetch(gdriveUrl, {
-          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
-        });
-        if (!gdriveRes.ok) {
-          gdriveRes = await fetch(`https://lh3.googleusercontent.com/d/${meta.gdrive_file_id}`);
+      if (meta) {
+        if (meta.r2_object_key) {
+          for (const bucket of buckets) {
+            try {
+              const obj = await bucket.get(meta.r2_object_key);
+              if (obj) {
+                const cType = meta.content_type || obj.httpMetadata?.contentType || "image/jpeg";
+                return new Response(obj.body, {
+                  status: 200,
+                  headers: {
+                    "Content-Type": cType,
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                    "Access-Control-Allow-Origin": "*",
+                    "X-Source": "r2-d1-matched"
+                  }
+                });
+              }
+            } catch (_) {}
+          }
         }
-        if (gdriveRes.ok) {
-          const cType = meta.content_type || gdriveRes.headers.get("content-type") || "image/jpeg";
-          return new Response(gdriveRes.body, {
-            status: 200,
-            headers: {
-              "Content-Type": cType,
-              "Cache-Control": "public, max-age=86400",
-              "X-Source": "gdrive-stream-fallback"
-            }
-          });
+        if (meta.gdrive_file_id) {
+          let gdriveRes = await fetch(`https://lh3.googleusercontent.com/d/${meta.gdrive_file_id}`);
+          if (!gdriveRes.ok) {
+            gdriveRes = await fetch(`https://drive.google.com/uc?export=view&id=${meta.gdrive_file_id}`, {
+              headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+            });
+          }
+          if (gdriveRes.ok) {
+            const cType = meta.content_type || gdriveRes.headers.get("content-type") || "image/jpeg";
+            return new Response(gdriveRes.body, {
+              status: 200,
+              headers: {
+                "Content-Type": cType,
+                "Cache-Control": "public, max-age=86400",
+                "Access-Control-Allow-Origin": "*",
+                "X-Source": "gdrive-d1-stream"
+              }
+            });
+          }
         }
       }
     } catch (err) {
-      console.warn("GDrive fallback lookup error:", err.message);
+      console.warn("D1 metadata fallback lookup error:", err.message);
     }
   }
 
-  // Fallback: If fileKey itself is a valid Google Drive ID (25-45 chars, no slashes)
-  if (/^[a-zA-Z0-9_-]{25,45}$/.test(fileKeyDecoded)) {
-    let gdriveRes = await fetch(`https://drive.google.com/uc?export=view&id=${fileKeyDecoded}`, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
-    });
+  // Fallback 2: Direct Google Drive ID stream (25-50 chars)
+  const gdriveCandidate = bareId || fileKeyDecoded.replace(/^gdrive\//, "");
+  if (/^[a-zA-Z0-9_-]{25,50}$/.test(gdriveCandidate)) {
+    let gdriveRes = await fetch(`https://lh3.googleusercontent.com/d/${gdriveCandidate}`);
     if (!gdriveRes.ok) {
-      gdriveRes = await fetch(`https://lh3.googleusercontent.com/d/${fileKeyDecoded}`);
+      gdriveRes = await fetch(`https://drive.google.com/uc?export=view&id=${gdriveCandidate}`, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+      });
     }
     if (gdriveRes.ok) {
       return new Response(gdriveRes.body, {
@@ -347,6 +334,7 @@ export async function handleServeFile(request, env, params, query) {
         headers: {
           "Content-Type": gdriveRes.headers.get("content-type") || "image/jpeg",
           "Cache-Control": "public, max-age=86400",
+          "Access-Control-Allow-Origin": "*",
           "X-Source": "gdrive-direct-stream"
         }
       });
@@ -358,10 +346,16 @@ export async function handleServeFile(request, env, params, query) {
 
 // ─── GET /api/r2/gdrive-proxy ───────────────────────────────────────────────
 export async function handleGDriveProxy(request, env, params, query) {
-  const fileId = query?.get("id") || params?.id || params?.key;
+  let fileId = query?.get("id") || params?.id || params?.key;
   if (!fileId) return errorResponse("Missing Google Drive file ID", 400);
 
-  const cleanId = fileId.replace(/^gdrive\//, "").replace(/\.jpg$/, "").replace(/\.png$/, "");
+  let cleanId = String(fileId).trim();
+  if (cleanId.includes("drive.google.com") || cleanId.includes("docs.google.com")) {
+    const matchD = cleanId.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const matchId = cleanId.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    cleanId = matchD ? matchD[1] : (matchId ? matchId[1] : cleanId);
+  }
+  cleanId = cleanId.replace(/^gdrive\//, "").replace(/\.(jpg|jpeg|png|webp|gif|pdf)$/i, "");
   const r2Key = `gdrive/${cleanId}.jpg`;
 
   const bucket = env.R2_BUCKET || env.CYRIXAPP_BUCKET;
@@ -375,6 +369,7 @@ export async function handleGDriveProxy(request, env, params, query) {
         existingObj.writeHttpMetadata(headers);
         headers.set("Content-Type", "image/jpeg");
         headers.set("Cache-Control", "public, max-age=31536000");
+        headers.set("Access-Control-Allow-Origin", "*");
         headers.set("X-Storage-Source", "R2-Bucket");
         return new Response(existingObj.body, { headers });
       }
@@ -396,14 +391,13 @@ export async function handleGDriveProxy(request, env, params, query) {
       if (res.ok) {
         const arrayBuffer = await res.arrayBuffer();
         if (arrayBuffer.byteLength > 0) {
-          // Save to R2 permanently
+          // Save to R2 permanently in background
           if (bucket) {
             try {
               await bucket.put(r2Key, arrayBuffer, {
                 httpMetadata: { contentType: "image/jpeg" }
               });
 
-              // Update D1 database link references
               if (env.DB) {
                 const r2PublicPath = `/uploads/${r2Key}`;
                 env.DB.prepare(`
@@ -420,6 +414,7 @@ export async function handleGDriveProxy(request, env, params, query) {
             headers: {
               "Content-Type": "image/jpeg",
               "Cache-Control": "public, max-age=31536000",
+              "Access-Control-Allow-Origin": "*",
               "X-Storage-Source": "GDrive-R2-AutoMigrated"
             }
           });

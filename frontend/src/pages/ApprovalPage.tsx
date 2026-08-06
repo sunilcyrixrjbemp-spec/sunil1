@@ -246,7 +246,7 @@ export default function ApprovalPage() {
 
     if (isPdfUrl) {
       setIsLoadingPdf(true);
-      fetch(lightboxImage)
+      fetch(formattedUrl)
         .then(async (res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const blob = await res.blob();
@@ -259,7 +259,7 @@ export default function ApprovalPage() {
         .catch((err) => {
           console.warn("Failed to fetch PDF blob, falling back to direct URL:", err);
           if (active) {
-            setDisplayImageUrl(lightboxImage);
+            setDisplayImageUrl(formattedUrl);
             setIsLoadingPdf(false);
           }
         });
@@ -271,12 +271,12 @@ export default function ApprovalPage() {
     }
 
     // Check HEIC asynchronously in background only if needed
-    if (lightboxImage.toLowerCase().endsWith(".heic") || lightboxImage.toLowerCase().endsWith(".heif")) {
-      checkIsHeic(lightboxImage).then(isHeicImg => {
+    if (formattedUrl.toLowerCase().endsWith(".heic") || formattedUrl.toLowerCase().endsWith(".heif")) {
+      checkIsHeic(formattedUrl).then(isHeicImg => {
         if (!active) return;
         if (isHeicImg) {
           setIsConvertingHeic(true);
-          convertHeicToJpegUrl(lightboxImage)
+          convertHeicToJpegUrl(formattedUrl)
             .then((url) => {
               if (!active) {
                 URL.revokeObjectURL(url);
@@ -288,7 +288,7 @@ export default function ApprovalPage() {
             })
             .catch(() => {
               if (active) {
-                setDisplayImageUrl(lightboxImage);
+                setDisplayImageUrl(formattedUrl);
                 setIsConvertingHeic(false);
               }
             });
