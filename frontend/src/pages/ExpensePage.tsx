@@ -3889,12 +3889,16 @@ export default function ExpensePage() {
                               {(leg.mode === "Bus" || leg.mode === "Auto") && (parseFloat(leg.amount) || 0) >= 300 && <span className="text-red-500"> *</span>}
                             </label>
                             {!files[leg.leg]?.main_bill && !hasExistingFile(leg.leg, leg.mode) ? (
-                              <input
-                                  type="file"
-                                  accept="*/*"
-                                  onChange={(e) => handleLegFileChange(leg.leg, "main_bill", e.target.files ? e.target.files[0] : null)}
-                                  className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-gray-305 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-gray-700 hover:file:bg-gray-50 cursor-pointer w-full"
-                                />
+                              <label className="cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg h-9 px-3 flex items-center justify-center gap-1.5 text-xs font-extrabold shadow-2xs w-full transition-all active:scale-[0.98]">
+    <Camera className="w-4 h-4 text-indigo-600 shrink-0" />
+    <span>Upload Ticket / Receipt Image</span>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => handleLegFileChange(leg.leg, "main_bill", e.target.files ? e.target.files[0] : null)}
+      className="hidden"
+    />
+  </label>
                             ) : files[leg.leg]?.main_bill ? (
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
                                 <span className="font-semibold text-blue-700 truncate max-w-[200px]">{files[leg.leg]?.main_bill?.name}</span>
@@ -3934,12 +3938,16 @@ export default function ExpensePage() {
                               Upload Manager Approval Screenshot (Optional)
                             </label>
                             {!files[leg.leg]?.comm_mail && !hasExistingFile(leg.leg, "Communication_Mail") ? (
-                              <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => handleLegFileChange(leg.leg, "comm_mail", e.target.files ? e.target.files[0] : null)}
-                                  className="text-xs file:mr-4 file:py-1.5 file:px-3 file:rounded file:border file:border-indigo-300 file:text-[10px] file:font-bold file:uppercase file:bg-white file:text-indigo-700 hover:file:bg-indigo-50 cursor-pointer w-full"
-                                />
+                              <label className="cursor-pointer bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg h-9 px-3 flex items-center justify-center gap-1.5 text-xs font-extrabold shadow-2xs w-full transition-all active:scale-[0.98]">
+    <Camera className="w-4 h-4 text-indigo-600 shrink-0" />
+    <span>Upload Approval Screenshot</span>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => handleLegFileChange(leg.leg, "comm_mail", e.target.files ? e.target.files[0] : null)}
+      className="hidden"
+    />
+  </label>
                             ) : files[leg.leg]?.comm_mail ? (
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-3 py-1.5 rounded text-xs">
                                 <span className="font-semibold text-blue-700 truncate max-w-[200px]">{files[leg.leg]?.comm_mail?.name}</span>
@@ -4045,12 +4053,16 @@ export default function ExpensePage() {
                                 </label>
                                 {!files[leg.leg]?.sub_bill && !hasExistingFile(leg.leg, leg.sub_mode) ? (
                                   <div className="mt-1.5">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={(e) => handleLegFileChange(leg.leg, "sub_bill", e.target.files ? e.target.files[0] : null)}
-                                      className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
-                                    />
+                                    <label className="cursor-pointer bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg h-8 px-2.5 flex items-center justify-center gap-1.5 text-[11px] font-extrabold shadow-2xs w-full transition-all active:scale-[0.98]">
+    <Camera className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+    <span>Upload Sub-Travel Ticket</span>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => handleLegFileChange(leg.leg, "sub_bill", e.target.files ? e.target.files[0] : null)}
+      className="hidden"
+    />
+  </label>
                                   </div>
                                 ) : files[leg.leg]?.sub_bill ? (
                                   <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px] mt-1.5">
@@ -4165,12 +4177,16 @@ export default function ExpensePage() {
                               </div>
                             ) : !files[leg.leg]?.hotel_bill && !hasExistingFile(leg.leg, "Hotel") ? (
                               <div className="mt-1.5">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => handleLegFileChange(leg.leg, "hotel_bill", e.target.files ? e.target.files[0] : null)}
-                                  className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
-                                />
+                                <label className="cursor-pointer bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-lg h-8 px-2.5 flex items-center justify-center gap-1.5 text-[11px] font-extrabold shadow-2xs w-full transition-all active:scale-[0.98]">
+    <Camera className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+    <span>Upload Hotel Bill</span>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => handleLegFileChange(leg.leg, "hotel_bill", e.target.files ? e.target.files[0] : null)}
+      className="hidden"
+    />
+  </label>
                               </div>
                             ) : files[leg.leg]?.hotel_bill ? (
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px] mt-1.5">
@@ -4239,12 +4255,16 @@ export default function ExpensePage() {
                             </label>
                             {!files[leg.leg]?.local_purchase_bill && !hasExistingFile(leg.leg, "Local_Purchase") ? (
                               <div className="mt-1.5">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => handleLegFileChange(leg.leg, "local_purchase_bill", e.target.files ? e.target.files[0] : null)}
-                                  className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
-                                />
+                                <label className="cursor-pointer bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg h-8 px-2.5 flex items-center justify-center gap-1.5 text-[11px] font-extrabold shadow-2xs w-full transition-all active:scale-[0.98]">
+    <Camera className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+    <span>Upload Local Purchase Bill</span>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => handleLegFileChange(leg.leg, "local_purchase_bill", e.target.files ? e.target.files[0] : null)}
+      className="hidden"
+    />
+  </label>
                               </div>
                             ) : files[leg.leg]?.local_purchase_bill ? (
                               <div className="flex items-center justify-between bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px] mt-1.5">
@@ -4310,12 +4330,16 @@ export default function ExpensePage() {
                           <label className="label-lte block">Misc Bill Attachment Indicator</label>
                           <div className="flex items-center gap-2">
                             {!files[leg.leg]?.oth_bill && !hasExistingFile(leg.leg, "Other") ? (
-                              <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => handleLegFileChange(leg.leg, "oth_bill", e.target.files ? e.target.files[0] : null)}
-                                  className="text-xs file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:uppercase file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer w-full"
-                                />
+                              <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg h-8 px-2.5 flex items-center justify-center gap-1.5 text-[11px] font-extrabold shadow-2xs w-full transition-all active:scale-[0.98]">
+    <Camera className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+    <span>Upload Misc Bill</span>
+    <input
+      type="file"
+      accept="image/*"
+      onChange={(e) => handleLegFileChange(leg.leg, "oth_bill", e.target.files ? e.target.files[0] : null)}
+      className="hidden"
+    />
+  </label>
                             ) : files[leg.leg]?.oth_bill ? (
                               <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-2 py-1 rounded text-[10px]">
                                 <span className="font-semibold text-blue-700 truncate max-w-[100px]">{files[leg.leg]?.oth_bill?.name}</span>
