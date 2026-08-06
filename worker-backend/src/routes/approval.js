@@ -6,6 +6,57 @@ import { computeDistrictType, computeDistrictInfo } from "../utils/districtHelpe
 import { jsonResponse } from "../utils/http.js";
 import { parseClientTimestamp } from "../utils/timestamp.js";
 
+function computeCombinedPurpose(legs, fallbackPurpose) {
+  if (!legs || legs.length === 0) return fallbackPurpose || "Field visit";
+  
+  const activitiesSet = new Set();
+  
+  for (const leg of legs) {
+    if (leg.activity_details) {
+      try {
+        const parsed = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
+        if (parsed.selected_activities && Array.isArray(parsed.selected_activities)) {
+          parsed.selected_activities.forEach(a => {
+            if (a && a.trim() && a !== "—") {
+              activitiesSet.add(a.trim());
+            }
+          });
+        }
+        if (parsed.calls_list && parsed.calls_list.length > 0) {
+          activitiesSet.add("Calls");
+        }
+        if (parsed.pms_list && parsed.pms_list.length > 0) {
+          activitiesSet.add("PMS");
+        }
+      } catch (e) {}
+    }
+    if (leg.visit_purpose) {
+      const purp = String(leg.visit_purpose);
+      if (purp.includes("Calls")) activitiesSet.add("Calls");
+      if (purp.includes("PMS")) activitiesSet.add("PMS");
+      if (purp.includes("Asset Tagging")) activitiesSet.add("Asset Tagging");
+      if (purp.includes("Calibration")) activitiesSet.add("Calibration");
+      if (purp.includes("Mobilise")) activitiesSet.add("Mobilise Asset Update");
+      if (purp.includes("Other")) activitiesSet.add("Other");
+    }
+  }
+
+  if (activitiesSet.size === 0) {
+    return fallbackPurpose || "Field visit";
+  }
+
+  const order = ["Calls", "PMS", "Asset Tagging", "Calibration", "Mobilise Asset Update", "Other"];
+  const sortedActs = Array.from(activitiesSet).sort((a, b) => {
+    let idxA = order.findIndex(o => a.toLowerCase().includes(o.toLowerCase()));
+    let idxB = order.findIndex(o => b.toLowerCase().includes(o.toLowerCase()));
+    if (idxA === -1) idxA = 99;
+    if (idxB === -1) idxB = 99;
+    return idxA - idxB;
+  });
+
+  return `Activities: ${sortedActs.join(", ")}`;
+}
+
 async function queryInChunks(db, queryTemplate, ids, chunkSize = 50) {
   let allResults = [];
   for (let i = 0; i < ids.length; i += chunkSize) {
@@ -234,7 +285,7 @@ export async function fetchPendingApprovals(env, user) {
     try {
       const legsRes = await queryInChunks(
         env.DB,
-        "SELECT exp_id, from_district, to_district FROM expense_itineraries WHERE exp_id IN (?)",
+        "SELECT exp_id, from_district, to_district, activity_details, visit_purpose FROM expense_itineraries WHERE exp_id IN (?)",
         normalExpCodes
       );
       for (const l of legsRes) {
@@ -252,7 +303,7 @@ export async function fetchPendingApprovals(env, user) {
 
     let callsAssigned = app.calls_assigned || 0;
     let callsCompleted = app.calls_completed || 0;
-    let cleanPurpose = app.description || "";
+    let cleanPurpose = computeCombinedPurpose(legs, app.description || "");
 
     if (callsCompleted === 0) {
       callsAssigned = 0;
@@ -312,7 +363,7 @@ export async function fetchPendingApprovals(env, user) {
       ),
       queryInChunks(
         env.DB,
-        "SELECT exp_id, from_district, to_district FROM expense_itineraries WHERE exp_id IN (?)",
+        "SELECT exp_id, from_district, to_district, activity_details, visit_purpose FROM expense_itineraries WHERE exp_id IN (?)",
         legacyCodes
       ).catch(() => [])
     ]);
@@ -335,11 +386,12 @@ export async function fetchPendingApprovals(env, user) {
         const levelNumber = row.status === "Pending L2" ? 2 : 1;
         const itiCount = countMap[row.exp_id] || 0;
         const category = modeMap[row.exp_id] || "Travel";
-        const districtType = computeDistrictType(row.submitter_district, legacyLegsMap[row.exp_id] || []);
+        const legList = legacyLegsMap[row.exp_id] || [];
+        const districtType = computeDistrictType(row.submitter_district, legList);
 
         let callsAssigned = row.calls_assigned || 0;
         let callsCompleted = row.calls_completed || 0;
-        let cleanPurpose = row.visit_purpose || "";
+        let cleanPurpose = computeCombinedPurpose(legList, row.visit_purpose || "");
 
         if (callsCompleted === 0) {
           callsAssigned = 0;

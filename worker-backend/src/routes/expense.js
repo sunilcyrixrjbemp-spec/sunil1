@@ -2563,6 +2563,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let totalCalibration = 0;
   let totalMobilise = 0;
   let firstPurpose = "";
+  const allClaimActivitiesSet = new Set();
 
   let newKm = 0.0;
   let newAuto = 0.0;
@@ -2771,7 +2772,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
     const cleanPurpose = sanitizedActs.length > 0 ? `Activities: ${sanitizedActs.join(", ")}` : (iti.visit_purpose && !iti.visit_purpose.startsWith("Activities:") ? iti.visit_purpose : "Field visit");
     iti.visit_purpose = cleanPurpose;
-    if (idx === 0) firstPurpose = cleanPurpose;
+    if (idx === 0 && !firstPurpose) firstPurpose = cleanPurpose;
+
+    sanitizedActs.forEach(act => allClaimActivitiesSet.add(act));
 
     totalAssigned += itiAssigned;
     totalCompleted += itiCompleted;
@@ -2779,6 +2782,18 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     totalAsset += itiAsset;
     totalCalibration += itiCalibration;
     totalMobilise += itiMobilise;
+  }
+
+  const actOrder = ["Calls", "PMS", "Asset Tagging", "Calibration", "Mobilise Asset Update", "Other"];
+  const sortedClaimActs = Array.from(allClaimActivitiesSet).sort((a, b) => {
+    let idxA = actOrder.findIndex(o => a.toLowerCase().includes(o.toLowerCase()));
+    let idxB = actOrder.findIndex(o => b.toLowerCase().includes(o.toLowerCase()));
+    if (idxA === -1) idxA = 99;
+    if (idxB === -1) idxB = 99;
+    return idxA - idxB;
+  });
+  if (sortedClaimActs.length > 0) {
+    firstPurpose = `Activities: ${sortedClaimActs.join(", ")}`;
   }
 
   // ₹0 expenses are allowed (e.g. base-location-only travel where all TA/DA was waived on frontend)
