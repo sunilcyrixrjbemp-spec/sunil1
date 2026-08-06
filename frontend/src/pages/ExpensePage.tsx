@@ -3515,14 +3515,14 @@ export default function ExpensePage() {
 
                     <div className="p-4 space-y-4">
                       
-                      <div className="flex items-center justify-between pb-3 -mx-4 px-4 -mt-4 pt-3 mb-1 bg-slate-50 border-b border-slate-200">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 -mx-4 px-4 -mt-4 pt-3 mb-1 bg-slate-50 border-b border-slate-200">
                         <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Travel Category</span>
-                        <div className="flex gap-2 flex-wrap" role="group">
+                        <div className="grid grid-cols-3 gap-1 sm:flex sm:gap-2 w-full sm:w-auto" role="group">
                           <button
                             key="In-District"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "In-District")}
-                            className={`px-3 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
+                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center ${
                               leg.travel_type === "In-District"
                                 ? "border-[#4A6A8A] bg-[#4A6A8A] text-white"
                                 : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
@@ -3534,7 +3534,7 @@ export default function ExpensePage() {
                             key="Outdoor"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Outdoor")}
-                            className={`px-3 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
+                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center ${
                               leg.travel_type === "Outdoor"
                                 ? "border-amber-600 bg-amber-500 text-white"
                                 : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
@@ -3546,7 +3546,7 @@ export default function ExpensePage() {
                             key="Out of State"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Out of State")}
-                            className={`px-3 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
+                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center whitespace-nowrap ${
                               leg.travel_type === "Out of State"
                                 ? "border-purple-600 bg-purple-600 text-white font-bold"
                                 : "border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
