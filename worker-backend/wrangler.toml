@@ -122,12 +122,14 @@ RATE_LIMIT_EMAIL = "10"
 #  → For signing one-click email approval tokens
 
 # ─── Cron Triggers ────────────────────────────────────────────────────────────
-# Enabled 2026-08-06 — all handlers are idempotent so duplicate fires are safe
-[triggers]
-crons = [
-  "0 0 * * *",      # 05:30 AM IST — Auto-approval expiry check (handleAutoApprovalExpiry)
-  "30 4 * * *",     # 10:00 AM IST — Manager daily digest emails (handleManagerDigest)
-  "0 18 * * *",     # 11:30 PM IST — Daily cleanup & system metrics (handleDailyCleanup)
-  "0 18 * * 0",     # Sunday 11:30 PM IST — Weekly report generation
-  "30 18 1 * *",    # 1st of month midnight IST — Monthly report generation
-]
+# NOTE: If deploying via GitHub Actions API Token without schedule permissions,
+# configure triggers directly in Cloudflare Dashboard → Workers → fieldops-api → Triggers
+# [triggers]
+# crons = [
+#   "0 0 * * *",      # 05:30 AM IST — Auto-approval expiry check (handleAutoApprovalExpiry)
+#   "30 4 * * *",     # 10:00 AM IST — Manager daily digest emails (handleManagerDigest)
+#   "0 18 * * *",     # 11:30 PM IST — Daily cleanup & system metrics (handleDailyCleanup)
+#   "0 18 * * 0",     # Sunday 11:30 PM IST — Weekly report generation
+#   "30 18 1 * *",    # 1st of month midnight IST — Monthly report generation
+# ]
+
