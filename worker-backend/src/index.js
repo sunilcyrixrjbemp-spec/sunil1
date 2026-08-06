@@ -373,6 +373,8 @@ router.delete("/api/files/:key", handleDeleteFile, true);
 router.get("/api/upload/file/images/:filename", handleServeFile, false);
 router.get("/api/upload/file/documents/:filename", handleServeFile, false);
 router.get("/uploads/expense_attachments/:filename", handleServeExpenseAttachment, false);
+router.get("/uploads/*", handleServeFile, false);
+router.get("/uploads/:key", handleServeFile, false);
 
 // ─── Reports Endpoints ────────────────────────────────────────────────────────
 router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);

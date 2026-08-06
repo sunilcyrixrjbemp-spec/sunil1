@@ -155,6 +155,8 @@ export async function handleServeFile(request, env, params, query) {
     fileKey = urlObj.pathname.split("/api/upload/file/images/")[1];
   } else if (!fileKey && urlObj.pathname.includes("/api/upload/file/documents/")) {
     fileKey = urlObj.pathname.split("/api/upload/file/documents/")[1];
+  } else if (!fileKey && urlObj.pathname.includes("/uploads/")) {
+    fileKey = urlObj.pathname.split("/uploads/")[1];
   }
 
   if (!fileKey) return errorResponse("Missing file key", 400);
@@ -238,6 +240,14 @@ export async function handleServeFile(request, env, params, query) {
       let obj = await bucket.get(fileKeyDecoded);
       if (!obj && fileKey !== fileKeyDecoded) {
         obj = await bucket.get(fileKey);
+      }
+      if (!obj && fileKeyDecoded.includes("/")) {
+        const lastPart = fileKeyDecoded.split("/").pop();
+        if (lastPart) obj = await bucket.get(lastPart);
+      }
+      if (!obj && fileKey.includes("/")) {
+        const lastPart = fileKey.split("/").pop();
+        if (lastPart) obj = await bucket.get(lastPart);
       }
       if (obj) {
         const contentType = obj.httpMetadata?.contentType || "application/octet-stream";

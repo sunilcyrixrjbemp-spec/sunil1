@@ -920,7 +920,7 @@ const LegDetailCard = ({
                       const cStatus = cItem.status || cItem.calls_status || act.callsStatus || "Attended & Closed";
                       
                       const cUrl = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url || "";
-                      const fullCUrl = cUrl ? (cUrl.startsWith("http") || cUrl.startsWith("data:") ? cUrl : `${API_BASE}${cUrl}`) : "";
+                      const fullCUrl = cUrl ? (cUrl.startsWith("http") || cUrl.startsWith("data:") ? cUrl : `${API_BASE}${cUrl.startsWith("/") ? "" : "/"}${cUrl}`) : "";
 
                       return (
                         <tr key={cIdx} className="hover:bg-blue-50/40 font-medium">
@@ -980,7 +980,7 @@ const LegDetailCard = ({
 
                       const pSched = pItem.schedule || pItem.pms_frequency || pItem.frequency || act.pmsFrequency || schedule || "—";
                       const pUrl = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url || "";
-                      const fullPUrl = pUrl ? (pUrl.startsWith("http") || pUrl.startsWith("data:") ? pUrl : `${API_BASE}${pUrl}`) : "";
+                      const fullPUrl = pUrl ? (pUrl.startsWith("http") || pUrl.startsWith("data:") ? pUrl : `${API_BASE}${pUrl.startsWith("/") ? "" : "/"}${pUrl}`) : "";
 
                       return (
                         <tr key={pIdx} className="hover:bg-emerald-50/40 font-medium">
