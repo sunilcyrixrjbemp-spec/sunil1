@@ -250,6 +250,21 @@ export async function fetchPendingApprovals(env, user) {
     const districtType = distInfo.districtType;
     const hasMismatch = distInfo.hasMismatch;
 
+    let callsAssigned = app.calls_assigned || 0;
+    let callsCompleted = app.calls_completed || 0;
+    let cleanPurpose = app.description || "";
+
+    if (callsCompleted === 0) {
+      callsAssigned = 0;
+      if (cleanPurpose.includes("Calls")) {
+        cleanPurpose = cleanPurpose.replace("Activities: Calls, ", "Activities: ")
+                                   .replace("Activities: Calls", "Activities: Other")
+                                   .replace("Calls, ", "")
+                                   .replace("Calls", "").trim();
+        if (cleanPurpose === "Activities:" || !cleanPurpose) cleanPurpose = "Field visit";
+      }
+    }
+
     result.push({
       id: app.id,
       expense_id: app.expense_id,
@@ -262,13 +277,13 @@ export async function fetchPendingApprovals(env, user) {
       expense_code: app.expense_code,
       employeeName: app.submitter_name || "Unknown Employee",
       eCode: app.submitter_code || "N/A",
-      purpose: app.description || "",
+      purpose: cleanPurpose,
       category: app.travel_mode || "Travel",
       amount: parseFloat(app.amount || 0),
       date: app.itinerary,
       itinerariesCount: app.itineraries_count || 0,
-      calls_assigned: app.calls_assigned || 0,
-      calls_completed: app.calls_completed || 0,
+      calls_assigned: callsAssigned,
+      calls_completed: callsCompleted,
       districtType: districtType,
       hasMismatch: hasMismatch
     });
@@ -320,6 +335,21 @@ export async function fetchPendingApprovals(env, user) {
         const category = modeMap[row.exp_id] || "Travel";
         const districtType = computeDistrictType(row.submitter_district, legacyLegsMap[row.exp_id] || []);
 
+        let callsAssigned = row.calls_assigned || 0;
+        let callsCompleted = row.calls_completed || 0;
+        let cleanPurpose = row.visit_purpose || "";
+
+        if (callsCompleted === 0) {
+          callsAssigned = 0;
+          if (cleanPurpose.includes("Calls")) {
+            cleanPurpose = cleanPurpose.replace("Activities: Calls, ", "Activities: ")
+                                       .replace("Activities: Calls", "Activities: Other")
+                                       .replace("Calls, ", "")
+                                       .replace("Calls", "").trim();
+            if (cleanPurpose === "Activities:" || !cleanPurpose) cleanPurpose = "Field visit";
+          }
+        }
+
         return {
           id: mockId,
           expense_id: mockId,
@@ -332,13 +362,13 @@ export async function fetchPendingApprovals(env, user) {
           expense_code: row.exp_id,
           employeeName: row.full_name || "Unknown Employee",
           eCode: row.e_code || row.user_id,
-          purpose: row.visit_purpose || "",
+          purpose: cleanPurpose,
           category: category,
           amount: parseFloat(row.total_amount || 0),
           date: row.expense_date,
           itinerariesCount: itiCount,
-          calls_assigned: row.calls_assigned || 0,
-          calls_completed: row.calls_completed || 0,
+          calls_assigned: callsAssigned,
+          calls_completed: callsCompleted,
           districtType: districtType
         };
       })
@@ -355,6 +385,31 @@ export async function fetchPendingApprovals(env, user) {
  * Retrieve pending approvals for a user
  */
 export async function handleGetApprovals(request, env, params, query, user) {
+  // Trigger background cleanup for legacy rows with 0 completed calls
+  if (env.DB) {
+    env.DB.prepare(`
+      UPDATE expenses 
+      SET calls_assigned = 0, 
+          description = CASE 
+            WHEN description LIKE '%Activities: Calls, %' THEN REPLACE(description, 'Activities: Calls, ', 'Activities: ')
+            WHEN description LIKE '%Activities: Calls%' THEN REPLACE(description, 'Activities: Calls', 'Activities: Other')
+            ELSE description 
+          END 
+      WHERE calls_assigned > 0 AND (calls_completed = 0 OR calls_completed IS NULL)
+    `).run().catch(() => {});
+
+    env.DB.prepare(`
+      UPDATE expense_itineraries 
+      SET calls_assigned = 0, 
+          visit_purpose = CASE 
+            WHEN visit_purpose LIKE '%Activities: Calls, %' THEN REPLACE(visit_purpose, 'Activities: Calls, ', 'Activities: ')
+            WHEN visit_purpose LIKE '%Activities: Calls%' THEN REPLACE(visit_purpose, 'Activities: Calls', 'Activities: Other')
+            ELSE visit_purpose 
+          END 
+      WHERE calls_assigned > 0 AND (calls_completed = 0 OR calls_completed IS NULL)
+    `).run().catch(() => {});
+  }
+
   const pending = await fetchPendingApprovals(env, user);
   return jsonResponse(pending);
 }
