@@ -365,7 +365,7 @@ const AttachmentCard = ({ att, index, setLightboxImage }: { att: any; index: num
 
 const LegDetailCard = ({
   leg, index, totalLegsCount, setLightboxImage, barcodeMap, claimDistrictType, userAllowance, claimMaster, allAttachments,
-  canEditAmounts, editedLeg, onLegAmountChange, onLegRemarkChange
+  canEditAmounts, editedLeg, onLegAmountChange, onLegRemarkChange, routeBenchmark
 }: {
   leg: any; index: number; totalLegsCount: number; setLightboxImage: (u: string) => void;
   barcodeMap: Record<string, { equipment: string; hospital: string }>;
@@ -377,6 +377,7 @@ const LegDetailCard = ({
   editedLeg?: any;
   onLegAmountChange?: (index: number, field: string, value: string | number) => void;
   onLegRemarkChange?: (index: number, field: string, remark: string) => void;
+  routeBenchmark?: any;
 }) => {
   const legNum = leg.leg || leg.leg_number || index + 1;
   const isFirstLeg = index === 0; // STRICT: DA is attached ONLY to the 1st Leg of the day!
@@ -1066,35 +1067,35 @@ const LegDetailCard = ({
       )}
 
       {/* HISTORICAL MINIMUM ROUTE BENCHMARK AUDIT CARD (APPROVER ONLY MATCH POPUP) */}
-      {routeBenchmarks[index] && (
+      {routeBenchmark && (
         <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2.5 mt-2 space-y-1.5 shadow-xs select-none">
           <div className="flex items-center justify-between font-extrabold text-emerald-950 text-[10.5px] border-b border-emerald-200 pb-1 flex-wrap gap-1">
             <span className="flex items-center gap-1.5 uppercase tracking-wider text-emerald-900">
-              🏆 Historical Minimum Route Match ({routeBenchmarks[index].from_location} ↔ {routeBenchmarks[index].to_location})
+              🏆 Historical Minimum Route Match ({routeBenchmark.from_location} ↔ {routeBenchmark.to_location})
             </span>
             <span className="text-[9.5px] bg-emerald-700 text-white px-2 py-0.5 rounded font-mono font-black shadow-2xs">
-              Verified Lowest Fare: ₹{routeBenchmarks[index].min_travel_amount}
+              Verified Lowest Fare: ₹{routeBenchmark.min_travel_amount}
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9.5px]">
             <div>
               <span className="text-slate-500 font-bold block">Lowest Fare Filed By:</span>
-              <span className="text-slate-900 font-black block leading-tight">{routeBenchmarks[index].prior_user_name}</span>
-              <span className="text-emerald-700 font-mono text-[8.5px] font-bold block">{routeBenchmarks[index].prior_claim_code}</span>
+              <span className="text-slate-900 font-black block leading-tight">{routeBenchmark.prior_user_name}</span>
+              <span className="text-emerald-700 font-mono text-[8.5px] font-bold block">{routeBenchmark.prior_claim_code}</span>
             </div>
             <div>
               <span className="text-slate-500 font-bold block">Min Distance & Mode:</span>
-              <span className="text-slate-900 font-mono font-extrabold block">{routeBenchmarks[index].min_distance_km} KM ({routeBenchmarks[index].travel_mode})</span>
+              <span className="text-slate-900 font-mono font-extrabold block">{routeBenchmark.min_distance_km} KM ({routeBenchmark.travel_mode})</span>
             </div>
             <div>
               <span className="text-slate-500 font-bold block">Minimum Travel Fare:</span>
-              <span className="text-emerald-900 font-mono font-black block text-xs">₹{routeBenchmarks[index].min_travel_amount}</span>
+              <span className="text-emerald-900 font-mono font-black block text-xs">₹{routeBenchmark.min_travel_amount}</span>
             </div>
             <div>
               <span className="text-slate-500 font-bold block">Current vs Minimum:</span>
-              {parseFloat(String(taAmt)) > routeBenchmarks[index].min_travel_amount ? (
+              {parseFloat(String(taAmt)) > routeBenchmark.min_travel_amount ? (
                 <span className="text-rose-800 font-extrabold bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 font-mono text-[9px] block">
-                  ⚠️ +₹{(parseFloat(String(taAmt)) - routeBenchmarks[index].min_travel_amount).toFixed(0)} Higher
+                  ⚠️ +₹{(parseFloat(String(taAmt)) - routeBenchmark.min_travel_amount).toFixed(0)} Higher
                 </span>
               ) : (
                 <span className="text-emerald-800 font-extrabold bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-[9px] block">
@@ -2315,6 +2316,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   editedLeg={editedLegs?.[idx]}
                   onLegAmountChange={onLegAmountChange}
                   onLegRemarkChange={onLegRemarkChange}
+                  routeBenchmark={routeBenchmarks[idx]}
                 />
               ))}
             </div>
