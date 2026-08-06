@@ -176,6 +176,18 @@ export default function AnalysisPage() {
   const user = authService.getCurrentUser();
   const allowedWindows = (user?.allowed_windows || "").split(",").map((w: string) => w.trim().toLowerCase());
   const isReviewer = allowedWindows.includes("approval") || hasFullAccess(user?.role);
+  const userRole = (user?.role || "").toLowerCase();
+  const isFullMapRole = 
+    userRole.includes("admin") ||
+    userRole.includes("account") ||
+    userRole.includes("hr") ||
+    userRole.includes("mis") ||
+    userRole.includes("vp") ||
+    userRole.includes("project head") ||
+    userRole.includes("project_head") ||
+    userRole.includes("director") ||
+    userRole.includes("zonal_manager") ||
+    userRole.includes("admin_reviewer");
 
   const [usersMap, setUsersMap] = useState<Record<string, any>>(() => {
     try {
@@ -2721,8 +2733,9 @@ export default function AnalysisPage() {
           <RajasthanMapChart
             expenses={mapExpenses}
             selectedZoneFilter={selectedZone}
-            selectedDistrictFilter={selectedDistrict === "all" ? null : selectedDistrict}
+            selectedDistrictFilter={!isFullMapRole && user?.district ? user.district : (selectedDistrict === "all" ? null : selectedDistrict)}
             onSelectDistrict={(dist) => {
+              if (!isFullMapRole && user?.district) return;
               if (!dist) {
                 setSelectedDistrict("all");
               } else {

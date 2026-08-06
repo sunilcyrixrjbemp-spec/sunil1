@@ -172,21 +172,27 @@ export default function DashboardLayout() {
         }`}
       >
         {/* HomePage Exact Dark Slate-Blue Header Bar (#4A6A8A) */}
-        <div className="h-14 px-3.5 bg-[#4A6A8A] flex items-center justify-between border-b border-[#3B546F] shrink-0 text-white shadow-2xs">
-          <Link to="/home" className="flex items-center gap-2 overflow-hidden">
-            <div className="bg-white/95 px-2 py-1 rounded-lg shadow-2xs flex items-center shrink-0">
+        <div className={`h-14 bg-[#4A6A8A] flex items-center border-b border-[#3B546F] shrink-0 text-white shadow-2xs transition-all duration-300 ${
+          isSidebarCollapsed ? "px-1.5 justify-between" : "px-3.5 justify-between"
+        }`}>
+          <Link to="/home" className="flex items-center gap-2 overflow-hidden min-w-0">
+            <div className={`bg-white/95 rounded-lg shadow-2xs flex items-center justify-center shrink-0 transition-all ${
+              isSidebarCollapsed ? "p-1 w-9 h-8 overflow-hidden" : "px-2 py-1"
+            }`}>
               <img
                 src="/logo-fieldconnect.png"
                 alt="Cyrix Field Connect"
-                className="h-6 w-auto max-w-[160px] object-contain"
-                style={{ height: "24px", maxHeight: "24px", maxWidth: "160px", objectFit: "contain" }}
+                className={`object-contain transition-all ${
+                  isSidebarCollapsed ? "h-6 w-auto max-w-full" : "h-6 w-auto max-w-[160px]"
+                }`}
+                style={{ height: "24px", maxHeight: "24px", objectFit: "contain" }}
                 height="24"
               />
             </div>
           </Link>
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="p-1 rounded-md text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer hidden md:flex items-center justify-center"
+            className="p-1 rounded-md text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer hidden md:flex items-center justify-center shrink-0"
             title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
