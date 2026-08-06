@@ -1783,7 +1783,7 @@ export default function AdminPage() {
                     dataIndex: "e_code",
                     key: "e_code",
                     render: (code: string) => (
-                      <span className="bg-[#4A6A8A] text-white font-mono font-extrabold text-xs px-2.5 py-0.5 rounded-none shadow-2xs">
+                      <span className="bg-slate-100 text-slate-800 font-mono font-extrabold text-xs px-2.5 py-1 rounded-lg border border-slate-200/90 shadow-2xs">
                         {code || "—"}
                       </span>
                     )
@@ -1794,8 +1794,10 @@ export default function AdminPage() {
                     key: "name",
                     render: (name: string, record: any) => (
                       <div>
-                        <div className="font-extrabold text-slate-900 text-sm">{name}</div>
-                        <div className="text-[11px] text-slate-500 font-semibold">{record.designation || "Engineer"}</div>
+                        <div className="font-extrabold text-slate-900 text-xs sm:text-sm leading-tight">{name}</div>
+                        <div className="text-[10px] font-extrabold text-slate-500 bg-slate-100/80 px-1.5 py-0.2 rounded w-fit mt-0.5 border border-slate-200/60 leading-none">
+                          {record.designation || "Engineer"}
+                        </div>
                       </div>
                     )
                   },
@@ -1803,19 +1805,28 @@ export default function AdminPage() {
                     title: "ROLE",
                     dataIndex: "role",
                     key: "role",
-                    render: (roleStr: string) => (
-                      <span className="inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-slate-100 text-slate-800 border border-slate-300">
-                        {roleStr || "—"}
-                      </span>
-                    )
+                    render: (roleStr: string) => {
+                      const r = (roleStr || "").toLowerCase();
+                      let style = "bg-slate-100 text-slate-700 border-slate-200";
+                      if (r.includes("engineer")) style = "bg-teal-50 text-teal-700 border-teal-200";
+                      else if (r.includes("manager") || r.includes("zm")) style = "bg-blue-50 text-blue-700 border-blue-200";
+                      else if (r.includes("admin") || r.includes("mis")) style = "bg-amber-50 text-amber-700 border-amber-200";
+                      else if (r.includes("coordinator")) style = "bg-purple-50 text-purple-700 border-purple-200";
+
+                      return (
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-lg border ${style}`}>
+                          {roleStr || "—"}
+                        </span>
+                      );
+                    }
                   },
                   {
                     title: "MOBILE / EMAIL",
                     key: "contact",
                     render: (_: any, record: any) => (
                       <div className="space-y-0.5 text-xs">
-                        <div className="font-extrabold text-slate-800 font-mono">{record.mobile_number || "—"}</div>
-                        <div className="text-slate-400 font-mono text-[10px]">{record.mail_id || "—"}</div>
+                        <div className="font-extrabold text-slate-800 font-mono text-[11.5px]">{record.mobile_number || "—"}</div>
+                        <div className="text-slate-400 font-mono text-[10px] truncate max-w-[170px]">{record.mail_id || "—"}</div>
                       </div>
                     )
                   },
@@ -1824,8 +1835,8 @@ export default function AdminPage() {
                     key: "location",
                     render: (_: any, record: any) => (
                       <div className="space-y-0.5">
-                        <div className="font-extrabold text-slate-900 text-xs">{record.district || "—"}</div>
-                        <span className="inline-block px-1.5 py-0.2 text-[9px] font-extrabold uppercase tracking-wider rounded-none bg-[#4A6A8A]/10 text-[#4A6A8A] border border-[#4A6A8A]/30">
+                        <div className="font-extrabold text-slate-900 text-xs leading-tight">{record.district || "—"}</div>
+                        <span className="inline-block px-1.5 py-0.2 text-[8.5px] font-extrabold uppercase tracking-wider rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 leading-none">
                           {record.zone || "NO ZONE"}
                         </span>
                       </div>
@@ -1838,12 +1849,24 @@ export default function AdminPage() {
                     render: (status: string) => {
                       const st = (status || "active").toLowerCase();
                       if (st === "active") {
-                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-emerald-100 text-emerald-800 border border-emerald-300">● ACTIVE</span>;
+                        return (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wider rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> ACTIVE
+                          </span>
+                        );
                       }
                       if (st === "locked") {
-                        return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-amber-100 text-amber-800 border border-amber-300">● LOCKED</span>;
+                        return (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wider rounded-full bg-amber-50 text-amber-700 border border-amber-200/90 shadow-2xs">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> LOCKED
+                          </span>
+                        );
                       }
-                      return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-rose-100 text-rose-800 border border-rose-300">● INACTIVE</span>;
+                      return (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wider rounded-full bg-rose-50 text-rose-700 border border-rose-200/90 shadow-2xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> INACTIVE
+                        </span>
+                      );
                     }
                   },
                   {
@@ -1854,8 +1877,8 @@ export default function AdminPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleOpenEditUserModal(record)}
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-[#4A6A8A] border border-slate-300 rounded-none transition-colors cursor-pointer"
-                          title="Edit User Config"
+                          className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+                          title="Edit User Profile"
                         >
                           <EditOutlined className="text-xs" />
                         </button>
@@ -1868,7 +1891,7 @@ export default function AdminPage() {
                           okButtonProps={{ danger: true }}
                         >
                           <button
-                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-none transition-colors cursor-pointer"
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg transition-all cursor-pointer shadow-2xs"
                             title="Force Logout Session"
                           >
                             <LogoutOutlined className="text-xs" />
