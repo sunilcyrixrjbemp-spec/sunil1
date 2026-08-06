@@ -306,7 +306,7 @@ export async function handleListUsers(request, env, params, query, user) {
       SELECT u.id, u.user_id, u.e_code, u.name, u.designation, u.grade, u.zone, u.district,
              u.manager, u.zonal_manager, u.coordinator, u.mobile_number, u.mail_id,
              u.user_status, u.type, u.date_of_joining, u.date_of_birth, u.e_upkaran_id,
-             u.base_reporting_location, u.allowed_windows, u.created_at, u.updated_at,
+             u.base_reporting_location, u.allowed_windows, u.can_bulk_approve, u.created_at, u.updated_at,
              r.role
       FROM users u
       LEFT JOIN user_roles r ON u.user_id = r.user_id

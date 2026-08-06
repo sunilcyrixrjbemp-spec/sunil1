@@ -629,7 +629,8 @@ export default function AdminPage() {
     setEditAllowedWindows(
       u.allowed_windows ? u.allowed_windows.split(",") : []
     );
-    setEditCanBulkApprove(Number(u.can_bulk_approve) === 1);
+    const isUserBulkApproved = Number(u.can_bulk_approve) === 1 || ["coordinator", "project head"].includes((u.role || "").toLowerCase().trim());
+    setEditCanBulkApprove(isUserBulkApproved);
     setEditUserId(u.user_id || "");
     setEditECode(u.e_code || "");
     setEditUserPassword("");
