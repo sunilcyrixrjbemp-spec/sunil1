@@ -1876,36 +1876,6 @@ export default function AdminPage() {
                     }
                   },
                   {
-                    title: "BULK APPROVAL",
-                    key: "can_bulk_approve",
-                    align: "center",
-                    render: (_: any, record: any) => {
-                      const isGranted = Number(record.can_bulk_approve) === 1 || ["coordinator", "project head"].includes((record.role || "").toLowerCase().trim());
-                      return (
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="flex items-center gap-1.5">
-                            <Switch
-                              size="small"
-                              checked={isGranted}
-                              onChange={(checked: boolean) => handleSingleToggleBulkApproval(record, checked)}
-                              style={{ backgroundColor: isGranted ? "#10b981" : "#ef4444" }}
-                            />
-                            <span className={`text-[10px] font-black font-mono ${isGranted ? "text-emerald-700" : "text-rose-600"}`}>
-                              {isGranted ? "ON" : "OFF"}
-                            </span>
-                          </div>
-                          <span className={`text-[8.5px] font-black px-1.5 py-0.2 uppercase tracking-tight rounded-none ${
-                            isGranted
-                              ? "bg-emerald-100 text-emerald-900 border border-emerald-400 font-mono"
-                              : "bg-rose-100 text-rose-900 border border-rose-300 font-mono"
-                          }`}>
-                            {isGranted ? "⚡ ALLOWED" : "🔒 INDIVIDUAL"}
-                          </span>
-                        </div>
-                      );
-                    }
-                  },
-                  {
                     title: "ACTIONS",
                     key: "actions",
                     align: "right",
@@ -3310,49 +3280,51 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                {/* Bulk Approval Rights Governance */}
-                <div className="mt-4">
-                  <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-                    <Zap size={14} className={editCanBulkApprove ? "text-emerald-600" : "text-slate-400"} />
-                    <span>Bulk Approval Permission Governance</span>
-                  </label>
+                {/* Bulk Approval Rights Governance - ONLY shown if Approval Center window is assigned or user has approver role */}
+                {(editAllowedWindows.includes("approval") || ["manager", "zonal head", "state head", "project head", "coordinator", "approver", "admin"].includes((editRole || "").toLowerCase().trim())) && (
+                  <div className="mt-4">
+                    <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                      <Zap size={14} className={editCanBulkApprove ? "text-emerald-600" : "text-slate-400"} />
+                      <span>Bulk Approval Permission Governance</span>
+                    </label>
 
-                  <div className={`p-3 rounded-none border transition-all flex flex-wrap items-center justify-between gap-3 ${
-                    editCanBulkApprove
-                      ? "bg-emerald-50/90 border-emerald-400 shadow-2xs"
-                      : "bg-rose-50/90 border-rose-300 shadow-2xs"
-                  }`}>
-                    <div className="flex-1 min-w-[200px]">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className={`text-xs font-black uppercase tracking-wide px-2 py-0.5 rounded-none font-mono ${
-                          editCanBulkApprove
-                            ? "bg-emerald-600 text-white"
-                            : "bg-rose-600 text-white"
-                        }`}>
-                          {editCanBulkApprove ? "⚡ ENABLED — BULK ACCESS GRANTED" : "🔒 DISABLED — INDIVIDUAL ONLY"}
+                    <div className={`p-3 rounded-none border transition-all flex flex-wrap items-center justify-between gap-3 ${
+                      editCanBulkApprove
+                        ? "bg-emerald-50/90 border-emerald-400 shadow-2xs"
+                        : "bg-rose-50/90 border-rose-300 shadow-2xs"
+                    }`}>
+                      <div className="flex-1 min-w-[200px]">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className={`text-xs font-black uppercase tracking-wide px-2 py-0.5 rounded-none font-mono ${
+                            editCanBulkApprove
+                              ? "bg-emerald-600 text-white"
+                              : "bg-rose-600 text-white"
+                          }`}>
+                            {editCanBulkApprove ? "⚡ ENABLED — BULK ACCESS GRANTED" : "🔒 DISABLED — INDIVIDUAL ONLY"}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-bold text-slate-800 mt-1">
+                          {editCanBulkApprove
+                            ? "User HAS permission to select multiple claims and bulk approve/reject in 1-click."
+                            : "User DOES NOT have bulk approval rights. Access is restricted to single claim review only."}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-none border border-slate-300 shadow-2xs">
+                        <span className={`text-xs font-black ${editCanBulkApprove ? "text-emerald-700" : "text-rose-700"}`}>
+                          {editCanBulkApprove ? "ON (Granted)" : "OFF (Revoked)"}
                         </span>
+                        <Switch
+                          checked={editCanBulkApprove}
+                          onChange={(checked: boolean) => setEditCanBulkApprove(checked)}
+                          checkedChildren="ON"
+                          unCheckedChildren="OFF"
+                          style={{ backgroundColor: editCanBulkApprove ? "#10b981" : "#ef4444" }}
+                        />
                       </div>
-                      <div className="text-[11px] font-bold text-slate-800 mt-1">
-                        {editCanBulkApprove
-                          ? "User HAS permission to select multiple claims and bulk approve/reject in 1-click."
-                          : "User DOES NOT have bulk approval rights. Access is restricted to single claim review only."}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-none border border-slate-300 shadow-2xs">
-                      <span className={`text-xs font-black ${editCanBulkApprove ? "text-emerald-700" : "text-rose-700"}`}>
-                        {editCanBulkApprove ? "ON (Granted)" : "OFF (Revoked)"}
-                      </span>
-                      <Switch
-                        checked={editCanBulkApprove}
-                        onChange={(checked: boolean) => setEditCanBulkApprove(checked)}
-                        checkedChildren="ON"
-                        unCheckedChildren="OFF"
-                        style={{ backgroundColor: editCanBulkApprove ? "#10b981" : "#ef4444" }}
-                      />
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
