@@ -319,7 +319,46 @@ export function computeBaseLocPolicy(baseReportingLocation, itineraries) {
     isDaAllowed = true;
   }
 
-  return { isBaseLocOnly: true, isDaAllowed, baseLocations };
+  // ── Determine exact Policy Case (1 to 5) ───────────────────────────────────
+  let policyCase = 2;
+  let policyRuleName = "Case 2: Base Location Duty";
+
+  if (!hasVisitedBase) {
+    policyCase = 3;
+    policyRuleName = "Case 3: Direct Outstation / Other Facility Duty (Base untouched)";
+  } else if (visitedNonBase) {
+    let firstBaseIdx = -1;
+    let firstNonBaseIdx = -1;
+    for (let i = 0; i < itineraries.length; i++) {
+      const leg = itineraries[i];
+      const f = leg.from || "";
+      const t = leg.to || "";
+      if (firstBaseIdx === -1 && (matchesBase(f, baseLocations) || matchesBase(t, baseLocations))) {
+        firstBaseIdx = i;
+      }
+      if (firstNonBaseIdx === -1 && (isOfficialNonBaseFacility(f, leg) || isOfficialNonBaseFacility(t, leg))) {
+        firstNonBaseIdx = i;
+      }
+    }
+    if (firstBaseIdx <= firstNonBaseIdx) {
+      policyCase = 4;
+      policyRuleName = "Case 4: Home → Base → Other Facility → Home";
+    } else {
+      policyCase = 5;
+      policyRuleName = "Case 5: Home → Other Facility → Base → Home";
+    }
+  } else {
+    const allCommute = itineraries.length > 0 && itineraries.every((leg, idx) => checkIsCommuteLeg(leg, baseLocations, idx, itineraries.length));
+    if (allCommute) {
+      policyCase = 1;
+      policyRuleName = "Case 1: Home ↔ Base Location Commute Only";
+    } else {
+      policyCase = 2;
+      policyRuleName = "Case 2: Home → Base → Local Errands → Home";
+    }
+  }
+
+  return { isBaseLocOnly: true, isDaAllowed, baseLocations, policyCase, policyRuleName };
 }
 
 /**
@@ -361,7 +400,7 @@ export function checkIsCommuteLeg(leg, baseLocations, index, totalLegs) {
 /**
  * Builds a human-readable system policy comment for deduction_reason.
  */
-export function buildPolicyComment(baseLocations, itineraries, isDaAllowed, date) {
+export function buildPolicyComment(baseLocations, itineraries, isDaAllowed, date, policyCase = null, policyRuleName = null) {
   const baseLabel = baseLocations.map(b => b.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")).join(", ");
   const commutedLegs = itineraries.filter((leg, idx) => checkIsCommuteLeg(leg, baseLocations, idx, itineraries.length));
   const taDeducted = commutedLegs.reduce((s, leg) => s + parseFloat(leg.amount || "0") + parseFloat(leg.sub_amount || "0"), 0);
@@ -372,7 +411,8 @@ export function buildPolicyComment(baseLocations, itineraries, isDaAllowed, date
   if (daDeducted > 0) parts.push(`DA ₹${daDeducted.toFixed(0)} not applicable at base location`);
   if (parts.length === 0) return "";
 
-  return `[Policy] Base: ${baseLabel} — ${parts.join("; ")}. Applied: ${date}.`;
+  const casePrefix = policyCase ? `[Case ${policyCase}${policyRuleName ? `: ${policyRuleName}` : ''}] ` : "";
+  return `[Policy] ${casePrefix}Base: ${baseLabel} — ${parts.join("; ")}. Applied: ${date}.`;
 }
 
 export async function getAssetCostsMap(env) {
@@ -2140,6 +2180,8 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     category: expense.travel_mode,
     date: expense.itinerary,
     purpose: expense.description || "",
+    policy_case: expense.policy_case || null,
+    policy_rule_name: expense.policy_rule_name || null,
     ai_analysis: expense.ai_analysis || null,
     is_anomaly: expense.is_anomaly || 0,
     original_amount: parseFloat(expense.original_amount || expense.amount || 0.0),
@@ -2542,7 +2584,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   // ── Backend safety net: re-run base-loc policy to catch any frontend miss ──
   // Frontend should have zeroed these, but backend verifies and corrects if not.
-  const { isBaseLocOnly, isDaAllowed, baseLocations } = computeBaseLocPolicy(
+  const { isBaseLocOnly, isDaAllowed, baseLocations, policyCase, policyRuleName } = computeBaseLocPolicy(
     user.base_reporting_location || "",
     itineraries
   );
@@ -2950,7 +2992,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
             da_amount = ?, hotel_amount = ?, other_expense_amount = ?, calls_assigned = ?, calls_completed = ?, 
             pms_count = ?, asset_tagging = ?, local_purchase_amount = ?, original_amount = ?, original_da_amount = ?, 
             original_hotel_amount = ?, original_other_expense_amount = ?, original_local_purchase_amount = ?, 
-            calibration_count = ?, mobilise_count = ?, updated_at = ?, district_type = ?
+            calibration_count = ?, mobilise_count = ?, updated_at = ?, district_type = ?,
+            policy_case = ?, policy_rule_name = ?
         WHERE id = ?
       `,
       params: [
@@ -2958,7 +3001,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
         totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
         totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
-        timestamp, submittedDistrictType, newExpId
+        timestamp, submittedDistrictType, policyCase, policyRuleName, newExpId
       ]
     });
   } else {
@@ -2969,16 +3012,16 @@ export async function handleSubmitExpense(request, env, params, query, user) {
           da_amount, hotel_amount, other_expense_amount, calls_assigned, calls_completed, pms_count, 
           asset_tagging, local_purchase_amount, original_amount, original_da_amount, original_hotel_amount, 
           original_other_expense_amount, original_local_purchase_amount, calibration_count, mobilise_count, 
-          created_at, updated_at, district_type
+          created_at, updated_at, district_type, policy_case, policy_rule_name
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
         user.id, claim_month, claim_year, amount, status, majorMode, date, firstPurpose, expenseCode,
         totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
         totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
         totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
-        timestamp, timestamp, submittedDistrictType
+        timestamp, timestamp, submittedDistrictType, policyCase, policyRuleName
       ]
     });
   }
@@ -3201,6 +3244,38 @@ export async function handleSubmitExpense(request, env, params, query, user) {
           taDeducted,
           daDeducted
         });
+      }
+    }
+  }
+
+  // Record structured deduction audit trail in expense_deductions table
+  if (env.DB && deductionItems.length > 0) {
+    for (const item of deductionItems) {
+      if (item.taDeducted > 0) {
+        runWrite(env, `
+          INSERT INTO expense_deductions (
+            expense_id, expense_code, user_id, rule_case, rule_name, category,
+            original_amt, deducted_amt, approved_amt, reason, applied_by, itinerary_id, leg_number, created_at
+          ) VALUES (?, ?, ?, ?, ?, 'TA', ?, ?, 0.0, ?, 'system', ?, ?, ?)
+        `, [
+          newExpId, expenseCode, user.user_id, policyCase, policyRuleName,
+          item.taDeducted, item.taDeducted,
+          `Commute TA not eligible under ${policyRuleName}`,
+          `${expenseCode}-${item.leg}`, item.leg, timestamp
+        ]).catch(err => console.error("Error saving TA deduction audit:", err.message));
+      }
+      if (item.daDeducted > 0) {
+        runWrite(env, `
+          INSERT INTO expense_deductions (
+            expense_id, expense_code, user_id, rule_case, rule_name, category,
+            original_amt, deducted_amt, approved_amt, reason, applied_by, itinerary_id, leg_number, created_at
+          ) VALUES (?, ?, ?, ?, ?, 'DA', ?, ?, 0.0, ?, 'system', ?, ?, ?)
+        `, [
+          newExpId, expenseCode, user.user_id, policyCase, policyRuleName,
+          item.daDeducted, item.daDeducted,
+          `Daily Allowance not applicable at base location under ${policyRuleName}`,
+          `${expenseCode}-${item.leg}`, item.leg, timestamp
+        ]).catch(err => console.error("Error saving DA deduction audit:", err.message));
       }
     }
   }
