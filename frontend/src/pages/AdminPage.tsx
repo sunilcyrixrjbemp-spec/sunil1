@@ -1436,20 +1436,28 @@ export default function AdminPage() {
     <>
       <div className="space-y-4 text-[#212529] animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 max-w-[1600px] mx-auto min-h-screen font-sans">
         
-        {/* Enterprise Header Banner */}
-        <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
-              <ControlOutlined className="text-base" />
+        {/* Enterprise Modern Header Banner */}
+        <div className="bg-gradient-to-r from-[#1e3a8a] via-[#2563eb] to-[#0ea5e9] text-white p-4 sm:p-5 rounded-2xl shadow-md flex flex-wrap items-center justify-between gap-4 border border-blue-400/20">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 shadow-inner">
+              <ControlOutlined className="text-xl" />
             </div>
             <div>
-              <h1 className="text-sm font-extrabold text-slate-900 leading-none">ADMIN GOVERNANCE CENTER</h1>
-              <p className="text-[10px] text-slate-500 mt-0.5">Enterprise user profiles, multi-level hierarchy routing, and system parameters.</p>
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black tracking-wide text-white m-0 uppercase">ADMIN GOVERNANCE CENTER</h1>
+                <span className="text-[10px] font-extrabold bg-white/20 text-white px-2 py-0.5 rounded-full uppercase tracking-wider backdrop-blur-xs hidden sm:inline-block">
+                  Live D1 Cluster
+                </span>
+              </div>
+              <p className="text-xs text-blue-100/90 m-0 mt-0.5 font-medium">
+                Enterprise user profiles, multi-level hierarchy routing, and system parameters.
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-none border border-emerald-200 font-mono flex items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 animate-pulse" /> Cloudflare D1 Synced
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="text-[11px] font-bold text-emerald-300 bg-emerald-950/40 px-3 py-1.2 rounded-xl border border-emerald-400/30 font-mono flex items-center gap-1.5 backdrop-blur-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" /> D1 Database Synced
             </span>
             <button
               type="button"
@@ -1457,7 +1465,7 @@ export default function AdminPage() {
                 fetchInitialData();
                 toast.success("Refreshed Governance Data!");
               }}
-              className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none px-3.5 py-1 border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+              className="bg-white/20 hover:bg-white/30 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl px-4 py-1.5 border border-white/20 cursor-pointer shadow-2xs flex items-center gap-2 transition-all active:scale-95 backdrop-blur-md"
             >
               <ReloadOutlined className="text-white text-xs" />
               <span>Sync Data</span>
@@ -1466,91 +1474,91 @@ export default function AdminPage() {
         </div>
 
         {/* 6 Executive Summary Metric Column Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
           
           {/* Card 1: Total Users */}
-          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-            <div className="w-9 h-9 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0 font-bold">
-              <UserOutlined />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3 flex items-center gap-3 shadow-2xs hover:shadow-md transition-all">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
+              <UserOutlined className="text-sm sm:text-base" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Users</span>
-              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{users.length}</span>
-              <span className="text-[9px] text-emerald-700 font-bold uppercase block mt-0.5">Active: {users.filter(u => u.user_status === 'active' || !u.user_status).length}</span>
+              <span className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Total Users</span>
+              <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 block mt-1 leading-none">{users.length}</span>
+              <span className="text-[8px] sm:text-[8.5px] text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold uppercase block mt-1 px-1.5 py-0.2 rounded w-fit truncate">Active: {users.filter(u => u.user_status === 'active' || !u.user_status).length}</span>
             </div>
           </div>
 
           {/* Card 2: Field Engineers */}
-          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-            <div className="w-9 h-9 rounded-none bg-emerald-600 flex items-center justify-center text-white shrink-0 font-bold">
-              <TeamOutlined />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3 flex items-center gap-3 shadow-2xs hover:shadow-md transition-all">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
+              <TeamOutlined className="text-sm sm:text-base" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Engineers</span>
-              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{users.filter(u => u.role?.toLowerCase().includes('engineer')).length}</span>
-              <span className="text-[9px] text-emerald-700 font-bold uppercase block mt-0.5">Deployed</span>
+              <span className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Engineers</span>
+              <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 block mt-1 leading-none">{users.filter(u => u.role?.toLowerCase().includes('engineer')).length}</span>
+              <span className="text-[8px] sm:text-[8.5px] text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold uppercase block mt-1 px-1.5 py-0.2 rounded w-fit truncate">Deployed</span>
             </div>
           </div>
 
           {/* Card 3: Managers & ZMs */}
-          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-            <div className="w-9 h-9 rounded-none bg-cyan-600 flex items-center justify-center text-white shrink-0 font-bold">
-              <ControlOutlined />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3 flex items-center gap-3 shadow-2xs hover:shadow-md transition-all">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
+              <ControlOutlined className="text-sm sm:text-base" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Managers</span>
-              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{users.filter(u => u.role?.toLowerCase().includes('manager')).length}</span>
-              <span className="text-[9px] text-cyan-700 font-bold uppercase block mt-0.5">Approval L2/L3</span>
+              <span className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Managers</span>
+              <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 block mt-1 leading-none">{users.filter(u => u.role?.toLowerCase().includes('manager')).length}</span>
+              <span className="text-[8px] sm:text-[8.5px] text-cyan-700 bg-cyan-50 border border-cyan-200 font-bold uppercase block mt-1 px-1.5 py-0.2 rounded w-fit truncate">Approval L2/L3</span>
             </div>
           </div>
 
           {/* Card 4: Admins & MIS */}
-          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-            <div className="w-9 h-9 rounded-none bg-amber-600 flex items-center justify-center text-white shrink-0 font-bold">
-              <LockOutlined />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3 flex items-center gap-3 shadow-2xs hover:shadow-md transition-all">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
+              <LockOutlined className="text-sm sm:text-base" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Admins / MIS</span>
-              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{users.filter(u => u.role?.toLowerCase().includes('admin') || u.role?.toLowerCase().includes('mis')).length}</span>
-              <span className="text-[9px] text-amber-700 font-bold uppercase block mt-0.5">Full Access</span>
+              <span className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Admins / MIS</span>
+              <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 block mt-1 leading-none">{users.filter(u => u.role?.toLowerCase().includes('admin') || u.role?.toLowerCase().includes('mis')).length}</span>
+              <span className="text-[8px] sm:text-[8.5px] text-amber-700 bg-amber-50 border border-amber-200 font-bold uppercase block mt-1 px-1.5 py-0.2 rounded w-fit truncate">Full Access</span>
             </div>
           </div>
 
           {/* Card 5: Hierarchy Rules */}
-          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-            <div className="w-9 h-9 rounded-none bg-rose-600 flex items-center justify-center text-white shrink-0 font-bold">
-              <SafetyCertificateOutlined />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3 flex items-center gap-3 shadow-2xs hover:shadow-md transition-all">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
+              <SafetyCertificateOutlined className="text-sm sm:text-base" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Hierarchy</span>
-              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{hierarchies.length}</span>
-              <span className="text-[9px] text-rose-700 font-bold uppercase block mt-0.5">Mapped Rules</span>
+              <span className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Hierarchy</span>
+              <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 block mt-1 leading-none">{hierarchies.length}</span>
+              <span className="text-[8px] sm:text-[8.5px] text-rose-700 bg-rose-50 border border-rose-200 font-bold uppercase block mt-1 px-1.5 py-0.2 rounded w-fit truncate">Mapped Rules</span>
             </div>
           </div>
 
           {/* Card 6: Screen Security */}
-          <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-            <div className="w-9 h-9 rounded-none bg-blue-600 flex items-center justify-center text-white shrink-0 font-bold">
-              <DatabaseOutlined />
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-3 flex items-center gap-3 shadow-2xs hover:shadow-md transition-all">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
+              <DatabaseOutlined className="text-sm sm:text-base" />
             </div>
             <div className="min-w-0 flex-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Windows</span>
-              <span className="text-sm font-black text-slate-900 font-mono block mt-1">{ALL_WINDOWS.length}</span>
-              <span className="text-[9px] text-blue-700 font-bold uppercase block mt-0.5">D1 Matrix</span>
+              <span className="text-[8.5px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Windows</span>
+              <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 block mt-1 leading-none">{ALL_WINDOWS.length}</span>
+              <span className="text-[8px] sm:text-[8.5px] text-indigo-700 bg-indigo-50 border border-indigo-200 font-bold uppercase block mt-1 px-1.5 py-0.2 rounded w-fit truncate">D1 Matrix</span>
             </div>
           </div>
 
         </div>
 
-        {/* Enterprise Sharp Tab Switcher Bar */}
-        <div className="bg-white border border-slate-300 rounded-none p-1.5 shadow-2xs flex flex-wrap gap-1">
+        {/* Enterprise Modern Segmented Tab Switcher Bar */}
+        <div className="bg-slate-200/70 p-1.5 rounded-2xl flex flex-wrap sm:flex-nowrap gap-1.5 border border-slate-300/60 shadow-inner">
           <button
             type="button"
             onClick={() => handleTabChange("users")}
-            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2 px-3 text-xs font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-xl flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === "users"
-                ? "bg-[#4A6A8A] text-white shadow-2xs"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                ? "bg-white text-[#1e3a8a] shadow-sm scale-[1.01]"
+                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
             <TeamOutlined className="text-sm" />
@@ -1560,10 +1568,10 @@ export default function AdminPage() {
           <button
             type="button"
             onClick={() => handleTabChange("approvals")}
-            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2 px-3 text-xs font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-xl flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === "approvals"
-                ? "bg-[#4A6A8A] text-white shadow-2xs"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                ? "bg-white text-[#1e3a8a] shadow-sm scale-[1.01]"
+                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
             <SafetyCertificateOutlined className="text-sm" />
@@ -1573,10 +1581,10 @@ export default function AdminPage() {
           <button
             type="button"
             onClick={() => handleTabChange("analytics")}
-            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2 px-3 text-xs font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-xl flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === "analytics"
-                ? "bg-[#4A6A8A] text-white shadow-2xs"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                ? "bg-white text-[#1e3a8a] shadow-sm scale-[1.01]"
+                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
             <BarChartOutlined className="text-sm" />
@@ -1586,10 +1594,10 @@ export default function AdminPage() {
           <button
             type="button"
             onClick={() => handleTabChange("settings")}
-            className={`flex-1 py-1.5 px-3 text-xs font-extrabold uppercase tracking-wider border-0 cursor-pointer transition-colors rounded-none flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2 px-3 text-xs font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-xl flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === "settings"
-                ? "bg-[#4A6A8A] text-white shadow-2xs"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                ? "bg-white text-[#1e3a8a] shadow-sm scale-[1.01]"
+                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
             }`}
           >
             <SettingOutlined className="text-sm" />
