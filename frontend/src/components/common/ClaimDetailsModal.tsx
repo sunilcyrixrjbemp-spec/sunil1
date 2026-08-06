@@ -40,7 +40,12 @@ const isValidText = (val: any): boolean => {
 export const formatImageUrl = (url: any): string => {
   if (!url) return "";
   let str = String(url).trim();
-  if (!str) return "";
+  if (!str || str === "null" || str === "undefined" || str === "—" || str === "no_photo") return "";
+
+  // Reject plain numeric barcodes or short identifiers (e.g. 67027306)
+  if (/^\d{4,16}$/.test(str)) {
+    return "";
+  }
 
   // 1. Google Drive direct stream & R2 auto-transfer proxy
   if (str.includes("drive.google.com") || str.includes("docs.google.com")) {
@@ -53,7 +58,7 @@ export const formatImageUrl = (url: any): string => {
   }
 
   // 2. Raw Google Drive File ID (25-50 chars)
-  if (/^[a-zA-Z0-9_-]{25,50}$/.test(str)) {
+  if (/^[a-zA-Z0-9_-]{25,50}$/.test(str) && !str.startsWith("http")) {
     return `${API_BASE}/api/r2/gdrive-proxy?id=${str}`;
   }
 
@@ -62,9 +67,13 @@ export const formatImageUrl = (url: any): string => {
     return str;
   }
 
-  // 4. Relative paths -> prepend API_BASE
-  const cleanPath = str.startsWith("/") ? str : `/${str}`;
-  return `${API_BASE}${cleanPath}`;
+  // 4. Relative paths -> prepend API_BASE only if valid upload/api path or has image extension
+  if (str.startsWith("/") || str.includes("uploads") || str.includes("api") || /\.(jpg|jpeg|png|webp|gif|pdf|avif)$/i.test(str)) {
+    const cleanPath = str.startsWith("/") ? str : `/${str}`;
+    return `${API_BASE}${cleanPath}`;
+  }
+
+  return "";
 };
 
 const getAttachmentsArray = (attachments: any): any[] => {

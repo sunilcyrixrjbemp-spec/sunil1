@@ -234,6 +234,11 @@ export default function ApprovalPage() {
 
     // IMMEDIATELY set image URL synchronously for 0ms instant display!
     const formattedUrl = formatImageUrl(lightboxImage);
+    if (!formattedUrl) {
+      setImageLoadError(true);
+      setDisplayImageUrl(null);
+      return;
+    }
     setDisplayImageUrl(formattedUrl);
 
     const isPdfUrl = formattedUrl.toLowerCase().includes(".pdf") || 
@@ -1706,23 +1711,25 @@ export default function ApprovalPage() {
                   />
                 </div>
               ) : imageLoadError ? (
-                <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 border border-slate-300 max-w-md my-2">
+                <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 border border-slate-300 max-w-md my-2 rounded-lg">
                   <span className="text-amber-500 text-3xl font-bold mb-2">⚠️</span>
-                  <p className="text-sm font-bold text-slate-800 mb-1">Image Preview Unavailable</p>
-                  <p className="text-xs text-slate-500 mb-4">Click below to open or download the attachment file directly.</p>
-                  <a
-                    href={displayImageUrl || lightboxImage}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white rounded-none text-xs font-bold no-underline"
-                  >
-                    Open File in New Tab ↗
-                  </a>
+                  <p className="text-sm font-bold text-slate-800 mb-1">Attachment Photo Unavailable</p>
+                  <p className="text-xs text-slate-500 mb-4">No photo was uploaded during submission or the file is no longer available on server.</p>
+                  {(displayImageUrl || lightboxImage) && (displayImageUrl || lightboxImage).startsWith("http") && (
+                    <a
+                      href={displayImageUrl || lightboxImage}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white rounded text-xs font-bold no-underline"
+                    >
+                      Try Open File in New Tab ↗
+                    </a>
+                  )}
                 </div>
               ) : (
                 <img 
                   src={displayImageUrl || lightboxImage} 
-                  alt="Receipt Invoice Lightbox" 
+                  alt="" 
                   style={{ 
                     width: lbZoom > 1 ? `${Math.round(lbZoom * 100)}%` : "auto",
                     maxWidth: lbZoom === 1 ? "85vw" : "none",
