@@ -2075,24 +2075,24 @@ export default function AdminPage() {
         </div>
       ) : activeTab === "approvals" ? (
         /* ================= ROLE MAPPINGS TAB ================= */
-        <div className="space-y-4">
-          <div className="flex flex-wrap justify-between items-center bg-white border border-slate-300 rounded-none p-3 shadow-2xs gap-3">
+        <div className="space-y-3">
+          <div className="flex flex-wrap justify-between items-center bg-white border border-slate-200/90 rounded-xl p-2.5 sm:p-3 shadow-2xs gap-2">
             <div>
-              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider leading-none">Team Hierarchy Mappings</h3>
-              <p className="text-slate-500 text-[10px] mt-1 font-bold">Add approval groups with named requesters and level-by-level approvers flow.</p>
+              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider leading-none m-0">Team Hierarchy Mappings</h3>
+              <p className="text-slate-500 text-[10px] mt-0.5 font-semibold leading-none">Add approval groups with named requesters and level-by-level approvers flow.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               <button
                 onClick={handleExportHierarchies}
-                className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors flex items-center gap-1.5"
+                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-extrabold uppercase tracking-wider rounded-lg border border-slate-200 cursor-pointer transition-all flex items-center gap-1 h-7"
                 title="Export all team hierarchies to CSV"
               >
-                <Download className="w-3.5 h-3.5 text-[#4A6A8A]" />
+                <Download className="w-3 h-3 text-[#4A6A8A]" />
                 Export CSV
               </button>
               <button
                 onClick={() => handleOpenHierarchyModal()}
-                className="px-3 py-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white text-xs font-extrabold uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors"
+                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs transition-all flex items-center gap-1 h-7"
               >
                 + Create Team
               </button>
@@ -2100,91 +2100,75 @@ export default function AdminPage() {
           </div>
 
           {safeHierarchies.length === 0 ? (
-            <div className="bg-white border border-slate-300 rounded-none p-8 text-center text-xs uppercase tracking-wider text-slate-500 font-extrabold shadow-2xs">
-              No team hierarchy configurations created. Click "Create Team" to define one.
+            <div className="bg-white border border-slate-200/90 rounded-xl p-6 text-center text-xs uppercase tracking-wider text-slate-400 font-extrabold shadow-2xs">
+              No team hierarchy configurations created. Click "+ Create Team" to define one.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-2.5">
               {safeHierarchies.map((hq) => (
-                <div key={hq.id} className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden flex flex-col justify-between">
-                  <div className="p-3 space-y-3">
-                    
-                    {/* Card Header */}
-                    <div className="flex justify-between items-start gap-4 border-b border-slate-200 pb-2">
-                      <div>
-                        <h4 className="font-extrabold text-slate-900 text-sm m-0 uppercase tracking-wide">{hq.name}</h4>
-                        <span className="text-[10px] text-[#4A6A8A] font-extrabold uppercase tracking-wider block mt-0.5 font-mono">
-                          {hq.approvers.length} Levels Approval Sequence
-                        </span>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <button
-                          onClick={() => handleOpenHierarchyModal(hq)}
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 rounded-none transition-all cursor-pointer"
-                          title="Edit Mappings"
-                        >
-                          <Pencil className="w-3.5 h-3.5 text-[#4A6A8A]" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteHierarchy(hq.id)}
-                          className="p-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 rounded-none transition-all cursor-pointer"
-                          title="Delete Team"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                <div key={hq.id} className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-2xs hover:shadow-sm transition-all space-y-2">
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-1.5">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-black text-slate-900 text-xs sm:text-sm m-0 uppercase tracking-wide">{hq.name}</h4>
+                      <span className="text-[9.5px] text-blue-700 bg-blue-50 px-2 py-0.2 rounded-full font-bold font-mono border border-blue-200">
+                        {hq.approvers.length} Levels Approval Sequence
+                      </span>
                     </div>
-
-                    {/* Requesters Box */}
-                    <div className="space-y-1">
-                      <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Mapped Requesters ({hq.requesters.length})</span>
-                      <div className="flex flex-nowrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-none overflow-x-auto whitespace-nowrap scrollbar-thin">
-                        {hq.requesters.length === 0 ? (
-                          <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">No employees mapped</span>
-                        ) : (
-                          hq.requesters.map((r) => (
-                            <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded-none bg-slate-200 text-slate-800 text-[10px] font-bold border border-slate-300 font-mono shrink-0">
-                              {r.user_name} ({r.user_code})
-                            </span>
-                          ))
-                        )}
-                      </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenHierarchyModal(hq)}
+                        className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+                        title="Edit Mappings"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteHierarchy(hq.id)}
+                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+                        title="Delete Team"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-
-                    {/* Approvers Pipeline - Enterprise Flow */}
-                    <div className="space-y-1.5 pt-2 border-t border-slate-200">
-                      <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Approval Sequence ({hq.approvers.length} Levels)</span>
-                      <div className="flex flex-wrap md:flex-nowrap items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-none overflow-x-auto scrollbar-thin">
-                        {hq.approvers.length === 0 ? (
-                          <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">No approvers mapped</span>
-                        ) : (
-                          hq.approvers.map((a, idx) => (
-                            <React.Fragment key={a.id}>
-                              {idx > 0 && (
-                                <div className="hidden md:flex items-center text-slate-400 font-extrabold px-1 text-xs shrink-0 select-none font-mono">
-                                  →
-                                </div>
-                              )}
-                              <div className="flex items-center gap-2.5 bg-white border border-slate-300 rounded-none p-2 shadow-2xs shrink-0 border-l-4 border-l-[#4A6A8A] min-w-[190px]">
-                                <span className="h-6 w-6 rounded-none bg-[#4A6A8A] text-white flex items-center justify-center text-xs font-mono font-extrabold">
-                                  L{a.level_number}
-                                </span>
-                                <div className="space-y-0.5">
-                                  <div className="text-xs font-extrabold text-slate-900 leading-tight">
-                                    {a.approver_name}
-                                  </div>
-                                  <div className="text-[9px] text-slate-500 font-bold uppercase tracking-wider leading-none">
-                                    {a.approver_role} <span className="font-mono text-[#4A6A8A]">({a.approver_code})</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </React.Fragment>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
                   </div>
+
+                  {/* Requesters Box */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Mapped Requesters ({hq.requesters.length}):</span>
+                    {hq.requesters.length === 0 ? (
+                      <span className="text-[10px] text-slate-400 font-semibold italic">No employees mapped</span>
+                    ) : (
+                      hq.requesters.map((r) => (
+                        <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-extrabold font-mono border border-slate-200/90">
+                          {r.user_name} <span className="text-slate-400 ml-1">({r.user_code})</span>
+                        </span>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Approvers Pipeline Flow */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1.5 border-t border-slate-100">
+                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Approval Sequence:</span>
+                    {hq.approvers.length === 0 ? (
+                      <span className="text-[10px] text-slate-400 font-semibold italic">No approvers mapped</span>
+                    ) : (
+                      hq.approvers.map((a, idx) => (
+                        <React.Fragment key={a.id}>
+                          {idx > 0 && <span className="text-slate-300 font-bold px-0.5 select-none font-mono">→</span>}
+                          <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-lg px-2 py-0.5 shadow-2xs">
+                            <span className="h-4.5 px-1.5 rounded bg-blue-600 text-white flex items-center justify-center text-[9.5px] font-mono font-black">
+                              L{a.level_number}
+                            </span>
+                            <div className="text-[11px] font-extrabold text-slate-800 leading-none">
+                              {a.approver_name} <span className="text-[9.5px] text-slate-500 font-normal">({a.approver_code})</span>
+                            </div>
+                          </div>
+                        </React.Fragment>
+                      ))
+                    )}
+                  </div>
+
                 </div>
               ))}
             </div>
@@ -2193,29 +2177,29 @@ export default function AdminPage() {
       ) : (
         /* ================= SYSTEM SETTINGS TAB ================= */
         <div className="space-y-4 animate-fadeIn max-w-5xl">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xs p-4">
-            <div className="border-b border-slate-300 pb-3 mb-4 flex items-center justify-between">
+          <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs p-3.5 space-y-3">
+            <div className="border-b border-slate-200 pb-2.5 flex items-center justify-between">
               <div>
-                <h2 className="text-xs font-extrabold text-slate-900 m-0 uppercase tracking-wider flex items-center gap-2 font-mono">
-                  <ControlOutlined className="text-[#4A6A8A]" /> Global System Settings &amp; Policies
+                <h2 className="text-xs font-black text-slate-900 m-0 uppercase tracking-wider flex items-center gap-2 font-mono">
+                  <ControlOutlined className="text-blue-600" /> Global System Settings &amp; Policies
                 </h2>
-                <p className="text-slate-500 text-[10px] mt-0.5 font-bold">
+                <p className="text-slate-500 text-[10px] mt-0.5 font-semibold leading-none">
                   Configure global expense submission windows, monthly cutoff dates, auto-approval rules, and grade allowance rates.
                 </p>
               </div>
             </div>
 
-            <form onSubmit={handleSaveSettings} className="space-y-4">
+            <form onSubmit={handleSaveSettings} className="space-y-3">
               
               {/* Section 1: Expense Submission Policies */}
-              <div className="bg-slate-50 p-3 rounded-none border border-slate-300 space-y-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-[#4A6A8A] block border-b border-slate-300 pb-1.5 font-mono">
+              <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/90 space-y-2">
+                <span className="text-xs font-black uppercase tracking-wider text-blue-700 block border-b border-slate-200 pb-1 font-mono leading-none">
                   1. Expense Submission Window &amp; Cutoff Policies
                 </span>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                       Allowed Past Days Submission Window *
                     </label>
                     <input
@@ -2224,16 +2208,16 @@ export default function AdminPage() {
                       required
                       value={settings.max_past_days_limit || "15"}
                       onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
+                      className="w-full px-2.5 py-1 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5"
                       placeholder="e.g. 15"
                     />
-                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
-                      Number of past calendar days (from today) allowed for engineers to log claims. Older days are locked.
+                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
+                      Past calendar days allowed for engineers to log claims.
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                       Monthly Cutoff Day (of next month) *
                     </label>
                     <input
@@ -2243,25 +2227,25 @@ export default function AdminPage() {
                       required
                       value={settings.monthly_cutoff_day || "3"}
                       onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
+                      className="w-full px-2.5 py-1 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5"
                       placeholder="e.g. 3"
                     />
-                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
-                      Day of the month after which previous month claims are blocked (e.g. set 3 to block on the 4th).
+                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
+                      Day of month after which previous month claims are blocked.
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Section 2: Auto-Expiry & Approval System Rules */}
-              <div className="bg-slate-50 p-3 rounded-none border border-slate-300 space-y-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-[#4A6A8A] block border-b border-slate-300 pb-1.5 font-mono">
+              <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/90 space-y-2">
+                <span className="text-xs font-black uppercase tracking-wider text-blue-700 block border-b border-slate-200 pb-1 font-mono leading-none">
                   2. Auto-Approval / Expiry Rules &amp; Routing Levels
                 </span>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                       Pending Days Threshold *
                     </label>
                     <input
@@ -2270,65 +2254,65 @@ export default function AdminPage() {
                       required
                       value={settings.pending_auto_expiry_days || "5"}
                       onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
+                      className="w-full px-2.5 py-1 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5"
                       placeholder="e.g. 5"
                     />
-                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
-                      Days a claim can stay pending at any level before system auto-action triggers (0 to disable).
+                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
+                      Days pending before system auto-action triggers (0 = disabled).
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                       Auto-Expiry Action Type *
                     </label>
                     <select
                       value={settings.pending_auto_action || "approve"}
                       onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
+                      className="w-full px-2 py-1 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5 cursor-pointer"
                     >
                       <option value="approve">⚡ Auto Approve Current Level</option>
                       <option value="reject">❌ Auto Reject Claim</option>
                       <option value="disabled">🚫 Disabled (Manual Action Only)</option>
                     </select>
-                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
+                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
                       System behavior when threshold days are reached without manager action.
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                       Auto-Approve Target Routing Level
                     </label>
                     <select
                       value={settings.auto_approve_target_level || "next_level"}
                       onChange={(e) => setSettings({ ...settings, auto_approve_target_level: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
+                      className="w-full px-2 py-1 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5 cursor-pointer"
                     >
                       <option value="next_level">⏩ Forward to Next Manager Level (L1 → L2)</option>
                       <option value="l1_only">1️⃣ Auto-Approve L1 Only</option>
                       <option value="full_final">✅ Complete Final Auto-Approval (All Levels)</option>
                     </select>
-                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
-                      When auto-approved, specifies which level the claim automatically routes to.
+                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
+                      Target destination level when auto-approved.
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
                       Rejection Fallback Routing Level
                     </label>
                     <select
                       value={settings.rejection_fallback_level || "creator"}
                       onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
-                      className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
+                      className="w-full px-2 py-1 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5 cursor-pointer"
                     >
                       <option value="creator">↩️ Return to Submitter / Drafts (For Edit &amp; Re-submit)</option>
                       <option value="previous_level">◀️ Return to Previous Manager Level</option>
                       <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
                     </select>
-                    <span className="text-[10px] text-slate-400 font-medium mt-1 block">
-                      Target destination when a claim is rejected (both manual and auto-rejections).
+                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
+                      Target destination when a claim is rejected.
                     </span>
                   </div>
                 </div>
@@ -2527,17 +2511,19 @@ export default function AdminPage() {
           </div>
 
           {/* Override Rejected Claims Panel */}
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xs p-4 space-y-4">
-            <div className="border-b border-slate-300 pb-2">
-              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider m-0 flex items-center gap-2 font-mono">
-                <span className="text-rose-600">↩</span> Override / Re-submit Rejected Claims
-              </h3>
-              <p className="text-slate-500 text-[10px] mt-0.5 font-bold">
-                Search and override rejected claims to reset their status to 'Submitted' and re-initialize approval routing from L1.
-              </p>
+          <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs p-3 space-y-2.5">
+            <div className="border-b border-slate-100 pb-1.5 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider m-0 flex items-center gap-1.5 font-mono">
+                  <span className="text-rose-600">↩</span> Override / Re-submit Rejected Claims
+                </h3>
+                <p className="text-slate-500 text-[10px] mt-0.5 font-semibold leading-none">
+                  Reset rejected claims back to 'Submitted' and re-initialize approval routing from L1.
+                </p>
+              </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <input
                 type="text"
                 value={rejectedSearch}
@@ -2547,54 +2533,54 @@ export default function AdminPage() {
                     fetchRejectedClaims(rejectedSearch);
                   }
                 }}
-                className="flex-1 px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
+                className="flex-1 px-2.5 py-1 text-xs font-mono font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5"
                 placeholder="Search by Claim Code, Employee Code, or Name..."
               />
               <button
                 type="button"
                 onClick={() => fetchRejectedClaims(rejectedSearch)}
-                className="px-4 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white rounded-none text-xs font-extrabold uppercase tracking-wider cursor-pointer border-0 shadow-2xs"
+                className="px-3 py-1 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-[11px] font-extrabold uppercase tracking-wider cursor-pointer border-0 shadow-2xs h-7.5 transition-all"
               >
                 Search
               </button>
             </div>
 
             {loadingRejected ? (
-              <div className="text-center py-6 text-xs text-slate-500 font-extrabold uppercase tracking-wider">
+              <div className="text-center py-4 text-xs text-slate-500 font-extrabold uppercase tracking-wider">
                 Loading rejected claims...
               </div>
             ) : rejectedClaims.length === 0 ? (
-              <div className="text-center py-6 text-xs text-slate-500 font-extrabold uppercase tracking-wider border border-dashed border-slate-300 rounded-none">
+              <div className="text-center py-4 text-xs text-slate-400 font-bold uppercase tracking-wider border border-dashed border-slate-200 rounded-lg">
                 No rejected claims found matching search criteria.
               </div>
             ) : (
-              <div className="border border-slate-300 rounded-none overflow-x-auto">
+              <div className="border border-slate-200/90 rounded-lg overflow-x-auto shadow-2xs">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-[#4A6A8A] text-white border-b border-slate-300">
-                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase font-mono">Claim Code</th>
-                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase">Employee</th>
-                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase font-mono">Expense Date</th>
-                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase font-mono">Amount</th>
-                      <th className="p-2.5 font-extrabold text-white text-[10px] uppercase text-right">Action</th>
+                    <tr className="bg-slate-800 text-white border-b border-slate-700">
+                      <th className="p-2 font-black text-white text-[9.5px] uppercase font-mono">Claim Code</th>
+                      <th className="p-2 font-black text-white text-[9.5px] uppercase">Employee</th>
+                      <th className="p-2 font-black text-white text-[9.5px] uppercase font-mono">Expense Date</th>
+                      <th className="p-2 font-black text-white text-[9.5px] uppercase font-mono">Amount</th>
+                      <th className="p-2 font-black text-white text-[9.5px] uppercase text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {rejectedClaims.map((claim) => (
-                      <tr key={claim.id} className="border-b border-slate-200 hover:bg-slate-50">
-                        <td className="p-2.5 font-mono font-bold text-slate-900">{claim.expense_code}</td>
-                        <td className="p-2.5">
-                          <div className="font-extrabold text-slate-800">{claim.employee_name}</div>
-                          <div className="text-[10px] text-slate-500 font-mono font-bold">{claim.employee_code}</div>
+                      <tr key={claim.id} className="border-b border-slate-100 hover:bg-blue-50/40 transition-colors">
+                        <td className="p-2 font-mono font-extrabold text-slate-900 text-xs">{claim.expense_code}</td>
+                        <td className="p-2">
+                          <div className="font-extrabold text-slate-900 text-xs leading-none">{claim.employee_name}</div>
+                          <div className="text-[9.5px] text-slate-400 font-mono font-bold mt-0.5">{claim.employee_code}</div>
                         </td>
-                        <td className="p-2.5 text-slate-600 font-mono font-bold">{claim.expense_date}</td>
-                        <td className="p-2.5 font-mono font-bold text-slate-900">₹{parseFloat(claim.amount).toLocaleString()}</td>
-                        <td className="p-2.5 text-right">
+                        <td className="p-2 text-slate-600 font-mono font-bold text-xs">{claim.expense_date}</td>
+                        <td className="p-2 font-mono font-extrabold text-slate-900 text-xs">₹{parseFloat(claim.amount).toLocaleString()}</td>
+                        <td className="p-2 text-right">
                           <button
                             type="button"
                             disabled={actioningClaimId === claim.id}
                             onClick={() => handleResubmitClaim(claim.id)}
-                            className="px-3 py-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white rounded-none text-[10px] font-extrabold uppercase tracking-wider cursor-pointer border-0 shadow-2xs disabled:opacity-60"
+                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10.5px] font-black uppercase tracking-wider cursor-pointer border-0 shadow-2xs disabled:opacity-60 transition-all"
                           >
                             {actioningClaimId === claim.id ? "Resetting..." : "Reset to Submitted"}
                           </button>
