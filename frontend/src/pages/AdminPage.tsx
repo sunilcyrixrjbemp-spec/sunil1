@@ -756,6 +756,7 @@ export default function AdminPage() {
       toast.dismiss(tid);
     }
   };
+  void handleSingleToggleBulkApproval;
 
   const downloadSampleCSV = () => {
     const headers = "e_code,name,password,role,designation,grade,district,zone,manager,zonal_manager,coordinator,mobile_number,mail_id,type,date_of_joining,date_of_birth,e_upkaran_id\n";
