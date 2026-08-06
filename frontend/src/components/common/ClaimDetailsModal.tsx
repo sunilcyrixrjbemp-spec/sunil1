@@ -1591,7 +1591,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   // Deduction Auditor Details (WHO deducted & WHY)
   const editHistory = Array.isArray(c.edit_history) ? c.edit_history : (Array.isArray(c.history) ? c.history : []);
   const humanEditor = editHistory.find((el: any) => el.editor_name && el.editor_name.toUpperCase() !== "SYSTEM");
-  const hasHumanDeduction = !!humanEditor || (editHistory.length > 0) || isValidText(c.deduction_remark) || isValidText(c.manager_remark);
+  const isManagerAction = isClaimRejected || !!rejectedStep || !!c.rejected_by || !!c.rejected_by_name || !!c.rejector_name || !!humanEditor || (editHistory.length > 0) || isValidText(c.deduction_remark) || isValidText(c.manager_remark) || isValidText(c.rejection_reason) || isValidText(c.rejection_remark) || isValidText(c.approver_remark);
+  const hasHumanDeduction = isManagerAction;
 
   const rawDeductionAmt = isClaimRejected
     ? originalClaimedTotal
@@ -1996,14 +1997,16 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
               {managerDeductionAmt > 0 && (
                 <div className="bg-rose-50/90 border border-rose-300 rounded-lg p-2 space-y-1">
                   <div className="flex items-center justify-between font-extrabold text-rose-950 text-[10px]">
-                    <span className="flex items-center gap-1">✏️ Manager Manual Deduction</span>
+                    <span className="flex items-center gap-1">
+                      {isClaimRejected ? "🚫 Manager Claim Rejection" : "✏️ Manager Manual Deduction"}
+                    </span>
                     <span className="font-mono text-rose-900 font-black">-{rupee(managerDeductionAmt)}</span>
                   </div>
                   <div className="text-[9.5px] text-rose-900 leading-tight">
-                    <b className="text-rose-950">Deducted By:</b> <span className="font-bold text-slate-900">{managerDeductorName}</span> {managerDeductorRole ? `(${managerDeductorRole})` : ''} {managerDeductorCode ? `[${managerDeductorCode}]` : ''}
+                    <b className="text-rose-950">{isClaimRejected ? "Rejected By:" : "Deducted By:"}</b> <span className="font-bold text-slate-900">{managerDeductorName}</span> {managerDeductorRole ? `(${managerDeductorRole})` : ''} {managerDeductorCode ? `[${managerDeductorCode}]` : ''}
                   </div>
                   <div className="text-[9.5px] text-rose-900 leading-tight">
-                    <b className="text-rose-950">Reason / Remarks:</b> <span className="font-bold text-slate-900">{finalManagerReason}</span>
+                    <b className="text-rose-950">Reason / Remarks:</b> <span className="font-bold text-slate-900">{rejectionRemark || finalManagerReason}</span>
                   </div>
                 </div>
               )}

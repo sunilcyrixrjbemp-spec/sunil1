@@ -2758,12 +2758,12 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
   // Create approvals level sequence
   const approvalChain = await env.DB.prepare(`
-    SELECT a.* 
+    SELECT DISTINCT a.level_number, a.approver_id, a.hierarchy_id
     FROM hierarchy_approvers a
     JOIN hierarchy_requesters hr ON a.hierarchy_id = hr.hierarchy_id
-    WHERE hr.user_id = ?
+    WHERE hr.user_id = ? OR hr.user_id = ? OR CAST(hr.user_id AS TEXT) = ?
     ORDER BY a.level_number ASC
-  `).bind(user.id).all();
+  `).bind(user.id, user.user_id || "", String(user.id)).all();
 
   let status = "approved";
   let approvalsToInsert = [];
@@ -2774,12 +2774,16 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     approvalsToInsert = [];
   } else if (approvalChain.results && approvalChain.results.length > 0) {
     status = "submitted";
+    const seenLevels = new Set();
     for (const step of approvalChain.results) {
-      approvalsToInsert.push({
-        approver_id: step.approver_id,
-        level_number: step.level_number,
-        status: step.level_number === 1 ? "pending" : "waiting"
-      });
+      if (!seenLevels.has(step.level_number)) {
+        seenLevels.add(step.level_number);
+        approvalsToInsert.push({
+          approver_id: step.approver_id,
+          level_number: step.level_number,
+          status: step.level_number === 1 ? "pending" : "waiting"
+        });
+      }
     }
   } else {
     if ((user.role || "").trim().toLowerCase() !== "admin") {
