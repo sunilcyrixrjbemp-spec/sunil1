@@ -851,116 +851,118 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
 
 
       {/* Statewide / Zone KPI Summary Bar (8 Live Metrics) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-3.5 bg-slate-50/90 border-b border-slate-200">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5 p-2.5 sm:p-3.5 bg-slate-50/90 border-b border-slate-200">
         {/* 1. Total Facilities */}
-        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
-          <div className="w-10 h-10 rounded-none bg-teal-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <Building2 className="w-5 h-5" />
+        <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Facilities</span>
-              <span className="text-[8.5px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Locations</span>
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[8px] sm:text-[9.5px] font-bold text-slate-500 uppercase tracking-wider truncate">Facilities</span>
+              <span className="text-[7.5px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-1 py-0.2 rounded font-mono shrink-0 truncate">Locations</span>
             </div>
-            <span className="text-lg font-mono font-extrabold text-slate-900 leading-none block">{summaryStats.totalFacilities}</span>
+            <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 leading-none block truncate">{summaryStats.totalFacilities}</span>
           </div>
         </div>
 
         {/* 2. Total Calls */}
-        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
-          <div className="w-10 h-10 rounded-none bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <PhoneCall className="w-5 h-5" />
+        <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <PhoneCall className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Calls</span>
-              <span className="text-[8.5px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Assigned</span>
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[8px] sm:text-[9.5px] font-bold text-slate-500 uppercase tracking-wider truncate">Total Calls</span>
+              <span className="text-[7.5px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1 py-0.2 rounded font-mono shrink-0 truncate">Assigned</span>
             </div>
-            <span className="text-lg font-mono font-extrabold text-slate-900 leading-none block">{summaryStats.totalCallsAssigned}</span>
+            <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 leading-none block truncate">{summaryStats.totalCallsAssigned}</span>
           </div>
         </div>
 
         {/* 3. Closed Calls */}
-        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
-          <div className="w-10 h-10 rounded-none bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Closed Calls</span>
-              <span className="text-[8.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Completed</span>
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[8px] sm:text-[9.5px] font-bold text-slate-500 uppercase tracking-wider truncate">Closed Calls</span>
+              <span className="text-[7.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded font-mono shrink-0 truncate">Completed</span>
             </div>
-            <span className="text-lg font-mono font-extrabold text-emerald-700 leading-none block">{summaryStats.totalCallsCompleted}</span>
+            <span className="text-xs sm:text-base font-mono font-extrabold text-emerald-700 leading-none block truncate">{summaryStats.totalCallsCompleted}</span>
           </div>
         </div>
 
         {/* 4. PMS Count */}
-        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
-          <div className="w-10 h-10 rounded-none bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <Wrench className="w-5 h-5" />
+        <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <Wrench className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PMS Done</span>
-              <span className="text-[8.5px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">PMS Calls</span>
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[8px] sm:text-[9.5px] font-bold text-slate-500 uppercase tracking-wider truncate">PMS Done</span>
+              <span className="text-[7.5px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1 py-0.2 rounded font-mono shrink-0 truncate">PMS Calls</span>
             </div>
-            <span className="text-lg font-mono font-extrabold text-indigo-700 leading-none block">{summaryStats.totalPms}</span>
+            <span className="text-xs sm:text-base font-mono font-extrabold text-indigo-700 leading-none block truncate">{summaryStats.totalPms}</span>
           </div>
         </div>
 
         {/* 5. Calibration */}
-        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
-          <div className="w-10 h-10 rounded-none bg-purple-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <Gauge className="w-5 h-5" />
+        <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <Gauge className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Calibration</span>
-              <span className="text-[8.5px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Calibrations</span>
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[8px] sm:text-[9.5px] font-bold text-slate-500 uppercase tracking-wider truncate">Calibration</span>
+              <span className="text-[7.5px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1 py-0.2 rounded font-mono shrink-0 truncate">Calibrations</span>
             </div>
-            <span className="text-lg font-mono font-extrabold text-purple-700 leading-none block">{summaryStats.totalCalibration}</span>
+            <span className="text-xs sm:text-base font-mono font-extrabold text-purple-700 leading-none block truncate">{summaryStats.totalCalibration}</span>
           </div>
         </div>
 
         {/* 6. Engineers */}
-        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
-          <div className="w-10 h-10 rounded-none bg-cyan-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <Users className="w-5 h-5" />
+        <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-cyan-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Engineers</span>
-              <span className="text-[8.5px] font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Field Staff</span>
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[8px] sm:text-[9.5px] font-bold text-slate-500 uppercase tracking-wider truncate">Engineers</span>
+              <span className="text-[7.5px] font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-1 py-0.2 rounded font-mono shrink-0 truncate">Field Staff</span>
             </div>
-            <span className="text-lg font-mono font-extrabold text-slate-900 leading-none block">{summaryStats.totalEngineers}</span>
+            <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 leading-none block truncate">{summaryStats.totalEngineers}</span>
           </div>
         </div>
 
         {/* 7. Managers */}
-        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
-          <div className="w-10 h-10 rounded-none bg-violet-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <UserCheck className="w-5 h-5" />
+        <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-violet-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <UserCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Managers</span>
-              <span className="text-[8.5px] font-bold text-violet-700 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Team Leads</span>
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[8px] sm:text-[9.5px] font-bold text-slate-500 uppercase tracking-wider truncate">Managers</span>
+              <span className="text-[7.5px] font-bold text-violet-700 bg-violet-50 border border-violet-200 px-1 py-0.2 rounded font-mono shrink-0 truncate">Team Leads</span>
             </div>
-            <span className="text-lg font-mono font-extrabold text-slate-900 leading-none block">{summaryStats.totalManagers}</span>
+            <span className="text-xs sm:text-base font-mono font-extrabold text-slate-900 leading-none block truncate">{summaryStats.totalManagers}</span>
           </div>
         </div>
 
-        {/* 8. Avg / Staff */}
-        <div className="bg-white p-3 rounded-none border border-slate-200 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-3">
-          <div className="w-10 h-10 rounded-none bg-amber-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <Calculator className="w-5 h-5" />
+        {/* 8. Avg Expense per Staff */}
+        <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-slate-200/90 shadow-2xs hover:shadow-md transition-all duration-200 flex items-center justify-between gap-2 min-w-0">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <Calculator className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-1 mb-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Avg / Staff</span>
-              <span className="text-[8.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none font-mono shrink-0">Per Staff</span>
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <span className="text-[8px] sm:text-[9.5px] font-bold text-slate-500 uppercase tracking-wider truncate">Avg / Staff</span>
+              <span className="text-[7.5px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-mono shrink-0 truncate">Per Staff</span>
             </div>
-            <span className="text-[15px] font-mono font-extrabold text-amber-700 leading-none block">₹{summaryStats.avgExpensePerEngineer.toLocaleString('en-IN')}</span>
+            <span className="text-xs sm:text-base font-mono font-extrabold text-amber-800 leading-none block truncate">
+              ₹{summaryStats.avgExpensePerEngineer.toLocaleString()}
+            </span>
           </div>
         </div>
       </div>
@@ -1419,23 +1421,13 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                     <div
                       key={idx}
                       onClick={() => handleDistrictClick(item.name)}
-                      className="bg-white cursor-pointer group transition-all duration-150"
-                      style={{
-                        border: "1px solid #dbeafe",
-                        padding: "10px 12px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        boxShadow: "0 1px 3px rgba(29,78,216,0.05)"
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#93c5fd"; e.currentTarget.style.background = "#f0f6ff"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#dbeafe"; e.currentTarget.style.background = "#ffffff"; }}
+                      className="bg-white cursor-pointer group transition-all duration-150 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-md border border-blue-100 hover:border-blue-300 hover:bg-blue-50/50"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className="text-[10px] font-extrabold font-mono text-white flex items-center justify-center shrink-0"
+                          className="text-[9.5px] font-extrabold font-mono text-white flex items-center justify-center shrink-0 rounded-md shadow-2xs"
                           style={{
-                            width: 20, height: 20,
+                            width: 22, height: 22,
                             background: idx < 3
                               ? ["#1d4ed8", "#2563eb", "#3b82f6"][idx]
                               : "#94a3b8"
@@ -1443,26 +1435,26 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                         >
                           {idx + 1}
                         </span>
-                        <div>
-                          <span className="text-[11px] font-bold text-slate-800 group-hover:text-blue-700 transition block">
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-800 group-hover:text-blue-700 transition block truncate">
                             {item.name}
                           </span>
-                          <div className="flex items-center gap-1 text-[9px] text-gray-500 font-mono mt-0.5">
-                            <span className="text-teal-600">{item.facilitiesCount}F</span>
+                          <div className="flex items-center gap-1 text-[8.5px] sm:text-[9px] text-gray-500 font-mono mt-0.5 truncate">
+                            <span className="text-teal-600 font-bold">{item.facilitiesCount}F</span>
                             <span className="text-gray-300">•</span>
-                            <span className="text-cyan-600">{item.engineersCount}E</span>
+                            <span className="text-cyan-600 font-bold">{item.engineersCount}E</span>
                             <span className="text-gray-300">•</span>
-                            <span className="text-violet-600">{item.managersCount}M</span>
+                            <span className="text-violet-600 font-bold">{item.managersCount}M</span>
                             <span className="text-gray-300">•</span>
-                            <span className="text-emerald-600">{item.callsCompleted}/{item.callsAssigned} Calls</span>
+                            <span className="text-emerald-600 font-bold">{item.callsCompleted}/{item.callsAssigned} Calls</span>
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[11px] font-mono font-bold text-blue-700 block">
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-mono font-extrabold text-blue-700 block">
                           ₹{item.amount.toLocaleString()}
                         </span>
-                        <span className="text-[9px] font-mono text-amber-600">
+                        <span className="text-[8.5px] font-mono text-amber-600 font-bold">
                           ₹{item.avgExpensePerStaff.toLocaleString()}/staff
                         </span>
                       </div>
