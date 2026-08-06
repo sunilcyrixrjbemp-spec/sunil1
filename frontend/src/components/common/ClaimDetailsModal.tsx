@@ -1124,8 +1124,10 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="0.1"
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
                 disabled={!canEditAmounts || parseFloat(String(km ?? 0)) <= 0}
-                value={editedLeg?.km ?? km}
+                value={(editedLeg?.km ?? km) === 0 ? "" : (editedLeg?.km ?? km)}
                 onChange={(e) => onLegAmountChange(index, "km", e.target.value)}
                 className={`w-full text-xs font-mono font-bold p-1 border rounded focus:border-[#4A6A8A] focus:outline-none ${
                   parseFloat(String(km ?? 0)) > 0 ? "border-slate-300 bg-white text-slate-900" : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
@@ -1159,8 +1161,10 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
                 disabled={!canEditAmounts || parseFloat(String(km ?? 0)) > 0}
-                value={editedLeg?.travel_amount ?? taAmt}
+                value={(editedLeg?.travel_amount ?? taAmt) === 0 ? "" : (editedLeg?.travel_amount ?? taAmt)}
                 onChange={(e) => onLegAmountChange(index, "travel_amount", e.target.value)}
                 className={`w-full text-xs font-mono font-bold p-1 border rounded focus:border-[#4A6A8A] focus:outline-none ${
                   parseFloat(String(km ?? 0)) > 0 ? "border-slate-200 bg-slate-100 text-slate-600 cursor-not-allowed" : "border-slate-300 bg-white text-slate-900"
@@ -1185,8 +1189,10 @@ const LegDetailCard = ({
                   type="number"
                   min="0"
                   step="1"
+                  placeholder="0"
+                  onFocus={(e) => e.target.select()}
                   disabled={!canEditAmounts}
-                  value={editedLeg?.da ?? daAmt}
+                  value={(editedLeg?.da ?? daAmt) === 0 ? "" : (editedLeg?.da ?? daAmt)}
                   onChange={(e) => onLegAmountChange(index, "da", e.target.value)}
                   className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-emerald-800"
                 />
@@ -1209,8 +1215,10 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
                 disabled={!canEditAmounts}
-                value={editedLeg?.sub_amount ?? 0}
+                value={(editedLeg?.sub_amount ?? 0) === 0 ? "" : (editedLeg?.sub_amount ?? 0)}
                 onChange={(e) => onLegAmountChange(index, "sub_amount", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-indigo-800"
               />
@@ -1232,8 +1240,10 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
                 disabled={!canEditAmounts}
-                value={editedLeg?.hotel_amount ?? hotelAmt}
+                value={(editedLeg?.hotel_amount ?? hotelAmt) === 0 ? "" : (editedLeg?.hotel_amount ?? hotelAmt)}
                 onChange={(e) => onLegAmountChange(index, "hotel_amount", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-purple-800"
               />
@@ -1255,8 +1265,10 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
                 disabled={!canEditAmounts}
-                value={editedLeg?.local_purchase ?? localPur}
+                value={(editedLeg?.local_purchase ?? localPur) === 0 ? "" : (editedLeg?.local_purchase ?? localPur)}
                 onChange={(e) => onLegAmountChange(index, "local_purchase", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-amber-800"
               />
@@ -1278,8 +1290,10 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                placeholder="0"
+                onFocus={(e) => e.target.select()}
                 disabled={!canEditAmounts}
-                value={editedLeg?.other_amount ?? othAmt}
+                value={(editedLeg?.other_amount ?? othAmt) === 0 ? "" : (editedLeg?.other_amount ?? othAmt)}
                 onChange={(e) => onLegAmountChange(index, "other_amount", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-amber-700"
               />

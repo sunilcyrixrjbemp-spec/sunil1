@@ -3620,7 +3620,8 @@ export default function ExpensePage() {
                                 type="number"
                                 min="0"
                                 step="any"
-                                value={leg.km}
+                                value={leg.km === 0 || leg.km === "0" ? "" : leg.km}
+                                onFocus={(e) => e.target.select()}
                                 disabled={leg.mode !== "Bike" && leg.mode !== "Car"}
                                 placeholder="0"
                                 onChange={(e) => handleItineraryChange(leg.leg, "km", e.target.value)}
@@ -3642,7 +3643,8 @@ export default function ExpensePage() {
                                 type="number"
                                 min="0"
                                 step="any"
-                                value={leg.amount}
+                                value={leg.amount === 0 || leg.amount === "0" ? "" : leg.amount}
+                                onFocus={(e) => e.target.select()}
                                 disabled={leg.mode === "Bike" || leg.mode === "Car"}
                                 placeholder="0"
                                 onChange={(e) => handleItineraryChange(leg.leg, "amount", e.target.value)}
@@ -3802,7 +3804,9 @@ export default function ExpensePage() {
                                   type="number"
                                   min="0"
                                   step="any"
-                                  value={leg.sub_amount}
+                                  placeholder="0"
+                                  onFocus={(e) => e.target.select()}
+                                  value={leg.sub_amount === 0 || leg.sub_amount === "0" ? "" : leg.sub_amount}
                                   onChange={(e) => handleItineraryChange(leg.leg, "sub_amount", e.target.value)}
                                   className="input-lte font-bold"
                                 />
@@ -3900,7 +3904,9 @@ export default function ExpensePage() {
                               type="number"
                               min="0"
                               step="any"
-                              value={leg.hotel}
+                              placeholder="0"
+                              onFocus={(e) => e.target.select()}
+                              value={leg.hotel === 0 || leg.hotel === "0" ? "" : leg.hotel}
                               onChange={(e) => handleItineraryChange(leg.leg, "hotel", e.target.value)}
                               className="input-lte font-bold"
                             />
@@ -3977,7 +3983,9 @@ export default function ExpensePage() {
                               type="number"
                               min="0"
                               step="any"
-                              value={leg.local_purchase}
+                              placeholder="0"
+                              onFocus={(e) => e.target.select()}
+                              value={leg.local_purchase === 0 || leg.local_purchase === "0" ? "" : leg.local_purchase}
                               onChange={(e) => handleItineraryChange(leg.leg, "local_purchase", e.target.value)}
                               className="input-lte font-bold"
                             />
@@ -4064,7 +4072,9 @@ export default function ExpensePage() {
                             type="number"
                             min="0"
                             step="any"
-                            value={leg.oth_amount}
+                            placeholder="0"
+                            onFocus={(e) => e.target.select()}
+                            value={leg.oth_amount === 0 || leg.oth_amount === "0" ? "" : leg.oth_amount}
                             onChange={(e) => handleItineraryChange(leg.leg, "oth_amount", e.target.value)}
                             disabled={!leg.oth_desc.trim()}
                             className={`input-lte font-bold ${!leg.oth_desc.trim() ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
