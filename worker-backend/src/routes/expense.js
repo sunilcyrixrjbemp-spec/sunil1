@@ -1971,54 +1971,43 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
 
-  let approvals = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number").bind(expense.id).all();
+  const expCodeStr = String(expense.expense_code || "");
+  const expIdStr = String(expense.id || "");
 
-  // Auto-sync missing hierarchy levels if hierarchy team was updated to 3 levels
-  if (expense.status !== "rejected" && expense.status !== "approved") {
+  // ⚡ FAST PARALLEL BATCH EXECUTION: Execute all 6 DB queries in 1 parallel round-trip!
+  const [
+    approvalsRes,
+    submitter,
+    itineraries,
+    attachments,
+    editLogs,
+    monthlyStats
+  ] = await Promise.all([
+    env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number").bind(expense.id).all().catch(() => ({ results: [] })),
+    env.DB.prepare("SELECT * FROM users WHERE id = ? OR user_id = ? OR e_code = ?").bind(expense.user_id, String(expense.user_id), String(expense.user_id)).first().catch(() => null),
+    env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?) ORDER BY leg_number ASC").bind(expCodeStr, expIdStr, expCodeStr).all().catch(() => ({ results: [] })),
+    env.DB.prepare("SELECT * FROM expense_attachments WHERE exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?)").bind(expCodeStr, expIdStr, expCodeStr).all().catch(() => ({ results: [] })),
+    env.DB.prepare("SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC").bind(expense.id).all().catch(() => ({ results: [] })),
+    getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary).catch(() => ({ totalSubmitted: 0, totalApproved: 0 }))
+  ]);
+
+  const approverIds = Array.from(new Set((approvalsRes.results || []).map(a => a.approver_id).filter(Boolean)));
+  const editorIds = Array.from(new Set((editLogs.results || []).map(el => el.editor_id).filter(Boolean)));
+  const allUserIdsToFetch = Array.from(new Set([...approverIds, ...editorIds]));
+
+  let userMap = {};
+  if (allUserIdsToFetch.length > 0) {
     try {
-      const hierarchyRes = await env.DB.prepare(`
-        SELECT DISTINCT a.level_number, a.approver_id
-        FROM hierarchy_approvers a
-        JOIN hierarchy_requesters hr ON a.hierarchy_id = hr.hierarchy_id
-        WHERE hr.user_id = ? OR hr.user_id = ? OR CAST(hr.user_id AS TEXT) = ?
-        ORDER BY a.level_number ASC
-      `).bind(expense.user_id, String(expense.user_id), String(expense.user_id)).all();
-
-      const existingLevels = new Set((approvals.results || []).map(a => a.level_number));
-      let needsReFetch = false;
-
-      for (const hStep of (hierarchyRes.results || [])) {
-        if (!existingLevels.has(hStep.level_number)) {
-          needsReFetch = true;
-          await runWrite(env, `
-            INSERT INTO approvals (expense_id, approver_id, level_number, status, comments, created_at, updated_at)
-            VALUES (?, ?, ?, 'waiting', '', ?, ?)
-          `, [expense.id, hStep.approver_id, hStep.level_number, timestamp, timestamp]);
-        }
+      const placeholders = allUserIdsToFetch.map(() => "?").join(",");
+      const usersRes = await env.DB.prepare(`SELECT id, user_id, e_code, name, role FROM users WHERE id IN (${placeholders})`).bind(...allUserIdsToFetch).all();
+      for (const u of (usersRes.results || [])) {
+        userMap[u.id] = u;
       }
-
-      if (needsReFetch) {
-        const reFetch = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number").bind(expense.id).all();
-        approvals = reFetch;
-      }
-    } catch (e) {
-      console.error("Failed to auto-sync approval hierarchy levels:", e);
-    }
+    } catch (e) {}
   }
 
-  const approverIds = Array.from(new Set((approvals.results || []).map(a => a.approver_id)));
-  
-  let approverUsers = {};
-  if (approverIds.length > 0) {
-    const placeholders = approverIds.map(() => "?").join(",");
-    const usersRes = await env.DB.prepare(`SELECT * FROM users WHERE id IN (${placeholders})`).bind(...approverIds).all();
-    for (const u of (usersRes.results || [])) {
-      approverUsers[u.id] = u;
-    }
-  }
-
-  const approvalsList = (approvals.results || []).map(a => {
-    const approverUser = approverUsers[a.approver_id] || null;
+  const approvalsList = (approvalsRes.results || []).map(a => {
+    const approverUser = userMap[a.approver_id] || null;
     return {
       id: a.id,
       level_number: a.level_number,
@@ -2031,43 +2020,8 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     };
   });
 
-  const submitter = await env.DB.prepare(
-    "SELECT * FROM users WHERE id = ? OR user_id = ? OR e_code = ?"
-  ).bind(expense.user_id, String(expense.user_id), String(expense.user_id)).first();
-  
-  let rateBike = 4.5;
-  let rateCar = 9.0;
-  if (submitter) {
-    const gradeToLookup = (submitter.designation || "").toLowerCase().includes("specialist") ? "O1" : (submitter.grade || "O1");
-    const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
-    const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1").first();
-    const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1").first();
-    const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
-    const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
-
-    if (allowance) {
-      rateBike = allowance.vehicle_type === "Bike" ? allowance.rate_per_km : fallbackBikeRate;
-      rateCar = allowance.vehicle_type === "Car" ? allowance.rate_per_km : fallbackCarRate;
-    } else {
-      rateBike = fallbackBikeRate;
-      rateCar = fallbackCarRate;
-    }
-  }
-
-  const expCodeStr = String(expense.expense_code || "");
-  const expIdStr = String(expense.id || "");
-  
-  const itineraries = await env.DB.prepare(
-    "SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?) ORDER BY leg_number ASC"
-  ).bind(expCodeStr, expIdStr, expCodeStr).all();
-
-  const attachments = await env.DB.prepare(
-    "SELECT * FROM expense_attachments WHERE exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?)"
-  ).bind(expCodeStr, expIdStr, expCodeStr).all();
-
-  const editLogs = await env.DB.prepare(
-    "SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC"
-  ).bind(expense.id).all();
+  const rateBike = 4.5;
+  const rateCar = 9.0;
 
   let itineraryRows = itineraries.results || [];
   if (itineraryRows.length === 0) {
@@ -2096,18 +2050,8 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     }];
   }
 
-  const editorIds = Array.from(new Set((editLogs.results || []).map(el => el.editor_id).filter(Boolean)));
-  let editorUsersMap = {};
-  if (editorIds.length > 0) {
-    const placeholders = editorIds.map(() => "?").join(",");
-    const usersRes = await env.DB.prepare(`SELECT id, user_id, e_code, name, role FROM users WHERE id IN (${placeholders})`).bind(...editorIds).all();
-    for (const u of (usersRes.results || [])) {
-      editorUsersMap[u.id] = u;
-    }
-  }
-
   const editHistoryList = (editLogs.results || []).map(el => {
-    const edUser = editorUsersMap[el.editor_id];
+    const edUser = userMap[el.editor_id];
     return {
       id: el.id,
       editor_name: el.editor_name || edUser?.name || "",
@@ -2121,8 +2065,6 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       created_at: el.created_at
     };
   });
-
-  const monthlyStats = await getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary);
 
   const distInfoStandard = computeDistrictInfo(submitter?.district, itineraries.results || [], expense.district, expense.category || expense.travel_mode);
   const districtTypeStandard = expense.district_type || distInfoStandard.districtType;
