@@ -3380,91 +3380,117 @@ export default function ExpensePage() {
         </div>
       </div>
 
-
-
       {/* Main Form container supporting dual layout */}
       <form onSubmit={handleFormSubmit} className="space-y-6">
         <div className="space-y-6">
-          
           <div className="space-y-6">
             
             {/* Date Selection card */}
-            <div className="card-lte-primary bg-white shadow-sm">
-              <div className="bg-slate-50 border-b border-gray-200 p-3 flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
-                  <Calendar className="w-4 h-4 text-blue-600" />
-                  Expense Date
-                </h3>
-              </div>
-              <div className="p-4 max-w-xs">
-                <label className="label-lte">Choose Travel Date <span className="text-red-500">*</span></label>
-                <ConfigProvider
-                  theme={{
-                    token: {
-                      colorPrimary: "#4f46e5",
-                      borderRadius: 8,
-                      fontFamily: "inherit",
-                      fontSize: 12,
-                    }
-                  }}
-                >
-                  <DatePicker
-                    value={date ? dayjs(date) : null}
-                    format="YYYY-MM-DD"
-                    allowClear={false}
-                    inputReadOnly
-                    style={{ width: "100%" }}
-                    disabledDate={(current: Dayjs) => {
-                      if (!current) return false;
-                      const dateStr = current.format("YYYY-MM-DD");
-                      if (maxDate && dateStr > maxDate) return true;
-                      if (minDate && dateStr < minDate) return true;
-                      if (editExpenseId && dateStr === originalExpenseDate) return false;
-                      if (submittedDates.includes(dateStr)) return true;
-                      return false;
-                    }}
-                    cellRender={(current: string | number | Dayjs, _info: any) => {
-                      // current can be string|number|Dayjs in antd — cast safely
-                      const d = dayjs.isDayjs(current) ? current : dayjs(current);
-                      const dateStr = d.format("YYYY-MM-DD");
-                      const isSubmitted = submittedDates.includes(dateStr);
-                      const isInRange = (!minDate || dateStr >= minDate) && (!maxDate || dateStr <= maxDate);
-                      const isEditOriginal = !!(editExpenseId && dateStr === originalExpenseDate);
-                      const isAvailable = isInRange && !isSubmitted;
-                      return (
-                        <div className="ant-picker-cell-inner" style={{ position: "relative" }}>
-                          {d.date()}
-                          {(isAvailable || isEditOriginal) && isInRange && (
-                            <span style={{
-                              position: "absolute",
-                              bottom: 1,
-                              left: "50%",
-                              transform: "translateX(-50%)",
-                              width: 5,
-                              height: 5,
-                              borderRadius: "50%",
-                              background: "#22c55e",
-                              display: "block"
-                            }} />
-                          )}
-                        </div>
-                      );
-                    }}
-                    onChange={(dayjsVal: Dayjs | null) => {
-                      if (!dayjsVal) return;
-                      const newDate = dayjsVal.format("YYYY-MM-DD");
-                      setDate(newDate);
-                      if (editExpenseId && newDate === originalExpenseDate) return;
-                      if (submittedDates.includes(newDate)) {
-                        toast.error("An expense claim for this date has already been submitted.");
-                        setDate(editExpenseId ? (originalExpenseDate || "") : "");
-                      }
-                    }}
-                  />
-                </ConfigProvider>
-              </div>
-            </div>
+            {(() => {
+              const claimDatesFromList = (claims || []).map((c: any) => (c.expense_date || c.date || "").slice(0, 10)).filter(Boolean);
+              const allSubmittedDates = Array.from(new Set([...(submittedDates || []), ...claimDatesFromList]));
+              const isCurrentDateSubmitted = !!(date && allSubmittedDates.includes(date) && (!editExpenseId || date !== originalExpenseDate));
 
+              return (
+                <div className="card-lte-primary bg-white shadow-sm">
+                  <div className="bg-slate-50 border-b border-gray-200 p-3 flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-blue-600" />
+                      Expense Date
+                    </h3>
+                  </div>
+                  <div className="p-4 max-w-xs">
+                    <label className="label-lte">Choose Travel Date <span className="text-red-500">*</span></label>
+                    <ConfigProvider
+                      theme={{
+                        token: {
+                          colorPrimary: "#4f46e5",
+                          borderRadius: 8,
+                          fontFamily: "inherit",
+                          fontSize: 12,
+                        }
+                      }}
+                    >
+                      <DatePicker
+                        value={date ? dayjs(date) : null}
+                        format="YYYY-MM-DD"
+                        allowClear={false}
+                        inputReadOnly
+                        style={{ width: "100%" }}
+                        disabledDate={(current: Dayjs) => {
+                          if (!current) return false;
+                          const dateStr = current.format("YYYY-MM-DD");
+                          if (maxDate && dateStr > maxDate) return true;
+                          if (minDate && dateStr < minDate) return true;
+                          if (editExpenseId && dateStr === originalExpenseDate) return false;
+                          if (allSubmittedDates.includes(dateStr)) return true;
+                          return false;
+                        }}
+                        cellRender={(current: string | number | Dayjs, _info: any) => {
+                          const d = dayjs.isDayjs(current) ? current : dayjs(current);
+                          const dateStr = d.format("YYYY-MM-DD");
+                          const isSubmitted = allSubmittedDates.includes(dateStr);
+                          const isInRange = (!minDate || dateStr >= minDate) && (!maxDate || dateStr <= maxDate);
+                          const isEditOriginal = !!(editExpenseId && dateStr === originalExpenseDate);
+                          const isAvailable = isInRange && !isSubmitted;
+                          return (
+                            <div className="ant-picker-cell-inner" style={{ position: "relative" }}>
+                              {d.date()}
+                              {(isAvailable || isEditOriginal) && isInRange && (
+                                <span style={{
+                                  position: "absolute",
+                                  bottom: 1,
+                                  left: "50%",
+                                  transform: "translateX(-50%)",
+                                  width: 5,
+                                  height: 5,
+                                  borderRadius: "50%",
+                                  background: "#22c55e",
+                                  display: "block"
+                                }} />
+                              )}
+                              {isSubmitted && !isEditOriginal && (
+                                <span style={{
+                                  position: "absolute",
+                                  bottom: 1,
+                                  left: "50%",
+                                  transform: "translateX(-50%)",
+                                  width: 5,
+                                  height: 5,
+                                  borderRadius: "50%",
+                                  background: "#ef4444",
+                                  display: "block"
+                                }} />
+                              )}
+                            </div>
+                          );
+                        }}
+                        onChange={(dayjsVal: Dayjs | null) => {
+                          if (!dayjsVal) return;
+                          const newDate = dayjsVal.format("YYYY-MM-DD");
+                          if (editExpenseId && newDate === originalExpenseDate) {
+                            setDate(newDate);
+                            return;
+                          }
+                          if (allSubmittedDates.includes(newDate)) {
+                            toast.error(`Claim for ${newDate} has already been submitted! Please choose another date.`);
+                            setDate("");
+                            return;
+                          }
+                          setDate(newDate);
+                        }}
+                      />
+                    </ConfigProvider>
+                    {isCurrentDateSubmitted && (
+                      <div className="mt-2 text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 p-2 rounded flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span>Claim for {date} already submitted! Please pick an unsubmitted date.</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
             {/* Visit Details Legs */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
