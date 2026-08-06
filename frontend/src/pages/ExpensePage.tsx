@@ -4945,9 +4945,9 @@ export default function ExpensePage() {
                                 </span>
                               </div>
 
-                              <div className="grid grid-cols-12 gap-2 items-end bg-white p-2.5 rounded-lg border border-emerald-100 text-[10px]">
+                              <div className="grid grid-cols-12 gap-2.5 items-end bg-white p-2.5 rounded-lg border border-emerald-100 text-[10px]">
                                 {/* 1. Equipment Selection */}
-                                <div className="col-span-6">
+                                <div className="col-span-12 sm:col-span-6">
                                   <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">Select Equipment Name <span className="text-red-500">*</span></label>
                                   <select
                                     value={leg.asset_tagging_equipment || ""}
@@ -4964,10 +4964,10 @@ export default function ExpensePage() {
                                 </div>
 
                                 {/* 2. Barcode 2 Columns: Prefix (Non-editable) + Suffix (8 digits) */}
-                                <div className="col-span-6">
+                                <div className="col-span-12 sm:col-span-6">
                                   <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">BARCODE <span className="text-red-500">*</span></label>
-                                  <div className="flex items-center h-7 rounded border border-slate-300 overflow-hidden bg-white shadow-2xs">
-                                    <span className="bg-slate-100 px-1.5 h-full flex items-center justify-center text-[10px] font-mono font-bold text-slate-700 select-none shrink-0 border-r border-slate-300">
+                                  <div className="flex items-center h-7 rounded border border-slate-300 overflow-hidden bg-white shadow-2xs w-full">
+                                    <span className="bg-slate-100 px-1.5 h-full flex items-center justify-center text-[9px] sm:text-[10px] font-mono font-bold text-slate-700 select-none shrink-0 border-r border-slate-300">
                                       (8004890615671)
                                     </span>
                                     <input
@@ -4982,13 +4982,13 @@ export default function ExpensePage() {
                                         handleItineraryChange(leg.leg, "asset_tagging_suffix", cleaned);
                                         handleItineraryChange(leg.leg, "asset_tagging_barcode", `(8004890615671) ${cleaned}`);
                                       }}
-                                      className="font-mono font-bold text-[10px] px-1.5 h-full w-full outline-none border-0 bg-transparent text-slate-800"
+                                      className="font-mono font-bold text-[10px] px-1.5 h-full flex-1 min-w-0 outline-none border-0 bg-transparent text-slate-800"
                                     />
                                   </div>
                                 </div>
 
                                 {/* 3. Hospital Name */}
-                                <div className="col-span-6">
+                                <div className="col-span-12 sm:col-span-6">
                                   <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">HOSPITAL NAME <span className="text-red-500">*</span></label>
                                   {districtHospitals.length > 0 ? (
                                     <select
@@ -5013,7 +5013,7 @@ export default function ExpensePage() {
                                 </div>
 
                                 {/* 4. Make & Model */}
-                                <div className="col-span-3">
+                                <div className="col-span-6 sm:col-span-3">
                                   <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">Make / Brand <span className="text-red-500">*</span></label>
                                   <input
                                     type="text"
@@ -5023,7 +5023,7 @@ export default function ExpensePage() {
                                     className="input-lte text-[10px] h-7 py-0.5 px-1.5 bg-white w-full border-emerald-200"
                                   />
                                 </div>
-                                <div className="col-span-3">
+                                <div className="col-span-6 sm:col-span-3">
                                   <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">Model <span className="text-red-500">*</span></label>
                                   <input
                                     type="text"
@@ -5035,7 +5035,7 @@ export default function ExpensePage() {
                                 </div>
 
                                 {/* 5. Serial Number & 6. Warranty Toggle */}
-                                <div className={leg.asset_tagging_has_warranty === "Yes" ? "col-span-3" : "col-span-6"}>
+                                <div className={leg.asset_tagging_has_warranty === "Yes" ? "col-span-6 sm:col-span-3" : "col-span-6 sm:col-span-3"}>
                                   <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">Serial Number <span className="text-red-500">*</span></label>
                                   <input
                                     type="text"
@@ -5045,8 +5045,8 @@ export default function ExpensePage() {
                                     className="input-lte font-mono text-[10px] h-7 py-0.5 px-1.5 bg-white w-full border-emerald-200"
                                   />
                                 </div>
-                                <div className={leg.asset_tagging_has_warranty === "Yes" ? "col-span-3" : "col-span-6"}>
-                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase whitespace-nowrap truncate">WARRANTY AVAILABLE? <span className="text-red-500">*</span></label>
+                                <div className={leg.asset_tagging_has_warranty === "Yes" ? "col-span-6 sm:col-span-3" : "col-span-6 sm:col-span-3"}>
+                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase whitespace-nowrap truncate block">WARRANTY AVAILABLE? <span className="text-red-500">*</span></label>
                                   <select
                                     value={leg.asset_tagging_has_warranty || "No"}
                                     onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_has_warranty", e.target.value)}
@@ -5060,7 +5060,7 @@ export default function ExpensePage() {
                                 {/* Warranty Dates (If Yes) */}
                                 {leg.asset_tagging_has_warranty === "Yes" && (
                                   <>
-                                    <div className="col-span-3">
+                                    <div className="col-span-6 sm:col-span-3">
                                       <label className="label-lte font-extrabold text-[8px] text-emerald-800 uppercase">Start Date <span className="text-red-500">*</span></label>
                                       <input
                                         type="date"
@@ -5069,7 +5069,7 @@ export default function ExpensePage() {
                                         className="input-lte text-[10px] font-semibold h-7 py-0.5 px-1 bg-emerald-50 border-emerald-300 w-full"
                                       />
                                     </div>
-                                    <div className="col-span-3">
+                                    <div className="col-span-6 sm:col-span-3">
                                       <label className="label-lte font-extrabold text-[8px] text-emerald-800 uppercase">End Date <span className="text-red-500">*</span></label>
                                       <input
                                         type="date"
@@ -5082,7 +5082,7 @@ export default function ExpensePage() {
                                 )}
 
                                 {/* 3 Photo Upload Columns */}
-                                <div className="col-span-12 grid grid-cols-3 gap-2 bg-emerald-50/50 p-2 rounded-lg border border-emerald-200 mt-1">
+                                <div className="col-span-12 grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-200 mt-1">
                                   {/* Photo 1: Barcode Photo */}
                                   <div className="col-span-1">
                                     <label className="label-lte font-bold text-[8px] text-emerald-800 uppercase block mb-0.5">
@@ -5195,7 +5195,8 @@ export default function ExpensePage() {
                                   </div>
                                 </div>
 
-                                {/* Add Asset Tag Button */}
+
+                          {/* Add Asset Tag Button */}
                                 <div className="col-span-12 flex justify-end mt-1">
                                   <button
                                     type="button"
