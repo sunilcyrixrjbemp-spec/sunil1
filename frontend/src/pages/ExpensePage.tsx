@@ -5193,21 +5193,20 @@ export default function ExpensePage() {
                                     )}
                                     {leg.asset_model_photo_loading && <span className="text-[8px] text-emerald-700 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
                                   </div>
-                                </div>
+                                 </div>
 
-
-                          {/* Add Asset Tag Button */}
-                                <div className="col-span-12 flex justify-end mt-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => addAssetTag(leg.leg)}
-                                    disabled={!leg.asset_tagging_equipment || (leg.asset_tagging_suffix || "").length !== 8}
-                                    className="btn-lte h-7 py-0.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[10px] uppercase rounded border-0 cursor-pointer flex items-center justify-center gap-1 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shadow-2xs"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" /> Save Tagged Asset
-                                  </button>
-                                </div>
-                              </div>
+                                 {/* Add Asset Tag Button */}
+                                 <div className="col-span-12 flex justify-center sm:justify-end mt-2 w-full">
+                                   <button
+                                     type="button"
+                                     onClick={() => addAssetTag(leg.leg)}
+                                     disabled={!leg.asset_tagging_equipment || (leg.asset_tagging_suffix || "").length !== 8}
+                                     className="btn-lte h-8 sm:h-7 py-1 sm:py-0.5 px-4 sm:px-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] sm:text-[10px] uppercase rounded border-0 cursor-pointer flex items-center justify-center gap-1.5 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shadow-2xs w-full sm:w-auto"
+                                   >
+                                     <Plus className="w-3.5 h-3.5" /> Save Tagged Asset
+                                   </button>
+                                 </div>
+                               </div>
 
                               {/* Added Assets Table */}
                               {(leg.assets_list || []).length > 0 && (
