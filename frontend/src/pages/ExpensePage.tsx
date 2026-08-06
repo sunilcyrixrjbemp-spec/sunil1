@@ -5300,24 +5300,25 @@ export default function ExpensePage() {
 
                           {/* Other Task Sub-Form */}
                           {(leg.selected_activities || []).includes("Other") && (
-                            <div className="bg-slate-50 border border-slate-300 rounded-none p-3.5 flex flex-col gap-2.5 shadow-2xs">
-                              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                                  ✏️ OTHER ACTIVITY DESCRIPTION / REMARK
+                            <div className="bg-slate-50/70 border border-slate-300 rounded-lg p-3 flex flex-col gap-2.5 shadow-2xs">
+                              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                                <span className="text-[11px] font-extrabold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                                  ✏️ Other Activity Description / Remark
                                 </span>
-                                <span className="text-[9px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-none border border-amber-300 uppercase tracking-wider">
-                                  REQUIRED
+                                <span className="text-[8.5px] font-extrabold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded border border-amber-300 uppercase tracking-wider shrink-0">
+                                  Required
                                 </span>
                               </div>
                               <div>
-                                <label className="label-lte text-slate-700 font-extrabold text-[10px] uppercase tracking-wider mb-1 block">STATE EXACT DETAILS & PURPOSE OF WORK DONE:</label>
+                                <label className="label-lte text-slate-700 font-extrabold text-[9px] uppercase tracking-wider mb-1 block">
+                                  State Exact Details & Purpose of Work Done <span className="text-red-500">*</span>
+                                </label>
                                 <textarea
                                   value={leg.activity_other_desc || ""}
                                   onChange={(e) => handleItineraryChange(leg.leg, "activity_other_desc", e.target.value)}
                                   placeholder="Describe the miscellaneous work performed in detail..."
                                   rows={2.5}
-                                  className="w-full text-xs font-semibold text-slate-900 bg-white border border-slate-300 focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] rounded-none p-2.5 shadow-2xs placeholder:text-slate-400 outline-none"
+                                  className="w-full text-xs font-semibold text-slate-900 bg-white border border-slate-300 focus:border-slate-500 rounded-md p-2.5 shadow-2xs placeholder:text-slate-400 outline-none"
                                 />
                               </div>
                             </div>
