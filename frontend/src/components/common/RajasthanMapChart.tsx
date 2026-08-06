@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Card } from "antd";
 import api from "../../services/api";
-import { getFacilitiesForDistrict, ASSETS_INVENTORY_DISTRICT_FACILITIES } from "../../utils/assetsInventoryMaster";
+import { getFacilitiesForDistrict } from "../../utils/assetsInventoryMaster";
 import { 
   MapPin, 
   Users, 
@@ -164,14 +164,14 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
   const [dynamicFacilitiesMap, setDynamicFacilitiesMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    api.get("/api/reports/district-facilities-summary")
+    api.get("/api/expense/form-init")
       .then(res => {
-        if (res.data && res.data.success && res.data.facilities_by_district) {
-          setDynamicFacilitiesMap(res.data.facilities_by_district);
+        if (res.data && res.data.facilities) {
+          setDynamicFacilitiesMap(res.data.facilities);
         }
       })
       .catch(err => {
-        console.warn("Could not fetch live district facilities summary from backend:", err);
+        console.warn("Could not fetch live district facilities from form-init:", err);
       });
   }, []);
 
@@ -486,8 +486,8 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
     const allEngineers = new Set<string>();
     const allManagers = new Set<string>();
 
-    // 1. Add all master inventory facilities according to active zone & district filters
-    const masterSource = Object.keys(dynamicFacilitiesMap).length > 0 ? dynamicFacilitiesMap : ASSETS_INVENTORY_DISTRICT_FACILITIES;
+    // 1. Add all real database facilities according to active zone & district filters
+    const masterSource = dynamicFacilitiesMap;
     Object.entries(masterSource).forEach(([distName, facs]) => {
       if (selectedZoneFilter && selectedZoneFilter !== "all") {
         if (!isDistrictInZone(distName, selectedZoneFilter)) return;
@@ -495,7 +495,9 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
       if (selectedDistrictFilter && selectedDistrictFilter !== "all") {
         if (normalizeDistrict(distName) !== normalizeDistrict(selectedDistrictFilter)) return;
       }
-      facs.forEach(f => allFacilities.add(f));
+      if (Array.isArray(facs)) {
+        facs.forEach(f => allFacilities.add(f));
+      }
     });
 
     // 2. Add live district stats & expense facilities
