@@ -39,7 +39,7 @@ import dayjs, { Dayjs } from "dayjs";
 
 const DEFAULT_WORKER_URL = "https://fieldops-api.sunilbishnoi.workers.dev";
 const rawBase = (api.defaults.baseURL || "").replace(/\/api$/, "");
-const API_BASE = (rawBase && rawBase.startsWith("http")) ? rawBase : DEFAULT_WORKER_URL;
+const API_BASE = (rawBase && rawBase.startsWith("http") && !rawBase.includes("indrae.in")) ? rawBase : DEFAULT_WORKER_URL;
 
 const renderAntdStatusTag = (status: string) => {
   const s = (status || "").toLowerCase().trim();
