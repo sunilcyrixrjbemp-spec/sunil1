@@ -47,12 +47,22 @@ export const formatImageUrl = (url: any): string => {
     return "";
   }
 
+  // 1. Decode URL-encoded slashes (%2F / %2f)
+  if (str.includes("%2F") || str.includes("%2f")) {
+    try { str = decodeURIComponent(str); } catch (e) {}
+  }
+
+  // 2. Convert legacy /api/r2/file/ to /uploads/
+  if (str.includes("/api/r2/file/")) {
+    str = str.replace(/\/api\/r2\/file\//g, "/uploads/");
+  }
+
   // Clean duplicate API_BASE prefix if present
   while (str.startsWith(`${API_BASE}${API_BASE}`)) {
     str = str.replace(`${API_BASE}${API_BASE}`, API_BASE);
   }
 
-  // 1. Google Drive direct stream & R2 auto-transfer proxy
+  // 3. Google Drive direct stream & R2 auto-transfer proxy
   if (str.includes("drive.google.com") || str.includes("docs.google.com")) {
     const matchD = str.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     const matchId = str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
@@ -62,17 +72,17 @@ export const formatImageUrl = (url: any): string => {
     }
   }
 
-  // 2. Raw Google Drive File ID (25-50 chars)
+  // 4. Raw Google Drive File ID (25-50 chars)
   if (/^[a-zA-Z0-9_-]{25,50}$/.test(str) && !str.startsWith("http")) {
     return `${API_BASE}/api/r2/gdrive-proxy?id=${str}`;
   }
 
-  // 3. Absolute HTTP(S) or Data URI
+  // 5. Absolute HTTP(S) or Data URI
   if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("data:")) {
     return str;
   }
 
-  // 4. Relative paths -> prepend API_BASE
+  // 6. Relative paths -> prepend API_BASE
   const cleanPath = str.startsWith("/") ? str : `/${str}`;
   return `${API_BASE}${cleanPath}`;
 };
