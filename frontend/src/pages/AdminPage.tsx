@@ -24,7 +24,6 @@ import {
   FileExcelOutlined,
   UserOutlined,
   SafetyCertificateOutlined,
-  LockOutlined,
   DatabaseOutlined,
   TeamOutlined,
   SettingOutlined,
@@ -1436,116 +1435,80 @@ export default function AdminPage() {
     <>
       <div className="space-y-4 text-[#212529] animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 max-w-[1600px] mx-auto min-h-screen font-sans">
         
-        {/* Enterprise Ultra-Compact Header Banner */}
-        <div className="bg-gradient-to-r from-[#1e3a8a] via-[#2563eb] to-[#0ea5e9] text-white px-3.5 py-2.5 rounded-xl shadow-xs flex flex-wrap items-center justify-between gap-2.5 border border-blue-400/20">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 shadow-inner">
-              <ControlOutlined className="text-base" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xs sm:text-sm font-black tracking-wide text-white m-0 uppercase">ADMIN GOVERNANCE CENTER</h1>
-                <span className="text-[9px] font-extrabold bg-white/20 text-white px-2 py-0.2 rounded-full uppercase tracking-wider backdrop-blur-xs hidden sm:inline-block">
-                  Live D1 Cluster
+        {/* Compact Actionable Governance Quick Metrics & Controls Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          
+          {/* Card 1: Total & Active Roster */}
+          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all">
+            <div className="min-w-0">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none">Total Employees</span>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span className="text-sm sm:text-base font-mono font-black text-slate-900 leading-none">{users.length}</span>
+                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                  {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active
                 </span>
               </div>
-              <p className="text-[10.5px] text-blue-100/90 m-0 mt-0.5 font-medium leading-none">
-                Enterprise user profiles, multi-level hierarchy routing, and system parameters.
-              </p>
+            </div>
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
+              <UserOutlined className="text-xs" />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-400/30 font-mono flex items-center gap-1.5 backdrop-blur-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> D1 Database Synced
-            </span>
+          {/* Card 2: Field vs Office Staff */}
+          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all">
+            <div className="min-w-0">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none">Role Breakdown</span>
+              <div className="flex items-center gap-1 mt-1 text-[10.5px] font-extrabold font-mono text-slate-800">
+                <span className="text-emerald-700 bg-emerald-50 px-1 rounded">{users.filter(u => u.role?.toLowerCase().includes('engineer')).length} Eng</span>
+                <span>·</span>
+                <span className="text-cyan-700 bg-cyan-50 px-1 rounded">{users.filter(u => u.role?.toLowerCase().includes('manager')).length} Mng</span>
+                <span>·</span>
+                <span className="text-amber-700 bg-amber-50 px-1 rounded">{users.filter(u => u.role?.toLowerCase().includes('admin')).length} Adm</span>
+              </div>
+            </div>
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+              <TeamOutlined className="text-xs" />
+            </div>
+          </div>
+
+          {/* Card 3: Regional Coverage */}
+          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all">
+            <div className="min-w-0">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none">Regional Matrix</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="text-xs sm:text-sm font-mono font-black text-slate-900 leading-none">{availableUserZones.length} Zones</span>
+                <span className="text-[10px] text-slate-500 font-bold">({availableUserDistricts.length} Districts)</span>
+              </div>
+            </div>
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
+              <DatabaseOutlined className="text-xs" />
+            </div>
+          </div>
+
+          {/* Card 4: Unmapped Routing Audit & Quick Sync */}
+          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all">
+            <div className="min-w-0">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none">Hierarchy Rules</span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-xs sm:text-sm font-mono font-black text-slate-900 leading-none">{hierarchies.length} Mapped</span>
+                {users.filter(u => !u.manager || u.manager === 'N/A').length > 0 && (
+                  <span className="text-[8.5px] font-extrabold text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">
+                    {users.filter(u => !u.manager || u.manager === 'N/A').length} Pending
+                  </span>
+                )}
+              </div>
+            </div>
             <button
               type="button"
               onClick={() => {
                 fetchInitialData();
                 toast.success("Refreshed Governance Data!");
               }}
-              className="bg-white/20 hover:bg-white/30 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-lg px-3 py-1 border border-white/20 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-all active:scale-95 backdrop-blur-md"
+              className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center font-bold shrink-0 cursor-pointer border-0 shadow-2xs transition-all active:scale-95"
+              title="Sync D1 Database"
             >
-              <ReloadOutlined className="text-white text-xs" />
-              <span>Sync Data</span>
+              <ReloadOutlined className="text-xs text-white" />
             </button>
-          </div>
-        </div>
-
-        {/* 6 Executive Summary Metric Column Cards Grid (Ultra-Compact High-Density Design) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
-          
-          {/* Card 1: Total Users */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md transition-all min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
-              <UserOutlined className="text-xs sm:text-sm" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[8px] sm:text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Total Users</span>
-              <span className="text-xs sm:text-sm font-mono font-extrabold text-slate-900 block mt-0.5 leading-none truncate">{users.length}</span>
-              <span className="text-[7.5px] text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold uppercase block mt-0.5 px-1 py-0.2 rounded w-fit truncate">Active: {users.filter(u => u.user_status === 'active' || !u.user_status).length}</span>
-            </div>
-          </div>
-
-          {/* Card 2: Field Engineers */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md transition-all min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
-              <TeamOutlined className="text-xs sm:text-sm" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[8px] sm:text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Engineers</span>
-              <span className="text-xs sm:text-sm font-mono font-extrabold text-slate-900 block mt-0.5 leading-none truncate">{users.filter(u => u.role?.toLowerCase().includes('engineer')).length}</span>
-              <span className="text-[7.5px] text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold uppercase block mt-0.5 px-1 py-0.2 rounded w-fit truncate">Deployed</span>
-            </div>
-          </div>
-
-          {/* Card 3: Managers & ZMs */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md transition-all min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-cyan-600 to-blue-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
-              <ControlOutlined className="text-xs sm:text-sm" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[8px] sm:text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Managers</span>
-              <span className="text-xs sm:text-sm font-mono font-extrabold text-slate-900 block mt-0.5 leading-none truncate">{users.filter(u => u.role?.toLowerCase().includes('manager')).length}</span>
-              <span className="text-[7.5px] text-cyan-700 bg-cyan-50 border border-cyan-200 font-bold uppercase block mt-0.5 px-1 py-0.2 rounded w-fit truncate">Approval L2/L3</span>
-            </div>
-          </div>
-
-          {/* Card 4: Admins & MIS */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md transition-all min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
-              <LockOutlined className="text-xs sm:text-sm" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[8px] sm:text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Admins / MIS</span>
-              <span className="text-xs sm:text-sm font-mono font-extrabold text-slate-900 block mt-0.5 leading-none truncate">{users.filter(u => u.role?.toLowerCase().includes('admin') || u.role?.toLowerCase().includes('mis')).length}</span>
-              <span className="text-[7.5px] text-amber-700 bg-amber-50 border border-amber-200 font-bold uppercase block mt-0.5 px-1 py-0.2 rounded w-fit truncate">Full Access</span>
-            </div>
-          </div>
-
-          {/* Card 5: Hierarchy Rules */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md transition-all min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
-              <SafetyCertificateOutlined className="text-xs sm:text-sm" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[8px] sm:text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Hierarchy</span>
-              <span className="text-xs sm:text-sm font-mono font-extrabold text-slate-900 block mt-0.5 leading-none truncate">{hierarchies.length}</span>
-              <span className="text-[7.5px] text-rose-700 bg-rose-50 border border-rose-200 font-bold uppercase block mt-0.5 px-1 py-0.2 rounded w-fit truncate">Mapped Rules</span>
-            </div>
-          </div>
-
-          {/* Card 6: Coordinators (Replaced confusing Windows metric) */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md transition-all min-w-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shrink-0 font-bold shadow-2xs">
-              <DatabaseOutlined className="text-xs sm:text-sm" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <span className="text-[8px] sm:text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none truncate">Coordinators</span>
-              <span className="text-xs sm:text-sm font-mono font-extrabold text-slate-900 block mt-0.5 leading-none truncate">{users.filter(u => u.role?.toLowerCase().includes('coordinator')).length}</span>
-              <span className="text-[7.5px] text-indigo-700 bg-indigo-50 border border-indigo-200 font-bold uppercase block mt-0.5 px-1 py-0.2 rounded w-fit truncate">Field Leads</span>
-            </div>
           </div>
 
         </div>
