@@ -1470,6 +1470,14 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const isOutDistrict = !isOutOfState && (c.districtType === "outstation" || c.is_outstation || c.districtType === "OUT_DISTRICT" ||
     (c.from_district && c.to_district && c.from_district !== c.to_district));
 
+  const attachments = getAttachmentsArray(c.attachments_detailed || c.attachments || c.bills || c.photos);
+  const approvals = Array.isArray(c.approvals) ? c.approvals : [];
+
+  // Rejection & Approval Status Flags
+  const isApproved = (c.status || "").toLowerCase() === "approved";
+  const rejectedStep = approvals.find((a: any) => (a.status || "").toLowerCase() === "rejected");
+  const isClaimRejected = (c.status || "").toLowerCase().includes("reject") || !!rejectedStep;
+
   // Limit Request Detection & Format Normalization
   const isLimitRequest = !!(
     c.is_limit_request ||
@@ -1496,14 +1504,6 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             : ((Array.isArray(editedLegs) && editedLegs.length > 0)
                 ? editedLegs
                 : (Array.isArray(c.itinerary) ? c.itinerary : []))));
-
-  const attachments = getAttachmentsArray(c.attachments_detailed || c.attachments || c.bills || c.photos);
-  const approvals = Array.isArray(c.approvals) ? c.approvals : [];
-
-  // Rejection & Approval Status Flags
-  const isApproved = (c.status || "").toLowerCase() === "approved";
-  const rejectedStep = approvals.find((a: any) => (a.status || "").toLowerCase() === "rejected");
-  const isClaimRejected = (c.status || "").toLowerCase().includes("reject") || !!rejectedStep;
 
   const rejectorName = rejectedStep?.approver_name || rejectedStep?.approver || c.rejected_by_name || c.rejector_name || c.rejected_by || "Manager / Coordinator";
   const rejectorCode = rejectedStep?.approver_code || c.rejector_code || "";
