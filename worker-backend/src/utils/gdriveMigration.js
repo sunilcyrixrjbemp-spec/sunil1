@@ -242,20 +242,20 @@ export async function handleMigrateGdrive(request, env, params, query, user) {
     }
   }
 
-  // Table 4: expenses
+  // Table 5: expense_itineraries (activity_details JSON)
   if (candidates.length < batchSize) {
     const remainingBatch = batchSize - candidates.length;
     try {
-      const expenseCandidates = await env.DB.prepare(`
-        SELECT 'expenses' as table_name, id, expense_code as code, attachments as url, 'expense_claim' as category, created_at as exp_date
-        FROM expenses
-        WHERE (attachments LIKE '%gdrive%' OR attachments LIKE '%drive.google%')
-          AND attachments IS NOT NULL
+      const itiCandidates = await env.DB.prepare(`
+        SELECT 'expense_itineraries' as table_name, id, exp_id as code, activity_details as url, 'service_report_itinerary' as category, NULL as exp_date
+        FROM expense_itineraries
+        WHERE (activity_details LIKE '%drive.google%' OR activity_details LIKE '%gdrive%' OR activity_details LIKE '%docs.google%')
+          AND activity_details IS NOT NULL
         ORDER BY id LIMIT ?
       `).bind(remainingBatch).all();
-      candidates = candidates.concat(expenseCandidates?.results || []);
+      candidates = candidates.concat(itiCandidates?.results || []);
     } catch (e) {
-      staticLog.error("Error querying expenses", { error: e.message });
+      staticLog.error("Error querying expense_itineraries", { error: e.message });
     }
   }
 
