@@ -1065,6 +1065,47 @@ const LegDetailCard = ({
         </>
       )}
 
+      {/* HISTORICAL MINIMUM ROUTE BENCHMARK AUDIT CARD (APPROVER ONLY MATCH POPUP) */}
+      {routeBenchmarks[index] && (
+        <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2.5 mt-2 space-y-1.5 shadow-xs select-none">
+          <div className="flex items-center justify-between font-extrabold text-emerald-950 text-[10.5px] border-b border-emerald-200 pb-1 flex-wrap gap-1">
+            <span className="flex items-center gap-1.5 uppercase tracking-wider text-emerald-900">
+              🏆 Historical Minimum Route Match ({routeBenchmarks[index].from_location} ↔ {routeBenchmarks[index].to_location})
+            </span>
+            <span className="text-[9.5px] bg-emerald-700 text-white px-2 py-0.5 rounded font-mono font-black shadow-2xs">
+              Verified Lowest Fare: ₹{routeBenchmarks[index].min_travel_amount}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9.5px]">
+            <div>
+              <span className="text-slate-500 font-bold block">Lowest Fare Filed By:</span>
+              <span className="text-slate-900 font-black block leading-tight">{routeBenchmarks[index].prior_user_name}</span>
+              <span className="text-emerald-700 font-mono text-[8.5px] font-bold block">{routeBenchmarks[index].prior_claim_code}</span>
+            </div>
+            <div>
+              <span className="text-slate-500 font-bold block">Min Distance & Mode:</span>
+              <span className="text-slate-900 font-mono font-extrabold block">{routeBenchmarks[index].min_distance_km} KM ({routeBenchmarks[index].travel_mode})</span>
+            </div>
+            <div>
+              <span className="text-slate-500 font-bold block">Minimum Travel Fare:</span>
+              <span className="text-emerald-900 font-mono font-black block text-xs">₹{routeBenchmarks[index].min_travel_amount}</span>
+            </div>
+            <div>
+              <span className="text-slate-500 font-bold block">Current vs Minimum:</span>
+              {parseFloat(String(taAmt)) > routeBenchmarks[index].min_travel_amount ? (
+                <span className="text-rose-800 font-extrabold bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 font-mono text-[9px] block">
+                  ⚠️ +₹{(parseFloat(String(taAmt)) - routeBenchmarks[index].min_travel_amount).toFixed(0)} Higher
+                </span>
+              ) : (
+                <span className="text-emerald-800 font-extrabold bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-[9px] block">
+                  ✓ Matches Lowest Fare
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MANAGER & COORDINATOR EXPENSE AMOUNT EDIT PANEL */}
       {canEditAmounts && onLegAmountChange && (
         <div className="bg-[#4A6A8A]/10 p-2.5 rounded-lg border-2 border-[#4A6A8A]/30 mt-2 space-y-2 select-none">
@@ -1457,6 +1498,40 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const [showReturnBox, setShowReturnBox] = useState(false);
   const [barcodeMap, setBarcodeMap] = useState<Record<string, { equipment: string; hospital: string }>>({});
   const [userAllowance, setUserAllowance] = useState<any>(null);
+  const [routeBenchmarks, setRouteBenchmarks] = useState<Record<number, any>>({});
+
+  useEffect(() => {
+    if (!open || !claimDetails) return;
+    const itineraries = Array.isArray(claimDetails.itineraries) && claimDetails.itineraries.length > 0
+      ? claimDetails.itineraries
+      : (Array.isArray(claimDetails.legs) ? claimDetails.legs : []);
+
+    const homeKeywords = ["home", "residence", "house", "room", "flat", "base", "stay"];
+
+    itineraries.forEach((leg: any, idx: number) => {
+      const fromLoc = (leg.from_location || leg.from_district || "").trim();
+      const toLoc = (leg.to_location || leg.to_district || "").trim();
+      if (!fromLoc || !toLoc) return;
+
+      const isHome = homeKeywords.some(kw => fromLoc.toLowerCase().includes(kw) || toLoc.toLowerCase().includes(kw));
+      if (isHome) return;
+
+      const token = localStorage.getItem("token") || "";
+      const apiUrl = import.meta.env.VITE_API_URL || "https://fieldops-api.sunilbishnoi.workers.dev/api";
+      const cleanApi = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
+
+      fetch(`${cleanApi}/approval/route-benchmark?from=${encodeURIComponent(fromLoc)}&to=${encodeURIComponent(toLoc)}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success && data.hasBenchmark && data.benchmark) {
+          setRouteBenchmarks(prev => ({ ...prev, [idx]: data.benchmark }));
+        }
+      })
+      .catch(() => {});
+    });
+  }, [open, claimDetails]);
 
   // INSTANT PHOTO PREFETCHER INTO BROWSER MEMORY (0ms DELAY WHEN CLICKING VIEW PHOTO / VIEW BILL)
   useEffect(() => {

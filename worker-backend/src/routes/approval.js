@@ -1209,7 +1209,82 @@ export async function handleBulkApprove(request, env, params, query, user) {
     successCount,
     failCount
   });
+export async function handleGetRouteBenchmark(request, env, params, query, user) {
+  try {
+    const fromLoc = (query.get("from") || "").trim();
+    const toLoc = (query.get("to") || "").trim();
+
+    if (!fromLoc || !toLoc) {
+      return jsonResponse({ success: true, hasBenchmark: false, reason: "Missing locations" });
+    }
+
+    const homeKeywords = ["home", "residence", "house", "room", "flat", "base", "stay"];
+    const fromLower = fromLoc.toLowerCase();
+    const toLower = toLoc.toLowerCase();
+
+    const isHomeLocation = homeKeywords.some(kw => fromLower.includes(kw) || toLower.includes(kw));
+    if (isHomeLocation) {
+      return jsonResponse({ success: true, hasBenchmark: false, reason: "Home or residence locations are excluded from benchmarks" });
+    }
+
+    // Query D1 DB for historical approved claims matching this exact route (either direction A->B or B->A)
+    const sql = `
+      SELECT 
+        i.from_location,
+        i.to_location,
+        i.distance_km,
+        i.travel_amount,
+        i.travel_mode,
+        e.user_name,
+        e.user_id,
+        e.expense_code,
+        e.created_at
+      FROM expense_itineraries i
+      JOIN expenses e ON (i.exp_id = e.expense_code OR i.exp_id = CAST(e.id AS TEXT) OR i.exp_id = e.id)
+      WHERE e.status = 'Approved'
+        AND i.travel_amount > 0
+        AND (
+          (LOWER(i.from_location) LIKE ? AND LOWER(i.to_location) LIKE ?)
+          OR (LOWER(i.from_location) LIKE ? AND LOWER(i.to_location) LIKE ?)
+        )
+        AND LOWER(i.from_location) NOT LIKE '%home%'
+        AND LOWER(i.to_location) NOT LIKE '%home%'
+        AND LOWER(i.from_location) NOT LIKE '%residence%'
+        AND LOWER(i.to_location) NOT LIKE '%residence%'
+      ORDER BY i.travel_amount ASC, i.distance_km ASC
+      LIMIT 1
+    `;
+
+    const matchFrom = `%${fromLower}%`;
+    const matchTo = `%${toLower}%`;
+
+    const result = await env.DB.prepare(sql).bind(matchFrom, matchTo, matchTo, matchFrom).first();
+
+    if (!result) {
+      return jsonResponse({ success: true, hasBenchmark: false });
+    }
+
+    return jsonResponse({
+      success: true,
+      hasBenchmark: true,
+      benchmark: {
+        prior_user_name: result.user_name || "Staff",
+        prior_user_id: result.user_id,
+        prior_claim_code: result.expense_code || "CLM",
+        prior_created_at: result.created_at,
+        min_distance_km: result.distance_km || 0,
+        min_travel_amount: result.travel_amount || 0,
+        travel_mode: result.travel_mode || "Travel",
+        from_location: result.from_location,
+        to_location: result.to_location
+      }
+    });
+  } catch (error) {
+    console.error("handleGetRouteBenchmark error:", error);
+    return jsonResponse({ success: false, error: error.message }, 500);
+  }
 }
+
 
 
 

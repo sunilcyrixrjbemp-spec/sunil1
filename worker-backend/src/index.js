@@ -45,7 +45,8 @@ import {
 // Approval handlers
 import {
   handleGetApprovals, handleApprove, handleReject,
-  handleReturnToDraft, handleAutoApprovalExpiry, handleBulkApprove
+  handleReturnToDraft, handleAutoApprovalExpiry, handleBulkApprove,
+  handleGetRouteBenchmark
 } from "./routes/approval.js";
 
 // Admin handlers
@@ -210,6 +211,7 @@ router.delete("/api/users/profile/photo", handleDeleteProfilePhoto, true);
 router.post("/api/users/change-password", handleChangePassword, true);
 
 // ─── Approval Endpoints — Two path aliases for compatibility ──────────────────
+router.get("/api/approval/route-benchmark", handleGetRouteBenchmark, true);
 router.get("/api/approval", handleGetApprovals, true);
 router.post("/api/approval/bulk-approve", handleBulkApprove, true);
 router.post("/api/approval/:expense_id/approve", handleApprove, true);
