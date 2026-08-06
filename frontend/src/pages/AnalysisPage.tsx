@@ -1595,25 +1595,29 @@ export default function AnalysisPage() {
       `}</style>
       
       {/* Ultra-Compact #4A6A8A Signature Header Bar */}
-      <div className="bg-[#4A6A8A] text-white rounded-t-lg px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
-        <div className="flex items-center gap-3">
+      <div className="bg-[#4A6A8A] text-white rounded-t-lg px-3 py-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shadow-2xs">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
               <FundOutlined className="text-white text-sm" />
             </div>
-            <span className="text-sm font-bold text-white tracking-normal">
+            <span className="text-xs sm:text-sm font-bold text-white tracking-normal whitespace-nowrap">
               Deep Analytics <span className="text-white/70 font-normal text-xs">({months[selectedMonth]} {selectedYear})</span>
             </span>
           </div>
+
+          <span className="sm:hidden text-[10px] font-mono font-bold text-white/90 bg-white/20 px-2 py-0.5 rounded shrink-0">
+            {activeExpenses.length} Rec.
+          </span>
         </div>
 
         {/* Controls & Mode Switcher */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
           {isReviewer && (
-            <div className="flex items-center bg-white/15 p-0.5 rounded-md text-xs font-bold">
+            <div className="flex items-center bg-white/15 p-0.5 rounded-md text-[11px] font-bold shrink-0">
               <button
                 onClick={() => setViewMode("my")}
-                className={`px-2.5 py-1 rounded transition-all flex items-center gap-1 cursor-pointer ${
+                className={`px-2 py-1 rounded transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                   viewMode === "my" ? "bg-white text-[#4A6A8A] shadow-xs" : "text-white/80 hover:text-white"
                 }`}
               >
@@ -1622,7 +1626,7 @@ export default function AnalysisPage() {
               </button>
               <button
                 onClick={() => setViewMode("team")}
-                className={`px-2.5 py-1 rounded transition-all flex items-center gap-1 cursor-pointer ${
+                className={`px-2 py-1 rounded transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                   viewMode === "team" ? "bg-white text-[#4A6A8A] shadow-xs" : "text-white/80 hover:text-white"
                 }`}
               >
@@ -1634,7 +1638,7 @@ export default function AnalysisPage() {
 
           <button
             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-            className="px-2.5 py-1 bg-white/15 hover:bg-white/25 text-white rounded-md text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+            className="px-2 py-1 bg-white/15 hover:bg-white/25 text-white rounded-md text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap shrink-0"
           >
             <FilterOutlined style={{ fontSize: 11 }} />
             {isFilterExpanded ? "Hide Filters" : "Filters"}
@@ -1647,12 +1651,12 @@ export default function AnalysisPage() {
             style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
             onClick={downloadCSV}
             disabled={activeExpenses.length === 0}
-            className="font-bold text-xs uppercase flex items-center justify-center shrink-0 h-7 px-3 cursor-pointer shadow-2xs"
+            className="font-bold text-[11px] uppercase flex items-center justify-center shrink-0 h-7 px-2.5 cursor-pointer shadow-2xs whitespace-nowrap rounded-md"
           >
             Export CSV
           </Button>
 
-          <span className="text-xs font-mono font-bold text-white/90 bg-white/20 px-2.5 py-1 rounded shrink-0">
+          <span className="hidden sm:inline-block text-xs font-mono font-bold text-white/90 bg-white/20 px-2.5 py-1 rounded shrink-0 whitespace-nowrap">
             {activeExpenses.length} Records
           </span>
         </div>
@@ -2713,9 +2717,9 @@ export default function AnalysisPage() {
         </div>
       </Modal>
 
-      {/* Rajasthan GeoJSON District Analytics Interactive Map Chart */}
+      {/* Rajasthan GeoJSON District Analytics Interactive Map Chart (Desktop Only) */}
       {(activeTab === "map" || activeTab === "overview") && (
-        <div className="mt-2">
+        <div className="mt-2 hidden md:block">
           <RajasthanMapChart
             expenses={mapExpenses}
             selectedZoneFilter={selectedZone}
