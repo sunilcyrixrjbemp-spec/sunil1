@@ -5,6 +5,7 @@ import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import { adminService } from "../services/adminService";
 import Loader from "../components/common/Loader";
+import AnalysisSkeleton from "../components/common/AnalysisSkeleton";
 import RajasthanMapChart from "../components/common/RajasthanMapChart";
 import {
   Button,
@@ -217,10 +218,7 @@ export default function AnalysisPage() {
     const fetchData = async () => {
       const cacheKeyMy = `cache_v4_my_expenses_${uId}_${monthQueryParam}`;
       const cacheKeyTeam = `cache_v4_team_expenses_${uId}_${monthQueryParam}`;
-      const hasCache = uId && localStorage.getItem(cacheKeyMy);
-      if (!hasCache) {
-        setLoading(true);
-      }
+      setLoading(true);
       try {
         if (isReviewer) {
           const [own, team] = await Promise.all([
@@ -1457,11 +1455,7 @@ export default function AnalysisPage() {
   console.log("AnalysisPage activeExpenses:", activeExpenses);
 
   if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <Loader message="Loading analysis dashboard..." />
-      </div>
-    );
+    return <AnalysisSkeleton />;
   }  return (
     <div className="w-full space-y-2 p-1 sm:p-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
