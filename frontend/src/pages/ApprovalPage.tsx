@@ -543,8 +543,19 @@ export default function ApprovalPage() {
       if (field === "km") {
         const dbBikeRate = expenseDetails?.rate_bike || 4.5;
         const dbCarRate = expenseDetails?.rate_car || 9.0;
-        const fallbackRate = leg.mode === "Car" ? dbCarRate : dbBikeRate;
-        const rate = (targetOriginal.km && targetOriginal.km > 0) ? ((targetOriginal.amount || targetOriginal.travel_amount || 0) / targetOriginal.km) : fallbackRate;
+        const mode = leg.mode || targetOriginal.mode || targetOriginal.travel_mode;
+        const defaultRate = mode === "Car" ? dbCarRate : dbBikeRate;
+
+        let rate = defaultRate;
+        if (targetOriginal.travel_amount && targetOriginal.km && targetOriginal.km > 0) {
+          const computed = targetOriginal.travel_amount / targetOriginal.km;
+          if (computed > 0) rate = computed;
+        } else if (targetOriginal.amount && targetOriginal.km && targetOriginal.km > 0) {
+          // If targetOriginal.amount is <= 15, it represents per-km rate directly
+          const computed = targetOriginal.amount <= 15 ? targetOriginal.amount : (targetOriginal.amount / targetOriginal.km);
+          if (computed > 0) rate = computed;
+        }
+
         newKm = numericValue;
         newTravelAmount = parseFloat((numericValue * rate).toFixed(2));
         updated[index] = {
