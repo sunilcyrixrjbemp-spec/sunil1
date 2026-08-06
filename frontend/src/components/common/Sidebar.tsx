@@ -141,6 +141,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               src="/logo-fieldconnect.png"
               alt="Cyrix Field Connect"
               className="h-6 w-auto max-w-[160px] object-contain"
+              style={{ height: "24px", maxHeight: "24px", maxWidth: "160px", objectFit: "contain" }}
+              height="24"
             />
           </div>
         </Link>

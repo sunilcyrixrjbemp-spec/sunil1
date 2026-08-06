@@ -271,6 +271,8 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
                 src="/logo-fieldconnect.png"
                 alt="Cyrix Field Connect Logo"
                 className="h-12 sm:h-14 w-auto object-contain drop-shadow-xs"
+                style={{ height: "52px", maxHeight: "56px", maxWidth: "260px", objectFit: "contain" }}
+                height="52"
               />
             </div>
             <h1

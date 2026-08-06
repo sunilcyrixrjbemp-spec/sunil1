@@ -179,6 +179,8 @@ export default function DashboardLayout() {
                 src="/logo-fieldconnect.png"
                 alt="Cyrix Field Connect"
                 className="h-6 w-auto max-w-[160px] object-contain"
+                style={{ height: "24px", maxHeight: "24px", maxWidth: "160px", objectFit: "contain" }}
+                height="24"
               />
             </div>
           </Link>
@@ -286,7 +288,7 @@ export default function DashboardLayout() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="bg-white/95 px-2.5 py-1 rounded-lg shadow-xs flex items-center shrink-0">
-                    <img src="/logo-fieldconnect.png" alt="Cyrix Field Connect Logo" className="h-7 w-auto max-w-[170px] object-contain" />
+                    <img src="/logo-fieldconnect.png" alt="Cyrix Field Connect Logo" className="h-7 w-auto max-w-[170px] object-contain" style={{ height: "28px", maxHeight: "28px", maxWidth: "170px", objectFit: "contain" }} height="28" />
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[10px] text-white/80 font-normal">All Application Menus & Services</span>
