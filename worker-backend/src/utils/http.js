@@ -10,8 +10,11 @@
 
 // ─── Allowed CORS origins ─────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
+  "https://fieldops.cyrixhealth.com",
+  "https://cyrixhealth.com",
   "https://indrae.in",
   "https://www.indrae.in",
+  "https://fieldops-api.sunilbishnoi.workers.dev",
   "https://fieldops-secondary-api.sunilbishnoi.workers.dev",
   "capacitor://localhost",
   "http://localhost",
@@ -25,12 +28,17 @@ const ALLOWED_ORIGINS = [
  * Returns the exact origin if allowed, or the primary production origin.
  */
 export function getAllowedOrigin(requestOrigin) {
-  if (!requestOrigin) return "https://indrae.in";
-  // Allow exact match or localhost (any port) for local dev
+  if (!requestOrigin) return "*";
   if (ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
-  if (requestOrigin.startsWith("http://localhost:")) return requestOrigin;
-  if (requestOrigin.startsWith("http://127.0.0.1:")) return requestOrigin;
-  return "https://indrae.in";
+  if (requestOrigin.includes("cyrixhealth.com") || 
+      requestOrigin.includes("pages.dev") || 
+      requestOrigin.includes("workers.dev") || 
+      requestOrigin.includes("indrae.in") ||
+      requestOrigin.startsWith("http://localhost:") || 
+      requestOrigin.startsWith("http://127.0.0.1:")) {
+    return requestOrigin;
+  }
+  return requestOrigin || "*";
 }
 
 /**
