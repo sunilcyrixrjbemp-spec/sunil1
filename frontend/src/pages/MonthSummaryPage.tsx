@@ -2083,7 +2083,7 @@ export default function MonthSummaryPage() {
                 </label>
                 <input
                   type="number"
-                  value={advanceAmountInput === 0 || advanceAmountInput === "0" ? "" : advanceAmountInput}
+                  value={String(advanceAmountInput) === "0" || advanceAmountInput === "" ? "" : advanceAmountInput}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setAdvanceAmountInput(e.target.value)}
                   className="w-full border border-slate-300 rounded-none px-3 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#4A6A8A] bg-white"

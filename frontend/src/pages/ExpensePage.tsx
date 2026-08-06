@@ -3620,7 +3620,7 @@ export default function ExpensePage() {
                                 type="number"
                                 min="0"
                                 step="any"
-                                value={leg.km === 0 || leg.km === "0" ? "" : leg.km}
+                                value={String(leg.km) === "0" || leg.km === "" ? "" : leg.km}
                                 onFocus={(e) => e.target.select()}
                                 disabled={leg.mode !== "Bike" && leg.mode !== "Car"}
                                 placeholder="0"
@@ -3643,7 +3643,7 @@ export default function ExpensePage() {
                                 type="number"
                                 min="0"
                                 step="any"
-                                value={leg.amount === 0 || leg.amount === "0" ? "" : leg.amount}
+                                value={String(leg.amount) === "0" || leg.amount === "" ? "" : leg.amount}
                                 onFocus={(e) => e.target.select()}
                                 disabled={leg.mode === "Bike" || leg.mode === "Car"}
                                 placeholder="0"
@@ -3806,7 +3806,7 @@ export default function ExpensePage() {
                                   step="any"
                                   placeholder="0"
                                   onFocus={(e) => e.target.select()}
-                                  value={leg.sub_amount === 0 || leg.sub_amount === "0" ? "" : leg.sub_amount}
+                                  value={String(leg.sub_amount) === "0" || leg.sub_amount === "" ? "" : leg.sub_amount}
                                   onChange={(e) => handleItineraryChange(leg.leg, "sub_amount", e.target.value)}
                                   className="input-lte font-bold"
                                 />
@@ -3906,7 +3906,7 @@ export default function ExpensePage() {
                               step="any"
                               placeholder="0"
                               onFocus={(e) => e.target.select()}
-                              value={leg.hotel === 0 || leg.hotel === "0" ? "" : leg.hotel}
+                              value={String(leg.hotel) === "0" || leg.hotel === "" ? "" : leg.hotel}
                               onChange={(e) => handleItineraryChange(leg.leg, "hotel", e.target.value)}
                               className="input-lte font-bold"
                             />
@@ -3985,7 +3985,7 @@ export default function ExpensePage() {
                               step="any"
                               placeholder="0"
                               onFocus={(e) => e.target.select()}
-                              value={leg.local_purchase === 0 || leg.local_purchase === "0" ? "" : leg.local_purchase}
+                              value={String(leg.local_purchase) === "0" || leg.local_purchase === "" ? "" : leg.local_purchase}
                               onChange={(e) => handleItineraryChange(leg.leg, "local_purchase", e.target.value)}
                               className="input-lte font-bold"
                             />
@@ -4074,7 +4074,7 @@ export default function ExpensePage() {
                             step="any"
                             placeholder="0"
                             onFocus={(e) => e.target.select()}
-                            value={leg.oth_amount === 0 || leg.oth_amount === "0" ? "" : leg.oth_amount}
+                            value={String(leg.oth_amount) === "0" || leg.oth_amount === "" ? "" : leg.oth_amount}
                             onChange={(e) => handleItineraryChange(leg.leg, "oth_amount", e.target.value)}
                             disabled={!leg.oth_desc.trim()}
                             className={`input-lte font-bold ${!leg.oth_desc.trim() ? "bg-gray-100 text-gray-400 cursor-not-allowed" : ""}`}
