@@ -33,7 +33,7 @@ bucket_name = "fieldops-uploads"
 
 [[r2_buckets]]
 binding = "CYRIXAPP_BUCKET"
-bucket_name = "cyrixapp"
+bucket_name = "fieldops-uploads"
 
 # ─── Cloudflare Queues (Async Job Processing — Pro Plan) ──────────────
 # Run once to create queues:
