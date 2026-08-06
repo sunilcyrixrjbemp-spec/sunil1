@@ -412,14 +412,14 @@ export default function DashboardLayout() {
         </main>
 
         {/* Mobile Bottom Navigation Bar - Replaces 3-Line Top Hamburger Menu */}
-        <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1 px-2 flex items-center justify-around lg:hidden shadow-lg">
+        <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 py-1.5 px-3 flex items-center justify-around lg:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
           {allowedWindows.includes("home") && (
             <Link
               to="/home"
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-3.5 py-1.5 rounded-xl text-[10.5px] font-extrabold transition-all transform active:scale-95 ${
                 location.pathname === "/home"
-                  ? "text-blue-600 bg-blue-50"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
               <Home className="w-4 h-4" />
@@ -430,10 +430,10 @@ export default function DashboardLayout() {
           {allowedWindows.includes("expense") && (
             <Link
               to="/submit-expense"
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-3.5 py-1.5 rounded-xl text-[10.5px] font-extrabold transition-all transform active:scale-95 ${
                 location.pathname.startsWith("/submit-expense")
-                  ? "text-emerald-600 bg-emerald-50"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
               <FilePlus className="w-4 h-4" />
@@ -444,10 +444,10 @@ export default function DashboardLayout() {
           {allowedWindows.includes("approval") && (
             <Link
               to="/approval-center"
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-3.5 py-1.5 rounded-xl text-[10.5px] font-extrabold transition-all transform active:scale-95 ${
                 location.pathname.startsWith("/approval-center")
-                  ? "text-amber-600 bg-amber-50"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/25"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
               <CheckSquare className="w-4 h-4" />
@@ -458,10 +458,10 @@ export default function DashboardLayout() {
           {allowedWindows.includes("profile") && (
             <Link
               to="/profile"
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+              className={`flex flex-col items-center gap-0.5 px-3.5 py-1.5 rounded-xl text-[10.5px] font-extrabold transition-all transform active:scale-95 ${
                 location.pathname.startsWith("/profile")
-                  ? "text-purple-600 bg-purple-50"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-500/25"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
               }`}
             >
               <User className="w-4 h-4" />
@@ -472,10 +472,10 @@ export default function DashboardLayout() {
           {/* 9-Dot Bento Grid "More" Button to Open All Menus */}
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+            className={`flex flex-col items-center gap-0.5 px-3.5 py-1.5 rounded-xl text-[10.5px] font-extrabold transition-all transform active:scale-95 cursor-pointer ${
               isMobileMenuOpen
-                ? "text-indigo-600 bg-indigo-50"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-gradient-to-r from-slate-700 to-slate-900 text-white shadow-md shadow-slate-500/25"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
             }`}
             title="All Menus & Services"
           >

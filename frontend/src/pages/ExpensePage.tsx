@@ -17,6 +17,7 @@ import {
   Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
   TrendingUp,
+  Zap,
   Info,
   MapPin,
   User,
@@ -5373,79 +5374,69 @@ export default function ExpensePage() {
         </div>
 
         {/* Claims Totals & Submissions bar (Full width under the grid) */}
-        <div className="bg-white border border-slate-200 border-t-4 border-t-[#4A6A8A] rounded-lg shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs font-semibold mt-6 w-full">
-          <div className="flex flex-wrap items-center gap-4 md:gap-6 text-[11px]">
-            <div className="flex items-center gap-1.5 border-r border-slate-200 pr-4 md:pr-6">
-              <TrendingUp className="w-4 h-4 text-[#4A6A8A]" />
-              <span className="text-xs font-extrabold uppercase text-slate-800 tracking-wider">CLAIM SUMMARY</span>
+        <div className="bg-gradient-to-br from-white via-slate-50/50 to-slate-100/50 border border-slate-200/90 rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col gap-4 text-xs font-semibold mt-6 w-full">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-[#4A6A8A] flex items-center justify-center text-white shadow-2xs">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs font-extrabold uppercase text-slate-900 tracking-wider m-0">Claim Financial Summary</h3>
+                <p className="text-[9.5px] text-slate-500 font-medium m-0">Review breakdown before submitting claim</p>
+              </div>
             </div>
-            <div>
-              <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">TRAVEL DATE</span>
-              <span className="text-slate-800 font-bold">{date || "No date selected"}</span>
-            </div>
-            {totalBikeCarKm > 0 && (
-              <div>
-                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">BIKE / CAR</span>
-                <span className="text-slate-800 font-mono font-bold">{totalBikeCarKm.toFixed(1)} KM (₹{totalBikeCarAmt.toLocaleString()})</span>
-              </div>
-            )}
-            {totalAuto > 0 && (
-              <div>
-                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">AUTO COST</span>
-                <span className="text-slate-800 font-mono font-bold">₹{totalAuto.toLocaleString()}</span>
-              </div>
-            )}
-            {totalDA > 0 && (
-              <div>
-                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">DA</span>
-                <span className="text-slate-800 font-mono font-bold">₹{totalDA.toLocaleString()}</span>
-              </div>
-            )}
-            {totalHotel > 0 && (
-              <div>
-                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">HOTEL</span>
-                <span className="text-slate-800 font-mono font-bold">₹{totalHotel.toLocaleString()}</span>
-              </div>
-            )}
-            {totalLocalPurchase > 0 && (
-              <div>
-                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">LOCAL PURCHASE</span>
-                <span className="text-slate-800 font-mono font-bold">₹{totalLocalPurchase.toLocaleString()}</span>
-              </div>
-            )}
-            {totalOther > 0 && (
-              <div>
-                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">OTHER</span>
-                <span className="text-slate-800 font-mono font-bold">₹{totalOther.toLocaleString()}</span>
-              </div>
-            )}
-            {totalBikeCarKm === 0 && totalAuto === 0 && (
-              <div>
-                <span className="text-slate-400 uppercase text-[9px] font-extrabold block mb-0.5 tracking-wider">DISTANCE</span>
-                <span className="text-slate-800 font-mono font-bold">0.0 KM</span>
-              </div>
-            )}
-            <div className="border-l border-slate-200 pl-4 md:pl-6">
-              <span className="text-slate-900 font-black uppercase text-[10px] block mb-0.5 tracking-wider">TOTAL AMOUNT</span>
-              <span className="text-[#4A6A8A] font-black font-mono text-base">₹{totalAmt.toLocaleString()}</span>
+            <div className="bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-2xs">
+              <span className="text-[9px] font-extrabold uppercase text-emerald-800 tracking-wider">NET PAYABLE:</span>
+              <span className="text-emerald-700 font-black font-mono text-base">₹{totalAmt.toLocaleString()}</span>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 bg-white p-3 rounded-xl border border-slate-200/70 shadow-2xs">
+            <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-150">
+              <span className="text-slate-400 uppercase text-[8.5px] font-extrabold block mb-0.5 tracking-wider">TRAVEL DATE</span>
+              <span className="text-slate-900 font-bold text-[11px] truncate block">{date || "No date selected"}</span>
+            </div>
+            <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-150">
+              <span className="text-slate-400 uppercase text-[8.5px] font-extrabold block mb-0.5 tracking-wider">VISITS / LEGS</span>
+              <span className="text-slate-900 font-bold text-[11px]">{itineraries.length} Visit{itineraries.length !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-150">
+              <span className="text-slate-400 uppercase text-[8.5px] font-extrabold block mb-0.5 tracking-wider">BIKE / CAR</span>
+              <span className="text-slate-900 font-mono font-bold text-[11px]">{totalBikeCarKm.toFixed(1)} KM (₹{totalBikeCarAmt.toLocaleString()})</span>
+            </div>
+            <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-150">
+              <span className="text-slate-400 uppercase text-[8.5px] font-extrabold block mb-0.5 tracking-wider">ALLOWANCE (DA)</span>
+              <span className="text-slate-900 font-mono font-bold text-[11px]">₹{totalDA.toLocaleString()}</span>
+            </div>
+            <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-150">
+              <span className="text-slate-400 uppercase text-[8.5px] font-extrabold block mb-0.5 tracking-wider">AUTO / CAB</span>
+              <span className="text-slate-900 font-mono font-bold text-[11px]">₹{totalAuto.toLocaleString()}</span>
+            </div>
+            <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-150">
+              <span className="text-slate-400 uppercase text-[8.5px] font-extrabold block mb-0.5 tracking-wider">HOTEL / STAY</span>
+              <span className="text-slate-900 font-mono font-bold text-[11px]">₹{totalHotel.toLocaleString()}</span>
+            </div>
+            <div className="bg-slate-50/80 p-2 rounded-lg border border-slate-150">
+              <span className="text-slate-400 uppercase text-[8.5px] font-extrabold block mb-0.5 tracking-wider">SPARE / OTHER</span>
+              <span className="text-slate-900 font-mono font-bold text-[11px]">₹{(totalLocalPurchase + totalOther).toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 w-full pt-1">
             {isLimitExceeded && (
               <button
                 type="button"
                 onClick={() => setShowApprovalModal(true)}
                 disabled={policyMissing}
-                className="flex-1 sm:flex-none h-10 sm:h-9 py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-extrabold uppercase tracking-wider text-xs rounded-lg shadow-sm border border-amber-600 flex items-center justify-center whitespace-nowrap cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto h-11 px-5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold uppercase tracking-wider text-xs rounded-xl shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                EXTEND LIMIT
+                <Zap className="w-4 h-4" /> EXTEND LIMIT
               </button>
             )}
             <button
               type="submit"
               disabled={isLimitExceeded || submitting || policyMissing}
-              className="flex-1 sm:flex-none h-10 sm:h-9 py-2 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold uppercase tracking-wider text-xs rounded-lg shadow-sm border border-emerald-600 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto h-11 px-7 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold uppercase tracking-wider text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
@@ -5454,7 +5445,7 @@ export default function ExpensePage() {
                 </>
               ) : (
                 <>
-                  <Check className="w-4 h-4 stroke-[3] shrink-0" />
+                  <Check className="w-4.5 h-4.5 stroke-[3] shrink-0" />
                   <span>{editExpenseId ? "UPDATE CLAIM" : "SUBMIT CLAIM"}</span>
                 </>
               )}
@@ -5462,12 +5453,13 @@ export default function ExpensePage() {
             <button
               type="button"
               onClick={() => navigate("/home")}
-              className="flex-1 sm:flex-none h-10 sm:h-9 py-2 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold uppercase tracking-wider text-xs rounded-lg border border-slate-300 shadow-xs flex items-center justify-center whitespace-nowrap cursor-pointer transition-colors"
+              className="w-full sm:w-auto h-11 px-6 bg-white hover:bg-slate-100 text-slate-700 font-extrabold uppercase tracking-wider text-xs rounded-xl border border-slate-300 shadow-xs flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
             >
               CANCEL
             </button>
           </div>
         </div>
+
         {/* Visit Activities Metrics Summary Grid of Box Cards */}
         <div className="mt-3 grid grid-cols-6 gap-1.5 w-full text-xs font-semibold">
           {/* Card 1: Calls Attended */}
