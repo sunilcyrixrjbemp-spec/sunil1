@@ -1960,7 +1960,41 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
 
-  const approvals = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number").bind(expense.id).all();
+  let approvals = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number").bind(expense.id).all();
+
+  // Auto-sync missing hierarchy levels if hierarchy team was updated to 3 levels
+  if (expense.status !== "rejected" && expense.status !== "approved") {
+    try {
+      const hierarchyRes = await env.DB.prepare(`
+        SELECT DISTINCT a.level_number, a.approver_id
+        FROM hierarchy_approvers a
+        JOIN hierarchy_requesters hr ON a.hierarchy_id = hr.hierarchy_id
+        WHERE hr.user_id = ? OR hr.user_id = ? OR CAST(hr.user_id AS TEXT) = ?
+        ORDER BY a.level_number ASC
+      `).bind(expense.user_id, String(expense.user_id), String(expense.user_id)).all();
+
+      const existingLevels = new Set((approvals.results || []).map(a => a.level_number));
+      let needsReFetch = false;
+
+      for (const hStep of (hierarchyRes.results || [])) {
+        if (!existingLevels.has(hStep.level_number)) {
+          needsReFetch = true;
+          await runWrite(env, `
+            INSERT INTO approvals (expense_id, approver_id, level_number, status, comments, created_at, updated_at)
+            VALUES (?, ?, ?, 'waiting', '', ?, ?)
+          `, [expense.id, hStep.approver_id, hStep.level_number, timestamp, timestamp]);
+        }
+      }
+
+      if (needsReFetch) {
+        const reFetch = await env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number").bind(expense.id).all();
+        approvals = reFetch;
+      }
+    } catch (e) {
+      console.error("Failed to auto-sync approval hierarchy levels:", e);
+    }
+  }
+
   const approverIds = Array.from(new Set((approvals.results || []).map(a => a.approver_id)));
   
   let approverUsers = {};
