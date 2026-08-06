@@ -11,6 +11,7 @@ import { hasFullAccess } from "../utils/constants";
 import LocationFilters from "../components/common/LocationFilters";
 import DistrictBadge from "../components/common/DistrictBadge";
 import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
+import HomeSkeleton from "../components/common/HomeSkeleton";
 import { 
   Card, 
   Button, 
@@ -1178,6 +1179,11 @@ export default function HomePage() {
   //   setStatsModalClaims(list);
   //   setShowStatsModal(true);
   // };
+
+  const isPageLoading = (activeTab === "my-claims" ? loadingMyExpenses : loadingTeamExpenses) && (activeTab === "my-claims" ? myExpenses.length === 0 : safeTeamExpenses.length === 0);
+  if (isPageLoading) {
+    return <HomeSkeleton />;
+  }
 
   return (
     <>
