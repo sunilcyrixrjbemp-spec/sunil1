@@ -111,6 +111,11 @@ export function otpTemplate({ name, otp, userId, purpose = "Account Unlock", exp
       </div>
     </div>
 
+    <!-- Junk/Spam notice -->
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;margin-top:16px;font-size:12px;color:#92400e;line-height:1.5;">
+      💡 <strong>Note:</strong> If you cannot find this email in your Inbox, please check your <strong>Junk / Spam folder</strong> and mark it as "Not Spam" or move it to Inbox.
+    </div>
+
     <p style="margin:20px 0 0 0;font-size:13px;color:#94a3b8;line-height:1.6;border-top:1px solid #e2e8f0;padding-top:16px;">
       Do not share this code with anyone. If you did not make this request or need assistance, please contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;font-weight:600;">sunil.vishnoi@indrae.in</a> immediately.
     </p>
@@ -121,10 +126,10 @@ export function otpTemplate({ name, otp, userId, purpose = "Account Unlock", exp
     </p>
   `;
 
-  const textPlain = `Dear ${name || "User"},\n\nWe have received a request for ${purpose} on your Cyrix Field Connect account.\n\nYour Verification Code (OTP): ${otp}\nValid for: ${expiryMinutes} minutes\n\nDo not share this code with anyone. If you did not make this request, please contact your system administrator immediately.\n\nThanks,\nCyrix HealthCare Team`;
+  const textPlain = `Dear ${name || "User"},\n\nWe have received a request for ${purpose} on your Cyrix Field Connect account.\n\nYour Verification Code (OTP): ${otp}\nValid for: ${expiryMinutes} minutes\n\nIf you cannot find this email in your Inbox, please check your Junk / Spam folder.\nDo not share this code with anyone. If you did not make this request, contact sunil.vishnoi@indrae.in immediately.\n\nThanks,\nCyrix HealthCare Team`;
 
   return {
-    subject: `Verification Code for ${purpose} — Cyrix HealthCare`,
+    subject: `Verification Code for ${purpose} - Cyrix HealthCare`,
     html: emailWrapper(content, `Your verification code is ${otp}`),
     text: textPlain,
   };
