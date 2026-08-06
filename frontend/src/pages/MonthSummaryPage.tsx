@@ -6,7 +6,7 @@ import {
   Calendar, Download, RefreshCw, Users, CheckCircle,
   IndianRupee, MapPin, Search, Filter, FileText, Loader2, Printer, X
 } from "lucide-react";
-import Loader from "../components/common/Loader";
+import MonthSummarySkeleton from "../components/common/MonthSummarySkeleton";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1850,9 +1850,7 @@ export default function MonthSummaryPage() {
 
         <div className="overflow-x-auto w-full">
           {loading ? (
-            <div className="py-8">
-              <Loader message="Loading summary records..." />
-            </div>
+            <MonthSummarySkeleton />
           ) : filtered.length === 0 ? (
             <div className="text-center py-16">
               <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
