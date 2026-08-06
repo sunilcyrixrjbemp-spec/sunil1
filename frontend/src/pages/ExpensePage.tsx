@@ -4741,14 +4741,17 @@ export default function ExpensePage() {
 
                           {/* PMS Sub-Form */}
                           {(leg.selected_activities || []).includes("PMS") && (
-                            <div className="bg-amber-50/20 border border-amber-150 rounded p-2.5 flex flex-col gap-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">Preventive Maintenance Services (PMS)</span>
+                            <div className="bg-amber-50/20 border border-amber-150 rounded p-3 flex flex-col gap-3">
+                              <div className="flex items-center justify-between border-b border-amber-200 pb-1.5">
+                                <span className="text-[11px] font-extrabold text-amber-900 uppercase tracking-wide flex items-center gap-1.5">
+                                  🛠️ Preventive Maintenance Services (PMS)
+                                </span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end bg-gray-50/50 p-2 rounded border border-gray-200 text-[10px]">
-                                {/* Barcode */}
-                                <div className="sm:col-span-5">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Barcode (QR)</label>
+
+                              <div className="grid grid-cols-12 gap-2.5 items-end bg-white p-2.5 rounded-lg border border-amber-200 text-[10px]">
+                                {/* 1. Barcode */}
+                                <div className="col-span-12 sm:col-span-5">
+                                  <label className="label-lte font-extrabold text-[8px] text-amber-900 uppercase">Barcode (QR) <span className="text-red-500">*</span></label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
                                       type="text"
@@ -4756,40 +4759,41 @@ export default function ExpensePage() {
                                       pattern="[0-9]*"
                                       maxLength={8}
                                       value={leg.pms_barcode || ""}
-                                      placeholder="8 digits"
+                                      placeholder="8 numeric digits"
                                       onChange={(e) => {
                                         const cleaned = e.target.value.replace(/\D/g, "");
                                         handleItineraryChange(leg.leg, "pms_barcode", cleaned);
                                         handleItineraryChange(leg.leg, "pms_verified", false);
                                         handleItineraryChange(leg.leg, "pms_asset_details", null);
                                       }}
-                                      className="input-lte font-mono h-7 py-0.5 text-xs"
+                                      className="input-lte font-mono h-7 py-0.5 px-2 text-xs border-amber-200 w-full"
                                     />
-                                    <div
+                                    <button
+                                      type="button"
                                       onClick={() => {
                                         if (String(leg.pms_barcode || '').replace(/\D/g, '').length === 8) {
                                           verifyLegBarcode(leg.leg, "PMS");
                                         }
                                       }}
-                                      className="h-7 px-3 flex items-center justify-center rounded-lg text-[10px] font-extrabold uppercase select-none transition-colors"
+                                      className="h-7 px-3 flex items-center justify-center rounded text-[10px] font-extrabold uppercase select-none transition-colors border-0 cursor-pointer shrink-0"
                                       style={
                                         String(leg.pms_barcode || '').replace(/\D/g, '').length === 8
-                                          ? { backgroundColor: '#10b981', color: '#000000', borderColor: '#0f172a', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'pointer' }
-                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', borderColor: '#cbd5e1', borderWidth: '1px', borderStyle: 'solid', cursor: 'not-allowed' }
+                                          ? { backgroundColor: '#10b981', color: '#ffffff' }
+                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', cursor: 'not-allowed' }
                                       }
                                     >
                                       Verify
-                                    </div>
+                                    </button>
                                   </div>
                                 </div>
 
-                                {/* Frequency */}
-                                <div className="sm:col-span-4">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">PMS Period</label>
+                                {/* 2. PMS Period */}
+                                <div className="col-span-6 sm:col-span-3">
+                                  <label className="label-lte font-extrabold text-[8px] text-amber-900 uppercase">PMS Period <span className="text-red-500">*</span></label>
                                   <select
                                     value={leg.pms_frequency || "3 month"}
                                     onChange={(e) => handleItineraryChange(leg.leg, "pms_frequency", e.target.value)}
-                                    className="input-lte text-[10px] font-bold h-7 py-0 px-1 bg-white"
+                                    className="input-lte text-[10px] font-bold h-7 py-0.5 px-1.5 bg-white border-amber-200 w-full"
                                   >
                                     <option value="3 month">3 month</option>
                                     <option value="6 month">6 month</option>
@@ -4797,62 +4801,54 @@ export default function ExpensePage() {
                                   </select>
                                 </div>
 
-                                {/* Photo + Add Button (side-by-side on all screens) */}
-                                <div className="sm:col-span-3 flex items-end gap-2">
-                                  {/* Photo Upload */}
-                                  <div className="flex-1">
-                                    <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Photo</label>
-                                    {leg.pms_photo_url ? (
-                                      <div className="flex gap-1 h-8 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
-                                        <span className="text-blue-700 cursor-pointer underline truncate max-w-[60px]" onClick={() => {
-                                          const fullUrl = formatImageUrl(leg.pms_photo_url);
-                                          setLightboxImage(fullUrl);
-                                        }}>View</span>
-                                        <button 
-                                          type="button" 
-                                          onClick={() => {
-                                            handleItineraryChange(leg.leg, "pms_photo_url", "");
-                                            handleItineraryChange(leg.leg, "pms_photo_name", "");
-                                          }} 
-                                          className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
-                                        >
-                                          ✕
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded h-8 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs w-full">
-                                        <Camera className="w-3 h-3 text-white" />
-                                        <span>Add</span>
-                                        <input
-                                          type="file"
-                                          accept="image/*"
-                                          onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) uploadActivityPhoto(leg.leg, "PMS", file);
-                                          }}
-                                          className="hidden"
-                                        />
-                                      </label>
-                                    )}
-                                    {leg.pms_photo_loading && <span className="text-[8px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
-                                  </div>
-
-                                  {/* + Add Entry Button */}
-                                  <div className="shrink-0">
-                                    <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase invisible block">Add</label>
-                                    <div
-                                      onClick={() => leg.pms_verified && addVerifiedBarcode(leg.leg, "PMS")}
-                                      className="w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-colors"
-                                      style={
-                                        leg.pms_verified
-                                          ? { backgroundColor: '#111827', color: '#ffffff', borderColor: '#000000', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'pointer' }
-                                          : { backgroundColor: '#e2e8f0', color: '#94a3b8', borderColor: '#cbd5e1', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'not-allowed' }
-                                      }
-                                      title="Add Verified Entry"
-                                    >
-                                      <Plus className="w-5 h-5" />
+                                {/* 3. Photo Upload */}
+                                <div className="col-span-6 sm:col-span-4">
+                                  <label className="label-lte font-extrabold text-[8px] text-amber-900 uppercase">PMS Report Photo <span className="text-red-500">*</span></label>
+                                  {leg.pms_photo_url ? (
+                                    <div className="flex gap-1 h-7 items-center justify-between bg-white border border-amber-300 px-1.5 rounded text-[9px] font-bold">
+                                      <span className="text-amber-700 cursor-pointer underline truncate max-w-[80px]" onClick={() => {
+                                        const fullUrl = formatImageUrl(leg.pms_photo_url);
+                                        setLightboxImage(fullUrl);
+                                      }}>Preview</span>
+                                      <button 
+                                        type="button" 
+                                        onClick={() => {
+                                          handleItineraryChange(leg.leg, "pms_photo_url", "");
+                                          handleItineraryChange(leg.leg, "pms_photo_name", "");
+                                        }} 
+                                        className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
+                                      >
+                                        ✕
+                                      </button>
                                     </div>
-                                  </div>
+                                  ) : (
+                                    <label className="cursor-pointer bg-slate-900 hover:bg-slate-800 text-white border border-slate-900 rounded h-7 px-2 flex items-center justify-center gap-1.5 text-[9.5px] font-extrabold shadow-2xs w-full">
+                                      <Camera className="w-3 h-3 text-white" />
+                                      <span>Add Report Photo</span>
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (file) uploadActivityPhoto(leg.leg, "PMS", file);
+                                        }}
+                                        className="hidden"
+                                      />
+                                    </label>
+                                  )}
+                                  {leg.pms_photo_loading && <span className="text-[8px] text-amber-700 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                </div>
+
+                                {/* 4. Add Verified PMS Entry Button */}
+                                <div className="col-span-12 flex justify-center sm:justify-end mt-1 w-full">
+                                  <button
+                                    type="button"
+                                    onClick={() => leg.pms_verified && addVerifiedBarcode(leg.leg, "PMS")}
+                                    disabled={!leg.pms_verified}
+                                    className="btn-lte h-8 sm:h-7 py-1 sm:py-0.5 px-4 sm:px-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[11px] sm:text-[10px] uppercase rounded border-0 cursor-pointer flex items-center justify-center gap-1.5 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shadow-2xs w-full sm:w-auto"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" /> Add PMS Entry
+                                  </button>
                                 </div>
                               </div>
 
