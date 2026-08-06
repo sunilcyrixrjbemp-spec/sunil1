@@ -1470,7 +1470,23 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const isOutDistrict = !isOutOfState && (c.districtType === "outstation" || c.is_outstation || c.districtType === "OUT_DISTRICT" ||
     (c.from_district && c.to_district && c.from_district !== c.to_district));
 
-  // Parse lists
+  // Limit Request Detection & Format Normalization
+  const isLimitRequest = !!(
+    c.is_limit_request ||
+    c.category === "Limit Request" ||
+    (c.expense_code && (c.expense_code.startsWith("LIMIT-") || c.expense_code.startsWith("LIMIT_")))
+  );
+
+  const limitType = c.limit_type || (c.expense_code?.includes("-KM-") ? "KM" : (c.expense_code?.includes("-AUTO-") ? "AUTO" : "KM"));
+  const requestedLimitVal = c.requested_value ?? (c.original_amount > 0 ? c.original_amount : (c.amount || 0));
+  const approvedLimitVal = isClaimRejected
+    ? 0
+    : (c.approved_value !== null && c.approved_value !== undefined ? parseFloat(c.approved_value) : (isApproved ? requestedLimitVal : requestedLimitVal));
+  const limitUnit = limitType === "KM" ? "KM" : "₹";
+  const formattedRequestedLimit = limitType === "KM" ? `${parseFloat(String(requestedLimitVal)).toFixed(0)} KM` : rupee(requestedLimitVal);
+  const formattedApprovedLimit = isClaimRejected
+    ? (limitType === "KM" ? "0 KM" : "₹0")
+    : (limitType === "KM" ? `${parseFloat(String(approvedLimitVal)).toFixed(0)} KM` : rupee(approvedLimitVal));
   const itineraries = (Array.isArray(c.itineraries) && c.itineraries.length > 0)
     ? c.itineraries
     : ((Array.isArray(c.legs) && c.legs.length > 0)
@@ -1941,25 +1957,94 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
         </div>
 
-        {/* ─── FINANCIAL SUMMARY CARDS (SEPARATE SYSTEM & MANAGER DEDUCTIONS) ─── */}
+        {/* ─── FINANCIAL / QUOTA SUMMARY CARDS ─── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-          <MiniAmountBox label="Total Claimed" value={rupee(originalClaimedTotal)} color="#4A6A8A" />
-          <MiniAmountBox
-            label={isApproved ? "Approved Net" : (isClaimRejected ? "Approved Net" : (liveEditedTotalSum !== null ? "Live Net After Edit" : "Estimated Net"))}
-            value={isClaimRejected ? "₹0" : rupee(currentApprovedNet)}
-            color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#059669")}
-          />
-          <MiniAmountBox label="Travel TA" value={rupee(totalTa)} subtext={c.total_km ? `${c.total_km} km` : undefined} color="#0284c7" />
-          <MiniAmountBox label="Daily DA" value={rupee(totalDa)} color="#059669" />
-          {otherAmount > 0 && <MiniAmountBox label="Other Exp." value={rupee(otherAmount)} color="#d97706" />}
-          {localPurchase > 0 && <MiniAmountBox label="Local Purchase" value={rupee(localPurchase)} color="#b45309" />}
-          {totalHotel > 0 && <MiniAmountBox label="Hotel / Stay" value={rupee(totalHotel)} color="#7c3aed" />}
-          {systemDeductionAmt > 0 && <MiniAmountBox label="⚙️ System Deduction" value={`-${rupee(systemDeductionAmt)}`} color="#d97706" />}
-          {managerDeductionAmt > 0 && <MiniAmountBox label="✏️ Manager Deduction" value={`-${rupee(managerDeductionAmt)}`} color="#dc2626" />}
+          {isLimitRequest ? (
+            <>
+              <MiniAmountBox label="Requested Extension" value={formattedRequestedLimit} color="#4A6A8A" />
+              <MiniAmountBox
+                label="Approved Extension"
+                value={formattedApprovedLimit}
+                color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#f59e0b")}
+              />
+              <MiniAmountBox label="Reimbursable Cash" value="₹0" subtext="Quota Extension" color="#64748b" />
+              <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
+                <div className="text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">Request Status</div>
+                <div className="pt-0.5">
+                  <StatusBadge status={c.status} record={c} getStatusBadgeClass={getStatusBadgeClass} getStatusLabel={getStatusLabel} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <MiniAmountBox label="Total Claimed" value={rupee(originalClaimedTotal)} color="#4A6A8A" />
+              <MiniAmountBox
+                label={isApproved ? "Approved Net" : (isClaimRejected ? "Approved Net" : (liveEditedTotalSum !== null ? "Live Net After Edit" : "Estimated Net"))}
+                value={isClaimRejected ? "₹0" : rupee(currentApprovedNet)}
+                color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#059669")}
+              />
+              <MiniAmountBox label="Travel TA" value={rupee(totalTa)} subtext={c.total_km ? `${c.total_km} km` : undefined} color="#0284c7" />
+              <MiniAmountBox label="Daily DA" value={rupee(totalDa)} color="#059669" />
+              {otherAmount > 0 && <MiniAmountBox label="Other Exp." value={rupee(otherAmount)} color="#d97706" />}
+              {localPurchase > 0 && <MiniAmountBox label="Local Purchase" value={rupee(localPurchase)} color="#b45309" />}
+              {totalHotel > 0 && <MiniAmountBox label="Hotel / Stay" value={rupee(totalHotel)} color="#7c3aed" />}
+              {systemDeductionAmt > 0 && <MiniAmountBox label="⚙️ System Deduction" value={`-${rupee(systemDeductionAmt)}`} color="#d97706" />}
+              {managerDeductionAmt > 0 && <MiniAmountBox label="✏️ Manager Deduction" value={`-${rupee(managerDeductionAmt)}`} color="#dc2626" />}
+            </>
+          )}
         </div>
 
-        {/* ─── DEDUCTIONS AUDIT BANNER (WHO DEDUCTED & WHY) ─── */}
-        {(systemDeductionAmt > 0 || managerDeductionAmt > 0) && (
+        {/* ─── DEDICATED LIMIT REQUEST PANEL ─── */}
+        {isLimitRequest && (
+          <div className="bg-white border-2 border-[#4A6A8A]/30 rounded-lg p-3 space-y-2.5 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Zap size={16} className="text-[#4A6A8A]" />
+                <span className="text-[12px] font-extrabold text-slate-800">
+                  {limitType === "KM" ? "Distance Limit Extension Request (Bike / Car)" : "Local Conveyance Limit Extension Request (Auto)"}
+                </span>
+              </div>
+              <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                Target Month: {c.month || c.date}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10.5px]">
+              <div className="bg-slate-50 p-2.5 rounded border border-slate-200 space-y-1">
+                <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Requested Limit Extension</div>
+                <div className="text-sm font-extrabold text-[#4A6A8A] font-mono">{formattedRequestedLimit}</div>
+              </div>
+              <div className={`p-2.5 rounded border space-y-1 ${isApproved ? 'bg-emerald-50 border-emerald-200' : (isClaimRejected ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200')}`}>
+                <div className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Approved Quota Decision</div>
+                <div className={`text-sm font-extrabold font-mono ${isApproved ? 'text-emerald-700' : (isClaimRejected ? 'text-rose-700' : 'text-amber-700')}`}>
+                  {isApproved ? `Approved: ${formattedApprovedLimit}` : (isClaimRejected ? `Rejected (0 ${limitUnit})` : 'Pending Manager Review')}
+                </div>
+              </div>
+            </div>
+
+            {/* Requester Purpose / Justification */}
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[10.5px]">
+              <div className="font-bold text-slate-500 uppercase text-[9px] mb-0.5">Employee Purpose / Justification</div>
+              <div className="text-slate-800 font-medium">{cleanPurpose || c.purpose || c.description || "Request additional limit extension."}</div>
+            </div>
+
+            {/* Manager Decision Remarks */}
+            {(rejectionRemark || c.approver_remark || c.manager_remark || c.comments || (approvals.length > 0 && approvals[0]?.comments)) && (
+              <div className={`p-2.5 rounded-lg border text-[10.5px] ${isClaimRejected ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
+                <div className="font-extrabold uppercase text-[9px] mb-0.5 flex items-center gap-1">
+                  {isClaimRejected ? <XCircle size={12} className="text-rose-600" /> : <CheckCircle2 size={12} className="text-emerald-600" />}
+                  Manager Remarks ({rejectorName})
+                </div>
+                <div className="font-bold text-slate-900 leading-relaxed">
+                  "{rejectionRemark || c.approver_remark || c.manager_remark || c.comments || approvals[0]?.comments}"
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── DEDUCTIONS AUDIT BANNER (FOR REGULAR TRAVEL CLAIMS ONLY) ─── */}
+        {!isLimitRequest && (systemDeductionAmt > 0 || managerDeductionAmt > 0) && (
           <div className="bg-slate-50 border-2 border-slate-300 rounded-lg p-2.5 space-y-2 text-[10.5px] shadow-2xs">
             {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 flex-wrap gap-2">
@@ -2016,7 +2101,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
         )}
 
-        {/* ─── ULTRA-COMPACT 1-LINE DAILY SUMMARY STRIP WITH EXACT FROM/TO LOCATION & DISTRICT ─── */}
+        {/* ─── ULTRA-COMPACT 1-LINE DAILY SUMMARY STRIP (FOR REGULAR TRAVEL CLAIMS ONLY) ─── */}
+        {!isLimitRequest && (
         <div className="bg-[#4A6A8A]/5 border-2 border-[#4A6A8A] rounded-lg p-2 shadow-2xs space-y-1">
           <div className="flex items-center justify-between border-b border-[#4A6A8A]/20 pb-1 flex-wrap gap-1">
             <div className="flex items-center gap-1.5">
@@ -2169,8 +2255,9 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   <div className="mt-0.5 text-slate-800 font-semibold">{overallOtherReason}</div>
                 </div>
               </div>
-            )}
           </div>
+        )}
+        </>
         )}
 
         {/* ─── WORK DONE SUMMARY (ONLY RENDER IF WORK COMPLETED IS STRICTLY > 0) ─── */}
@@ -2303,7 +2390,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         </div>
 
         {/* ─── REMARKS & DEDUCTIONS (FOR DEDUCTIONS / ADJUSTMENTS WHEN NOT FULLY REJECTED) ─── */}
-        {hasOverallDeduction && !isClaimRejected && (
+        {!isLimitRequest && hasOverallDeduction && !isClaimRejected && (
           <div className="bg-white rounded-lg border border-rose-200 shadow-2xs p-2.5">
             <SectionHeader icon={AlertTriangle} label="Deductions & Policy Remarks" accent="#ef4444" />
             <div className="space-y-1 text-[10px]">

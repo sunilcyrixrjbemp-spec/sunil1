@@ -199,6 +199,8 @@ export async function fetchPendingApprovals(env, user) {
 
   // 1. Process pending limit requests
   for (const pl of (pendingLimitsRes.results || [])) {
+    const isKm = pl.request_type === "KM";
+    const reqVal = parseFloat(pl.requested_value || 0);
     result.push({
       id: -pl.id,
       expense_id: -pl.id,
@@ -209,11 +211,15 @@ export async function fetchPendingApprovals(env, user) {
       created_at: pl.created_at,
       updated_at: pl.updated_at,
       expense_code: `LIMIT-${pl.request_type}-${pl.id}`,
+      is_limit_request: true,
+      limit_type: pl.request_type,
+      requested_value: reqVal,
+      display_amount: isKm ? `${reqVal.toFixed(0)} KM` : `₹${reqVal.toLocaleString("en-IN")}`,
       employeeName: pl.submitter_name || `Employee ${pl.user_id}`,
       eCode: pl.user_id,
-      purpose: `Request additional ${parseFloat(pl.requested_value || 0).toFixed(1)} ${pl.request_type} limit for month ${pl.for_month}`,
+      purpose: `Request additional ${reqVal.toFixed(1)} ${pl.request_type === "KM" ? "KM" : "₹"} limit for month ${pl.for_month}`,
       category: "Limit Request",
-      amount: parseFloat(pl.requested_value || 0),
+      amount: isKm ? 0 : reqVal,
       date: pl.for_month,
       itinerariesCount: 0,
       districtType: "IN_DISTRICT"
