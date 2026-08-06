@@ -1662,18 +1662,18 @@ export default function AnalysisPage() {
         </div>
       </div>
 
-      {/* Ultra-Compact 100% Single-Line Filter Toolbar (No Wrapping, Minimal Space) */}
+      {/* Ultra-Compact Filter Toolbar (Responsive Grid for Mobile & Desktop) */}
       {isFilterExpanded && (
-        <div className="bg-white border-x border-b border-slate-200/80 px-2 py-1.5 shadow-2xs">
-          <div className="flex flex-nowrap items-center gap-1.5 w-full overflow-x-auto no-scrollbar">
+        <div className="bg-white border-x border-b border-slate-200/80 p-2 shadow-2xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-nowrap items-center gap-2 w-full">
             {viewMode === "team" && isReviewer && (
               <>
-                <div className="shrink-0 w-22 sm:w-24">
+                <div className="w-full">
                   <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Zone</span>
                   <select
                     value={selectedZone}
                     onChange={(e) => setSelectedZone(e.target.value)}
-                    className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none"
+                    className="analysis-select-input w-full text-[10.5px] px-1.5 py-1 h-7 leading-none rounded border border-slate-300 bg-white"
                   >
                     <option value="all">All Zones</option>
                     {uniqueZones.map(z => (
@@ -1682,12 +1682,12 @@ export default function AnalysisPage() {
                   </select>
                 </div>
 
-                <div className="shrink-0 w-24 sm:w-28">
+                <div className="w-full">
                   <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">District</span>
                   <select
                     value={selectedDistrict}
                     onChange={(e) => setSelectedDistrict(e.target.value)}
-                    className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none"
+                    className="analysis-select-input w-full text-[10.5px] px-1.5 py-1 h-7 leading-none rounded border border-slate-300 bg-white"
                   >
                     <option value="all">All Districts</option>
                     {filterOptions.districts.map(d => (
@@ -1696,7 +1696,7 @@ export default function AnalysisPage() {
                   </select>
                 </div>
 
-                <div className="shrink-0 w-26 sm:w-32">
+                <div className="w-full col-span-2 sm:col-span-1">
                   <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5 flex items-center gap-0.5">
                     <SearchOutlined style={{ fontSize: 8 }} /> Engineer
                   </span>
@@ -1706,7 +1706,7 @@ export default function AnalysisPage() {
                     value={selectedEngineer}
                     onChange={(val) => setSelectedEngineer(val)}
                     className="w-full text-[10.5px] font-semibold"
-                    style={{ minHeight: "24px", height: "24px" }}
+                    style={{ minHeight: "28px", height: "28px" }}
                     placeholder="Search"
                     optionFilterProp="label"
                     filterOption={(input, option) =>
@@ -1722,12 +1722,12 @@ export default function AnalysisPage() {
                   />
                 </div>
 
-                <div className="shrink-0 w-22 sm:w-26">
+                <div className="w-full">
                   <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Coordinator</span>
                   <select
                     value={selectedCoordinator}
                     onChange={(e) => setSelectedCoordinator(e.target.value)}
-                    className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none"
+                    className="analysis-select-input w-full text-[10.5px] px-1.5 py-1 h-7 leading-none rounded border border-slate-300 bg-white"
                   >
                     <option value="all">All Coordinators</option>
                     {coordinatorsList.map(name => (
@@ -1738,12 +1738,12 @@ export default function AnalysisPage() {
               </>
             )}
 
-            <div className="shrink-0 w-20 sm:w-22">
+            <div className="w-full">
               <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Status</span>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="analysis-select-input w-full text-[10.5px] font-bold text-slate-700 px-1 py-0 h-6 leading-none"
+                className="analysis-select-input w-full text-[10.5px] font-bold text-slate-700 px-1.5 py-1 h-7 leading-none rounded border border-slate-300 bg-white"
               >
                 <option value="all">All Status</option>
                 <option value="approved">Approved</option>
@@ -1752,13 +1752,13 @@ export default function AnalysisPage() {
               </select>
             </div>
 
-            <div className="shrink-0 w-16 sm:w-18">
+            <div className="w-full">
               <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Month</span>
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
                 disabled={!!startDate || !!endDate}
-                className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none disabled:opacity-50"
+                className="analysis-select-input w-full text-[10.5px] px-1.5 py-1 h-7 leading-none rounded border border-slate-300 bg-white disabled:opacity-50"
               >
                 {months.map((m, i) => (
                   <option key={i} value={i}>{m}</option>
@@ -1766,13 +1766,13 @@ export default function AnalysisPage() {
               </select>
             </div>
 
-            <div className="shrink-0 w-14 sm:w-16">
+            <div className="w-full">
               <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Year</span>
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
                 disabled={!!startDate || !!endDate}
-                className="analysis-select-input w-full text-[10.5px] px-1 py-0 h-6 leading-none disabled:opacity-50"
+                className="analysis-select-input w-full text-[10.5px] px-1.5 py-1 h-7 leading-none rounded border border-slate-300 bg-white disabled:opacity-50"
               >
                 {availableYears.map(y => (
                   <option key={y} value={y}>{y}</option>
@@ -1780,7 +1780,7 @@ export default function AnalysisPage() {
               </select>
             </div>
 
-            <div className="shrink-0">
+            <div className="w-full col-span-2 sm:col-span-2 lg:w-auto shrink-0">
               <span className="text-[8px] font-extrabold text-slate-400 uppercase block leading-none mb-0.5">Custom Date Range</span>
               <div className="flex items-center gap-1">
                 <input
@@ -1789,7 +1789,7 @@ export default function AnalysisPage() {
                   min={minDateStr}
                   max={maxDateStr}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="analysis-date-input text-[10px] w-24 px-1 py-0 h-6 leading-none"
+                  className="analysis-date-input text-[10px] w-24 px-1 py-0.5 h-7 leading-none rounded border border-slate-300 bg-white"
                 />
                 <span className="text-slate-400 text-[9px]">to</span>
                 <input
@@ -1798,7 +1798,7 @@ export default function AnalysisPage() {
                   min={minDateStr}
                   max={maxDateStr}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="analysis-date-input text-[10px] w-24 px-1 py-0 h-6 leading-none"
+                  className="analysis-date-input text-[10px] w-24 px-1 py-0.5 h-7 leading-none rounded border border-slate-300 bg-white"
                 />
                 {(startDate || endDate) && (
                   <Button
@@ -1816,93 +1816,91 @@ export default function AnalysisPage() {
       )}
 
       {/* Stat Card Design System */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 my-2.5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 my-2.5">
         {/* Card 1: Total Claimed */}
         <div
-          className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md hover:border-blue-400 transition-all cursor-pointer"
+          className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md hover:border-blue-400 transition-all cursor-pointer"
           onClick={() => setSelectedStatus("all")}
         >
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <FileExcelOutlined style={{ fontSize: 16 }} />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <FileExcelOutlined className="text-xs sm:text-sm text-white" />
           </div>
           <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">TOTAL CLAIMED</span>
-            <span className="text-[13px] font-mono font-extrabold text-slate-900 leading-none">{(totalAmount || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
-            <span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">{count} Claims</span>
+            <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none truncate">TOTAL CLAIMED</span>
+            <span className="text-xs sm:text-[13px] font-mono font-extrabold text-slate-900 leading-none truncate">{(totalAmount || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-1 py-0.2 rounded font-mono leading-none w-fit truncate">{count} Claims</span>
           </div>
         </div>
 
         {/* Card 2: Approved */}
         <div
-          className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md hover:border-emerald-400 transition-all cursor-pointer"
+          className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md hover:border-emerald-400 transition-all cursor-pointer"
           onClick={() => setSelectedStatus("approved")}
         >
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <CheckOutlined style={{ fontSize: 16 }} />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <CheckOutlined className="text-xs sm:text-sm text-white" />
           </div>
           <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">APPROVED</span>
-            <span className="text-[13px] font-mono font-extrabold text-emerald-800 leading-none">{(statusStats.appAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
-            <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">{statusStats.appCnt} Claims</span>
+            <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none truncate">APPROVED</span>
+            <span className="text-xs sm:text-[13px] font-mono font-extrabold text-emerald-800 leading-none truncate">{(statusStats.appAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded font-mono leading-none w-fit truncate">{statusStats.appCnt} Claims</span>
           </div>
         </div>
 
         {/* Card 3: Pending */}
         <div
-          className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md hover:border-amber-400 transition-all cursor-pointer"
+          className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md hover:border-amber-400 transition-all cursor-pointer"
           onClick={() => setSelectedStatus("pending")}
         >
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <InfoCircleOutlined style={{ fontSize: 16 }} />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <InfoCircleOutlined className="text-xs sm:text-sm text-white" />
           </div>
           <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">PENDING</span>
-            <span className="text-[13px] font-mono font-extrabold text-amber-800 leading-none">{(statusStats.pendAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
-            <span className="text-[8px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">{statusStats.pendCnt} Claims</span>
+            <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none truncate">PENDING</span>
+            <span className="text-xs sm:text-[13px] font-mono font-extrabold text-amber-800 leading-none truncate">{(statusStats.pendAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-mono leading-none w-fit truncate">{statusStats.pendCnt} Claims</span>
           </div>
         </div>
 
         {/* Card 4: Rejected */}
         <div
-          className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md hover:border-rose-400 transition-all cursor-pointer"
+          className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md hover:border-rose-400 transition-all cursor-pointer"
           onClick={() => setSelectedStatus("rejected")}
         >
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <CloseOutlined style={{ fontSize: 16 }} />
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <CloseOutlined className="text-xs sm:text-sm text-white" />
           </div>
           <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">REJECTED</span>
-            <span className="text-[13px] font-mono font-extrabold text-rose-800 leading-none">{(statusStats.rejAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
-            <span className="text-[8px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">{statusStats.rejCnt} Claims</span>
+            <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none truncate">REJECTED</span>
+            <span className="text-xs sm:text-[13px] font-mono font-extrabold text-rose-800 leading-none truncate">{(statusStats.rejAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1 py-0.2 rounded font-mono leading-none w-fit truncate">{statusStats.rejCnt} Claims</span>
           </div>
         </div>
 
         {/* Card 5: Avg Claim */}
-        <div className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md transition-all">
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <RiseOutlined style={{ fontSize: 16 }} />
+        <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md transition-all">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <RiseOutlined className="text-xs sm:text-sm text-white" />
           </div>
           <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">AVG CLAIM</span>
-            <span className="text-[13px] font-mono font-extrabold text-indigo-900 leading-none">{(avgValue || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
-            <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">Per Claim</span>
+            <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none truncate">AVG CLAIM</span>
+            <span className="text-xs sm:text-[13px] font-mono font-extrabold text-indigo-900 leading-none truncate">{(avgValue || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}</span>
+            <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1 py-0.2 rounded font-mono leading-none w-fit truncate">Per Claim</span>
           </div>
         </div>
 
         {/* Card 6: Calls Done */}
-        <div className="bg-white border border-slate-200 rounded-none p-2.5 flex items-center gap-2.5 shadow-2xs hover:shadow-md transition-all">
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-xs">
-            <RocketOutlined style={{ fontSize: 16 }} />
+        <div className="bg-white border border-slate-200/90 rounded-xl p-2 sm:p-2.5 flex items-center gap-2 shadow-2xs hover:shadow-md transition-all">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <RocketOutlined className="text-xs sm:text-sm text-white" />
           </div>
           <div className="flex flex-col justify-center min-w-0 flex-1 gap-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">CALLS DONE</span>
-            <span className="text-[13px] font-mono font-extrabold text-cyan-900 leading-none">{activityStats.callsCompleted}/{activityStats.callsAssigned}</span>
-            <span className="text-[8px] font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit">Completed</span>
+            <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none truncate">CALLS DONE</span>
+            <span className="text-xs sm:text-[13px] font-mono font-extrabold text-cyan-900 leading-none truncate">{activityStats.callsCompleted}/{activityStats.callsAssigned}</span>
+            <span className="text-[8px] font-bold text-cyan-700 bg-cyan-50 border border-cyan-200 px-1 py-0.2 rounded font-mono leading-none w-fit truncate">Completed</span>
           </div>
         </div>
       </div>
-
-
 
       {/* Dashboard Full-Bleed Grid */}
       {count === 0 ? (
