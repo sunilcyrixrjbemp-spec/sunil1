@@ -344,6 +344,9 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
             <p className="mt-1 m-0 text-xs text-slate-500 font-medium leading-relaxed">
               We sent a 6-digit OTP code to your registered email <strong className="text-slate-800 font-bold">{maskedEmail}</strong>
             </p>
+            <div className="mt-2.5 p-2 bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-semibold text-center leading-tight">
+              💡 <strong>Note:</strong> If you don't see the email in your Inbox, please check your <strong>Junk / Spam folder</strong>.
+            </div>
           </div>
 
           <form onSubmit={handleVerifyOtpAndUnlock} className="flex flex-col gap-4">
