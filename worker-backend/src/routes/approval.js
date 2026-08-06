@@ -1116,12 +1116,20 @@ export async function handleBulkApprove(request, env, params, query, user) {
 
   for (const expId of expense_ids) {
     try {
+      const bulkLabel = action_type === "reject" ? "Bulk Rejection" : "Bulk Approval";
+      const cleanUserComment = (comments || "").trim();
+      const formattedComment = cleanUserComment 
+        ? (cleanUserComment.startsWith("Bulk Approval") || cleanUserComment.startsWith("Bulk Rejection") 
+            ? cleanUserComment 
+            : `${bulkLabel} :- ${cleanUserComment}`)
+        : bulkLabel;
+
       const mockParams = { expense_id: String(expId) };
       const mockRequest = new Request(request.url, {
         method: "POST",
         headers: request.headers,
         body: JSON.stringify({
-          comments: comments || ("Bulk " + (action_type === "reject" ? "rejection" : "approval")),
+          comments: formattedComment,
           client_timestamp: parseClientTimestamp(body.client_timestamp)
         })
       });

@@ -801,17 +801,21 @@ export default function ApprovalPage() {
     let successCount = 0;
     let failCount = 0;
 
+    const bulkLabel = bulkActionType === "reject" ? "Bulk Rejection" : "Bulk Approval";
+    const cleanRemark = bulkComments.trim();
+    const formattedBulkComment = cleanRemark ? `${bulkLabel} :- ${cleanRemark}` : bulkLabel;
+
     try {
-      const res = await approvalService.bulkApproveExpenses(selectedIds, bulkActionType, bulkComments.trim());
+      const res = await approvalService.bulkApproveExpenses(selectedIds, bulkActionType, formattedBulkComment);
       successCount = res.successCount || selectedIds.length;
       failCount = res.failCount || 0;
     } catch (err) {
       const results = await Promise.all(selectedIds.map(async (id) => {
         try {
           if (bulkActionType === "approve") {
-            await approvalService.approveExpense(id, bulkComments.trim());
+            await approvalService.approveExpense(id, formattedBulkComment);
           } else {
-            await approvalService.rejectExpense(id, bulkComments.trim());
+            await approvalService.rejectExpense(id, formattedBulkComment);
           }
           return { success: true };
         } catch (e) {
