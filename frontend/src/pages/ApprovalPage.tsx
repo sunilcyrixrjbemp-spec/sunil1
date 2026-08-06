@@ -468,13 +468,29 @@ export default function ApprovalPage() {
       );
     };
 
-    // Clear previous expense details to prevent showing stale or incomplete claim data
-    setExpenseDetails(null);
-    setLoadingDetails(true);
-
+    // 1. INSTANTLY construct initial claim details from row data for 0ms modal open speed!
     const targetId = app.expense_id ?? app.id ?? app.expense_code;
+    const initialDetails = {
+      id: app.id || app.expense_id,
+      expense_code: app.expense_code || String(targetId),
+      user_id: app.user_id || app.eCode || 0,
+      submitter_name: app.employeeName || app.submitter_name || "Employee",
+      submitter_code: app.eCode || app.submitter_code || "",
+      month: app.date || app.month || "",
+      amount: parseFloat(app.amount || 0),
+      status: app.status || "submitted",
+      category: app.category || app.travel_mode || "Travel",
+      date: app.date || "",
+      purpose: app.purpose || app.description || "",
+      attachments: getAttachmentsArray(app.attachments || app.attachment_urls || app.attachments_detailed),
+      itineraries: [],
+      approvals: []
+    };
+
     const cacheKey = `cache_claim_detail_${targetId}`;
     const cached = localStorage.getItem(cacheKey);
+    let hasLoadedData = false;
+
     if (cached) {
       try {
         const cachedData = JSON.parse(cached);
@@ -482,10 +498,18 @@ export default function ApprovalPage() {
           setExpenseDetails(cachedData);
           initLegs(cachedData);
           setLoadingDetails(false);
+          hasLoadedData = true;
         }
       } catch (e) {}
     }
 
+    if (!hasLoadedData) {
+      setExpenseDetails(initialDetails);
+      initLegs(initialDetails);
+      setLoadingDetails(false);
+    }
+
+    // 2. Fetch full leg breakdown asynchronously in background without blocking UI!
     try {
       const details = await expenseService.getExpenseDetails(targetId);
       if (details) {
@@ -494,11 +518,7 @@ export default function ApprovalPage() {
         safeSetLocalStorage(cacheKey, JSON.stringify(details));
       }
     } catch (err: any) {
-      console.error("Error loading expense details:", err);
-      const errMsg = err?.response?.data?.error || err?.message || String(err);
-      toast.error(`Failed to load expense itinerary details: ${errMsg}`);
-    } finally {
-      setLoadingDetails(false);
+      console.warn("Background expense details fetch error:", err);
     }
   };
 

@@ -42,19 +42,19 @@ export const formatImageUrl = (url: any): string => {
   let str = String(url).trim();
   if (!str) return "";
 
-  // 1. Google Drive direct CDN stream conversion
+  // 1. Google Drive direct stream & R2 auto-transfer proxy
   if (str.includes("drive.google.com") || str.includes("docs.google.com")) {
     const matchD = str.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     const matchId = str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
     const fileId = matchD ? matchD[1] : (matchId ? matchId[1] : null);
     if (fileId) {
-      return `https://lh3.googleusercontent.com/d/${fileId}`;
+      return `${API_BASE}/api/r2/gdrive-proxy?id=${fileId}`;
     }
   }
 
   // 2. Raw Google Drive File ID (25-50 chars)
   if (/^[a-zA-Z0-9_-]{25,50}$/.test(str)) {
-    return `https://lh3.googleusercontent.com/d/${str}`;
+    return `${API_BASE}/api/r2/gdrive-proxy?id=${str}`;
   }
 
   // 3. Absolute HTTP(S) or Data URI
@@ -949,7 +949,7 @@ const LegDetailCard = ({
                       const cType = cItem.call_type || cItem.calls_type || cItem.type || act.callsType || "Service Call";
                       const cStatus = cItem.status || cItem.calls_status || act.callsStatus || "Attended & Closed";
                       
-                      const cUrl = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url || "";
+                      const cUrl = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url || cItem.url || cItem.file_url || cItem.photo || cItem.service_report_photo || cItem.calls_asset_details?.attachment_url || cItem.calls_asset_details?.photo_url || cItem.calls_asset_details?.url || "";
                       const fullCUrl = formatImageUrl(cUrl);
 
                       return (
@@ -1009,7 +1009,7 @@ const LegDetailCard = ({
                       const pHospital = isValidText(rawHospital) ? rawHospital : (pCode !== "—" && barcodeMap[pCode]?.hospital ? barcodeMap[pCode].hospital : "—");
 
                       const pSched = pItem.schedule || pItem.pms_frequency || pItem.frequency || act.pmsFrequency || schedule || "—";
-                      const pUrl = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url || "";
+                      const pUrl = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url || pItem.url || pItem.file_url || pItem.photo || pItem.service_report_photo || pItem.pms_asset_details?.attachment_url || pItem.pms_asset_details?.photo_url || pItem.pms_asset_details?.url || "";
                       const fullPUrl = formatImageUrl(pUrl);
 
                       return (

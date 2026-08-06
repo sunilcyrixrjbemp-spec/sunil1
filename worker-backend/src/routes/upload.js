@@ -363,6 +363,81 @@ export async function handleServeFile(request, env, params, query) {
   return new Response("File not found", { status: 404 });
 }
 
+// ─── GET /api/r2/gdrive-proxy ───────────────────────────────────────────────
+export async function handleGDriveProxy(request, env, params, query) {
+  const fileId = query?.get("id") || params?.id || params?.key;
+  if (!fileId) return errorResponse("Missing Google Drive file ID", 400);
+
+  const cleanId = fileId.replace(/^gdrive\//, "").replace(/\.jpg$/, "").replace(/\.png$/, "");
+  const r2Key = `gdrive/${cleanId}.jpg`;
+
+  const bucket = env.R2_BUCKET || env.CYRIXAPP_BUCKET;
+
+  // 1. Check if already stored in Cloudflare R2 Bucket
+  if (bucket) {
+    try {
+      const existingObj = await bucket.get(r2Key);
+      if (existingObj) {
+        const headers = new Headers();
+        existingObj.writeHttpMetadata(headers);
+        headers.set("Content-Type", "image/jpeg");
+        headers.set("Cache-Control", "public, max-age=31536000");
+        headers.set("X-Storage-Source", "R2-Bucket");
+        return new Response(existingObj.body, { headers });
+      }
+    } catch (e) {}
+  }
+
+  // 2. Auto-fetch from Google Drive CDN stream
+  const gdriveUrlsToTry = [
+    `https://lh3.googleusercontent.com/d/${cleanId}`,
+    `https://drive.google.com/uc?export=download&id=${cleanId}`,
+    `https://docs.google.com/uc?export=download&id=${cleanId}`
+  ];
+
+  for (const url of gdriveUrlsToTry) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+      });
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        if (arrayBuffer.byteLength > 0) {
+          // Save to R2 permanently
+          if (bucket) {
+            try {
+              await bucket.put(r2Key, arrayBuffer, {
+                httpMetadata: { contentType: "image/jpeg" }
+              });
+
+              // Update D1 database link references
+              if (env.DB) {
+                const r2PublicPath = `/uploads/${r2Key}`;
+                env.DB.prepare(`
+                  UPDATE expense_attachments 
+                  SET file_url = ? 
+                  WHERE file_url LIKE ? OR file_url LIKE ?
+                `).bind(r2PublicPath, `%${cleanId}%`, `%gdrive%`).run().catch(() => {});
+              }
+            } catch (err) {}
+          }
+
+          return new Response(arrayBuffer, {
+            status: 200,
+            headers: {
+              "Content-Type": "image/jpeg",
+              "Cache-Control": "public, max-age=31536000",
+              "X-Storage-Source": "GDrive-R2-AutoMigrated"
+            }
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
+  return errorResponse("Unable to retrieve Google Drive image", 404);
+}
+
 // ─── DELETE /api/files/:key — Delete from R2 (Admin only) ────────────────────
 export async function handleDeleteFile(request, env, params, query, user) {
   if (!user || (user.role !== "Admin" && user.role !== "Manager")) {

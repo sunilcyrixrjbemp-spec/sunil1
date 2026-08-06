@@ -70,7 +70,7 @@ import {
 
 // Upload handlers
 import {
-  handleUploadImage, handleUploadDocument, handleServeFile
+  handleUploadImage, handleUploadDocument, handleServeFile, handleGDriveProxy
 } from "./routes/upload.js";
 
 // Reports handlers
@@ -360,6 +360,7 @@ router.post("/api/tickets/:ticket_id/reopen", handleReopenTicket, true);
 router.post("/api/tickets/:ticket_id/followup", handleToggleFollowup, true);
 
 // ─── Upload Endpoints ─────────────────────────────────────────────────────────
+router.get("/api/r2/gdrive-proxy", handleGDriveProxy, false);
 router.post("/api/upload/image", handleUploadImage, true);
 router.post("/api/upload/document", handleUploadDocument, true);
 // R2 file serving (primary path & aliases)
