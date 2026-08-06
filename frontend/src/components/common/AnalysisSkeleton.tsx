@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function AnalysisSkeleton() {
   return (
     <div className="w-full space-y-2 p-1 sm:p-2 animate-pulse" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>

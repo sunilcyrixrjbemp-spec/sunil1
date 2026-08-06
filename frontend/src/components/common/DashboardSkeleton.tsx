@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function DashboardSkeleton() {
   return (
     <div className="p-4 md:p-6 bg-slate-50 min-h-screen font-sans animate-pulse">
