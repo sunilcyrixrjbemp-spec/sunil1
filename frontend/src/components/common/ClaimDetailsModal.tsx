@@ -1067,44 +1067,73 @@ const LegDetailCard = ({
       )}
 
       {/* HISTORICAL MINIMUM ROUTE BENCHMARK AUDIT CARD (APPROVER ONLY MATCH POPUP) */}
-      {routeBenchmark && (
-        <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2.5 mt-2 space-y-1.5 shadow-xs select-none">
-          <div className="flex items-center justify-between font-extrabold text-emerald-950 text-[10.5px] border-b border-emerald-200 pb-1 flex-wrap gap-1">
-            <span className="flex items-center gap-1.5 uppercase tracking-wider text-emerald-900">
-              🏆 Historical Minimum Route Match ({routeBenchmark.from_location} ↔ {routeBenchmark.to_location})
-            </span>
-            <span className="text-[9.5px] bg-emerald-700 text-white px-2 py-0.5 rounded font-mono font-black shadow-2xs">
-              Verified Lowest Fare: ₹{routeBenchmark.min_travel_amount}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9.5px]">
-            <div>
-              <span className="text-slate-500 font-bold block">Lowest Fare Filed By:</span>
-              <span className="text-slate-900 font-black block leading-tight">{routeBenchmark.prior_user_name}</span>
-              <span className="text-emerald-700 font-mono text-[8.5px] font-bold block">{routeBenchmark.prior_claim_code}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 font-bold block">Min Distance & Mode:</span>
-              <span className="text-slate-900 font-mono font-extrabold block">{routeBenchmark.min_distance_km} KM ({routeBenchmark.travel_mode})</span>
-            </div>
-            <div>
-              <span className="text-slate-500 font-bold block">Minimum Travel Fare:</span>
-              <span className="text-emerald-900 font-mono font-black block text-xs">₹{routeBenchmark.min_travel_amount}</span>
-            </div>
-            <div>
-              <span className="text-slate-500 font-bold block">Current vs Minimum:</span>
-              {parseFloat(String(taAmt)) > routeBenchmark.min_travel_amount ? (
-                <span className="text-rose-800 font-extrabold bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 font-mono text-[9px] block">
-                  ⚠️ +₹{(parseFloat(String(taAmt)) - routeBenchmark.min_travel_amount).toFixed(0)} Higher
+      {routeBenchmark && (routeBenchmark.global || routeBenchmark.min_travel_amount) && (
+        (() => {
+          const globalObj = routeBenchmark.global || routeBenchmark;
+          const sameUserObj = routeBenchmark.sameUser;
+          const curAmt = parseFloat(String(taAmt)) || 0;
+
+          return (
+            <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2.5 mt-2 space-y-2 shadow-xs select-none">
+              <div className="flex items-center justify-between font-extrabold text-emerald-950 text-[10.5px] border-b border-emerald-200 pb-1 flex-wrap gap-1">
+                <span className="flex items-center gap-1.5 uppercase tracking-wider text-emerald-900">
+                  🏆 Historical Minimum Route Match ({globalObj.from_location} ↔ {globalObj.to_location})
                 </span>
-              ) : (
-                <span className="text-emerald-800 font-extrabold bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-[9px] block">
-                  ✓ Matches Lowest Fare
+                <span className="text-[9.5px] bg-emerald-700 text-white px-2 py-0.5 rounded font-mono font-black shadow-2xs">
+                  Global Min: ₹{globalObj.min_travel_amount}
                 </span>
+              </div>
+
+              {/* Global Historical Lowest Record */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[9.5px]">
+                <div>
+                  <span className="text-slate-500 font-bold block">Lowest Fare (All Staff):</span>
+                  <span className="text-slate-900 font-black block leading-tight">{globalObj.prior_user_name}</span>
+                  <span className="text-emerald-700 font-mono text-[8.5px] font-bold block">{globalObj.prior_claim_code}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block">Min Distance & Mode:</span>
+                  <span className="text-slate-900 font-mono font-extrabold block">{globalObj.min_distance_km} KM ({globalObj.travel_mode})</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block">Minimum Travel Fare:</span>
+                  <span className="text-emerald-900 font-mono font-black block text-xs">₹{globalObj.min_travel_amount}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-bold block">Current vs Global Min:</span>
+                  {curAmt > globalObj.min_travel_amount ? (
+                    <span className="text-rose-800 font-extrabold bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 font-mono text-[9px] block">
+                      ⚠️ +₹{(curAmt - globalObj.min_travel_amount).toFixed(0)} Higher
+                    </span>
+                  ) : (
+                    <span className="text-emerald-800 font-extrabold bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-[9px] block">
+                      ✓ Matches Lowest Fare
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Same User Prior Historical Fare Badge (If User Filed Same Route Previously) */}
+              {sameUserObj && (
+                <div className="bg-indigo-50/90 border border-indigo-200 rounded p-1.5 text-[9.5px] flex items-center justify-between flex-wrap gap-1 mt-1">
+                  <div className="flex items-center gap-1.5 font-bold text-indigo-950">
+                    <span className="bg-indigo-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded">Same User History</span>
+                    <span>This user previously filed <b>₹{sameUserObj.min_travel_amount}</b> for this route ({sameUserObj.prior_claim_code})</span>
+                  </div>
+                  {curAmt > sameUserObj.min_travel_amount ? (
+                    <span className="text-amber-900 font-extrabold bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 font-mono text-[8.5px]">
+                      ⚠️ +₹{(curAmt - sameUserObj.min_travel_amount).toFixed(0)} Higher than user's own prior ₹{sameUserObj.min_travel_amount}
+                    </span>
+                  ) : (
+                    <span className="text-emerald-800 font-extrabold bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300 font-mono text-[8.5px]">
+                      ✓ Matches user's own prior fare (₹{sameUserObj.min_travel_amount})
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-          </div>
-        </div>
+          );
+        })()
       )}
 
       {/* MANAGER & COORDINATOR EXPENSE AMOUNT EDIT PANEL */}
@@ -1521,13 +1550,22 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       const apiUrl = import.meta.env.VITE_API_URL || "https://fieldops-api.sunilbishnoi.workers.dev/api";
       const cleanApi = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
 
-      fetch(`${cleanApi}/approval/route-benchmark?from=${encodeURIComponent(fromLoc)}&to=${encodeURIComponent(toLoc)}`, {
+      const targetUserId = claimDetails.user_id || claimDetails.userId || "";
+      const targetUserName = claimDetails.user_name || claimDetails.userName || "";
+
+      fetch(`${cleanApi}/approval/route-benchmark?from=${encodeURIComponent(fromLoc)}&to=${encodeURIComponent(toLoc)}&user_id=${encodeURIComponent(targetUserId)}&user_name=${encodeURIComponent(targetUserName)}`, {
         headers: { "Authorization": `Bearer ${token}` }
       })
       .then(res => res.json())
       .then(data => {
-        if (data && data.success && data.hasBenchmark && data.benchmark) {
-          setRouteBenchmarks(prev => ({ ...prev, [idx]: data.benchmark }));
+        if (data && data.success && data.hasBenchmark) {
+          setRouteBenchmarks(prev => ({
+            ...prev,
+            [idx]: {
+              global: data.benchmark,
+              sameUser: data.sameUserBenchmark
+            }
+          }));
         }
       })
       .catch(() => {});

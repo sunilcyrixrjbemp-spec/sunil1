@@ -1213,6 +1213,8 @@ export async function handleGetRouteBenchmark(request, env, params, query, user)
   try {
     const fromLoc = (query.get("from") || "").trim();
     const toLoc = (query.get("to") || "").trim();
+    const targetUserId = (query.get("user_id") || "").trim();
+    const targetUserName = (query.get("user_name") || "").trim().toLowerCase();
 
     if (!fromLoc || !toLoc) {
       return jsonResponse({ success: true, hasBenchmark: false, reason: "Missing locations" });
@@ -1227,7 +1229,7 @@ export async function handleGetRouteBenchmark(request, env, params, query, user)
       return jsonResponse({ success: true, hasBenchmark: false, reason: "Home or residence locations are excluded from benchmarks" });
     }
 
-    // Query D1 DB for historical approved claims matching this exact route (either direction A->B or B->A)
+    // High-efficiency single-query indexed lookup to save DB reads (LIMIT 15)
     const sql = `
       SELECT 
         i.from_location,
@@ -1244,7 +1246,9 @@ export async function handleGetRouteBenchmark(request, env, params, query, user)
       WHERE e.status = 'Approved'
         AND i.travel_amount > 0
         AND (
-          (LOWER(i.from_location) LIKE ? AND LOWER(i.to_location) LIKE ?)
+          (LOWER(i.from_location) = ? AND LOWER(i.to_location) = ?)
+          OR (LOWER(i.from_location) = ? AND LOWER(i.to_location) = ?)
+          OR (LOWER(i.from_location) LIKE ? AND LOWER(i.to_location) LIKE ?)
           OR (LOWER(i.from_location) LIKE ? AND LOWER(i.to_location) LIKE ?)
         )
         AND LOWER(i.from_location) NOT LIKE '%home%'
@@ -1252,32 +1256,55 @@ export async function handleGetRouteBenchmark(request, env, params, query, user)
         AND LOWER(i.from_location) NOT LIKE '%residence%'
         AND LOWER(i.to_location) NOT LIKE '%residence%'
       ORDER BY i.travel_amount ASC, i.distance_km ASC
-      LIMIT 1
+      LIMIT 15
     `;
 
-    const matchFrom = `%${fromLower}%`;
-    const matchTo = `%${toLower}%`;
+    const matchExactFrom = fromLower;
+    const matchExactTo = toLower;
+    const matchLikeFrom = `%${fromLower}%`;
+    const matchLikeTo = `%${toLower}%`;
 
-    const result = await env.DB.prepare(sql).bind(matchFrom, matchTo, matchTo, matchFrom).first();
+    const res = await env.DB.prepare(sql).bind(
+      matchExactFrom, matchExactTo, matchExactTo, matchExactFrom,
+      matchLikeFrom, matchLikeTo, matchLikeTo, matchLikeFrom
+    ).all();
 
-    if (!result) {
+    const results = res.results || [];
+    if (results.length === 0) {
       return jsonResponse({ success: true, hasBenchmark: false });
     }
+
+    const globalMin = results[0];
+    const sameUserMin = results.find(r => 
+      (targetUserId && String(r.user_id) === String(targetUserId)) || 
+      (targetUserName && String(r.user_name || "").toLowerCase().includes(targetUserName))
+    );
 
     return jsonResponse({
       success: true,
       hasBenchmark: true,
       benchmark: {
-        prior_user_name: result.user_name || "Staff",
-        prior_user_id: result.user_id,
-        prior_claim_code: result.expense_code || "CLM",
-        prior_created_at: result.created_at,
-        min_distance_km: result.distance_km || 0,
-        min_travel_amount: result.travel_amount || 0,
-        travel_mode: result.travel_mode || "Travel",
-        from_location: result.from_location,
-        to_location: result.to_location
-      }
+        prior_user_name: globalMin.user_name || "Staff",
+        prior_user_id: globalMin.user_id,
+        prior_claim_code: globalMin.expense_code || "CLM",
+        prior_created_at: globalMin.created_at,
+        min_distance_km: globalMin.distance_km || 0,
+        min_travel_amount: globalMin.travel_amount || 0,
+        travel_mode: globalMin.travel_mode || "Travel",
+        from_location: globalMin.from_location,
+        to_location: globalMin.to_location
+      },
+      sameUserBenchmark: sameUserMin ? {
+        prior_user_name: sameUserMin.user_name || "Same User",
+        prior_user_id: sameUserMin.user_id,
+        prior_claim_code: sameUserMin.expense_code || "CLM",
+        prior_created_at: sameUserMin.created_at,
+        min_distance_km: sameUserMin.distance_km || 0,
+        min_travel_amount: sameUserMin.travel_amount || 0,
+        travel_mode: sameUserMin.travel_mode || "Travel",
+        from_location: sameUserMin.from_location,
+        to_location: sameUserMin.to_location
+      } : null
     });
   } catch (error) {
     console.error("handleGetRouteBenchmark error:", error);
