@@ -2247,15 +2247,15 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
             {/* Individual Breakdown Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {/* System Policy Deduction Card */}
+              {/* Base Location Deduction Card */}
               {systemDeductionAmt > 0 && (
                 <div className="bg-amber-50/90 border border-amber-300 rounded-lg p-2.5 space-y-1">
                   <div className="flex items-center justify-between font-extrabold text-amber-950 text-[10.5px]">
-                    <span className="flex items-center gap-1.5">⚙️ System Policy Deduction</span>
+                    <span className="flex items-center gap-1.5">📍 Base Location Deduction</span>
                     <span className="font-mono text-amber-900 font-black">-{rupee(systemDeductionAmt)}</span>
                   </div>
                   <div className="text-[9.5px] text-amber-900 leading-tight">
-                    <b className="text-amber-950">Deducted By:</b> System Rule Engine (Base Location Policy)
+                    <b className="text-amber-950">Deducted By:</b> System Rule Engine
                   </div>
                   <div className="text-[9.5px] text-amber-900 leading-normal bg-white p-1.5 rounded border border-amber-200 mt-1">
                     <b className="text-amber-950 block mb-0.5">Exact Reason / Rule:</b>
