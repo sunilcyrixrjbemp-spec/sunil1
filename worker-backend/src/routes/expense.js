@@ -606,6 +606,10 @@ export async function serializeExpenses(env, expenses, submittersMap) {
         leg: l.leg_number,
         from_district: l.from_district,
         to_district: l.to_district,
+        from_state: l.from_state || l.state || "Rajasthan",
+        to_state: l.to_state || l.dest_state || "Rajasthan",
+        state: l.state || l.from_state || "Rajasthan",
+        dest_state: l.dest_state || l.to_state || "Rajasthan",
         from: l.from_location || "",
         to: l.to_location || "",
         mode: l.travel_mode,
@@ -625,6 +629,10 @@ export async function serializeExpenses(env, expenses, submittersMap) {
         leg: l.leg_number,
         from_district: l.from_district,
         to_district: l.to_district,
+        from_state: l.from_state || l.state || "Rajasthan",
+        to_state: l.to_state || l.dest_state || "Rajasthan",
+        state: l.state || l.from_state || "Rajasthan",
+        dest_state: l.dest_state || l.to_state || "Rajasthan",
         from: l.from_location || "",
         to: l.to_location || "",
         mode: l.travel_mode,
@@ -2162,6 +2170,10 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
         leg: i.leg_number,
         from_district: finalFromDist,
         to_district: finalToDist,
+        from_state: i.from_state || i.state || submitter?.state || "Rajasthan",
+        to_state: i.to_state || i.dest_state || submitter?.state || "Rajasthan",
+        state: i.state || i.from_state || submitter?.state || "Rajasthan",
+        dest_state: i.dest_state || i.to_state || submitter?.state || "Rajasthan",
         from: finalFromLoc,
         to: finalToLoc,
       mode: i.travel_mode,
@@ -2978,6 +2990,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const itiId = `${expenseCode}-${legNum}`;
     const fromDist = iti.district_from || iti.from_district || user.district || user.base_reporting_location || "—";
     const toDist = iti.district || iti.to_district || user.district || user.base_reporting_location || "—";
+    const fromSt = iti.state || iti.from_state || user.state || "Rajasthan";
+    const toSt = iti.dest_state || iti.to_state || (iti.travel_type === "Out of State" ? "Gujarat" : (user.state || "Rajasthan"));
     const fromLoc = iti.from || iti.from_location || fromDist;
     const toLoc = iti.to || iti.to_location || toDist;
     const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
@@ -2985,16 +2999,16 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     dbBatchStatements.push({
       sql: `
         INSERT INTO expense_itineraries (
-          itinerary_id, exp_id, leg_number, from_district, to_district, from_location, to_location, 
+          itinerary_id, exp_id, leg_number, from_district, to_district, from_state, to_state, state, dest_state, from_location, to_location, 
           travel_mode, distance_km, travel_amount, sub_mode, sub_km, sub_amount, da_amount, hotel_amount, 
           local_purchase, local_purchase_remark, other_desc, other_amount, calls_assigned, calls_completed, pms_count, asset_tagging, visit_purpose, 
           activity_details, original_distance_km, original_travel_amount, original_sub_amount, original_da_amount, 
           original_hotel_amount, original_other_amount, original_local_purchase, calibration_count, mobilise_count
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
-        itiId, expenseCode, legNum, fromDist, toDist, fromLoc, toLoc,
+        itiId, expenseCode, legNum, fromDist, toDist, fromSt, toSt, fromSt, toSt, fromLoc, toLoc,
         iti.mode || "Bike", parseFloat(iti.km || "0.0"),
         isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
         iti.sub_mode || null,

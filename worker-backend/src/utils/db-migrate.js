@@ -100,7 +100,12 @@ export async function runMigrations(db) {
     // Add base_reporting_location column to users if not present
     `ALTER TABLE users ADD COLUMN base_reporting_location TEXT`,
     // Add district_type column to expenses if not present
-    `ALTER TABLE expenses ADD COLUMN district_type TEXT`
+    `ALTER TABLE expenses ADD COLUMN district_type TEXT`,
+    // Add state tracking columns to expense_itineraries if not present
+    `ALTER TABLE expense_itineraries ADD COLUMN from_state TEXT`,
+    `ALTER TABLE expense_itineraries ADD COLUMN to_state TEXT`,
+    `ALTER TABLE expense_itineraries ADD COLUMN state TEXT`,
+    `ALTER TABLE expense_itineraries ADD COLUMN dest_state TEXT`
   ];
 
   for (const sql of migrations) {

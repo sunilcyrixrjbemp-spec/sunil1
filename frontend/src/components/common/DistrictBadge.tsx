@@ -34,7 +34,7 @@ export function computeDistrictInfo(
   if (legs && Array.isArray(legs) && legs.length > 0) {
     for (const leg of legs) {
       const legType = (leg.travel_type || "").trim().toLowerCase();
-      if (legType === "outdoor") {
+      if (legType === "outdoor" || legType === "out of state" || legType === "out_of_state") {
         hasOutdoorLeg = true;
       }
       const fromDist = normalizeDistrictName(leg.district_from || leg.from_district || leg.fromDistrict);

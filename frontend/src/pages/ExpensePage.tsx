@@ -11,6 +11,7 @@ import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsPdf } from "../utils/pdf";
 import { getISTDate, getISTMonth } from "../utils/dateUtils";
+import { ALL_INDIAN_STATES, getDistrictsForState } from "../utils/indianStatesDistricts";
 import ClaimDetailsModal from "../components/common/ClaimDetailsModal";
 import { 
   Trash2, Plus, Calendar, 
@@ -116,7 +117,7 @@ const getAttachmentsArray = (attachments: any): string[] => {
 interface ItineraryLeg {
   company_provided?: boolean;
   leg: number;
-  travel_type: "In-District" | "Outdoor";
+  travel_type: "In-District" | "Outdoor" | "Out of State";
   district_from: string;
   district: string;
   state?: string;
@@ -1033,13 +1034,16 @@ export default function ExpensePage() {
         const leg1 = updated.find(l => l.leg === 1);
         if (leg1) {
           const hotelAmt = parseFloat(leg1.hotel) || 0;
-          const hasOutDistrictLeg = computeDistrictType(hDist, updated, null) === "OUT_DISTRICT";
+          const hasOutStateLeg = updated.some(l => l.travel_type === "Out of State" || (l.dest_state && l.dest_state !== l.state));
+          const hasOutDistrictLeg = computeDistrictType(hDist, updated, null) === "OUT_DISTRICT" || hasOutStateLeg;
 
           const allowanceObj = data.allowance || {};
-          if (leg1.company_provided) {
+          if (hasOutStateLeg && allowanceObj.daily_out_state && allowanceObj.daily_out_state > 0) {
+            // Out of State: DA remains daily_out_state from DB even when staying at hotel
+            leg1.da = (allowanceObj.daily_out_state || 0).toString();
+          } else if (leg1.company_provided) {
             leg1.da = (allowanceObj.daily_hotel || 0).toString();
           } else if (hotelAmt > 0) {
-            // Hotel stay: always use daily_hotel rate (no out-of-state logic)
             leg1.da = (allowanceObj.daily_hotel || 0).toString();
           } else if (hasOutDistrictLeg) {
             leg1.da = (allowanceObj.daily_out_district || 0).toString();
@@ -1436,7 +1440,7 @@ export default function ExpensePage() {
             checkFrom.trim().toLowerCase() === checkTo.trim().toLowerCase() &&
             checkFromDist.trim().toLowerCase() === checkToDist.trim().toLowerCase()
           ) {
-            toast.error("Source (From) and Destination (To) locations cannot be the same.");
+            toast.error("Source (From) and Destination (To) locations cannot be the same.", { id: "same-location-error" });
             (updatedLeg as any)[field] = "";
           }
         }
@@ -1456,8 +1460,22 @@ export default function ExpensePage() {
           if (value === "In-District") {
             updatedLeg.district_from = hDist === "All" ? "Jodhpur" : hDist;
             updatedLeg.district = hDist === "All" ? "Jodhpur" : hDist;
-          } else {
+            updatedLeg.state = user.state || "Rajasthan";
+            updatedLeg.dest_state = user.state || "Rajasthan";
+          } else if (value === "Outdoor") {
             updatedLeg.district_from = hDist === "All" ? "Jodhpur" : hDist;
+            updatedLeg.state = user.state || "Rajasthan";
+            updatedLeg.dest_state = user.state || "Rajasthan";
+          } else if (value === "Out of State") {
+            updatedLeg.district_from = hDist === "All" ? "Jodhpur" : hDist;
+            updatedLeg.state = user.state || "Rajasthan";
+            if (!updatedLeg.dest_state || updatedLeg.dest_state === updatedLeg.state) {
+              updatedLeg.dest_state = "Gujarat";
+            }
+            const destDists = getDistrictsForState(updatedLeg.dest_state);
+            if (destDists.length > 0 && (!updatedLeg.district || !destDists.includes(updatedLeg.district))) {
+              updatedLeg.district = destDists[0];
+            }
           }
         }
 
@@ -1473,12 +1491,12 @@ export default function ExpensePage() {
 
         if (field === "hotel" && legNum === 1) {
           const hotelAmt = parseFloat(value) || 0;
-          const isOutState = updatedLeg.dest_state !== updatedLeg.state;
+          const isOutState = updatedLeg.travel_type === "Out of State" || updatedLeg.dest_state !== updatedLeg.state;
           const hotelLimit = isOutState 
             ? (allowance.hotel_out_state_s && allowance.hotel_out_state_s > 0 ? allowance.hotel_out_state_s : 2000)
             : (allowance.hotel_in_state_s || 1000);
           if (hotelAmt > hotelLimit) {
-            toast.error(`Maximum hotel stay allowance is ₹${hotelLimit}`);
+            toast.error(`Maximum hotel stay allowance is ₹${hotelLimit}`, { id: "hotel-limit-exceeded" });
             updatedLeg.hotel = hotelLimit.toString();
           }
           if (value !== "0" && value !== 0) {
@@ -1488,19 +1506,19 @@ export default function ExpensePage() {
 
         if (field === "dest_state" && legNum === 1) {
           const hotelAmt = parseFloat(updatedLeg.hotel) || 0;
-          const isOutState = value !== updatedLeg.state;
+          const isOutState = updatedLeg.travel_type === "Out of State" || value !== updatedLeg.state;
           const hotelLimit = isOutState 
             ? (allowance.hotel_out_state_s && allowance.hotel_out_state_s > 0 ? allowance.hotel_out_state_s : 2000)
             : (allowance.hotel_in_state_s || 1000);
           if (hotelAmt > hotelLimit) {
-            toast.error(`Maximum hotel stay allowance is ₹${hotelLimit}`);
+            toast.error(`Maximum hotel stay allowance is ₹${hotelLimit}`, { id: "hotel-limit-exceeded" });
             updatedLeg.hotel = hotelLimit.toString();
           }
         }
 
         // Force company_provided to false if conditions are not met
         const isUserJodhpur = (user.district || "").trim().toLowerCase() === "jodhpur";
-        const isLegOutdoor = updatedLeg.travel_type === "Outdoor";
+        const isLegOutdoor = updatedLeg.travel_type === "Outdoor" || updatedLeg.travel_type === "Out of State";
         const isDestJodhpur = (updatedLeg.district || "").trim().toLowerCase() === "jodhpur";
         const isHotelZero = updatedLeg.hotel === "0";
         
@@ -1512,16 +1530,22 @@ export default function ExpensePage() {
       });
 
       // 2. Recalculate DA for Leg 1 based on the updated list of legs
-      const hasOutDistrictLeg = updatedLegs.some(l => (l.travel_type || "").toLowerCase() === "outdoor");
+      const hasOutStateLeg = updatedLegs.some(l => l.travel_type === "Out of State" || (l.dest_state && l.dest_state !== l.state));
+      const hasOutDistrictLeg = updatedLegs.some(l => (l.travel_type || "").toLowerCase() === "outdoor" || l.travel_type === "Out of State");
 
       const leg1 = updatedLegs.find(l => l.leg === 1);
       if (leg1) {
         if (field !== "da") {
           const hotelAmt = parseFloat(leg1.hotel) || 0;
-          if (leg1.company_provided) {
+          if (hasOutStateLeg) {
+            // Out of State: DA remains daily_out_state from DB even when staying at hotel
+            const outStateDa = (allowance.daily_out_state && allowance.daily_out_state > 0)
+              ? allowance.daily_out_state
+              : (allowance.daily_out_district || 0);
+            leg1.da = outStateDa.toString();
+          } else if (leg1.company_provided) {
             leg1.da = (allowance.daily_hotel || 0).toString();
           } else if (hotelAmt > 0) {
-            // Hotel stay: always use daily_hotel rate (no out-of-state logic)
             leg1.da = (allowance.daily_hotel || 0).toString();
           } else if (hasOutDistrictLeg) {
             leg1.da = (allowance.daily_out_district || 0).toString();
@@ -2598,6 +2622,10 @@ export default function ExpensePage() {
         const ws_asset = acts.includes("Asset Tagging") ? assetsList.reduce((sum, item) => sum + (parseInt(item.quantity || "0") || 0), 0) : 0;
 
         const detailsObj = {
+          state: leg.state || "Rajasthan",
+          dest_state: leg.dest_state || "Rajasthan",
+          is_out_of_state: leg.travel_type === "Out of State" || (leg.dest_state && leg.dest_state !== leg.state),
+          travel_type: leg.travel_type,
           selected_activities: acts,
           calls_barcode: leg.calls_barcode || "",
           calls_verified: !!leg.calls_verified,
@@ -3270,12 +3298,12 @@ export default function ExpensePage() {
                       
                       <div className="flex items-center justify-between pb-3 -mx-4 px-4 -mt-4 pt-3 mb-1 bg-slate-50 border-b border-slate-200">
                         <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Travel Category</span>
-                        <div className="flex gap-2" role="group">
+                        <div className="flex gap-2 flex-wrap" role="group">
                           <button
                             key="In-District"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "In-District")}
-                            className={`px-4 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
+                            className={`px-3 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
                               leg.travel_type === "In-District"
                                 ? "border-[#4A6A8A] bg-[#4A6A8A] text-white"
                                 : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
@@ -3287,13 +3315,25 @@ export default function ExpensePage() {
                             key="Outdoor"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Outdoor")}
-                            className={`px-4 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
+                            className={`px-3 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
                               leg.travel_type === "Outdoor"
                                 ? "border-amber-600 bg-amber-500 text-white"
                                 : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                             }`}
                           >
                             Outdoor
+                          </button>
+                          <button
+                            key="Out of State"
+                            type="button"
+                            onClick={() => handleItineraryChange(leg.leg, "travel_type", "Out of State")}
+                            className={`px-3 py-1.5 text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs ${
+                              leg.travel_type === "Out of State"
+                                ? "border-purple-600 bg-purple-600 text-white font-bold"
+                                : "border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                            }`}
+                          >
+                            ✈️ Out of State
                           </button>
                         </div>
                       </div>
@@ -3316,6 +3356,31 @@ export default function ExpensePage() {
                             )}
                           </div>
                           <div className="space-y-2.5">
+                            {leg.travel_type === "Out of State" && (
+                              <div>
+                                <label className="label-lte text-purple-800 font-extrabold flex items-center gap-1">
+                                  <span>State Name</span> <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                  value={leg.state || "Rajasthan"}
+                                  disabled={isFromLocked}
+                                  onChange={(e) => {
+                                    const newState = e.target.value;
+                                    handleItineraryChange(leg.leg, "state", newState);
+                                    const stateDists = getDistrictsForState(newState);
+                                    handleItineraryChange(leg.leg, "district_from", stateDists[0] || "");
+                                    handleItineraryChange(leg.leg, "from", "");
+                                  }}
+                                  className="input-lte font-semibold pr-8 border-purple-300 bg-purple-50/50 rounded-none shadow-2xs disabled:bg-slate-100 mb-2"
+                                >
+                                  <option value="">Select From State</option>
+                                  {ALL_INDIAN_STATES.map(st => (
+                                    <option key={st} value={st}>{st}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
                             <div>
                               <label className="label-lte">District <span className="text-red-500">*</span></label>
                               <div className="relative">
@@ -3330,7 +3395,10 @@ export default function ExpensePage() {
                                   className="input-lte font-semibold pr-8 border-slate-300 rounded-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                                 >
                                   <option value="">Select District</option>
-                                  {distOpts.map(d => <option key={d} value={d}>{d}</option>)}
+                                  {(leg.travel_type === "Out of State"
+                                    ? getDistrictsForState(leg.state || "Rajasthan")
+                                    : distOpts
+                                  ).map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
                               </div>
                             </div>
@@ -3408,6 +3476,30 @@ export default function ExpensePage() {
                             <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">DESTINATION LOCATION (TO)</span>
                           </div>
                           <div className="space-y-2.5">
+                            {leg.travel_type === "Out of State" && (
+                              <div>
+                                <label className="label-lte text-purple-800 font-extrabold flex items-center gap-1">
+                                  <span>State Name</span> <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                  value={leg.dest_state || "Gujarat"}
+                                  onChange={(e) => {
+                                    const newState = e.target.value;
+                                    handleItineraryChange(leg.leg, "dest_state", newState);
+                                    const stateDists = getDistrictsForState(newState);
+                                    handleItineraryChange(leg.leg, "district", stateDists[0] || "");
+                                    handleItineraryChange(leg.leg, "to", "");
+                                  }}
+                                  className="input-lte font-semibold pr-8 border-purple-300 bg-purple-50/50 rounded-none shadow-2xs mb-2"
+                                >
+                                  <option value="">Select State</option>
+                                  {ALL_INDIAN_STATES.map(st => (
+                                    <option key={st} value={st}>{st}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+
                             <div>
                               <label className="label-lte">District <span className="text-red-500">*</span></label>
                               <div className="relative">
@@ -3422,7 +3514,10 @@ export default function ExpensePage() {
                                   className="input-lte font-semibold pr-8 border-slate-300 rounded-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500"
                                 >
                                   <option value="">Select District</option>
-                                  {distOpts.map(d => <option key={d} value={d}>{d}</option>)}
+                                  {(leg.travel_type === "Out of State" || (leg.dest_state && leg.dest_state !== leg.state)
+                                    ? getDistrictsForState(leg.dest_state || "Gujarat")
+                                    : distOpts
+                                  ).map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
                               </div>
                             </div>
@@ -3775,7 +3870,13 @@ export default function ExpensePage() {
                           </div>
 
                           <div>
-                            <label className="label-lte" title={`Outstation Hotel Limit: max ₹${allowance.hotel_in_state_s} per night.`}>
+                            <label 
+                              className="label-lte" 
+                              title={leg.travel_type === "Out of State" || leg.dest_state !== leg.state
+                                ? `Out-of-State Hotel Limit (DB): max ₹${allowance.hotel_out_state_s || 2000} per night.` 
+                                : `Outstation Hotel Limit (DB): max ₹${allowance.hotel_in_state_s || 1000} per night.`
+                              }
+                            >
                               Hotel Charges <Info className="w-3 h-3 inline text-blue-500 mb-0.5" />
                             </label>
                             <input
