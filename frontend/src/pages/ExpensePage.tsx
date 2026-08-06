@@ -3228,8 +3228,6 @@ export default function ExpensePage() {
     }
   };
 
-
-
   if (initLoading) {
     return <Loader message="Initializing Expense Builder..." />;
   }
@@ -3242,24 +3240,23 @@ export default function ExpensePage() {
       <div className="space-y-6 animate-fadeIn text-[#212529] pb-32 md:pb-8 text-xs font-sans">
       
       {/* Header Info Bar */}
-      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0 shadow-2xs">
-            <FileText className="w-5 h-5" />
+      <div className="bg-white border border-slate-200 rounded-md shadow-2xs flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-4 sm:py-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded bg-[#4A6A8A] flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <FileText className="w-4 h-4" />
           </div>
           <div>
-            <h1 className="text-sm font-extrabold text-slate-900 leading-none tracking-tight">Submit Daily Expense Claim</h1>
-            <p className="text-[10px] text-slate-500 mt-1 font-medium">Fill out your travel details and work report for the day with automated policy validation.</p>
+            <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight">Submit Daily Expense Claim</h1>
+            <p className="text-[9.5px] text-slate-500 font-medium">Submit daily travel & work details.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-center">
-          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">EXPENSE ID:</span>
-          <span className="bg-[#4A6A8A] text-white font-extrabold py-1.5 px-4 rounded-none text-[11px] font-mono tracking-wide shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider">EXPENSE ID:</span>
+          <span className="bg-[#4A6A8A] text-white font-extrabold py-0.5 px-2.5 rounded text-[10px] sm:text-[11px] font-mono tracking-wide shadow-2xs">
             {nextExpId}
           </span>
         </div>
       </div>
-
       {policyMissing && (
         <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-none flex items-start gap-2.5 font-medium shadow-2xs animate-pulse">
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-rose-650" />
