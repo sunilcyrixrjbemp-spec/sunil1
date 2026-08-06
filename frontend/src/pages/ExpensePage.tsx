@@ -2609,17 +2609,28 @@ export default function ExpensePage() {
 
       const itinerariesData = itineraries.map((leg, index) => {
         const legNum = index + 1;
-        const acts = leg.selected_activities || [];
-        
+        const rawActs = leg.selected_activities || [];
         const callsList = leg.calls_list || [];
         const pmsList = leg.pms_list || [];
         const assetsList = leg.assets_list || [];
+        const calibCount = parseInt(leg.calibration_count || "0") || 0;
+        const mobCount = parseInt(leg.mobilise_asset_count || "0") || 0;
 
-        // Compute CRM work metrics based on list entries
-        const ws_assigned = acts.includes("Calls") ? callsList.length : 0;
-        const ws_closed = acts.includes("Calls") ? callsList.filter(c => c.status === "Close" || c.status === "Attend & Close").length : 0;
-        const ws_pms = acts.includes("PMS") ? pmsList.length : 0;
-        const ws_asset = acts.includes("Asset Tagging") ? assetsList.reduce((sum, item) => sum + (parseInt(item.quantity || "0") || 0), 0) : 0;
+        const acts: string[] = [];
+        if (callsList.length > 0) acts.push("Calls");
+        if (pmsList.length > 0) acts.push("PMS");
+        if (assetsList.length > 0) acts.push("Asset Tagging");
+        if (calibCount > 0) acts.push("Calibration");
+        if (mobCount > 0) acts.push("Mobilisation");
+        if (rawActs.includes("Other") || (leg.activity_other_desc && leg.activity_other_desc.trim()) || (leg.oth_desc && leg.oth_desc.trim())) {
+          acts.push("Other");
+        }
+
+        // Compute CRM work metrics based on actual list entries
+        const ws_assigned = callsList.length;
+        const ws_closed = callsList.filter(c => c.status === "Close" || c.status === "Attend & Close" || c.barcode).length;
+        const ws_pms = pmsList.filter(p => p.barcode || p.status === "Close" || p.status === "Attended").length;
+        const ws_asset = assetsList.reduce((sum, item) => sum + (parseInt(item.quantity || "0") || 0), 0);
 
         const detailsObj = {
           state: leg.state || "Rajasthan",
@@ -2638,8 +2649,8 @@ export default function ExpensePage() {
           pms_frequency: leg.pms_frequency || "3 month",
           asset_tagging_equipment: leg.asset_tagging_equipment || "",
           asset_tagging_quantity: leg.asset_tagging_quantity || "0",
-          mobilise_asset_count: leg.mobilise_asset_count || "0",
-          calibration_count: leg.calibration_count || "0",
+          mobilise_asset_count: mobCount.toString(),
+          calibration_count: calibCount.toString(),
           activity_other_desc: leg.activity_other_desc || "",
           calls_list: callsList,
           pms_list: pmsList,
@@ -2676,8 +2687,8 @@ export default function ExpensePage() {
           ws_closed: ws_closed.toString(),
           ws_pms: ws_pms.toString(),
           ws_asset: ws_asset.toString(),
-          calibration_count: (leg.calibration_count || 0).toString(),
-          mobilise_asset_count: (leg.mobilise_asset_count || 0).toString(),
+          calibration_count: calibCount.toString(),
+          mobilise_asset_count: mobCount.toString(),
           visit_purpose: acts.length > 0 ? `Activities: ${acts.join(", ")}` : "Field visit",
           activity_details: JSON.stringify(detailsObj)
         };

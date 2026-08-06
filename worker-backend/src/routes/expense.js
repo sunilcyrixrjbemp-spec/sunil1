@@ -2720,38 +2720,57 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       } catch (e) {}
     }
 
-    let itiAssigned = parseInt(iti.ws_assigned || "0", 10);
-    let itiCompleted = parseInt(iti.ws_closed || "0", 10);
-    let itiPms = parseInt(iti.ws_pms || "0", 10);
-    let itiAsset = parseInt(iti.ws_asset || "0", 10);
-    let itiCalibration = parseInt(iti.calibration_count || "0", 10);
-    let itiMobilise = parseInt(iti.mobilise_asset_count || "0", 10);
+    let itiAssigned = 0;
+    let itiCompleted = 0;
+    let itiPms = 0;
+    let itiAsset = 0;
+    let itiCalibration = parseInt(iti.calibration_count || "0", 10) || 0;
+    let itiMobilise = parseInt(iti.mobilise_asset_count || "0", 10) || 0;
+
+    const sanitizedActs = [];
 
     if (actDetails) {
-      const selectedActs = actDetails.selected_activities || [];
-      if (selectedActs.includes("Calls")) {
-        const callsList = actDetails.calls_list || [];
+      const selectedActs = Array.isArray(actDetails.selected_activities) ? actDetails.selected_activities : [];
+      const callsList = Array.isArray(actDetails.calls_list) ? actDetails.calls_list : [];
+      const pmsList = Array.isArray(actDetails.pms_list) ? actDetails.pms_list : [];
+      const assetsList = Array.isArray(actDetails.assets_list) ? actDetails.assets_list : [];
+
+      if (callsList.length > 0) {
         itiAssigned = callsList.length;
-        itiCompleted = callsList.filter(c => c.barcode).length;
-      } else {
-        itiAssigned = 0;
-        itiCompleted = 0;
+        itiCompleted = callsList.filter(c => c.barcode || c.status === "Close" || c.status === "Attend & Close").length;
+        sanitizedActs.push("Calls");
       }
 
-      if (selectedActs.includes("PMS")) {
-        const pmsList = actDetails.pms_list || [];
-        itiPms = pmsList.filter(p => p.barcode).length;
-      } else {
-        itiPms = 0;
+      if (pmsList.length > 0) {
+        itiPms = pmsList.filter(p => p.barcode || p.status === "Close" || p.status === "Attended").length;
+        if (itiPms > 0 || pmsList.length > 0) sanitizedActs.push("PMS");
       }
 
-      if (selectedActs.includes("Asset Tagging")) {
-        const assetsList = actDetails.assets_list || [];
+      if (assetsList.length > 0) {
         itiAsset = assetsList.reduce((sum, item) => sum + (parseInt(item.quantity || "0", 10) || 0), 0);
-      } else {
-        itiAsset = 0;
+        if (itiAsset > 0 || assetsList.length > 0) sanitizedActs.push("Asset Tagging");
       }
+
+      if (itiCalibration > 0) sanitizedActs.push("Calibration");
+      if (itiMobilise > 0) sanitizedActs.push("Mobilisation");
+
+      if (selectedActs.includes("Other") || (actDetails.activity_other_desc && actDetails.activity_other_desc.trim())) {
+        sanitizedActs.push("Other");
+      }
+
+      actDetails.selected_activities = sanitizedActs;
+      if (typeof iti.activity_details === "object") {
+        iti.activity_details = actDetails;
+      } else {
+        iti.activity_details = JSON.stringify(actDetails);
+      }
+    } else {
+      if (iti.oth_desc && iti.oth_desc.trim()) sanitizedActs.push("Other");
     }
+
+    const cleanPurpose = sanitizedActs.length > 0 ? `Activities: ${sanitizedActs.join(", ")}` : (iti.visit_purpose && !iti.visit_purpose.startsWith("Activities:") ? iti.visit_purpose : "Field visit");
+    iti.visit_purpose = cleanPurpose;
+    if (idx === 0) firstPurpose = cleanPurpose;
 
     totalAssigned += itiAssigned;
     totalCompleted += itiCompleted;
@@ -3021,9 +3040,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
         isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
         parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.local_purchase_remark || iti.local_purchase_desc || null, iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
-        parseInt(iti.ws_assigned || "0", 10), parseInt(iti.ws_closed || "0", 10),
-        parseInt(iti.ws_pms || "0", 10), parseInt(iti.ws_asset || "0", 10),
-        iti.visit_purpose || "Field visit",
+        itiAssigned, itiCompleted,
+        itiPms, itiAsset,
+        cleanPurpose,
         typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
         parseFloat(iti.km || "0.0"),
         isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
