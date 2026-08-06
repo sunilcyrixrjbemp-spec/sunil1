@@ -2,11 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "sunil1",
   "compatibility_date": "2026-06-27",
+  "pages_build_output_dir": "frontend/dist",
   "observability": {
     "enabled": true
-  },
-  "assets": {
-    "directory": "frontend"
   },
   "compatibility_flags": [
     "nodejs_compat"
