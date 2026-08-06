@@ -1894,10 +1894,10 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       itineraries: [
         {
           leg: 1,
-          from_district: submitter?.district || "N/A",
-          to_district: "N/A",
-          from: "N/A",
-          to: "N/A",
+          from_district: submitter?.district || submitter?.base_reporting_location || "Base District",
+          to_district: submitter?.district || submitter?.base_reporting_location || "Base District",
+          from: submitter?.district || "Local Duty",
+          to: submitter?.district || "Local Duty",
           mode: pl.request_type,
           km: pl.request_type === "KM" ? parseFloat(pl.requested_value) : 0.0,
           amount: pl.request_type === "AUTO" ? parseFloat(pl.requested_value) : 0.0,
@@ -2062,10 +2062,10 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
   if (itineraryRows.length === 0) {
     itineraryRows = [{
       leg_number: 1,
-      from_district: expense.district || "N/A",
-      to_district: expense.district || "N/A",
-      from_location: "",
-      to_location: "",
+      from_district: expense.district || submitter?.district || submitter?.base_reporting_location || "Base District",
+      to_district: expense.district || submitter?.district || submitter?.base_reporting_location || "Base District",
+      from_location: expense.from_location || expense.district || submitter?.district || "Local Duty",
+      to_location: expense.to_location || expense.district || submitter?.district || "Local Duty",
       travel_mode: expense.travel_mode || "Bike",
       distance_km: parseFloat(expense.total_km || 0),
       travel_amount: parseFloat(expense.amount || 0),
@@ -2145,12 +2145,20 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       itinerary_id: a.itinerary_id,
       bill_type: a.bill_type
     })),
-    itineraries: itineraryRows.map(i => ({
-      leg: i.leg_number,
-      from_district: i.from_district,
-      to_district: i.to_district,
-      from: i.from_location || "",
-      to: i.to_location || "",
+    itineraries: itineraryRows.map(i => {
+      const empDist = submitter?.district || expense.district || submitter?.base_reporting_location || "";
+      const fallbackDist = (empDist && empDist !== "N/A" && empDist !== "NA") ? empDist : "Base District";
+      const cleanFromDist = (i.from_district && i.from_district !== "N/A" && i.from_district !== "NA") ? i.from_district : fallbackDist;
+      const cleanToDist = (i.to_district && i.to_district !== "N/A" && i.to_district !== "NA") ? i.to_district : fallbackDist;
+      const cleanFromLoc = (i.from_location && i.from_location !== "N/A" && i.from_location !== "NA") ? i.from_location : (cleanFromDist !== "Base District" ? cleanFromDist : "Local Duty");
+      const cleanToLoc = (i.to_location && i.to_location !== "N/A" && i.to_location !== "NA") ? i.to_location : (cleanToDist !== "Base District" ? cleanToDist : "Local Duty");
+
+      return {
+        leg: i.leg_number,
+        from_district: cleanFromDist,
+        to_district: cleanToDist,
+        from: cleanFromLoc,
+        to: cleanToLoc,
       mode: i.travel_mode,
       km: parseFloat(i.distance_km || 0.0),
       amount: parseFloat(i.travel_amount || 0.0),
@@ -2182,7 +2190,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       original_hotel: parseFloat(i.original_hotel_amount || i.hotel_amount || 0.0),
       original_oth_amount: parseFloat(i.original_other_amount || i.other_amount || 0.0),
       original_local_purchase: parseFloat(i.original_local_purchase || i.local_purchase || 0.0)
-    })),
+    }; }),
     deduction_amount: expense.deduction_amount !== undefined && expense.deduction_amount !== null
       ? parseFloat(expense.deduction_amount)
       : (expense.deduction_amt !== undefined && expense.deduction_amt !== null
