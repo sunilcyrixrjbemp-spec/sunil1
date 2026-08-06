@@ -1318,6 +1318,7 @@ interface ClaimDetailsModalProps {
   comments: string;
   setComments: (v: string) => void;
   actionLoading: boolean;
+  loadingDetails?: boolean;
   handleApprove: () => void;
   handleReject: () => void;
   handleReturn?: () => void;
@@ -1335,11 +1336,83 @@ interface ClaimDetailsModalProps {
 
 const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   open, claimDetails, user,
-  comments, setComments, actionLoading, handleApprove, handleReject, handleReturn,
+  comments, setComments, actionLoading, loadingDetails, handleApprove, handleReject, handleReturn,
   handleDeleteClaim, onClose, navigate, setLightboxImage,
   getStatusBadgeClass, getStatusLabel, sourceMode,
   editedLegs, onLegAmountChange, onLegRemarkChange
 }) => {
+  if (loadingDetails || !claimDetails) {
+    if (!open) return null;
+    return (
+      <Modal
+        open={open}
+        onCancel={onClose}
+        footer={null}
+        width={920}
+        centered
+        destroyOnClose={true}
+        className="claim-details-modal-skeleton"
+      >
+        <div className="space-y-4 p-3 animate-pulse" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-200"></div>
+              <div className="space-y-1.5">
+                <div className="h-4 w-44 bg-slate-300 rounded"></div>
+                <div className="h-3 w-28 bg-slate-200 rounded"></div>
+              </div>
+            </div>
+            <div className="h-7 w-24 bg-slate-200 rounded-full"></div>
+          </div>
+
+          {/* 1-Line Daily Summary Strip Skeleton */}
+          <div className="bg-slate-100/80 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+            <div className="h-4 w-56 bg-slate-300 rounded"></div>
+            <div className="h-4 w-32 bg-slate-200 rounded"></div>
+            <div className="h-4 w-28 bg-slate-300 rounded"></div>
+          </div>
+
+          {/* Leg Breakdown Cards Skeleton */}
+          <div className="space-y-3">
+            {[1, 2].map((idx) => (
+              <div key={idx} className="bg-white border border-slate-200/90 rounded-xl p-4 space-y-3 shadow-2xs">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                  <div className="h-4 w-28 bg-slate-300 rounded"></div>
+                  <div className="h-4 w-20 bg-slate-200 rounded"></div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="h-3.5 bg-slate-200 rounded"></div>
+                  <div className="h-3.5 bg-slate-200 rounded"></div>
+                  <div className="h-3.5 bg-slate-200 rounded"></div>
+                  <div className="h-3.5 bg-slate-200 rounded"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Photos Row Skeleton */}
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+            <div className="h-3 w-32 bg-slate-300 rounded"></div>
+            <div className="flex gap-3">
+              <div className="w-20 h-20 bg-slate-200 rounded-lg"></div>
+              <div className="w-20 h-20 bg-slate-200 rounded-lg"></div>
+              <div className="w-20 h-20 bg-slate-200 rounded-lg"></div>
+            </div>
+          </div>
+
+          {/* Approvers Hierarchy Skeleton */}
+          <div className="space-y-2 pt-2 border-t border-slate-100">
+            <div className="h-3 w-36 bg-slate-300 rounded"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-full bg-slate-200"></div>
+              <div className="h-3.5 w-48 bg-slate-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [showReturnBox, setShowReturnBox] = useState(false);
   const [barcodeMap, setBarcodeMap] = useState<Record<string, { equipment: string; hospital: string }>>({});
