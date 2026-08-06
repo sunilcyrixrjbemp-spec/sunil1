@@ -5373,7 +5373,7 @@ export default function ExpensePage() {
         </div>
 
         {/* Claims Totals & Submissions bar (Full width under the grid) */}
-        <div className="bg-white border border-slate-200 border-t-4 border-t-[#4A6A8A] rounded-none shadow-2xs p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs font-semibold mt-6 w-full">
+        <div className="bg-white border border-slate-200 border-t-4 border-t-[#4A6A8A] rounded-lg shadow-sm p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-xs font-semibold mt-6 w-full">
           <div className="flex flex-wrap items-center gap-4 md:gap-6 text-[11px]">
             <div className="flex items-center gap-1.5 border-r border-slate-200 pr-4 md:pr-6">
               <TrendingUp className="w-4 h-4 text-[#4A6A8A]" />
@@ -5431,13 +5431,13 @@ export default function ExpensePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
             {isLimitExceeded && (
               <button
                 type="button"
                 onClick={() => setShowApprovalModal(true)}
                 disabled={policyMissing}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-extrabold uppercase tracking-wider py-2 px-4 rounded-none shadow-2xs border border-amber-600 cursor-pointer text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 sm:flex-none h-10 sm:h-9 py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-extrabold uppercase tracking-wider text-xs rounded-lg shadow-sm border border-amber-600 flex items-center justify-center whitespace-nowrap cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 EXTEND LIMIT
               </button>
@@ -5445,16 +5445,16 @@ export default function ExpensePage() {
             <button
               type="submit"
               disabled={isLimitExceeded || submitting || policyMissing}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider py-2.5 px-6 rounded-none shadow-2xs border border-emerald-600 flex items-center justify-center gap-2 cursor-pointer text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 sm:flex-none h-10 sm:h-9 py-2 px-5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold uppercase tracking-wider text-xs rounded-lg shadow-sm border border-emerald-600 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                   <span>SUBMITTING...</span>
                 </>
               ) : (
                 <>
-                  <Check className="w-4 h-4 stroke-[3]" />
+                  <Check className="w-4 h-4 stroke-[3] shrink-0" />
                   <span>{editExpenseId ? "UPDATE CLAIM" : "SUBMIT CLAIM"}</span>
                 </>
               )}
@@ -5462,13 +5462,12 @@ export default function ExpensePage() {
             <button
               type="button"
               onClick={() => navigate("/home")}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold uppercase tracking-wider py-2.5 px-5 rounded-none border border-slate-300 shadow-2xs cursor-pointer text-xs transition-colors"
+              className="flex-1 sm:flex-none h-10 sm:h-9 py-2 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold uppercase tracking-wider text-xs rounded-lg border border-slate-300 shadow-xs flex items-center justify-center whitespace-nowrap cursor-pointer transition-colors"
             >
               CANCEL
             </button>
           </div>
         </div>
-
         {/* Visit Activities Metrics Summary Grid of Box Cards */}
         <div className="mt-3 grid grid-cols-6 gap-1.5 w-full text-xs font-semibold">
           {/* Card 1: Calls Attended */}

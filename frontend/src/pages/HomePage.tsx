@@ -57,7 +57,6 @@ import {
   Loader2,
   AlertTriangle,
   ChevronUp,
-  RefreshCw,
   FileText,
   Route,
   Car
@@ -1292,15 +1291,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <Button 
-              onClick={() => refreshDashboardData()}
-              className="bg-white/10 hover:bg-white/20 text-white border-0 font-medium text-[10px] h-6 px-2 rounded shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-            >
-              <RefreshCw size={12} className="text-white" />
-              Refresh
-            </Button>
-          </div>
+
         </div>
 
         {allowanceStats?.policy_missing && (
