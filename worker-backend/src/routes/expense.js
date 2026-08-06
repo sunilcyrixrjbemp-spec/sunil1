@@ -5198,4 +5198,147 @@ export async function handleGetPolicyRules(req, env, params, query) {
   }
 }
 
+export async function ensureFieldAssetTable(env) {
+  try {
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS field_asset_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        barcode TEXT UNIQUE NOT NULL,
+        prefix_code TEXT DEFAULT '(8004890615671)',
+        suffix_code TEXT NOT NULL,
+        equipment_name TEXT NOT NULL,
+        district TEXT,
+        hospital_name TEXT NOT NULL,
+        make TEXT,
+        model TEXT,
+        serial_number TEXT,
+        has_warranty INTEGER DEFAULT 0,
+        warranty_start_date TEXT,
+        warranty_end_date TEXT,
+        barcode_photo TEXT,
+        serial_photo TEXT,
+        model_photo TEXT,
+        created_by_user_id TEXT,
+        created_by_user_name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `).run();
+  } catch (e) {
+    console.error("ensureFieldAssetTable error:", e);
+  }
+}
+
+export async function handleSaveFieldAsset(request, env, params, query, user) {
+  try {
+    await ensureFieldAssetTable(env);
+    const body = await request.json();
+    const {
+      barcode, prefix_code, suffix_code, equipment_name, district,
+      hospital_name, make, model, serial_number, has_warranty,
+      warranty_start_date, warranty_end_date, barcode_photo,
+      serial_photo, model_photo
+    } = body;
+
+    if (!barcode || !equipment_name || !hospital_name) {
+      return jsonResponse({ success: false, error: "Missing mandatory asset fields" }, 400);
+    }
+
+    const userId = user?.id || user?.user_id || "USER";
+    const userName = user?.name || user?.user_name || "Staff";
+
+    await env.DB.prepare(`
+      INSERT INTO field_asset_data (
+        barcode, prefix_code, suffix_code, equipment_name, district,
+        hospital_name, make, model, serial_number, has_warranty,
+        warranty_start_date, warranty_end_date, barcode_photo,
+        serial_photo, model_photo, created_by_user_id, created_by_user_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(barcode) DO UPDATE SET
+        equipment_name = excluded.equipment_name,
+        district = excluded.district,
+        hospital_name = excluded.hospital_name,
+        make = excluded.make,
+        model = excluded.model,
+        serial_number = excluded.serial_number,
+        has_warranty = excluded.has_warranty,
+        warranty_start_date = excluded.warranty_start_date,
+        warranty_end_date = excluded.warranty_end_date,
+        barcode_photo = COALESCE(excluded.barcode_photo, field_asset_data.barcode_photo),
+        serial_photo = COALESCE(excluded.serial_photo, field_asset_data.serial_photo),
+        model_photo = COALESCE(excluded.model_photo, field_asset_data.model_photo)
+    `).bind(
+      barcode, prefix_code || "(8004890615671)", suffix_code || "",
+      equipment_name, district || "", hospital_name,
+      make || "", model || "", serial_number || "",
+      has_warranty ? 1 : 0, warranty_start_date || "", warranty_end_date || "",
+      barcode_photo || "", serial_photo || "", model_photo || "",
+      userId, userName
+    ).run();
+
+    return jsonResponse({ success: true, message: "Asset tagged successfully", barcode });
+  } catch (err) {
+    console.error("handleSaveFieldAsset error:", err);
+    return jsonResponse({ success: false, error: err.message }, 500);
+  }
+}
+
+export async function handleGetFieldAssetByBarcode(request, env, params, query, user) {
+  try {
+    await ensureFieldAssetTable(env);
+    const barcode = (query.get("barcode") || "").trim();
+    if (!barcode) {
+      return jsonResponse({ success: false, error: "Missing barcode" }, 400);
+    }
+
+    const row = await env.DB.prepare(`
+      SELECT * FROM field_asset_data WHERE barcode = ? OR suffix_code = ? OR barcode LIKE ?
+    `).bind(barcode, barcode, `%${barcode}%`).first();
+
+    if (!row) {
+      return jsonResponse({ success: true, found: false });
+    }
+
+    return jsonResponse({ success: true, found: true, asset: row });
+  } catch (err) {
+    console.error("handleGetFieldAssetByBarcode error:", err);
+    return jsonResponse({ success: false, error: err.message }, 500);
+  }
+}
+
+export async function handleGetOpenCalls(request, env, params, query, user) {
+  try {
+    const barcode = (query.get("barcode") || "").trim();
+    const complaintId = (query.get("complaint_id") || "").trim();
+
+    let sql = `
+      SELECT c.*, e.user_name, e.expense_code
+      FROM expense_breakdown_calls c
+      JOIN expenses e ON (c.exp_id = e.expense_code OR c.exp_id = CAST(e.id AS TEXT) OR c.exp_id = e.id)
+      WHERE (LOWER(c.calls_status) LIKE '%open%' OR LOWER(c.calls_status) LIKE '%pending%')
+    `;
+    const paramsList = [];
+
+    if (barcode) {
+      sql += ` AND (c.barcode LIKE ? OR c.barcode = ?)`;
+      paramsList.push(`%${barcode}%`, barcode);
+    }
+    if (complaintId) {
+      sql += ` AND (c.calls_complaint_id LIKE ? OR c.calls_complaint_id = ?)`;
+      paramsList.push(`%${complaintId}%`, complaintId);
+    }
+
+    sql += ` ORDER BY c.id DESC LIMIT 10`;
+
+    const res = await env.DB.prepare(sql).bind(...paramsList).all();
+
+    return jsonResponse({
+      success: true,
+      openCalls: res.results || []
+    });
+  } catch (err) {
+    console.error("handleGetOpenCalls error:", err);
+    return jsonResponse({ success: false, error: err.message }, 500);
+  }
+}
+
 

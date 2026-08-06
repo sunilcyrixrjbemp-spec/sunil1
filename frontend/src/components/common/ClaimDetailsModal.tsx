@@ -946,16 +946,20 @@ const LegDetailCard = ({
                   <thead>
                     <tr className="bg-blue-50/80 text-blue-900 font-extrabold uppercase border-b border-blue-200 text-[9px]">
                       <th className="py-1 px-2">#</th>
+                      <th className="py-1 px-2">Complaint ID</th>
                       <th className="py-1 px-2">Barcode</th>
                       <th className="py-1 px-2">Equipment Name</th>
                       <th className="py-1 px-2">Hospital Name</th>
                       <th className="py-1 px-2">Call Type</th>
                       <th className="py-1 px-2">Status</th>
-                      <th className="py-1 px-2 text-center">Attachment</th>
+                      <th className="py-1 px-2">Action Taken</th>
+                      <th className="py-1 px-2">Spare Replaced</th>
+                      <th className="py-1 px-2 text-center">Attachments</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-blue-100 bg-white">
                     {effectiveCallsList.map((cItem: any, cIdx: number) => {
+                      const cComplaintId = cItem.complaint_id || cItem.calls_complaint_id || cItem.call_id || "—";
                       const cCode = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no || barcode || "—";
                       
                       const rawEquipment = cItem.equipment || cItem.equipment_name || cItem.asset_name || equipmentName || (cCode !== "—" ? barcodeMap[cCode]?.equipment : "");
@@ -966,27 +970,61 @@ const LegDetailCard = ({
 
                       const cType = cItem.call_type || cItem.calls_type || cItem.type || act.callsType || "Service Call";
                       const cStatus = cItem.status || cItem.calls_status || act.callsStatus || "Attended & Closed";
+                      const cActionTaken = cItem.action_taken || cItem.calls_action_taken || "—";
+                      const cSpareReplaced = cItem.spare_replaced || cItem.calls_spare_replaced || "No";
+                      const cSpareVal = cItem.spare_estimated_value || cItem.calls_spare_estimated_value || 0;
+                      const cSpareName = cItem.spare_name || cItem.calls_spare_name || "";
                       
                       const cUrl = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url || cItem.url || cItem.file_url || cItem.photo || cItem.service_report_photo || cItem.calls_asset_details?.attachment_url || cItem.calls_asset_details?.photo_url || cItem.calls_asset_details?.url || "";
                       const fullCUrl = formatImageUrl(cUrl);
+                      const fullOldSpareUrl = formatImageUrl(cItem.old_spare_photo || cItem.calls_old_spare_photo || "");
+                      const fullNewSpareUrl = formatImageUrl(cItem.new_spare_photo || cItem.calls_new_spare_photo || "");
 
                       return (
                         <tr key={cIdx} className="hover:bg-blue-50/40 font-medium">
                           <td className="py-1 px-2 font-bold text-blue-800">{cIdx + 1}</td>
+                          <td className="py-1 px-2 font-mono font-bold text-blue-800">{cComplaintId}</td>
                           <td className="py-1 px-2 font-mono font-bold text-[#4A6A8A]">{cCode}</td>
                           <td className="py-1 px-2 font-bold text-slate-800">{cEquipment}</td>
                           <td className="py-1 px-2 text-slate-700">{cHospital}</td>
                           <td className="py-1 px-2 font-semibold text-blue-800">{cType}</td>
                           <td className="py-1 px-2 font-bold text-emerald-700">{cStatus}</td>
+                          <td className="py-1 px-2 text-slate-800 max-w-[140px] truncate">{cActionTaken}</td>
+                          <td className="py-1 px-2 font-bold">
+                            {cSpareReplaced === "Yes" ? (
+                              <span className="text-amber-800 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">Yes {cSpareName ? `(${cSpareName} - ₹${cSpareVal})` : `(₹${cSpareVal})`}</span>
+                            ) : (
+                              <span className="text-slate-500">No</span>
+                            )}
+                          </td>
                           <td className="py-1 px-2 text-center">
-                            {fullCUrl ? (
-                              <button
-                                onClick={() => setLightboxImage(fullCUrl)}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
-                              >
-                                <Eye size={10} /> View Photo
-                              </button>
-                            ) : "—"}
+                            <div className="flex items-center justify-center gap-1">
+                              {fullCUrl && (
+                                <button
+                                  onClick={() => setLightboxImage(fullCUrl)}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-700 text-white text-[8px] font-bold hover:bg-blue-800 transition-colors"
+                                >
+                                  <Eye size={9} /> Report
+                                </button>
+                              )}
+                              {fullOldSpareUrl && (
+                                <button
+                                  onClick={() => setLightboxImage(fullOldSpareUrl)}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-700 text-white text-[8px] font-bold hover:bg-amber-800 transition-colors"
+                                >
+                                  <Eye size={9} /> Old Spare
+                                </button>
+                              )}
+                              {fullNewSpareUrl && (
+                                <button
+                                  onClick={() => setLightboxImage(fullNewSpareUrl)}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-700 text-white text-[8px] font-bold hover:bg-emerald-800 transition-colors"
+                                >
+                                  <Eye size={9} /> New Spare
+                                </button>
+                              )}
+                              {!fullCUrl && !fullOldSpareUrl && !fullNewSpareUrl && "—"}
+                            </div>
                           </td>
                         </tr>
                       );

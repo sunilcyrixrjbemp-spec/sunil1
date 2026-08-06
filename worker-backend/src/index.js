@@ -90,7 +90,8 @@ import {
   handleGetEngineerMonthClaims, handleGetConsolidatedReport,
   handleServeExpenseAttachment, handleGetTeamUsers, handleGetKpiAppraisal,
   handleSaveKpiAppraisal, handleGetPolicyRules, handleRetroactiveBasePolicyCheck,
-  handleBulkRetroactivePolicyCheck, handleReverseExpense, handleEvaluatePolicy
+  handleBulkRetroactivePolicyCheck, handleReverseExpense, handleEvaluatePolicy,
+  handleSaveFieldAsset, handleGetFieldAssetByBarcode, handleGetOpenCalls
 } from "./routes/expense.js";
 
 // Attendance handlers
@@ -408,6 +409,9 @@ router.get("/api/expense/team-users", handleGetTeamUsers, true);
 router.get("/api/expense/kpi-appraisal", handleGetKpiAppraisal, true);
 router.post("/api/expense/kpi-appraisal", handleSaveKpiAppraisal, true);
 router.get("/api/expense/verify-barcode", handleVerifyBarcode, true);
+router.post("/api/expense/assets/tag", handleSaveFieldAsset, true);
+router.get("/api/expense/assets/by-barcode", handleGetFieldAssetByBarcode, true);
+router.get("/api/expense/calls/open-calls", handleGetOpenCalls, true);
 router.get("/api/expense/asset-value-master", handleGetAssetValueMaster, true);
 router.get("/api/expense/month-summary", handleGetMonthSummary, true);
 router.get("/api/expense/engineer-month-claims", handleGetEngineerMonthClaims, true);

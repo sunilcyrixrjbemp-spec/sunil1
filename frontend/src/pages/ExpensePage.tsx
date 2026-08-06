@@ -166,13 +166,45 @@ interface ItineraryLeg {
   mobilise_asset_count?: string;
   calibration_count?: string;
   activity_other_desc?: string;
+  calls_complaint_id?: string;
+  calls_hospital?: string;
+  calls_action_taken?: string;
+  calls_spare_replaced?: string;
+  calls_spare_name?: string;
+  calls_spare_estimated_value?: string | number;
+  calls_old_spare_photo?: string;
+  calls_new_spare_photo?: string;
+  calls_old_spare_loading?: boolean;
+  calls_new_spare_loading?: boolean;
+  asset_tagging_suffix?: string;
+  asset_tagging_barcode?: string;
+  asset_tagging_hospital?: string;
+  asset_tagging_make?: string;
+  asset_tagging_model?: string;
+  asset_tagging_serial?: string;
+  asset_tagging_has_warranty?: string;
+  asset_tagging_warranty_start?: string;
+  asset_tagging_warranty_end?: string;
+  asset_tagging_barcode_photo?: string;
+  asset_tagging_serial_photo?: string;
+  asset_tagging_model_photo?: string;
+  asset_barcode_photo_loading?: boolean;
+  asset_serial_photo_loading?: boolean;
+  asset_model_photo_loading?: boolean;
   calls_list?: Array<{
     barcode: string;
+    complaint_id?: string;
+    hospital_name?: string;
+    action_taken?: string;
     verified: boolean;
     type: string;
     status: string;
+    spare_replaced?: string;
+    spare_estimated_value?: number;
     asset_details: any;
     photo_url?: string;
+    old_spare_photo?: string;
+    new_spare_photo?: string;
   }>;
   pms_list?: Array<{
     barcode: string;
@@ -183,7 +215,19 @@ interface ItineraryLeg {
   }>;
   assets_list?: Array<{
     equipment_name: string;
-    quantity: string;
+    barcode?: string;
+    suffix?: string;
+    hospital_name?: string;
+    make?: string;
+    model?: string;
+    serial_number?: string;
+    has_warranty?: string;
+    warranty_start?: string;
+    warranty_end?: string;
+    barcode_photo?: string;
+    serial_photo?: string;
+    model_photo?: string;
+    quantity?: string;
   }>;
 }
 
@@ -1254,22 +1298,82 @@ export default function ExpensePage() {
           toast.error("Please verify the barcode first.");
           return l;
         }
-        if (!l.calls_photo_url) {
-          toast.error("Service Report photo is compulsory for Calls. Please upload a photo before adding.");
+
+        const complaintId = (l.calls_complaint_id || "").trim();
+        const callType = l.calls_type || "Support Call";
+
+        if (!complaintId) {
+          toast.error(`Complaint ID / Call ID is compulsory for ${callType}.`);
           return l;
         }
+
+        if (callType === "Support Call") {
+          const isValidSupport = /^SCRJ\d+$/i.test(complaintId);
+          if (!isValidSupport) {
+            toast.error('Support Call ID must start with "SCRJ" followed strictly by numeric digits (e.g. SCRJ12345). No spaces or special characters.');
+            return l;
+          }
+        } else if (callType === "Online Call") {
+          const isValidOnline = /^\d{8}-\d{6}$/.test(complaintId) || /^\d+-\d+$/.test(complaintId);
+          if (!isValidOnline) {
+            toast.error('Online Call Complaint ID must strictly follow "13126080-100125" format.');
+            return l;
+          }
+        }
+
+        const actionTaken = (l.calls_action_taken || "").trim();
+        if (!actionTaken) {
+          toast.error("Action Taken Remark is compulsory for Calls.");
+          return l;
+        }
+
+        if (!l.calls_photo_url) {
+          toast.error("Service Report photo is compulsory for Calls.");
+          return l;
+        }
+
+        if (l.calls_spare_replaced === "Yes") {
+          if (!l.calls_spare_name || !l.calls_spare_name.trim()) {
+            toast.error("Spare / Item Name is compulsory when Spare Replaced / Local Purchase is Yes.");
+            return l;
+          }
+          if (!l.calls_old_spare_photo) {
+            toast.error("Old Spare Photo is compulsory when Spare Replaced is Yes.");
+            return l;
+          }
+          if (!l.calls_new_spare_photo) {
+            toast.error("New Spare Photo is compulsory when Spare Replaced is Yes.");
+            return l;
+          }
+        }
+
         const newItem = {
           barcode: l.calls_barcode || "",
+          complaint_id: complaintId.toUpperCase(),
+          hospital_name: l.calls_hospital || l.calls_asset_details?.hospital_name || "",
+          action_taken: actionTaken,
           verified: true,
-          type: l.calls_type || "Support Call",
+          type: callType,
           status: l.calls_status || "Attend",
+          spare_replaced: l.calls_spare_replaced === "Yes" ? "Yes" : "No",
+          spare_name: l.calls_spare_replaced === "Yes" ? (l.calls_spare_name || "").trim() : "",
+          spare_estimated_value: l.calls_spare_replaced === "Yes" ? (parseFloat(String(l.calls_spare_estimated_value || 0)) || 0) : 0,
           asset_details: l.calls_asset_details,
-          photo_url: l.calls_photo_url || ""
+          photo_url: l.calls_photo_url || "",
+          old_spare_photo: l.calls_spare_replaced === "Yes" ? (l.calls_old_spare_photo || "") : "",
+          new_spare_photo: l.calls_spare_replaced === "Yes" ? (l.calls_new_spare_photo || "") : ""
         };
         return {
           ...l,
           calls_list: [...(l.calls_list || []), newItem],
           calls_barcode: "",
+          calls_complaint_id: "",
+          calls_action_taken: "",
+          calls_spare_replaced: "No",
+          calls_spare_name: "",
+          calls_spare_estimated_value: "",
+          calls_old_spare_photo: "",
+          calls_new_spare_photo: "",
           calls_verified: false,
           calls_asset_details: null,
           calls_photo_url: ""
@@ -1315,14 +1419,23 @@ export default function ExpensePage() {
     }));
   };
 
-  const uploadActivityPhoto = async (legNum: number, activityType: "Calls" | "PMS", file: File) => {
-    // Any file format is allowed for Call/PMS photos
+  const uploadActivityPhoto = async (
+    legNum: number, 
+    activityType: "Calls" | "PMS" | "Asset_Barcode" | "Asset_Serial" | "Asset_Model" | "Calls_Old_Spare" | "Calls_New_Spare", 
+    file: File
+  ) => {
+    // Any file format is allowed for photos
 
     setItineraries(prev => prev.map(l => {
       if (l.leg !== legNum) return l;
-      return activityType === "Calls" 
-        ? { ...l, calls_photo_loading: true }
-        : { ...l, pms_photo_loading: true };
+      if (activityType === "Calls") return { ...l, calls_photo_loading: true };
+      if (activityType === "PMS") return { ...l, pms_photo_loading: true };
+      if (activityType === "Asset_Barcode") return { ...l, asset_barcode_photo_loading: true };
+      if (activityType === "Asset_Serial") return { ...l, asset_serial_photo_loading: true };
+      if (activityType === "Asset_Model") return { ...l, asset_model_photo_loading: true };
+      if (activityType === "Calls_Old_Spare") return { ...l, calls_old_spare_loading: true };
+      if (activityType === "Calls_New_Spare") return { ...l, calls_new_spare_loading: true };
+      return l;
     }));
 
     try {
@@ -1346,9 +1459,14 @@ export default function ExpensePage() {
         toast.error("Photo size exceeds the 2MB limit. Please upload a smaller photo.");
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
-          return activityType === "Calls"
-            ? { ...l, calls_photo_loading: false }
-            : { ...l, pms_photo_loading: false };
+          if (activityType === "Calls") return { ...l, calls_photo_loading: false };
+          if (activityType === "PMS") return { ...l, pms_photo_loading: false };
+          if (activityType === "Asset_Barcode") return { ...l, asset_barcode_photo_loading: false };
+          if (activityType === "Asset_Serial") return { ...l, asset_serial_photo_loading: false };
+          if (activityType === "Asset_Model") return { ...l, asset_model_photo_loading: false };
+          if (activityType === "Calls_Old_Spare") return { ...l, calls_old_spare_loading: false };
+          if (activityType === "Calls_New_Spare") return { ...l, calls_new_spare_loading: false };
+          return l;
         }));
         return;
       }
@@ -1357,9 +1475,14 @@ export default function ExpensePage() {
       if (data && data.url) {
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
-          return activityType === "Calls"
-            ? { ...l, calls_photo_url: data.url, calls_photo_name: file.name, calls_photo_loading: false }
-            : { ...l, pms_photo_url: data.url, pms_photo_name: file.name, pms_photo_loading: false };
+          if (activityType === "Calls") return { ...l, calls_photo_url: data.url, calls_photo_name: file.name, calls_photo_loading: false };
+          if (activityType === "PMS") return { ...l, pms_photo_url: data.url, pms_photo_name: file.name, pms_photo_loading: false };
+          if (activityType === "Asset_Barcode") return { ...l, asset_tagging_barcode_photo: data.url, asset_barcode_photo_loading: false };
+          if (activityType === "Asset_Serial") return { ...l, asset_tagging_serial_photo: data.url, asset_serial_photo_loading: false };
+          if (activityType === "Asset_Model") return { ...l, asset_tagging_model_photo: data.url, asset_model_photo_loading: false };
+          if (activityType === "Calls_Old_Spare") return { ...l, calls_old_spare_photo: data.url, calls_old_spare_loading: false };
+          if (activityType === "Calls_New_Spare") return { ...l, calls_new_spare_photo: data.url, calls_new_spare_loading: false };
+          return l;
         }));
         toast.success("Photo uploaded successfully.");
       } else {
@@ -1370,9 +1493,14 @@ export default function ExpensePage() {
       toast.error("Failed to upload photo.");
       setItineraries(prev => prev.map(l => {
         if (l.leg !== legNum) return l;
-        return activityType === "Calls"
-          ? { ...l, calls_photo_loading: false }
-          : { ...l, pms_photo_loading: false };
+        if (activityType === "Calls") return { ...l, calls_photo_loading: false };
+        if (activityType === "PMS") return { ...l, pms_photo_loading: false };
+        if (activityType === "Asset_Barcode") return { ...l, asset_barcode_photo_loading: false };
+        if (activityType === "Asset_Serial") return { ...l, asset_serial_photo_loading: false };
+        if (activityType === "Asset_Model") return { ...l, asset_model_photo_loading: false };
+        if (activityType === "Calls_Old_Spare") return { ...l, calls_old_spare_loading: false };
+        if (activityType === "Calls_New_Spare") return { ...l, calls_new_spare_loading: false };
+        return l;
       }));
     }
   };
@@ -1381,36 +1509,110 @@ export default function ExpensePage() {
     setItineraries(prev => prev.map(l => {
       if (l.leg !== legNum) return l;
       const eq = l.asset_tagging_equipment;
-      const qty = l.asset_tagging_quantity || "0";
+      const suffix = (l.asset_tagging_suffix || "").trim();
+      const barcode = l.asset_tagging_barcode || `(8004890615671) ${suffix}`;
+      const hospital = (l.asset_tagging_hospital || l.district || "").trim();
+      const make = (l.asset_tagging_make || "").trim();
+      const model = (l.asset_tagging_model || "").trim();
+      const serial = (l.asset_tagging_serial || "").trim();
+      const hasWarranty = l.asset_tagging_has_warranty || "No";
+      const warrantyStart = l.asset_tagging_warranty_start || "";
+      const warrantyEnd = l.asset_tagging_warranty_end || "";
+
       if (!eq) {
-        toast.error("Please select an equipment first.");
+        toast.error("Equipment Name is compulsory.");
         return l;
       }
-      if (parseInt(qty) <= 0) {
-        toast.error("Please enter a valid quantity greater than 0.");
+      if (suffix.length !== 8) {
+        toast.error("Barcode suffix is compulsory and must be exactly 8 numeric digits.");
         return l;
       }
-      
-      const currentList = l.assets_list || [];
-      if (currentList.some(item => item.equipment_name === eq)) {
-        toast.error("This equipment has already been added to this leg.");
+      if (!hospital) {
+        toast.error("Hospital / Facility Name is compulsory.");
+        return l;
+      }
+      if (!make) {
+        toast.error("Make / Brand is compulsory.");
+        return l;
+      }
+      if (!model) {
+        toast.error("Model is compulsory.");
+        return l;
+      }
+      if (!serial) {
+        toast.error("Serial Number is compulsory.");
+        return l;
+      }
+      if (hasWarranty === "Yes" && (!warrantyStart || !warrantyEnd)) {
+        toast.error("Warranty Start Date & End Date are compulsory when Warranty Details is Yes.");
         return l;
       }
 
-      // Cross-leg duplicate equipment check for same day
-      const otherLegs = prev.filter(ol => ol.leg !== legNum);
-      for (const otherLeg of otherLegs) {
-        if ((otherLeg.assets_list || []).some(item => item.equipment_name === eq)) {
-          toast.error(`Equipment "${eq}" has already been tagged in Leg ${otherLeg.leg}. Same equipment cannot be tagged twice in a single day.`);
-          return l;
-        }
-      }
+      const newItem = {
+        equipment_name: eq,
+        barcode: barcode,
+        suffix: suffix,
+        hospital_name: hospital,
+        make: make,
+        model: model,
+        serial_number: serial,
+        has_warranty: hasWarranty,
+        warranty_start: warrantyStart,
+        warranty_end: warrantyEnd,
+        barcode_photo: l.asset_tagging_barcode_photo || "",
+        serial_photo: l.asset_tagging_serial_photo || "",
+        model_photo: l.asset_tagging_model_photo || ""
+      };
+
+      // Save to field_asset_data table via API in background
+      try {
+        const token = localStorage.getItem("token") || "";
+        const apiUrl = import.meta.env.VITE_API_URL || "https://fieldops-api.sunilbishnoi.workers.dev/api";
+        const cleanApi = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
+
+        fetch(`${cleanApi}/expense/assets/tag`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            barcode: barcode,
+            prefix_code: "(8004890615671)",
+            suffix_code: suffix,
+            equipment_name: eq,
+            district: l.district || "",
+            hospital_name: hospital,
+            make: make,
+            model: model,
+            serial_number: serial,
+            has_warranty: hasWarranty === "Yes" ? 1 : 0,
+            warranty_start_date: warrantyStart,
+            warranty_end_date: warrantyEnd,
+            barcode_photo: l.asset_tagging_barcode_photo || "",
+            serial_photo: l.asset_tagging_serial_photo || "",
+            model_photo: l.asset_tagging_model_photo || ""
+          })
+        }).catch(() => {});
+      } catch (e) {}
+
+      toast.success(`Asset Tagged: ${barcode}`);
 
       return {
         ...l,
-        assets_list: [...currentList, { equipment_name: eq, quantity: qty }],
+        assets_list: [...(l.assets_list || []), newItem],
         asset_tagging_equipment: "",
-        asset_tagging_quantity: ""
+        asset_tagging_suffix: "",
+        asset_tagging_barcode: "",
+        asset_tagging_make: "",
+        asset_tagging_model: "",
+        asset_tagging_serial: "",
+        asset_tagging_has_warranty: "No",
+        asset_tagging_warranty_start: "",
+        asset_tagging_warranty_end: "",
+        asset_tagging_barcode_photo: "",
+        asset_tagging_serial_photo: "",
+        asset_tagging_model_photo: ""
       };
     }));
   };
@@ -4146,7 +4348,7 @@ export default function ExpensePage() {
                                 { label: "Calls", val: "Calls" },
                                 { label: "PMS", val: "PMS" },
                                 { label: "Asset Tagging", val: "Asset Tagging" },
-                                { label: "Mobilise Asset Update", val: "Mobilise Asset Update" },
+                                  { label: "Mobilise Asset Update", val: "Mobilise Asset Update" },
                                 { label: "Calibration", val: "Calibration" },
                                 { label: "Other", val: "Other" }
                               ];
@@ -4181,16 +4383,27 @@ export default function ExpensePage() {
                         {/* Sub-forms for active selections */}
                         <div className="grid grid-cols-1 gap-4">
                           {/* Calls Sub-Form */}
-                          {(leg.selected_activities || []).includes("Calls") && (
+                          {(leg.selected_activities || []).includes("Calls") && (() => {
+                            const toDistrict = leg.district || leg.to || "";
+                            const districtHospitals = getFacilitiesForDistrict(toDistrict);
+
+                            return (
                             <div className="bg-blue-50/20 border border-blue-150 rounded p-2.5 flex flex-col gap-2">
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between flex-wrap gap-1">
                                 <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide">Support Calls Log</span>
-                                <span className="text-[8px] font-bold text-rose-500 uppercase">⚠ Service Report Compulsory</span>
+                                <span className="text-[8px] font-bold text-rose-500 uppercase">⚠ All Fields & Service Report Compulsory</span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end bg-gray-50/50 p-2 rounded border border-gray-200 text-[10px]">
-                                {/* Barcode */}
-                                <div className="sm:col-span-4">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Barcode (QR)</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end bg-gray-50/50 p-2.5 rounded-lg border border-gray-200 text-[10px]">
+                                {/* 1. Barcode */}
+                                <div className="col-span-12 sm:col-span-4">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase flex items-center justify-between">
+                                    <span>Barcode (QR) <span className="text-red-500">*</span></span>
+                                    {leg.calls_verified && leg.calls_asset_details && (
+                                      <span className="text-emerald-800 text-[8px] font-mono">
+                                        ✓ {leg.calls_asset_details.equipment_name || 'Verified'}
+                                      </span>
+                                    )}
+                                  </label>
                                   <div className="flex gap-1.5 items-center">
                                     <input
                                       type="text"
@@ -4205,7 +4418,7 @@ export default function ExpensePage() {
                                         handleItineraryChange(leg.leg, "calls_verified", false);
                                         handleItineraryChange(leg.leg, "calls_asset_details", null);
                                       }}
-                                      className="input-lte font-mono h-7 py-0.5 text-xs"
+                                      className="input-lte font-mono h-8 py-1 text-xs border-blue-300 flex-1 min-w-0"
                                     />
                                     <div
                                       onClick={() => {
@@ -4213,7 +4426,7 @@ export default function ExpensePage() {
                                           verifyLegBarcode(leg.leg, "Calls");
                                         }
                                       }}
-                                      className="h-7 px-3 flex items-center justify-center rounded-lg text-[10px] font-extrabold uppercase select-none transition-colors"
+                                      className="h-8 px-3 flex items-center justify-center rounded-lg text-[10px] font-extrabold uppercase select-none transition-colors shrink-0"
                                       style={
                                         String(leg.calls_barcode || '').replace(/\D/g, '').length === 8
                                           ? { backgroundColor: '#10b981', color: '#000000', borderColor: '#0f172a', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'pointer' }
@@ -4226,25 +4439,39 @@ export default function ExpensePage() {
                                 </div>
 
                                 {/* Call Type */}
-                                <div className="sm:col-span-3">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Call Type</label>
+                                <div className="col-span-12 sm:col-span-2">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Call Type <span className="text-red-500">*</span></label>
                                   <select
                                     value={leg.calls_type || "Support Call"}
                                     onChange={(e) => handleItineraryChange(leg.leg, "calls_type", e.target.value)}
-                                    className="input-lte text-[10px] font-bold h-7 py-0 px-1 bg-white"
+                                    className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
                                   >
                                     <option value="Support Call">Support</option>
                                     <option value="Online Call">Online</option>
                                   </select>
                                 </div>
 
+                                {/* Complaint ID / Call ID */}
+                                <div className="col-span-12 sm:col-span-3">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">
+                                    Complaint ID <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={leg.calls_complaint_id || ""}
+                                    placeholder={(leg.calls_type || "Support Call") === "Support Call" ? "SCRJ1234" : "13126080-100125"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "calls_complaint_id", e.target.value)}
+                                    className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
+                                  />
+                                </div>
+
                                 {/* Call Status */}
-                                <div className="sm:col-span-2">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Status</label>
+                                <div className="col-span-12 sm:col-span-3">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Status <span className="text-red-500">*</span></label>
                                   <select
                                     value={leg.calls_status || "Attend"}
                                     onChange={(e) => handleItineraryChange(leg.leg, "calls_status", e.target.value)}
-                                    className="input-lte text-[10px] font-bold h-7 py-0 px-1 bg-white"
+                                    className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
                                   >
                                     <option value="Attend">Attend</option>
                                     <option value="Close">Close</option>
@@ -4252,60 +4479,176 @@ export default function ExpensePage() {
                                   </select>
                                 </div>
 
-                                {/* Service Report + Add Button (side-by-side on all screens) */}
-                                <div className="sm:col-span-3 flex items-end gap-2">
-                                  {/* Photo Upload */}
-                                  <div className="flex-1">
-                                    <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Service Report <span className="text-rose-500">*</span></label>
-                                    {leg.calls_photo_url ? (
-                                      <div className="flex gap-1 h-8 items-center justify-between bg-blue-50 border border-blue-200 px-1.5 rounded text-[9px] font-bold">
-                                        <span className="text-blue-700 cursor-pointer underline truncate max-w-[60px]" onClick={() => {
-                                          const fullUrl = formatImageUrl(leg.calls_photo_url);
-                                          setLightboxImage(fullUrl);
-                                        }}>View</span>
-                                        <button 
-                                          type="button" 
-                                          onClick={() => {
-                                            handleItineraryChange(leg.leg, "calls_photo_url", "");
-                                            handleItineraryChange(leg.leg, "calls_photo_name", "");
-                                          }} 
-                                          className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
-                                        >
-                                          ✕
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded h-8 px-2 flex items-center justify-center gap-1 text-[10px] font-bold shadow-xs w-full">
-                                        <Camera className="w-3 h-3 text-white" />
-                                        <span>Add</span>
-                                        <input
-                                          type="file"
-                                          accept="image/*"
-                                          onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) uploadActivityPhoto(leg.leg, "Calls", file);
-                                          }}
-                                          className="hidden"
-                                        />
-                                      </label>
-                                    )}
-                                    {leg.calls_photo_loading && <span className="text-[8px] text-blue-600 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                {/* Hospital Dropdown (Destination District) */}
+                                <div className="col-span-12 sm:col-span-6">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">
+                                    HOSPITAL NAME <span className="text-red-500">*</span>
+                                  </label>
+                                  {districtHospitals.length > 0 ? (
+                                    <select
+                                      value={leg.calls_hospital || leg.calls_asset_details?.hospital_name || ""}
+                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_hospital", e.target.value)}
+                                      className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
+                                    >
+                                      <option value="">-- Select Hospital --</option>
+                                      {districtHospitals.map((h, hIdx) => (
+                                        <option key={hIdx} value={h}>{h}</option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      value={leg.calls_hospital || leg.calls_asset_details?.hospital_name || ""}
+                                      placeholder="Hospital / Facility Name"
+                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_hospital", e.target.value)}
+                                      className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
+                                    />
+                                  )}
+                                </div>
+
+                                {/* Action Taken Remark */}
+                                <div className="col-span-12 sm:col-span-6">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">
+                                    Action Taken Remark <span className="text-red-500">*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={leg.calls_action_taken || ""}
+                                    placeholder="Describe action / work performed..."
+                                    onChange={(e) => handleItineraryChange(leg.leg, "calls_action_taken", e.target.value)}
+                                    className="input-lte text-xs font-semibold h-8 py-1 px-2 bg-white border-blue-300 w-full"
+                                  />
+                                </div>
+
+                                {/* Is Spare Replaced? */}
+                                <div className={leg.calls_spare_replaced === "Yes" ? "col-span-12 sm:col-span-4" : "col-span-12"}>
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Spare Replaced / Local Purchase? <span className="text-red-500">*</span></label>
+                                  <select
+                                    value={leg.calls_spare_replaced || "No"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "calls_spare_replaced", e.target.value)}
+                                    className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
+                                  >
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                  </select>
+                                </div>
+
+                                {/* Spare / Item Name */}
+                                {leg.calls_spare_replaced === "Yes" && (
+                                  <div className="col-span-12 sm:col-span-4">
+                                    <label className="label-lte font-extrabold text-[8px] text-amber-800 uppercase">Spare / Item Name <span className="text-red-500">*</span></label>
+                                    <input
+                                      type="text"
+                                      placeholder="Item / Spare Name"
+                                      value={leg.calls_spare_name || ""}
+                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_spare_name", e.target.value)}
+                                      className="input-lte text-xs font-semibold h-8 py-1 px-2 bg-amber-50 border-amber-300 w-full"
+                                    />
                                   </div>
+                                )}
+
+                                {/* Estimated Value if Spare Replaced */}
+                                {leg.calls_spare_replaced === "Yes" && (
+                                  <div className="col-span-12 sm:col-span-4">
+                                    <label className="label-lte font-extrabold text-[8px] text-amber-800 uppercase">Est Value (₹) <span className="text-red-500">*</span></label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      placeholder="0"
+                                      onFocus={(e) => e.target.select()}
+                                      value={String(leg.calls_spare_estimated_value) === "0" || leg.calls_spare_estimated_value === "" ? "" : leg.calls_spare_estimated_value}
+                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_spare_estimated_value", e.target.value)}
+                                      className="input-lte font-mono font-bold h-8 py-1 text-xs bg-amber-50 border-amber-300 w-full"
+                                    />
+                                  </div>
+                                )}
+
+                              {/* Photo Upload Section (1 or 3 depending on Spare Replaced) */}
+                                <div className="col-span-12 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end pt-1">
+                                  {leg.calls_spare_replaced === "Yes" ? (
+                                    <>
+                                      {/* 1. Service Report Photo */}
+                                      <div className="col-span-12 sm:col-span-4">
+                                        <label className="label-lte font-extrabold text-[8px] text-gray-600 uppercase">1. Service Report <span className="text-red-500">*</span></label>
+                                        {leg.calls_photo_url ? (
+                                          <div className="flex gap-1.5 h-9 items-center justify-between bg-blue-50 border border-blue-200 px-2 rounded-lg text-[10px] font-bold">
+                                            <span className="text-blue-700 cursor-pointer underline truncate max-w-[120px]" onClick={() => setLightboxImage(formatImageUrl(leg.calls_photo_url))}>View Photo</span>
+                                            <button type="button" onClick={() => handleItineraryChange(leg.leg, "calls_photo_url", "")} className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-xs">✕</button>
+                                          </div>
+                                        ) : (
+                                          <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded-lg h-9 px-3 flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs w-full">
+                                            <Camera className="w-4 h-4 text-white" />
+                                            <span>1. Service Report</span>
+                                            <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadActivityPhoto(leg.leg, "Calls", e.target.files[0])} className="hidden" />
+                                          </label>
+                                        )}
+                                      </div>
+
+                                      {/* 2. Old Spare Photo */}
+                                      <div className="col-span-12 sm:col-span-4">
+                                        <label className="label-lte font-extrabold text-[8px] text-amber-800 uppercase">2. Old Spare Photo <span className="text-red-500">*</span></label>
+                                        {leg.calls_old_spare_photo ? (
+                                          <div className="flex gap-1.5 h-9 items-center justify-between bg-amber-50 border border-amber-200 px-2 rounded-lg text-[10px] font-bold">
+                                            <span className="text-amber-800 cursor-pointer underline truncate max-w-[120px]" onClick={() => setLightboxImage(formatImageUrl(leg.calls_old_spare_photo))}>View Photo</span>
+                                            <button type="button" onClick={() => handleItineraryChange(leg.leg, "calls_old_spare_photo", "")} className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-xs">✕</button>
+                                          </div>
+                                        ) : (
+                                          <label className="cursor-pointer bg-amber-700 hover:bg-amber-800 text-white border border-amber-700 rounded-lg h-9 px-3 flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs w-full">
+                                            <Camera className="w-4 h-4 text-white" />
+                                            <span>2. Old Spare Photo</span>
+                                            <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadActivityPhoto(leg.leg, "Calls_Old_Spare", e.target.files[0])} className="hidden" />
+                                          </label>
+                                        )}
+                                      </div>
+
+                                      {/* 3. New Spare Photo */}
+                                      <div className="col-span-12 sm:col-span-4">
+                                        <label className="label-lte font-extrabold text-[8px] text-emerald-800 uppercase">3. New Spare Photo <span className="text-red-500">*</span></label>
+                                        {leg.calls_new_spare_photo ? (
+                                          <div className="flex gap-1.5 h-9 items-center justify-between bg-emerald-50 border border-emerald-200 px-2 rounded-lg text-[10px] font-bold">
+                                            <span className="text-emerald-800 cursor-pointer underline truncate max-w-[120px]" onClick={() => setLightboxImage(formatImageUrl(leg.calls_new_spare_photo))}>View Photo</span>
+                                            <button type="button" onClick={() => handleItineraryChange(leg.leg, "calls_new_spare_photo", "")} className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-xs">✕</button>
+                                          </div>
+                                        ) : (
+                                          <label className="cursor-pointer bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-700 rounded-lg h-9 px-3 flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs w-full">
+                                            <Camera className="w-4 h-4 text-white" />
+                                            <span>3. New Spare Photo</span>
+                                            <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadActivityPhoto(leg.leg, "Calls_New_Spare", e.target.files[0])} className="hidden" />
+                                          </label>
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="col-span-12">
+                                      <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Service Report Photo <span className="text-red-500">*</span></label>
+                                      {leg.calls_photo_url ? (
+                                        <div className="flex gap-1.5 h-9 items-center justify-between bg-blue-50 border border-blue-200 px-2 rounded-lg text-[10px] font-bold">
+                                          <span className="text-blue-700 cursor-pointer underline truncate max-w-[160px]" onClick={() => setLightboxImage(formatImageUrl(leg.calls_photo_url))}>View Service Report Photo</span>
+                                          <button type="button" onClick={() => handleItineraryChange(leg.leg, "calls_photo_url", "")} className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-xs">✕</button>
+                                        </div>
+                                      ) : (
+                                        <label className="cursor-pointer bg-gray-900 hover:bg-gray-800 text-white border border-gray-900 rounded-lg h-9 px-3 flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs w-full">
+                                          <Camera className="w-4 h-4 text-white" />
+                                          <span>Add Service Report Photo</span>
+                                          <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadActivityPhoto(leg.leg, "Calls", e.target.files[0])} className="hidden" />
+                                        </label>
+                                      )}
+                                    </div>
+                                  )}
 
                                   {/* + Add Entry Button */}
-                                  <div className="shrink-0">
-                                    <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase invisible block">Add</label>
+                                  <div className="col-span-12 flex justify-end pt-2">
                                     <div
                                       onClick={() => leg.calls_verified && addVerifiedBarcode(leg.leg, "Calls")}
-                                      className="w-10 h-8 flex items-center justify-center rounded-lg shadow-sm transition-colors"
+                                      className="h-9 px-4 flex items-center justify-center rounded-lg shadow-sm transition-colors text-xs font-bold uppercase gap-1.5 w-full sm:w-auto"
                                       style={
                                         leg.calls_verified
                                           ? { backgroundColor: '#111827', color: '#ffffff', borderColor: '#000000', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'pointer' }
                                           : { backgroundColor: '#e2e8f0', color: '#94a3b8', borderColor: '#cbd5e1', borderWidth: '1.5px', borderStyle: 'solid', cursor: 'not-allowed' }
                                       }
-                                      title="Add Verified Entry"
+                                      title="Add Verified Call Entry"
                                     >
-                                      <Plus className="w-5 h-5" />
+                                      <Plus className="w-4 h-4" /> Add Call Entry
                                     </div>
                                   </div>
                                 </div>
@@ -4327,32 +4670,46 @@ export default function ExpensePage() {
                                   <table className="table-lte text-xs w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
-                                        <th className="py-1.5 px-2 text-left">District Name</th>
-                                        <th className="py-1.5 px-2 text-left">Hospital Name</th>
-                                        <th className="py-1.5 px-2 text-left">Equipment Name</th>
-                                        <th className="py-1.5 px-2 text-left">Model</th>
+                                        <th className="py-1.5 px-2 text-left font-mono">Complaint ID</th>
                                         <th className="py-1.5 px-2 text-left font-mono">Bar Code</th>
-                                        <th className="py-1.5 px-2 text-left">Inventory Status</th>
+                                        <th className="py-1.5 px-2 text-left">Equipment Name</th>
+                                        <th className="py-1.5 px-2 text-left">Hospital Name</th>
                                         <th className="py-1.5 px-2 text-left">Call Type</th>
                                         <th className="py-1.5 px-2 text-left">Call Status</th>
-                                        <th className="py-1.5 px-2 text-center w-12">Photo</th>
+                                        <th className="py-1.5 px-2 text-left">Action Taken</th>
+                                        <th className="py-1.5 px-2 text-left">Spare Replaced</th>
+                                        <th className="py-1.5 px-2 text-center">Photos</th>
                                         <th className="py-1.5 px-2 text-center w-12">Action</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                       {(leg.calls_list || []).map((item, idx) => (
                                         <tr key={idx} className="hover:bg-gray-50">
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.district_name || "—"}</td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.hospital_name || "—"}</td>
+                                          <td className="py-1.5 px-2 font-mono font-bold text-blue-700 text-[10px]">{item.complaint_id || "—"}</td>
+                                          <td className="py-1.5 px-2 font-mono font-bold text-gray-800 text-[10px]">{item.barcode}</td>
                                           <td className="py-1.5 px-2 text-[10px] text-gray-700 font-bold">{item.asset_details?.equipment_name || "—"}</td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.model_name || "—"}</td>
-                                          <td className="py-1.5 px-2 font-mono font-bold text-gray-800">{item.barcode}</td>
-                                          <td className="py-1.5 px-2">
-                                            <span className="px-1.5 py-0.5 rounded font-bold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                              {item.asset_details?.inventory_status || "Active"}
-                                            </span>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.hospital_name || item.asset_details?.hospital_name || "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px] text-gray-800 max-w-[150px] truncate">{item.action_taken || "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px] font-bold">
+                                             {item.spare_replaced === "Yes" ? (
+                                               <span className="text-amber-800 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">Yes (₹{item.spare_estimated_value || 0})</span>
+                                             ) : (
+                                               <span className="text-gray-500">No</span>
+                                             )}
+                                           </td>
+                                           <td className="py-1.5 px-2 text-center">
+                                             <div className="flex items-center justify-center gap-1">
+                                               {item.photo_url && (
+                                                 <button type="button" onClick={() => setLightboxImage(formatImageUrl(item.photo_url))} className="text-[9px] text-blue-600 font-bold bg-blue-50 px-1 py-0.5 rounded border border-blue-200 hover:underline">Report</button>
+                                               )}
+                                               {item.old_spare_photo && (
+                                                 <button type="button" onClick={() => setLightboxImage(formatImageUrl(item.old_spare_photo))} className="text-[9px] text-amber-700 font-bold bg-amber-50 px-1 py-0.5 rounded border border-amber-200 hover:underline">Old Spare</button>
+                                               )}
+                                               {item.new_spare_photo && (
+                                                 <button type="button" onClick={() => setLightboxImage(formatImageUrl(item.new_spare_photo))} className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200 hover:underline">New Spare</button>
+                                               )}
+                                             </div>
                                           </td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-600 font-semibold">{item.type}</td>
                                           <td className="py-1.5 px-2">
                                             <span className={`px-1.5 py-0.5 rounded font-bold text-[8px] uppercase ${
                                               item.status === "Close" ? "bg-green-50 text-green-700 border border-green-200" :
@@ -4361,22 +4718,6 @@ export default function ExpensePage() {
                                             }`}>
                                               {item.status}
                                             </span>
-                                          </td>
-                                          <td className="py-1.5 px-2 text-center">
-                                            {item.photo_url ? (
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  const fullUrl = formatImageUrl(item.photo_url);
-                                                  setLightboxImage(fullUrl);
-                                                }}
-                                                className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
-                                              >
-                                                Preview
-                                              </button>
-                                            ) : (
-                                              <span className="text-[10px] text-gray-400">—</span>
-                                            )}
                                           </td>
                                           <td className="py-1.5 px-2 text-center">
                                             <button
@@ -4395,7 +4736,8 @@ export default function ExpensePage() {
                                 </div>
                               )}
                             </div>
-                          )}
+                            );
+                          })()}
 
                           {/* PMS Sub-Form */}
                           {(leg.selected_activities || []).includes("PMS") && (
@@ -4591,18 +4933,26 @@ export default function ExpensePage() {
                           )}
 
                           {/* Asset Tagging Sub-Form */}
-                          {(leg.selected_activities || []).includes("Asset Tagging") && (
-                            <div className="bg-emerald-50/20 border border-emerald-150 rounded p-3 flex flex-col gap-3">
-                              <div className="flex items-center justify-between border-b border-emerald-100 pb-1.5">
-                                <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide">Asset Tagging Tasks</span>
+                          {(leg.selected_activities || []).includes("Asset Tagging") && (() => {
+                            const destDistrict = leg.district || leg.to || "";
+                            const districtHospitals = getFacilitiesForDistrict(destDistrict);
+
+                            return (
+                            <div className="bg-emerald-50/30 border border-emerald-200 rounded p-3 flex flex-col gap-3">
+                              <div className="flex items-center justify-between border-b border-emerald-200 pb-1.5">
+                                <span className="text-[11px] font-extrabold text-emerald-900 uppercase tracking-wide flex items-center gap-1.5">
+                                  🏷️ Asset Tagging Details
+                                </span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end bg-gray-50/50 p-2.5 rounded border border-gray-200">
-                                <div className="sm:col-span-8">
-                                  <label className="label-lte font-bold">Select Equipment Name</label>
+
+                              <div className="grid grid-cols-12 gap-2 items-end bg-white p-2.5 rounded-lg border border-emerald-100 text-[10px]">
+                                {/* 1. Equipment Selection */}
+                                <div className="col-span-6">
+                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">Select Equipment Name <span className="text-red-500">*</span></label>
                                   <select
                                     value={leg.asset_tagging_equipment || ""}
                                     onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_equipment", e.target.value)}
-                                    className="input-lte text-xs font-semibold py-1.5 px-2 bg-white"
+                                    className="input-lte text-[10px] font-semibold h-7 py-0.5 px-1.5 bg-white border-emerald-200 w-full"
                                   >
                                     <option value="">-- Choose Equipment --</option>
                                     {assetValueMaster.map((eq, i) => (
@@ -4612,66 +4962,301 @@ export default function ExpensePage() {
                                     ))}
                                   </select>
                                 </div>
-                                <div className="sm:col-span-4">
-                                  <label className="label-lte font-bold">Quantity Tagged</label>
-                                  <div className="flex gap-1.5">
+
+                                {/* 2. Barcode 2 Columns: Prefix (Non-editable) + Suffix (8 digits) */}
+                                <div className="col-span-6">
+                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">BARCODE <span className="text-red-500">*</span></label>
+                                  <div className="flex items-center h-7 rounded border border-slate-300 overflow-hidden bg-white shadow-2xs">
+                                    <span className="bg-slate-100 px-1.5 h-full flex items-center justify-center text-[10px] font-mono font-bold text-slate-700 select-none shrink-0 border-r border-slate-300">
+                                      (8004890615671)
+                                    </span>
                                     <input
-                                      type="number"
-                                      value={leg.asset_tagging_quantity || ""}
-                                      onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_quantity", e.target.value)}
-                                      className="input-lte font-semibold"
-                                      placeholder="Qty"
+                                      type="text"
+                                      inputMode="numeric"
+                                      pattern="[0-9]*"
+                                      maxLength={8}
+                                      placeholder="8 numeric digits"
+                                      value={leg.asset_tagging_suffix || ""}
+                                      onChange={(e) => {
+                                        const cleaned = e.target.value.replace(/\D/g, "").slice(0, 8);
+                                        handleItineraryChange(leg.leg, "asset_tagging_suffix", cleaned);
+                                        handleItineraryChange(leg.leg, "asset_tagging_barcode", `(8004890615671) ${cleaned}`);
+                                      }}
+                                      className="font-mono font-bold text-[10px] px-1.5 h-full w-full outline-none border-0 bg-transparent text-slate-800"
                                     />
-                                    <button
-                                      type="button"
-                                      onClick={() => addAssetTag(leg.leg)}
-                                      disabled={!leg.asset_tagging_equipment || parseInt(leg.asset_tagging_quantity || "0") <= 0}
-                                      className="btn-lte p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded border-0 cursor-pointer flex items-center justify-center disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-                                      title="Add Equipment Tag"
-                                    >
-                                      <Plus className="w-4 h-4" />
-                                    </button>
                                   </div>
+                                </div>
+
+                                {/* 3. Hospital Name */}
+                                <div className="col-span-6">
+                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">HOSPITAL NAME <span className="text-red-500">*</span></label>
+                                  {districtHospitals.length > 0 ? (
+                                    <select
+                                      value={leg.asset_tagging_hospital || ""}
+                                      onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_hospital", e.target.value)}
+                                      className="input-lte text-[10px] font-semibold h-7 py-0.5 px-1.5 bg-white border-emerald-200 w-full"
+                                    >
+                                      <option value="">-- Choose Hospital --</option>
+                                      {districtHospitals.map((h, hIdx) => (
+                                        <option key={hIdx} value={h}>{h}</option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      value={leg.asset_tagging_hospital || ""}
+                                      placeholder="Enter Hospital / Facility Name"
+                                      onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_hospital", e.target.value)}
+                                      className="input-lte text-[10px] font-semibold h-7 py-0.5 px-1.5 bg-white w-full border-emerald-200"
+                                    />
+                                  )}
+                                </div>
+
+                                {/* 4. Make & Model */}
+                                <div className="col-span-3">
+                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">Make / Brand <span className="text-red-500">*</span></label>
+                                  <input
+                                    type="text"
+                                    value={leg.asset_tagging_make || ""}
+                                    placeholder="e.g. Philips, GE"
+                                    onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_make", e.target.value)}
+                                    className="input-lte text-[10px] h-7 py-0.5 px-1.5 bg-white w-full border-emerald-200"
+                                  />
+                                </div>
+                                <div className="col-span-3">
+                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">Model <span className="text-red-500">*</span></label>
+                                  <input
+                                    type="text"
+                                    value={leg.asset_tagging_model || ""}
+                                    placeholder="Model No / Name"
+                                    onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_model", e.target.value)}
+                                    className="input-lte text-[10px] h-7 py-0.5 px-1.5 bg-white w-full border-emerald-200"
+                                  />
+                                </div>
+
+                                {/* 5. Serial Number & 6. Warranty Toggle */}
+                                <div className={leg.asset_tagging_has_warranty === "Yes" ? "col-span-3" : "col-span-6"}>
+                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase">Serial Number <span className="text-red-500">*</span></label>
+                                  <input
+                                    type="text"
+                                    value={leg.asset_tagging_serial || ""}
+                                    placeholder="Serial No"
+                                    onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_serial", e.target.value)}
+                                    className="input-lte font-mono text-[10px] h-7 py-0.5 px-1.5 bg-white w-full border-emerald-200"
+                                  />
+                                </div>
+                                <div className={leg.asset_tagging_has_warranty === "Yes" ? "col-span-3" : "col-span-6"}>
+                                  <label className="label-lte font-extrabold text-[8px] text-emerald-900 uppercase whitespace-nowrap truncate">WARRANTY AVAILABLE? <span className="text-red-500">*</span></label>
+                                  <select
+                                    value={leg.asset_tagging_has_warranty || "No"}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_has_warranty", e.target.value)}
+                                    className="input-lte text-[10px] font-bold h-7 py-0.5 px-1.5 bg-white w-full border-emerald-200"
+                                  >
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                  </select>
+                                </div>
+
+                                {/* Warranty Dates (If Yes) */}
+                                {leg.asset_tagging_has_warranty === "Yes" && (
+                                  <>
+                                    <div className="col-span-3">
+                                      <label className="label-lte font-extrabold text-[8px] text-emerald-800 uppercase">Start Date <span className="text-red-500">*</span></label>
+                                      <input
+                                        type="date"
+                                        value={leg.asset_tagging_warranty_start || ""}
+                                        onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_warranty_start", e.target.value)}
+                                        className="input-lte text-[10px] font-semibold h-7 py-0.5 px-1 bg-emerald-50 border-emerald-300 w-full"
+                                      />
+                                    </div>
+                                    <div className="col-span-3">
+                                      <label className="label-lte font-extrabold text-[8px] text-emerald-800 uppercase">End Date <span className="text-red-500">*</span></label>
+                                      <input
+                                        type="date"
+                                        value={leg.asset_tagging_warranty_end || ""}
+                                        onChange={(e) => handleItineraryChange(leg.leg, "asset_tagging_warranty_end", e.target.value)}
+                                        className="input-lte text-[10px] font-semibold h-7 py-0.5 px-1 bg-emerald-50 border-emerald-300 w-full"
+                                      />
+                                    </div>
+                                  </>
+                                )}
+
+                                {/* 3 Photo Upload Columns */}
+                                <div className="col-span-12 grid grid-cols-3 gap-2 bg-emerald-50/50 p-2 rounded-lg border border-emerald-200 mt-1">
+                                  {/* Photo 1: Barcode Photo */}
+                                  <div className="col-span-1">
+                                    <label className="label-lte font-bold text-[8px] text-emerald-800 uppercase block mb-0.5">
+                                      1. Barcode Photo
+                                    </label>
+                                    {leg.asset_tagging_barcode_photo ? (
+                                      <div className="flex gap-1 h-7 items-center justify-between bg-white border border-emerald-300 px-1.5 rounded text-[9px] font-bold">
+                                        <span className="text-emerald-700 cursor-pointer underline truncate max-w-[80px]" onClick={() => {
+                                          const fullUrl = formatImageUrl(leg.asset_tagging_barcode_photo);
+                                          setLightboxImage(fullUrl);
+                                        }}>Preview</span>
+                                        <button 
+                                          type="button" 
+                                          onClick={() => handleItineraryChange(leg.leg, "asset_tagging_barcode_photo", "")} 
+                                          className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <label className="cursor-pointer bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-800 rounded h-7 px-2 flex items-center justify-center gap-1 text-[9px] font-extrabold shadow-2xs w-full">
+                                        <Camera className="w-3 h-3 text-white" />
+                                        <span>Add Barcode Photo</span>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) uploadActivityPhoto(leg.leg, "Asset_Barcode", file);
+                                          }}
+                                          className="hidden"
+                                        />
+                                      </label>
+                                    )}
+                                    {leg.asset_barcode_photo_loading && <span className="text-[8px] text-emerald-700 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                  </div>
+
+                                  {/* Photo 2: Serial Number Photo */}
+                                  <div className="col-span-1">
+                                    <label className="label-lte font-bold text-[8px] text-emerald-800 uppercase block mb-0.5">
+                                      2. Serial Number Photo
+                                    </label>
+                                    {leg.asset_tagging_serial_photo ? (
+                                      <div className="flex gap-1 h-7 items-center justify-between bg-white border border-emerald-300 px-1.5 rounded text-[9px] font-bold">
+                                        <span className="text-emerald-700 cursor-pointer underline truncate max-w-[80px]" onClick={() => {
+                                          const fullUrl = formatImageUrl(leg.asset_tagging_serial_photo);
+                                          setLightboxImage(fullUrl);
+                                        }}>Preview</span>
+                                        <button 
+                                          type="button" 
+                                          onClick={() => handleItineraryChange(leg.leg, "asset_tagging_serial_photo", "")} 
+                                          className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <label className="cursor-pointer bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-800 rounded h-7 px-2 flex items-center justify-center gap-1 text-[9px] font-extrabold shadow-2xs w-full">
+                                        <Camera className="w-3 h-3 text-white" />
+                                        <span>Add Serial Photo</span>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) uploadActivityPhoto(leg.leg, "Asset_Serial", file);
+                                          }}
+                                          className="hidden"
+                                        />
+                                      </label>
+                                    )}
+                                    {leg.asset_serial_photo_loading && <span className="text-[8px] text-emerald-700 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                  </div>
+
+                                  {/* Photo 3: Make & Model Photo */}
+                                  <div className="col-span-1">
+                                    <label className="label-lte font-bold text-[8px] text-emerald-800 uppercase block mb-0.5">
+                                      3. Make & Model Photo
+                                    </label>
+                                    {leg.asset_tagging_model_photo ? (
+                                      <div className="flex gap-1 h-7 items-center justify-between bg-white border border-emerald-300 px-1.5 rounded text-[9px] font-bold">
+                                        <span className="text-emerald-700 cursor-pointer underline truncate max-w-[80px]" onClick={() => {
+                                          const fullUrl = formatImageUrl(leg.asset_tagging_model_photo);
+                                          setLightboxImage(fullUrl);
+                                        }}>Preview</span>
+                                        <button 
+                                          type="button" 
+                                          onClick={() => handleItineraryChange(leg.leg, "asset_tagging_model_photo", "")} 
+                                          className="text-rose-600 border-0 bg-transparent font-black cursor-pointer text-[9px]"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <label className="cursor-pointer bg-emerald-700 hover:bg-emerald-800 text-white border border-emerald-800 rounded h-7 px-2 flex items-center justify-center gap-1 text-[9px] font-extrabold shadow-2xs w-full">
+                                        <Camera className="w-3 h-3 text-white" />
+                                        <span>Add Model Photo</span>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) uploadActivityPhoto(leg.leg, "Asset_Model", file);
+                                          }}
+                                          className="hidden"
+                                        />
+                                      </label>
+                                    )}
+                                    {leg.asset_model_photo_loading && <span className="text-[8px] text-emerald-700 font-semibold block animate-pulse mt-0.5">Uploading...</span>}
+                                  </div>
+                                </div>
+
+                                {/* Add Asset Tag Button */}
+                                <div className="col-span-12 flex justify-end mt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => addAssetTag(leg.leg)}
+                                    disabled={!leg.asset_tagging_equipment || (leg.asset_tagging_suffix || "").length !== 8}
+                                    className="btn-lte h-7 py-0.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[10px] uppercase rounded border-0 cursor-pointer flex items-center justify-center gap-1 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed shadow-2xs"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" /> Save Tagged Asset
+                                  </button>
                                 </div>
                               </div>
 
                               {/* Added Assets Table */}
                               {(leg.assets_list || []).length > 0 && (
-                                <div className="border border-gray-200 rounded overflow-x-auto mt-2 bg-white w-full max-w-full block scrollbar-thin">
+                                <div className="border border-gray-200 rounded overflow-x-auto mt-1 bg-white w-full max-w-full block scrollbar-thin">
                                   <table className="table-lte text-xs w-full text-left border-collapse">
                                     <thead>
                                       <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
+                                        <th className="py-1.5 px-2 text-left font-mono">Barcode</th>
                                         <th className="py-1.5 px-2 text-left">Equipment Name</th>
-                                        <th className="py-1.5 px-2 text-center w-24">Quantity</th>
+                                        <th className="py-1.5 px-2 text-left">Hospital</th>
+                                        <th className="py-1.5 px-2 text-left">Make / Model</th>
+                                        <th className="py-1.5 px-2 text-left">Warranty</th>
                                         <th className="py-1.5 px-2 text-center w-12">Action</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                      {(leg.assets_list || []).map((item, idx) => {
-                                        const qty = parseInt(item.quantity || "0") || 0;
-                                        return (
-                                          <tr key={idx} className="hover:bg-gray-50">
-                                            <td className="py-1.5 px-2 font-bold text-gray-800">{item.equipment_name}</td>
-                                            <td className="py-1.5 px-2 text-center font-semibold text-gray-600">{qty}</td>
-                                            <td className="py-1.5 px-2 text-center">
-                                              <button
-                                                type="button"
-                                                onClick={() => removeAssetTag(leg.leg, idx)}
-                                                className="p-1 text-rose-600 hover:bg-rose-50 rounded border-0 bg-transparent cursor-pointer"
-                                                title="Remove equipment entry"
-                                              >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
+                                      {(leg.assets_list || []).map((item, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50">
+                                          <td className="py-1.5 px-2 font-mono font-bold text-emerald-800 text-[10px]">{item.barcode || item.equipment_name}</td>
+                                          <td className="py-1.5 px-2 font-bold text-gray-800 text-[10px]">{item.equipment_name}</td>
+                                          <td className="py-1.5 px-2 text-gray-700 text-[10px]">{item.hospital_name || "—"}</td>
+                                          <td className="py-1.5 px-2 text-gray-600 text-[10px]">{item.make || item.model ? `${item.make || ''} ${item.model || ''}` : "—"}</td>
+                                          <td className="py-1.5 px-2 text-[10px]">
+                                            {item.has_warranty === "Yes" ? (
+                                              <span className="font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[8.5px]">
+                                                {item.warranty_start} to {item.warranty_end}
+                                              </span>
+                                            ) : (
+                                              <span className="text-gray-400">No</span>
+                                            )}
+                                          </td>
+                                          <td className="py-1.5 px-2 text-center">
+                                            <button
+                                              type="button"
+                                              onClick={() => removeAssetTag(leg.leg, idx)}
+                                              className="p-1 text-rose-600 hover:bg-rose-50 rounded border-0 bg-transparent cursor-pointer"
+                                              title="Remove equipment entry"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      ))}
                                     </tbody>
                                   </table>
                                 </div>
                               )}
                             </div>
-                          )}
+                            );
+                          })()}
 
                           {/* Mobilise Asset Update Sub-Form */}
                           {(leg.selected_activities || []).includes("Mobilise Asset Update") && (
