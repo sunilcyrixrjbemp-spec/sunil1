@@ -3656,9 +3656,9 @@ export default function ExpensePage() {
                                       handleItineraryChange(leg.leg, "from_custom", !leg.from_custom);
                                       handleItineraryChange(leg.leg, "from", "");
                                     }}
-                                    className="text-[9px] font-bold text-blue-600 hover:text-blue-800 border-0 bg-transparent cursor-pointer uppercase tracking-wider"
+                                    className="text-[9.5px] font-extrabold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-md cursor-pointer uppercase tracking-wider whitespace-nowrap shrink-0 transition-all active:scale-95 flex items-center gap-1 shadow-2xs"
                                   >
-                                    {leg.from_custom ? "📋 Select from list" : "✍️ Type Custom"}
+                                    {leg.from_custom ? "📋 Select From List" : "✍️ Type Custom"}
                                   </button>
                                 )}
                               </div>
@@ -3775,9 +3775,9 @@ export default function ExpensePage() {
                                       handleItineraryChange(leg.leg, "to_custom", !leg.to_custom);
                                       handleItineraryChange(leg.leg, "to", "");
                                     }}
-                                    className="text-[9px] font-bold text-blue-600 hover:text-blue-800 border-0 bg-transparent cursor-pointer uppercase tracking-wider"
+                                    className="text-[9.5px] font-extrabold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-md cursor-pointer uppercase tracking-wider whitespace-nowrap shrink-0 transition-all active:scale-95 flex items-center gap-1 shadow-2xs"
                                   >
-                                    {leg.to_custom ? "📋 Select from list" : "⚡ TYPE CUSTOM"}
+                                    {leg.to_custom ? "📋 Select From List" : "⚡ Type Custom"}
                                   </button>
                                 )}
                               </div>
@@ -3807,7 +3807,7 @@ export default function ExpensePage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Travel Mode, KM and Amount details */}
                       <div className="border-t border-slate-200 pt-4 space-y-3">
                         <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none flex items-center gap-1.5">
