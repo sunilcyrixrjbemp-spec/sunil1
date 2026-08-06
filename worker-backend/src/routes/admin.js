@@ -416,6 +416,7 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
       if (body.e_upkaran_id !== undefined) { updates.push("e_upkaran_id = ?"); bindings.push(body.e_upkaran_id); }
       if (body.base_reporting_location !== undefined) { updates.push("base_reporting_location = ?"); bindings.push(body.base_reporting_location); }
       if (body.allowed_windows !== undefined) { updates.push("allowed_windows = ?"); bindings.push(body.allowed_windows); }
+      if (body.can_bulk_approve !== undefined) { updates.push("can_bulk_approve = ?"); bindings.push(Number(body.can_bulk_approve) ? 1 : 0); }
 
       if (password) {
         const newHash = await getPasswordHash(password);
@@ -1861,4 +1862,27 @@ export async function handleRevertClaimDeductions(request, env, params, query, a
     console.error("Failed to revert claim deductions:", err);
     return jsonResponse({ status: "error", error: "Failed to revert claim deductions: " + err.message }, 500);
   }
+}
+
+export async function handleBulkToggleBulkApproval(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return jsonResponse({ error: "Invalid JSON" }, 400); }
+  const { user_ids, user_codes, can_bulk_approve } = body;
+  const targetVal = Number(can_bulk_approve) ? 1 : 0;
+
+  const targets = Array.isArray(user_ids) ? user_ids : (Array.isArray(user_codes) ? user_codes : []);
+  if (targets.length === 0) {
+    return jsonResponse({ error: "No user targets provided" }, 400);
+  }
+
+  const placeholders = targets.map(() => "?").join(",");
+  await env.DB.prepare(
+    `UPDATE users SET can_bulk_approve = ? WHERE user_id IN (${placeholders}) OR e_code IN (${placeholders}) OR id IN (${placeholders})`
+  ).bind(targetVal, ...targets, ...targets, ...targets).run();
+
+  return jsonResponse({
+    success: true,
+    message: `Successfully ${targetVal === 1 ? 'GRANTED' : 'REVOKED'} Bulk Approval access for ${targets.length} user(s).`,
+    updated_count: targets.length
+  });
 }

@@ -41,6 +41,7 @@ export interface UserEditPayload {
   e_upkaran_id?: string;
   base_reporting_location?: string;
   allowed_windows?: string;
+  can_bulk_approve?: number;
   new_user_id?: string;
   new_e_code?: string;
   password?: string;
@@ -96,6 +97,11 @@ export const adminService = {
 
   bulkCreateUsers: async (data: UserCreatePayload[]): Promise<any> => {
     const response = await api.post("/admin/users/bulk", data);
+    return response.data;
+  },
+
+  toggleBulkApproval: async (user_ids: string[], can_bulk_approve: number): Promise<any> => {
+    const response = await api.post("/admin/users/bulk-approval-toggle", { user_ids, can_bulk_approve });
     return response.data;
   },
 

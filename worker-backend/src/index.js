@@ -57,7 +57,7 @@ import {
   handleGetSystemSettings, handleSaveSystemSettings,
   handleSearchRejectedExpenses, handleResubmitRejectedExpense,
   handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates,
-  handleTestTime, handleRevertClaimDeductions
+  handleTestTime, handleRevertClaimDeductions, handleBulkToggleBulkApproval
 } from "./routes/admin.js";
 
 // Ticket handlers
@@ -232,6 +232,7 @@ router.get("/api/admin/users", handleListUsers, true, ["Admin"]);
 router.post("/api/admin/users/bulk", handleBulkCreateUsers, true, ["Admin"]);
 router.post("/api/admin/users", handleSaveUser, true, ["Admin"]);
 router.put("/api/admin/users/:user_id", handleUpdateUser, true, ["Admin"]);
+router.post("/api/admin/users/bulk-approval-toggle", handleBulkToggleBulkApproval, true, ["Admin"]);
 router.delete("/api/admin/users/:user_id", handleDeleteUser, true, ["Admin"]);
 router.get("/api/admin/eligible-approvers", handleGetEligibleApprovers, true, ["Admin"]);
 router.get("/api/admin/hierarchies/export", handleExportHierarchies, true, ["Admin"]);

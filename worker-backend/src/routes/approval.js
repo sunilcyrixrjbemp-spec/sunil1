@@ -1016,10 +1016,11 @@ export async function handleAutoApprovalExpiry(env) {
 export async function handleBulkApprove(request, env, params, query, user) {
   const userRoleClean = (user.role || "").trim().toLowerCase();
   const allowedBulkRoles = ["coordinator", "project head"];
+  const isDynamicAuthorized = Number(user.can_bulk_approve) === 1 || Number(user.canBulkApprove) === 1;
   
-  if (!allowedBulkRoles.includes(userRoleClean)) {
+  if (!isDynamicAuthorized && !allowedBulkRoles.includes(userRoleClean)) {
     return jsonResponse({
-      error: "Forbidden: Bulk approval is restricted to Coordinator and Project Head roles only. Please review and approve claims individually."
+      error: "Forbidden: Bulk approval access has not been granted to your account. Please contact system administrator for Bulk Approval privileges."
     }, 403);
   }
 

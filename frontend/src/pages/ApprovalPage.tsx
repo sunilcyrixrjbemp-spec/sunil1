@@ -128,7 +128,7 @@ export default function ApprovalPage() {
 
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const userRoleLower = (currentUser.role || "").trim().toLowerCase();
-  const isBulkAuthorized = ["coordinator", "project head"].includes(userRoleLower);
+  const isBulkAuthorized = Number(currentUser.can_bulk_approve) === 1 || Number(currentUser.canBulkApprove) === 1 || ["coordinator", "project head"].includes(userRoleLower);
   // Edit single itineraries state
   const [editedLegs, setEditedLegs] = useState<any[]>([]);
   const [removedAttachments, setRemovedAttachments] = useState<string[]>([]);

@@ -341,6 +341,8 @@ export default function AdminPage() {
   const [editEUpkaranId, setEditEUpkaranId] = useState("");
   const [editBaseReportingLocation, setEditBaseReportingLocation] = useState("");
   const [editAllowedWindows, setEditAllowedWindows] = useState<string[]>([]);
+  const [editCanBulkApprove, setEditCanBulkApprove] = useState<boolean>(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<React.Key[]>([]);
   const [editUserId, setEditUserId] = useState("");
   const [editECode, setEditECode] = useState("");
   const [editUserPassword, setEditUserPassword] = useState("");
@@ -626,6 +628,7 @@ export default function AdminPage() {
     setEditAllowedWindows(
       u.allowed_windows ? u.allowed_windows.split(",") : []
     );
+    setEditCanBulkApprove(Number(u.can_bulk_approve) === 1);
     setEditUserId(u.user_id || "");
     setEditECode(u.e_code || "");
     setEditUserPassword("");
@@ -698,6 +701,7 @@ export default function AdminPage() {
       e_upkaran_id: editEUpkaranId.trim(),
       base_reporting_location: editBaseReportingLocation.trim(),
       allowed_windows: editAllowedWindows.join(","),
+      can_bulk_approve: editCanBulkApprove ? 1 : 0,
       new_user_id: isUserIdModified ? editUserId.trim() : undefined,
       new_e_code: isECodeModified ? editECode.trim() : undefined,
       password: isPasswordModified ? editUserPassword.trim() : undefined,
@@ -714,6 +718,40 @@ export default function AdminPage() {
       setEditUserError(getErrorMessage(err, "Failed to update user details."));
     } finally {
       setEditUserLoading(false);
+    }
+  };
+
+  const handleBatchToggleBulkApproval = async (grant: boolean) => {
+    if (selectedUserIds.length === 0) {
+      toast.error("Please select at least one employee from the table.");
+      return;
+    }
+    const actionLabel = grant ? "Granting" : "Revoking";
+    const tid = toast.loading(`${actionLabel} Bulk Approval access for ${selectedUserIds.length} employee(s)...`);
+    try {
+      const userTargets = selectedUserIds.map(id => String(id));
+      await adminService.toggleBulkApproval(userTargets, grant ? 1 : 0);
+      toast.success(`Successfully ${grant ? "GRANTED" : "REVOKED"} Bulk Approval access for ${selectedUserIds.length} employee(s)!`);
+      setSelectedUserIds([]);
+      await fetchInitialData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to update bulk approval permissions");
+    } finally {
+      toast.dismiss(tid);
+    }
+  };
+
+  const handleSingleToggleBulkApproval = async (record: any, grant: boolean) => {
+    const targetCode = record.user_id || record.e_code || String(record.id);
+    const tid = toast.loading(`Updating Bulk Approval access for ${record.name}...`);
+    try {
+      await adminService.toggleBulkApproval([targetCode], grant ? 1 : 0);
+      toast.success(`Bulk Approval access ${grant ? "GRANTED to" : "REVOKED from"} ${record.name}`);
+      await fetchInitialData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to toggle bulk approval permission");
+    } finally {
+      toast.dismiss(tid);
     }
   };
 
@@ -1720,6 +1758,30 @@ export default function AdminPage() {
 
           {/* Ant Design Table Container */}
           <div className="p-3">
+            {selectedUserIds.length > 0 && (
+              <div className="bg-amber-50 border border-amber-200 p-2.5 flex flex-wrap items-center justify-between gap-2 animate-fadeIn mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="bg-amber-600 text-white font-extrabold text-xs px-2 py-0.5 font-mono">
+                    {selectedUserIds.length} SELECTED
+                  </span>
+                  <span className="text-xs font-bold text-slate-700">Batch Bulk Approval Actions:</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleBatchToggleBulkApproval(true)}
+                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-colors"
+                  >
+                    <span>⚡ Grant Bulk Approval Access</span>
+                  </button>
+                  <button
+                    onClick={() => handleBatchToggleBulkApproval(false)}
+                    className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-colors"
+                  >
+                    <span>🔒 Revoke Bulk Approval Access</span>
+                  </button>
+                </div>
+              </div>
+            )}
             {loading ? (
               <div className="py-16 text-center bg-white border border-slate-300 rounded-none">
                 <Spin size="large" tip="Loading system employees database..." />
@@ -1727,7 +1789,11 @@ export default function AdminPage() {
             ) : (
               <Table
                 dataSource={filteredUsers}
-                rowKey={(record) => record.id || record.user_id || record.e_code}
+                rowKey={(record) => record.user_id || record.e_code || record.id}
+                rowSelection={{
+                  selectedRowKeys: selectedUserIds,
+                  onChange: (keys) => setSelectedUserIds(keys)
+                }}
                 pagination={{
                   pageSize: adminUserPageSize,
                   onChange: (_, size) => setAdminUserPageSize(size),
@@ -1737,7 +1803,7 @@ export default function AdminPage() {
                   showTotal: (total, range) => `Showing ${range[0]}-${range[1]} of ${total} employees`
                 }}
                 className="ant-table-striped"
-                scroll={{ x: 800 }}
+                scroll={{ x: 850 }}
                 columns={[
                   {
                     title: "EMP CODE",
@@ -1805,6 +1871,29 @@ export default function AdminPage() {
                         return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-amber-100 text-amber-800 border border-amber-300">● LOCKED</span>;
                       }
                       return <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-none bg-rose-100 text-rose-800 border border-rose-300">● INACTIVE</span>;
+                    }
+                  },
+                  {
+                    title: "BULK APPROVAL",
+                    key: "can_bulk_approve",
+                    align: "center",
+                    render: (_: any, record: any) => {
+                      const isGranted = Number(record.can_bulk_approve) === 1 || ["coordinator", "project head"].includes((record.role || "").toLowerCase().trim());
+                      return (
+                        <div className="flex flex-col items-center gap-1">
+                          <Switch
+                            size="small"
+                            checked={isGranted}
+                            onChange={(checked) => handleSingleToggleBulkApproval(record, checked)}
+                            style={{ backgroundColor: isGranted ? "#10b981" : "#cbd5e1" }}
+                          />
+                          <span className={`text-[8.5px] font-extrabold px-1.5 py-0.2 uppercase tracking-tight rounded-none ${
+                            isGranted ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+                          }`}>
+                            {isGranted ? "⚡ ALLOWED" : "🔒 INDIVIDUAL"}
+                          </span>
+                        </div>
+                      );
                     }
                   },
                   {
@@ -3210,6 +3299,28 @@ export default function AdminPage() {
                       {win.name}
                     </label>
                   ))}
+                </div>
+
+                {/* Bulk Approval Rights Governance */}
+                <div className="mt-3">
+                  <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
+                    ⚡ Bulk Approval Permission Governance
+                  </label>
+                  <div className="p-2.5 bg-emerald-50/60 rounded-none border border-emerald-200 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-black text-slate-900">Allow Bulk Reimbursement Approval</div>
+                      <div className="text-[10px] text-slate-500 font-semibold">
+                        Permits user to check multiple claims and perform 1-click batch approval / rejection on Approval Center.
+                      </div>
+                    </div>
+                    <Switch
+                      checked={editCanBulkApprove}
+                      onChange={(checked) => setEditCanBulkApprove(checked)}
+                      checkedChildren="GRANT"
+                      unCheckedChildren="REVOKE"
+                      style={{ backgroundColor: editCanBulkApprove ? "#10b981" : "#cbd5e1" }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
