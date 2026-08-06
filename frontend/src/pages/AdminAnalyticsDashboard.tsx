@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
+import AdminAnalyticsSkeleton from "../components/common/AdminAnalyticsSkeleton";
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────────
 interface AnalyticsData {
@@ -173,10 +174,7 @@ export default function AdminAnalyticsDashboard() {
       </div>
 
       {loading && !analytics ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-indigo-500 opacity-80" />
-          <p className="text-xs font-medium">Fetching real-time Cloudflare telemetry...</p>
-        </div>
+        <AdminAnalyticsSkeleton />
       ) : (
         <>
           {/* TAB 1: OVERVIEW */}
