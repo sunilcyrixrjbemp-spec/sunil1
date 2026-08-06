@@ -34,7 +34,7 @@ jobs:
             echo "Using Cloudflare Scoped API Token authentication..."
             export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
           fi
-          npx wrangler deploy
+          npx wrangler deploy --config wrangler.toml
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
@@ -47,7 +47,7 @@ jobs:
           else
             export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
           fi
-          echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put PRIMARY_CLOUDFLARE_API_TOKEN || true
+          echo "${{ secrets.CF_API_TOKEN }}" | npx wrangler secret put PRIMARY_CLOUDFLARE_API_TOKEN --config wrangler.toml || true
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
 
