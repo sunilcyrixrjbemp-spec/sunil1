@@ -3,9 +3,12 @@ import { tokenPersistence } from "../utils/persistence";
 import { Capacitor } from "@capacitor/core";
 import { Preferences } from "@capacitor/preferences";
 
-const WORKER_BACKEND_URL = "https://fieldops-secondary-api.sunilbishnoi.workers.dev";
+// Primary Cloudflare Worker URL — matches `name = "fieldops-api"` in worker-backend/wrangler.toml
+// Updated 2026-08-06: fixed from stale fieldops-secondary-api URL
+const WORKER_BACKEND_URL = "https://fieldops-api.sunilbishnoi.workers.dev";
 const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
-const API_BASE_URL = (rawBaseUrl && !rawBaseUrl.includes("onrender.com") && !rawBaseUrl.includes("sunnybishnoi")) ? rawBaseUrl : `${WORKER_BACKEND_URL}/api`;
+// Prefer env var; fallback to primary worker URL. Reject old render.com/sunnybishnoi URLs.
+const API_BASE_URL = (rawBaseUrl && !rawBaseUrl.includes("onrender.com") && !rawBaseUrl.includes("sunnybishnoi") && !rawBaseUrl.includes("secondary")) ? rawBaseUrl : `${WORKER_BACKEND_URL}/api`;
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

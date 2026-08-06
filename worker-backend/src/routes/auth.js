@@ -357,8 +357,27 @@ function normalizeDateStr(dStr) {
 }
 
 // ─── GET /api/auth/dropdowns ──────────────────────────────────────────────────
+// KV cache key — TTL 1h (3600s). Force-refresh with ?bust=1.
+const DROPDOWNS_KV_KEY = "cache:auth:dropdowns:v1";
+const DROPDOWNS_TTL_SECONDS = 3600; // 1 hour
 
 export async function handleGetDropdowns(request, env) {
+  const urlObj = new URL(request.url);
+  const bustCache = urlObj.searchParams.get("bust") === "1";
+
+  // Try KV cache first (skip if bust=1 or KV not available)
+  if (env.OTPS_KV && !bustCache) {
+    try {
+      const cached = await env.OTPS_KV.get(DROPDOWNS_KV_KEY, "json");
+      if (cached) {
+        return jsonResponse({ ...cached, _cache: "hit" });
+      }
+    } catch (_) {
+      // KV error — fall through to DB
+    }
+  }
+
+  // Cache miss — query D1
   const [gradesResult, hospitalsResult] = await Promise.all([
     env.DB.prepare(`SELECT DISTINCT grade FROM allowance_master WHERE grade IS NOT NULL`).all(),
     env.DB.prepare(`SELECT district_name, hospital_name FROM no_ta_da_hospitals`).all()
@@ -371,10 +390,19 @@ export async function handleGetDropdowns(request, env) {
     facilities[h.district_name].push(h.hospital_name);
   }
 
-  return jsonResponse({
+  const payload = {
     designations: DESIGNATIONS, zones: ZONE_DISTRICTS, roles: ROLES,
     grades: grades.length ? grades : ["A","B","C","D"], facilities
-  });
+  };
+
+  // Write to KV cache (fire-and-forget, do not block response)
+  if (env.OTPS_KV) {
+    env.OTPS_KV.put(DROPDOWNS_KV_KEY, JSON.stringify(payload), {
+      expirationTtl: DROPDOWNS_TTL_SECONDS
+    }).catch(() => {/* silently ignore KV write errors */});
+  }
+
+  return jsonResponse({ ...payload, _cache: "miss" });
 }
 
 // ─── POST /api/auth/forgot-password ──────────────────────────────────────────

@@ -17,6 +17,7 @@
 import { verifyJwt } from "./utils/security.js";
 import { runRead } from "./utils/db.js";
 import { runMigrations } from "./utils/db-migrate.js";
+import { runMigrationsV3, checkV3TableStatus } from "./utils/db-migrate-v3.js";
 import {
   jsonResponse, errorResponse, unauthorizedResponse, forbiddenResponse,
   notFoundResponse, preflightResponse, corsHeaders, securityHeaders,
@@ -290,6 +291,31 @@ router.post("/api/admin/run-migrations-v2", async (req, env, params, query, user
   if (!handleRunMigrationsV2) return errorResponse("V2 migrations not yet available", 503);
   if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
   return handleRunMigrationsV2(req, env, params, query, user);
+}, true, ["Admin"]);
+
+router.post("/api/admin/run-migrations-v3", async (req, env, params, query, user) => {
+  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
+  try {
+    const result = await runMigrationsV3(env.DB);
+    return jsonResponse({
+      success: result.errors.length === 0,
+      message: `Migrations v3 complete — ${result.applied.length} applied, ${result.errors.length} errors`,
+      applied: result.applied,
+      errors: result.errors
+    });
+  } catch (e) {
+    return errorResponse("Migration v3 error: " + e.message, 500);
+  }
+}, true, ["Admin"]);
+
+router.get("/api/admin/migration-status-v3", async (req, env, params, query, user) => {
+  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
+  try {
+    const status = await checkV3TableStatus(env.DB);
+    return jsonResponse({ success: true, v3_status: status });
+  } catch (e) {
+    return errorResponse("Status check error: " + e.message, 500);
+  }
 }, true, ["Admin"]);
 
 // ─── File Management (Sprint 6) ───────────────────────────────────────────────

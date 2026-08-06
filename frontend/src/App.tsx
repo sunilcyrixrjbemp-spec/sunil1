@@ -89,10 +89,12 @@ function App() {
     };
   }, []);
 
-  // Non-blocking ping to wake up free-tier backend server instantly on app startup
+  // Non-blocking ping to wake up backend worker on app startup & prefetch dropdowns
   useEffect(() => {
-    fetch("https://fieldops-secondary-api.sunilbishnoi.workers.dev/api/health").catch(() => {});
+    fetch("https://fieldops-api.sunilbishnoi.workers.dev/api/health").catch(() => {});
     initOtaUpdates();
+    // Non-blocking prefetch of static master data (dropdowns)
+    fetch("https://fieldops-api.sunilbishnoi.workers.dev/api/auth/dropdowns").catch(() => {});
   }, []);
 
   // Global cleanup handler to ensure body styles are clean on unmount
