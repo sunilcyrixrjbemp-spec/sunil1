@@ -907,7 +907,19 @@ export default function HomePage() {
       key: "purpose",
       width: "18%",
       render: (text: string, record: any) => {
-        const desc = text || record.purpose || "Field visit & operational claim";
+        let desc = text || record.purpose || "Field visit & operational claim";
+        const callsComp = record.calls_completed ?? record.calls ?? 0;
+        
+        if (callsComp === 0) {
+          if (desc.includes("Calls")) {
+            desc = desc.replace("Activities: Calls, ", "Activities: ")
+                       .replace("Activities: Calls", "Activities: Other")
+                       .replace("Calls, ", "")
+                       .replace("Calls", "").trim();
+            if (desc === "Activities:" || !desc) desc = "Field visit";
+          }
+        }
+
         return (
           <div className="text-[11px] text-slate-700 font-medium line-clamp-2 leading-tight pr-1" title={desc}>
             {desc}
@@ -993,7 +1005,9 @@ export default function HomePage() {
 
         // 1. Calls Box (Blue)
         const callsComp = record.calls_completed ?? record.calls ?? 0;
-        const callsAssign = record.calls_assigned ?? 0;
+        let callsAssign = record.calls_assigned ?? 0;
+        if (callsComp === 0) callsAssign = 0;
+
         if (callsAssign > 0 || callsComp > 0) {
           const text = callsAssign > 0 ? `${callsComp}/${callsAssign} Calls` : `${callsComp} Calls`;
           boxes.push(
