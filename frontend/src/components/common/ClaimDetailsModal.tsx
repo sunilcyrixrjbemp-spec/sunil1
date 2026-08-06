@@ -2043,172 +2043,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
         )}
 
-        {/* ─── DEDUCTIONS AUDIT BANNER (FOR REGULAR TRAVEL CLAIMS ONLY) ─── */}
-        {!isLimitRequest && (systemDeductionAmt > 0 || managerDeductionAmt > 0) && (
-          <div className="bg-slate-50 border-2 border-slate-300 rounded-lg p-2.5 space-y-2 text-[10.5px] shadow-2xs">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 flex-wrap gap-2">
-              <div className="flex items-center gap-1.5 font-extrabold text-slate-800 flex-wrap">
-                <ShieldCheck size={15} className="text-[#4A6A8A] shrink-0" />
-                <span>Deduction Audit Details:</span>
-                <span className="font-semibold text-slate-600">Claimed: <b>{rupee(originalClaimedTotal)}</b></span>
-                <span className="text-slate-400">➔</span>
-                <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Approved Net: {rupee(currentApprovedNet)}
-                </span>
-              </div>
-              <div className="font-mono text-[10px] font-extrabold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                Total Deduction: -{rupee(totalCombinedDeduction)}
-              </div>
-            </div>
-
-            {/* Individual Breakdown Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {/* System Policy Deduction Card */}
-              {systemDeductionAmt > 0 && (
-                <div className="bg-amber-50/90 border border-amber-300 rounded-lg p-2 space-y-1">
-                  <div className="flex items-center justify-between font-extrabold text-amber-950 text-[10px]">
-                    <span className="flex items-center gap-1">⚙️ System Policy Deduction</span>
-                    <span className="font-mono text-amber-900 font-black">-{rupee(systemDeductionAmt)}</span>
-                  </div>
-                  <div className="text-[9.5px] text-amber-900 leading-tight">
-                    <b className="text-amber-950">Deducted By:</b> System Rule Engine (Policy Caps)
-                  </div>
-                  <div className="text-[9.5px] text-amber-900 leading-tight">
-                    <b className="text-amber-950">Reason / Rule:</b> {overallSystemReason || overallBaseLocationReason || "Grade allowance caps & distance limits."}
-                  </div>
-                </div>
-              )}
-
-              {/* Manager Manual Deduction Card */}
-              {managerDeductionAmt > 0 && (
-                <div className="bg-rose-50/90 border border-rose-300 rounded-lg p-2 space-y-1">
-                  <div className="flex items-center justify-between font-extrabold text-rose-950 text-[10px]">
-                    <span className="flex items-center gap-1">
-                      {isClaimRejected ? "🚫 Manager Claim Rejection" : "✏️ Manager Manual Deduction"}
-                    </span>
-                    <span className="font-mono text-rose-900 font-black">-{rupee(managerDeductionAmt)}</span>
-                  </div>
-                  <div className="text-[9.5px] text-rose-900 leading-tight">
-                    <b className="text-rose-950">{isClaimRejected ? "Rejected By:" : "Deducted By:"}</b> <span className="font-bold text-slate-900">{managerDeductorName}</span> {managerDeductorRole ? `(${managerDeductorRole})` : ''} {managerDeductorCode ? `[${managerDeductorCode}]` : ''}
-                  </div>
-                  <div className="text-[9.5px] text-rose-900 leading-tight">
-                    <b className="text-rose-950">Reason / Remarks:</b> <span className="font-bold text-slate-900">{rejectionRemark || finalManagerReason}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ─── ULTRA-COMPACT 1-LINE DAILY SUMMARY STRIP (FOR REGULAR TRAVEL CLAIMS ONLY) ─── */}
-        {!isLimitRequest && (
-        <>
-        <div className="bg-[#4A6A8A]/5 border-2 border-[#4A6A8A] rounded-lg p-2 shadow-2xs space-y-1">
-          <div className="flex items-center justify-between border-b border-[#4A6A8A]/20 pb-1 flex-wrap gap-1">
-            <div className="flex items-center gap-1.5">
-              <span className="w-4 h-4 rounded bg-[#4A6A8A] text-white flex items-center justify-center text-[9px] shrink-0 font-extrabold">
-                ✨
-              </span>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4A6A8A]">
-                Daily Summary by Sunny AI
-              </span>
-              <span className="text-[9.5px] text-slate-500 font-semibold">
-                ({formatDateDDMMMYY(c.date || c.itinerary)})
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-[9px]">
-              <span className="font-bold text-slate-600">
-                Claimed: <b className="text-slate-900">{rupee(originalClaimedTotal)}</b>
-              </span>
-              <span className={`font-extrabold px-1.5 py-0.2 rounded border ${
-                isApproved
-                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                  : (isClaimRejected ? "bg-rose-100 text-rose-800 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
-              }`}>
-                {isApproved
-                  ? `Approved Net: ${rupee(approvedAmt)}`
-                  : (isClaimRejected ? "Approved Net: ₹0 (Rejected)" : `Estimated Net: ${rupee(approvedAmt)}`)}
-              </span>
-            </div>
-          </div>
-
-          {/* Strict 1-Line Clean & Simple English AI Narrative Summary */}
-          <div className="text-[10px] text-slate-800 font-medium bg-white p-2 rounded border border-[#4A6A8A]/20 flex items-center gap-1.5 whitespace-nowrap overflow-x-auto">
-
-            {/* Name + Code */}
-            <span className="font-extrabold text-slate-900 shrink-0">{c.submitter_name || c.name || "Engineer"}</span>
-            {c.submitter_code && <span className="font-mono text-slate-500 font-bold shrink-0">[{c.submitter_code}]</span>}
-
-            {/* Travel KM + Mode */}
-            {calculatedTotalKm > 0 && (
-              <><span className="shrink-0 text-slate-400">·</span>
-              <span className="shrink-0 bg-blue-100 text-blue-800 font-extrabold px-1.5 py-0.2 rounded border border-blue-200">🚗 {calculatedTotalKm} km</span></>
-            )}
-            {modesList.length > 0 && (
-              <span className="shrink-0 bg-slate-100 text-slate-700 font-bold px-1.5 py-0.2 rounded border border-slate-200">
-                {modesList.join(" + ")}
-              </span>
-            )}
-
-            {/* Date */}
-            <span className="shrink-0 text-slate-400">·</span>
-            <span className="shrink-0 text-slate-600 font-semibold">{formatDateDDMMMYY(c.date || c.itinerary)}</span>
-
-            {/* Route: each leg from→to with location names */}
-            {itineraries.length > 0 && (
-              <>
-                <span className="shrink-0 text-slate-400">·</span>
-                <span className="shrink-0 font-bold text-slate-700">Route:</span>
-                {itineraries.map((l: any, idx: number) => {
-                  const fL = l.from || l.from_location || l.from_district || "—";
-                  const tL = l.to || l.to_location || l.to_district || "—";
-                  const hosp = l.hospital_name || l.hospital || "";
-                  const visitLabel = hosp && hosp !== tL ? `${tL} (${hosp})` : tL;
-                  return (
-                    <React.Fragment key={idx}>
-                      {idx > 0 && <span className="shrink-0 text-slate-300 font-bold">›</span>}
-                      <span className="shrink-0 text-slate-600">{fL}</span>
-                      <span className="shrink-0 text-slate-400 font-bold">→</span>
-                      <span className="shrink-0 font-extrabold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200/80">
-                        {visitLabel}
-                      </span>
-                    </React.Fragment>
-                  );
-                })}
-              </>
-            )}
-
-            {/* Work done */}
-            {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0 || otherAmount > 0) && (
-              <>
-                <span className="shrink-0 text-slate-400">·</span>
-                <span className="shrink-0 font-bold text-slate-700">Work:</span>
-                {totalCallsCompleted > 0 && <span className="shrink-0 font-extrabold text-blue-900 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/80">{totalCallsCompleted} Calls</span>}
-                {totalPms > 0 && <span className="shrink-0 font-extrabold text-emerald-900 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200/80">{totalPms} PMS</span>}
-                {totalCalibration > 0 && <span className="shrink-0 font-extrabold text-purple-900 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200/80">{totalCalibration} Calib</span>}
-                {totalMobilise > 0 && <span className="shrink-0 font-extrabold text-amber-900 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200/80">{totalMobilise} Mobi</span>}
-                {totalAssetTagging > 0 && <span className="shrink-0 font-extrabold text-indigo-900 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/80">{totalAssetTagging} Tagged</span>}
-                {otherAmount > 0 && <span className="shrink-0 font-extrabold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">{allOtherRemarks ? `Other: ${allOtherRemarks}` : `Other Exp ${rupee(otherAmount)}`}</span>}
-              </>
-            )}
-
-            {/* Status */}
-            <span className="shrink-0 text-slate-400">·</span>
-            <span className={`shrink-0 font-extrabold px-1.5 py-0.2 rounded border ${
-              isApproved ? "bg-emerald-100 text-emerald-900 border-emerald-300" : (isClaimRejected ? "bg-rose-100 text-rose-900 border-rose-300" : "bg-blue-100 text-blue-900 border-blue-300")
-            }`}>
-              {isApproved ? `✅ Approved: ${rupee(approvedAmt)}` : (isClaimRejected ? `❌ Rejected` : `⏳ Est. Net: ${rupee(approvedAmt)}`)}
-            </span>
-            {isClaimRejected && rejectionRemark && (
-              <span className="shrink-0 text-rose-700 font-bold">"{rejectionRemark}"</span>
-            )}
-          </div>
-
-        </div>
-
-        {/* ─── DEEP LEG-BY-LEG CARDS ────────────────────────────────────────── */}
-        {itineraries.length > 0 && (
+        {/* ─── DEEP LEG-BY-LEG CARDS (FOR REGULAR TRAVEL CLAIMS ONLY) ─── */}
+        {!isLimitRequest && itineraries.length > 0 && (
           <div className="space-y-2">
             <SectionHeader
               icon={Route}
@@ -2391,55 +2227,68 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           )}
         </div>
 
-        {/* ─── REMARKS & DEDUCTIONS (FOR DEDUCTIONS / ADJUSTMENTS WHEN NOT FULLY REJECTED) ─── */}
+        {/* ─── DEDUCTIONS & POLICY REMARKS (FULL CONSOLIDATED AUDIT CARD) ─── */}
         {!isLimitRequest && hasOverallDeduction && !isClaimRejected && (
-          <div className="bg-white rounded-lg border border-rose-200 shadow-2xs p-2.5">
-            <SectionHeader icon={AlertTriangle} label="Deductions & Policy Remarks" accent="#ef4444" />
-            <div className="space-y-1 text-[10px]">
-              {deductionAmt > 0 && (
-                <div className="flex items-start gap-2 py-1 border-b border-slate-100">
-                  <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wide min-w-[140px] shrink-0">Total Deduction</span>
-                  <span className="text-[11px] font-black text-rose-600">-{rupee(deductionAmt)}</span>
+          <div className="bg-white rounded-lg border-2 border-rose-200 shadow-2xs p-2.5 space-y-2 text-[10.5px]">
+            <SectionHeader icon={AlertTriangle} label="Deductions & Policy Audit Details" accent="#ef4444" />
+            
+            {/* Summary Line */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 font-extrabold text-slate-800 flex-wrap">
+                <span>Deduction Audit Details:</span>
+                <span className="font-semibold text-slate-600">Claimed: <b>{rupee(originalClaimedTotal)}</b></span>
+                <span className="text-slate-400">➔</span>
+                <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  Approved Net: {rupee(currentApprovedNet)}
+                </span>
+              </div>
+              <div className="font-mono text-[10.5px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                Total Deduction: -{rupee(totalCombinedDeduction)}
+              </div>
+            </div>
+
+            {/* Individual Breakdown Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {/* System Policy Deduction Card */}
+              {systemDeductionAmt > 0 && (
+                <div className="bg-amber-50/90 border border-amber-300 rounded-lg p-2.5 space-y-1">
+                  <div className="flex items-center justify-between font-extrabold text-amber-950 text-[10.5px]">
+                    <span className="flex items-center gap-1.5">⚙️ System Policy Deduction</span>
+                    <span className="font-mono text-amber-900 font-black">-{rupee(systemDeductionAmt)}</span>
+                  </div>
+                  <div className="text-[9.5px] text-amber-900 leading-tight">
+                    <b className="text-amber-950">Deducted By:</b> System Rule Engine (Base Location Policy)
+                  </div>
+                  <div className="text-[9.5px] text-amber-900 leading-normal bg-white p-1.5 rounded border border-amber-200 mt-1">
+                    <b className="text-amber-950 block mb-0.5">Exact Reason / Rule:</b>
+                    <span className="text-slate-900 font-semibold">
+                      {overallBaseLocationReason || overallSystemReason || c.km_deduction_reason || c.da_deduction_reason || c.policy_rule_name || "Base Reporting Location (Case 5): Same District Travel — Travel TA/DA is ₹0 as per policy."}
+                    </span>
+                  </div>
                 </div>
               )}
-              {overallBaseLocationReason && (
-                <div className="flex items-start gap-2 py-1 border-b border-slate-100 bg-indigo-50/60 p-1.5 rounded border border-indigo-200">
-                  <span className="text-[9px] font-bold text-indigo-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
-                    📍 Base Working Location
-                  </span>
-                  <span className="text-[10px] font-semibold text-slate-800">{overallBaseLocationReason}</span>
-                </div>
-              )}
-              {c.km_deduction_reason && (
-                <div className="flex items-start gap-2 py-1 border-b border-slate-100 bg-amber-50/60 p-1.5 rounded border border-amber-200">
-                  <span className="text-[9px] font-bold text-amber-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
-                    ⚙️ System KM Policy
-                  </span>
-                  <span className="text-[10px] font-semibold text-slate-800">{c.km_deduction_reason}</span>
-                </div>
-              )}
-              {c.da_deduction_reason && (
-                <div className="flex items-start gap-2 py-1 border-b border-slate-100 bg-amber-50/60 p-1.5 rounded border border-amber-200">
-                  <span className="text-[9px] font-bold text-amber-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
-                    ⚙️ System DA Policy
-                  </span>
-                  <span className="text-[10px] font-semibold text-slate-800">{c.da_deduction_reason}</span>
-                </div>
-              )}
-              {overallSystemReason && (
-                <div className="flex items-start gap-2 py-1 border-b border-slate-100 bg-amber-50/60 p-1.5 rounded border border-amber-200">
-                  <span className="text-[9px] font-bold text-amber-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
-                    ⚙️ System Base Policy
-                  </span>
-                  <span className="text-[10px] font-semibold text-slate-800">{overallSystemReason}</span>
-                </div>
-              )}
-              {(c.deduction_remark || c.approver_remark || c.remark) && (
-                <div className="flex items-start gap-2 py-1 bg-rose-50/60 p-1.5 rounded border border-rose-200">
-                  <span className="text-[9px] font-bold text-rose-900 uppercase tracking-wide min-w-[140px] shrink-0 flex items-center gap-1">
-                    👤 Rejection Remark:
-                  </span>
-                  <span className="text-[10px] font-semibold text-slate-800">{c.deduction_remark || c.approver_remark || c.remark}</span>
+
+              {/* Coordinator / Manager Manual Deduction Card */}
+              {managerDeductionAmt > 0 && (
+                <div className="bg-rose-50/90 border border-rose-300 rounded-lg p-2.5 space-y-1">
+                  <div className="flex items-center justify-between font-extrabold text-rose-950 text-[10.5px]">
+                    <span className="flex items-center gap-1.5">
+                      {isClaimRejected ? "🚫 Claim Rejection" : `✏️ ${managerDeductorRole || "Coordinator / Manager"} Manual Deduction`}
+                    </span>
+                    <span className="font-mono text-rose-900 font-black">-{rupee(managerDeductionAmt)}</span>
+                  </div>
+                  <div className="text-[9.5px] text-rose-900 leading-tight">
+                    <b className="text-rose-950">{isClaimRejected ? "Rejected By:" : "Deducted By:"}</b>{" "}
+                    <span className="font-extrabold text-slate-900">{managerDeductorName}</span>{" "}
+                    {managerDeductorRole ? <span className="font-bold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 text-[9px]">({managerDeductorRole})</span> : ""}
+                    {managerDeductorCode ? <span className="font-mono text-slate-500 font-bold text-[9px]"> [{managerDeductorCode}]</span> : ""}
+                  </div>
+                  <div className="text-[9.5px] text-rose-900 leading-normal bg-white p-1.5 rounded border border-rose-200 mt-1">
+                    <b className="text-rose-950 block mb-0.5">Exact Remarks:</b>
+                    <span className="text-slate-900 font-semibold">
+                      "{rejectionRemark || finalManagerReason || "Manual deduction applied during approval review."}"
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
