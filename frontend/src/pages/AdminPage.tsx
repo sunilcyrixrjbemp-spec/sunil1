@@ -1612,32 +1612,32 @@ export default function AdminPage() {
         {activeTab === "users" ? (
           /* ================= USERS LIST TAB ================= */
           <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
-            {/* Enterprise Structured Filters & Actions Bar */}
-            <div className="p-3 border-b border-slate-300 bg-slate-50 space-y-3">
-              {/* Row 1: Structured Grid Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+            {/* Ultra-Compact High-Density Filters & Actions Bar */}
+            <div className="p-2 sm:p-2.5 border-b border-slate-200/90 bg-slate-50/90 space-y-2">
+              {/* Row 1: High-Density Filters */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2">
                 {/* Search Input */}
-                <div className="flex flex-col">
-                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Search</label>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Search</span>
                   <input
                     type="text"
                     placeholder="Name, Code, Mobile..."
                     value={userSearchTerm}
                     onChange={(e) => setUserSearchTerm(e.target.value)}
-                    className="w-full px-2.5 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8"
+                    className="w-full px-2 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7 leading-none"
                   />
                 </div>
 
                 {/* Zone Filter */}
-                <div className="flex flex-col">
-                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Zone</label>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Zone</span>
                   <select
                     value={userZoneFilter}
                     onChange={(e) => {
                       setUserZoneFilter(e.target.value);
                       setUserDistrictFilter("all");
                     }}
-                    className="w-full px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                    className="w-full px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
                   >
                     <option value="all">All Zones ({availableUserZones.length})</option>
                     {availableUserZones.map((z: string) => (
@@ -1647,12 +1647,12 @@ export default function AdminPage() {
                 </div>
 
                 {/* District Filter */}
-                <div className="flex flex-col">
-                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">District</label>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">District</span>
                   <select
                     value={userDistrictFilter}
                     onChange={(e) => setUserDistrictFilter(e.target.value)}
-                    className="w-full px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                    className="w-full px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
                   >
                     <option value="all">All Districts ({availableUserDistricts.length})</option>
                     {availableUserDistricts.map((d: string) => (
@@ -1662,12 +1662,12 @@ export default function AdminPage() {
                 </div>
 
                 {/* Manager Filter */}
-                <div className="flex flex-col">
-                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Manager</label>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Manager</span>
                   <select
                     value={userManagerFilter}
                     onChange={(e) => setUserManagerFilter(e.target.value)}
-                    className="w-full px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                    className="w-full px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
                   >
                     <option value="all">All Managers ({availableUserManagers.length})</option>
                     {availableUserManagers.map((m: string) => (
@@ -1677,12 +1677,12 @@ export default function AdminPage() {
                 </div>
 
                 {/* Role Filter */}
-                <div className="flex flex-col">
-                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Role</label>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Role</span>
                   <select
                     value={userRoleFilter}
                     onChange={(e) => setUserRoleFilter(e.target.value)}
-                    className="w-full px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                    className="w-full px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
                   >
                     <option value="all">All Roles ({availableUserRoles.length})</option>
                     {availableUserRoles.map((r: string) => (
@@ -1691,14 +1691,14 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* Status Filter & Reset Button */}
-                <div className="flex flex-col">
-                  <label className="text-[9px] font-extrabold uppercase text-slate-500 mb-0.5 tracking-wider">Status &amp; Reset</label>
+                {/* Status Filter & Reset */}
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Status</span>
                   <div className="flex items-center gap-1">
                     <select
                       value={userStatusFilter}
                       onChange={(e) => setUserStatusFilter(e.target.value)}
-                      className="flex-1 min-w-0 px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer shadow-2xs h-8"
+                      className="flex-1 min-w-0 px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
                     >
                       <option value="all">All Status</option>
                       {availableUserStatuses.map((st: string) => (
@@ -1715,8 +1715,7 @@ export default function AdminPage() {
                         setUserRoleFilter("all");
                         setUserStatusFilter("all");
                       }}
-                      className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 text-[10px] font-extrabold uppercase rounded-none border border-slate-300 h-8 cursor-pointer transition-colors shrink-0"
-                      title="Reset All Filters"
+                      className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-extrabold uppercase rounded-lg border border-slate-300 h-7 cursor-pointer transition-colors shrink-0"
                     >
                       Reset
                     </button>
@@ -1724,18 +1723,18 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Row 2: Actions & Total Count Row */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200">
-                <div className="text-[11px] font-mono font-bold text-slate-600">
-                  Showing: <span className="text-[#4A6A8A] font-extrabold">{filteredUsers.length}</span> of {safeUsers.length} Employees
+              {/* Row 2: Actions & Count Row */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-200/80">
+                <div className="text-[10.5px] font-mono font-extrabold text-slate-600">
+                  Showing <span className="text-blue-700">{filteredUsers.length}</span> of {safeUsers.length} Employees
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   <button
                     onClick={handleExportUsersExcel}
-                    className="px-3 py-1.5 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                    className="px-2.5 py-1 bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-all h-7"
                   >
-                    <FileExcelOutlined className="text-white text-xs" />
+                    <FileExcelOutlined className="text-xs" />
                     <span>Export Excel</span>
                   </button>
                   <button
@@ -1743,23 +1742,23 @@ export default function AdminPage() {
                       setSingleUserError(null);
                       setShowSingleUserModal(true);
                     }}
-                    className="px-3 py-1.5 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-all h-7"
                   >
-                    <PlusOutlined className="text-white text-xs" />
+                    <PlusOutlined className="text-xs" />
                     <span>+ Single User</span>
                   </button>
                   <Popconfirm
                     title="Force Logout All Users?"
-                    description="This will log out all active users from their devices."
+                    description="This will instantly invalidate session tokens for all users (except yourself)."
                     onConfirm={handleForceLogoutAll}
                     okText="Yes, Logout All"
                     cancelText="Cancel"
-                    okButtonProps={{ danger: true }}
+                    okButtonProps={{ danger: true, size: "small" }}
                   >
                     <button
-                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-all h-7"
                     >
-                      <LogoutOutlined className="text-white text-xs" />
+                      <LogoutOutlined className="text-xs" />
                       <span>Force Logout All</span>
                     </button>
                   </Popconfirm>
