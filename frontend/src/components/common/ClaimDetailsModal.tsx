@@ -2095,8 +2095,6 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             )}
           </div>
         )}
-        </>
-        )}
 
         {/* ─── WORK DONE SUMMARY (ONLY RENDER IF WORK COMPLETED IS STRICTLY > 0) ─── */}
         {(totalCallsCompleted > 0 || totalPms > 0 || totalCalibration > 0 || totalMobilise > 0 || totalAssetTagging > 0) && (
