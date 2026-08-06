@@ -4,7 +4,6 @@ import { SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart, SaaS3DHybridTrend
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import { adminService } from "../services/adminService";
-import Loader from "../components/common/Loader";
 import AnalysisSkeleton from "../components/common/AnalysisSkeleton";
 import RajasthanMapChart from "../components/common/RajasthanMapChart";
 import {
