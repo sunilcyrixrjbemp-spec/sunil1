@@ -263,6 +263,8 @@ export async function fetchPendingApprovals(env, user) {
                                    .replace("Calls", "").trim();
         if (cleanPurpose === "Activities:" || !cleanPurpose) cleanPurpose = "Field visit";
       }
+    } else if (callsCompleted > 0 && callsAssigned > callsCompleted) {
+      callsAssigned = callsCompleted;
     }
 
     result.push({
@@ -399,6 +401,12 @@ export async function handleGetApprovals(request, env, params, query, user) {
     `).run().catch(() => {});
 
     env.DB.prepare(`
+      UPDATE expenses 
+      SET calls_assigned = calls_completed 
+      WHERE calls_assigned > calls_completed AND calls_completed > 0
+    `).run().catch(() => {});
+
+    env.DB.prepare(`
       UPDATE expense_itineraries 
       SET calls_assigned = 0, 
           visit_purpose = CASE 
@@ -407,6 +415,12 @@ export async function handleGetApprovals(request, env, params, query, user) {
             ELSE visit_purpose 
           END 
       WHERE calls_assigned > 0 AND (calls_completed = 0 OR calls_completed IS NULL)
+    `).run().catch(() => {});
+
+    env.DB.prepare(`
+      UPDATE expense_itineraries 
+      SET calls_assigned = calls_completed 
+      WHERE calls_assigned > calls_completed AND calls_completed > 0
     `).run().catch(() => {});
   }
 

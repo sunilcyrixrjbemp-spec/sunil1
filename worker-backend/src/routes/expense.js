@@ -2736,8 +2736,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       const assetsList = Array.isArray(actDetails.assets_list) ? actDetails.assets_list : [];
 
       if (callsList.length > 0) {
-        itiAssigned = callsList.length;
         itiCompleted = callsList.filter(c => c.barcode || c.status === "Close" || c.status === "Attend & Close").length;
+        itiAssigned = itiCompleted;
         sanitizedActs.push("Calls");
       }
 

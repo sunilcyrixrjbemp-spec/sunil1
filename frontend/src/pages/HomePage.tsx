@@ -1007,6 +1007,7 @@ export default function HomePage() {
         const callsComp = record.calls_completed ?? record.calls ?? 0;
         let callsAssign = record.calls_assigned ?? 0;
         if (callsComp === 0) callsAssign = 0;
+        if (callsAssign > callsComp && callsComp > 0) callsAssign = callsComp;
 
         if (callsAssign > 0 || callsComp > 0) {
           const text = callsAssign > 0 ? `${callsComp}/${callsAssign} Calls` : `${callsComp} Calls`;
