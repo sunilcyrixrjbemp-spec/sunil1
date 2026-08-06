@@ -2634,9 +2634,9 @@ export default function ExpensePage() {
 
         // Compute CRM work metrics based on actual list entries
         const ws_assigned = callsList.length;
-        const ws_closed = callsList.filter(c => c.status === "Close" || c.status === "Attend & Close" || c.barcode).length;
-        const ws_pms = pmsList.filter(p => p.barcode || p.status === "Close" || p.status === "Attended").length;
-        const ws_asset = assetsList.reduce((sum, item) => sum + (parseInt(item.quantity || "0") || 0), 0);
+        const ws_closed = callsList.filter((c: any) => c.status === "Close" || c.status === "Attend & Close" || c.barcode).length;
+        const ws_pms = pmsList.filter((p: any) => p.barcode || p.status === "Close" || p.status === "Attended").length;
+        const ws_asset = assetsList.reduce((sum: number, item: any) => sum + (parseInt(item.quantity || "0") || 0), 0);
 
         const detailsObj = {
           state: leg.state || "Rajasthan",

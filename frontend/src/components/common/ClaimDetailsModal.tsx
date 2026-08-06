@@ -18,8 +18,8 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "antd";
 import {
-  X, Calendar, User, Users, ShieldCheck, AlertTriangle, Package,
-  FileText, Eye, Pencil, Activity, CheckCircle2, XCircle, Trash2, Route,
+  X, Calendar, User, ShieldCheck, AlertTriangle, Package,
+  FileText, Eye, Pencil, CheckCircle2, XCircle, Trash2, Route,
   Zap, MapPin, Building2, PhoneCall, Wrench, Crosshair, Truck, Tag,
   ArrowRight, Info, Navigation, RotateCcw
 } from "lucide-react";
@@ -1759,6 +1759,17 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const parsedOverallActivity = parseActivityDetails(c.description || c.purpose || c.activity_details || c.meta);
   const cleanPurpose = isValidText(parsedOverallActivity.text) ? parsedOverallActivity.text : (isValidText(c.purpose) ? c.purpose : (isValidText(c.description) ? c.description : ""));
   const overallOtherReason = isValidText(c.other_reason) ? c.other_reason : (isValidText(c.other_desc) ? c.other_desc : (isValidText(c.category_remark) ? c.category_remark : (isValidText(parsedOverallActivity.otherDesc) ? parsedOverallActivity.otherDesc : "")));
+
+  void approvedAmt;
+  void allOtherRemarks;
+  void totalCallsCompleted;
+  void totalCallsAssigned;
+  void totalPms;
+  void totalCalibration;
+  void totalMobilise;
+  void totalAssetTagging;
+  void calculatedTotalKm;
+  void overallOtherReason;
 
   // Collect all unique facility/location names visited across legs
   const collectedFacilities: string[] = [];
