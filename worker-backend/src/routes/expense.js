@@ -2562,6 +2562,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let totalAsset = 0;
   let totalCalibration = 0;
   let totalMobilise = 0;
+  let firstPurpose = "";
 
   let newKm = 0.0;
   let newAuto = 0.0;
@@ -2837,7 +2838,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   }
 
   const majorMode = itineraries[0]?.mode || "Other";
-  const firstPurpose = itineraries[0]?.visit_purpose || "Field visit";
+  firstPurpose = firstPurpose || itineraries[0]?.visit_purpose || "Field visit";
 
   // Create approvals level sequence
   const approvalChain = await env.DB.prepare(`
