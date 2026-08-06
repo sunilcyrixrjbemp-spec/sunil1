@@ -18,6 +18,7 @@ import Loader from "../components/common/Loader";
 
 import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
+import { formatImageUrl } from "../components/common/ClaimDetailsModal";
 import { 
   Check, 
   X, 
@@ -232,11 +233,11 @@ export default function ApprovalPage() {
     }
 
     // IMMEDIATELY set image URL synchronously for 0ms instant display!
-    setDisplayImageUrl(lightboxImage);
+    const formattedUrl = formatImageUrl(lightboxImage);
+    setDisplayImageUrl(formattedUrl);
 
-    const isPdfUrl = lightboxImage.toLowerCase().includes(".pdf") || 
-                     lightboxImage.toLowerCase().includes("pdf") || 
-                     lightboxImage.includes("gdrive/");
+    const isPdfUrl = formattedUrl.toLowerCase().includes(".pdf") || 
+                     formattedUrl.toLowerCase().includes(".pdf?");
 
     if (isPdfUrl) {
       setIsLoadingPdf(true);

@@ -37,6 +37,36 @@ const isValidText = (val: any): boolean => {
   return true;
 };
 
+export const formatImageUrl = (url: any): string => {
+  if (!url) return "";
+  let str = String(url).trim();
+  if (!str) return "";
+
+  // 1. Google Drive direct CDN stream conversion
+  if (str.includes("drive.google.com") || str.includes("docs.google.com")) {
+    const matchD = str.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const matchId = str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    const fileId = matchD ? matchD[1] : (matchId ? matchId[1] : null);
+    if (fileId) {
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+  }
+
+  // 2. Raw Google Drive File ID (25-50 chars)
+  if (/^[a-zA-Z0-9_-]{25,50}$/.test(str)) {
+    return `https://lh3.googleusercontent.com/d/${str}`;
+  }
+
+  // 3. Absolute HTTP(S) or Data URI
+  if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("data:")) {
+    return str;
+  }
+
+  // 4. Relative paths -> prepend API_BASE
+  const cleanPath = str.startsWith("/") ? str : `/${str}`;
+  return `${API_BASE}${cleanPath}`;
+};
+
 const getAttachmentsArray = (attachments: any): any[] => {
   if (!attachments) return [];
   if (Array.isArray(attachments)) return attachments.filter(Boolean);
@@ -282,7 +312,7 @@ const AttachmentCard = ({ att, index, setLightboxImage }: { att: any; index: num
   const url = typeof att === "string" ? att : (att.file_url || att.url || "");
   if (!url) return null;
 
-  const fullUrl = url.startsWith("http") || url.startsWith("data:") ? url : `${API_BASE}${url}`;
+  const fullUrl = formatImageUrl(url);
   const isPdf = url.toLowerCase().split("?")[0].endsWith(".pdf");
   const billType = typeof att === "object" ? att.bill_type : null;
 
@@ -920,7 +950,7 @@ const LegDetailCard = ({
                       const cStatus = cItem.status || cItem.calls_status || act.callsStatus || "Attended & Closed";
                       
                       const cUrl = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url || "";
-                      const fullCUrl = cUrl ? (cUrl.startsWith("http") || cUrl.startsWith("data:") ? cUrl : `${API_BASE}${cUrl.startsWith("/") ? "" : "/"}${cUrl}`) : "";
+                      const fullCUrl = formatImageUrl(cUrl);
 
                       return (
                         <tr key={cIdx} className="hover:bg-blue-50/40 font-medium">
@@ -980,7 +1010,7 @@ const LegDetailCard = ({
 
                       const pSched = pItem.schedule || pItem.pms_frequency || pItem.frequency || act.pmsFrequency || schedule || "—";
                       const pUrl = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url || "";
-                      const fullPUrl = pUrl ? (pUrl.startsWith("http") || pUrl.startsWith("data:") ? pUrl : `${API_BASE}${pUrl.startsWith("/") ? "" : "/"}${pUrl}`) : "";
+                      const fullPUrl = formatImageUrl(pUrl);
 
                       return (
                         <tr key={pIdx} className="hover:bg-emerald-50/40 font-medium">

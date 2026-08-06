@@ -4937,24 +4937,23 @@ export async function handleServeExpenseAttachment(request, env, params, query, 
 
   const key = `expense_attachments/${filename}`;
 
-  // 1. If Cloudflare R2 bucket binding is available on env.BUCKET
-  if (env.BUCKET) {
+  const keysToTry = [key, filename, `uploads/${filename}`, `uploads/expense_attachments/${filename}`];
+  const buckets = [env.R2_BUCKET, env.CYRIXAPP_BUCKET, env.BUCKET].filter(Boolean);
+
+  for (const bucket of buckets) {
     try {
-      const object = await env.BUCKET.get(key);
-      if (object === null) {
-        return new Response("File not found in R2 bucket", { status: 404 });
+      for (const k of keysToTry) {
+        const object = await bucket.get(k);
+        if (object) {
+          const headers = new Headers();
+          object.writeHttpMetadata(headers);
+          if (object.httpEtag) headers.set("etag", object.httpEtag);
+          headers.set("Cache-Control", "public, max-age=31536000");
+          return new Response(object.body, { headers });
+        }
       }
-      
-      const headers = new Headers();
-      object.writeHttpMetadata(headers);
-      headers.set("etag", object.httpEtag);
-      headers.set("Cache-Control", "public, max-age=31536000");
-      
-      return new Response(object.body, {
-        headers
-      });
     } catch (e) {
-      console.error("Error reading from env.BUCKET:", e);
+      console.error("Error reading from R2 bucket:", e);
     }
   }
 
