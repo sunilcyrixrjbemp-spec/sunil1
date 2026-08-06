@@ -3268,68 +3268,68 @@ export default function ExpensePage() {
         </div>
       )}
 
-      {/* 4 Premium Stat Cards (High-Density Design System) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* 4 Premium Stat Cards (Compact 2x2 Mobile Grid System) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         {/* Profile Card */}
-        <div className="bg-white border border-slate-200 rounded-none shadow-2xs p-3 flex items-center gap-3 hover:border-indigo-300 transition-all">
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
-            <User className="w-4.5 h-4.5" />
+        <div className="bg-white border border-slate-200 rounded-md shadow-2xs p-2 sm:p-2.5 flex items-center gap-2 hover:border-indigo-300 transition-all">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <User className="w-4 h-4" />
           </div>
           <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">EMPLOYEE PROFILE</span>
-            <span className="text-xs font-extrabold text-slate-900 leading-tight truncate" title={user.name || "—"}>
+            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">EMPLOYEE PROFILE</span>
+            <span className="text-[11px] sm:text-xs font-extrabold text-slate-900 leading-tight truncate" title={user.name || "—"}>
               {user.name || "—"}
             </span>
-            <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-mono mt-0.5">
+            <div className="flex items-center gap-1 text-[8.5px] text-slate-500 font-mono mt-0.5">
               <span>{user.e_code || "—"}</span>
               <span className="text-slate-300">|</span>
-              <span className="text-indigo-600 font-bold bg-indigo-50 px-1 py-0.2 border border-indigo-100 rounded-none">Grade: {user.grade || "—"}</span>
+              <span className="text-indigo-600 font-bold bg-indigo-50 px-1 py-0.2 rounded text-[8px]">Grade: {user.grade || "—"}</span>
             </div>
           </div>
         </div>
 
         {/* Assigned Home District Card */}
-        <div className="bg-white border border-slate-200 rounded-none shadow-2xs p-3 flex items-center gap-3 hover:border-emerald-300 transition-all">
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
-            <MapPin className="w-4.5 h-4.5" />
+        <div className="bg-white border border-slate-200 rounded-md shadow-2xs p-2 sm:p-2.5 flex items-center gap-2 hover:border-emerald-300 transition-all">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <MapPin className="w-4 h-4" />
           </div>
           <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">ASSIGNED DISTRICT</span>
-            <span className="text-xs font-extrabold text-slate-900 leading-tight truncate">
+            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">ASSIGNED DISTRICT</span>
+            <span className="text-[11px] sm:text-xs font-extrabold text-slate-900 leading-tight truncate">
               {user.district || "—"}
             </span>
-            <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-none font-mono leading-none w-fit mt-0.5">
+            <span className="text-[8px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded font-mono leading-none w-fit mt-0.5">
               In-District Boundary
             </span>
           </div>
         </div>
 
         {/* Monthly Distance Limit Card */}
-        <div className="bg-white border border-slate-200 rounded-none shadow-2xs p-3 flex items-center gap-3 hover:border-blue-300 transition-all">
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+        <div className="bg-white border border-slate-200 rounded-md shadow-2xs p-2 sm:p-2.5 flex items-center gap-2 hover:border-blue-300 transition-all">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
             {allowance.vehicle_type === "Car" ? (
-              <Car className="w-4.5 h-4.5" />
+              <Car className="w-4 h-4" />
             ) : allowance.vehicle_type === "Bike" ? (
-              <Bike className="w-4.5 h-4.5" />
+              <Bike className="w-4 h-4" />
             ) : (
-              <Navigation className="w-4.5 h-4.5" />
+              <Navigation className="w-4 h-4" />
             )}
           </div>
           <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
+            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
               {limitPillLabel}
             </span>
-            <span className="text-xs font-mono font-black text-slate-900 leading-tight">
+            <span className="text-[11px] sm:text-xs font-mono font-black text-slate-900 leading-tight">
               {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 0) + approvedKm)} KM
             </span>
-            <div className="w-full bg-slate-100 rounded-none h-1.5 mt-1 overflow-hidden">
+            <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden flex items-center">
               <div 
-                className="bg-blue-600 h-1.5 rounded-none transition-all duration-300"
-                style={{ width: `${getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 0) + approvedKm))}%` }}
+                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${Math.max(allowance.current_month_km ? 5 : 0, getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 0) + approvedKm)))}%` }}
               ></div>
             </div>
             {existingKmReq && (
-              <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[9px] font-bold shrink-0">
+              <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8px] font-bold shrink-0">
                 <span className="text-slate-400">Request:</span>
                 <span className={
                   existingKmReq.status === "Approved" ? "text-green-600 font-black" :
@@ -3346,25 +3346,25 @@ export default function ExpensePage() {
         </div>
 
         {/* Monthly Auto Cap Card */}
-        <div className="bg-white border border-slate-200 rounded-none shadow-2xs p-3 flex items-center gap-3 hover:border-amber-300 transition-all">
-          <div className="w-9 h-9 rounded-none bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
-            <Navigation className="w-4.5 h-4.5" />
+        <div className="bg-white border border-slate-200 rounded-md shadow-2xs p-2 sm:p-2.5 flex items-center gap-2 hover:border-amber-300 transition-all">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
+            <Navigation className="w-4 h-4" />
           </div>
           <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
+            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
               MONTHLY AUTO CAP
             </span>
-            <span className="text-xs font-mono font-black text-slate-900 leading-tight">
+            <span className="text-[11px] sm:text-xs font-mono font-black text-slate-900 leading-tight">
               ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{((allowance.max_auto_per_month || 0) + approvedAuto).toLocaleString()}
             </span>
-            <div className="w-full bg-slate-100 rounded-none h-1.5 mt-1 overflow-hidden">
+            <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden flex items-center">
               <div 
-                className="bg-amber-500 h-1.5 rounded-none transition-all duration-300"
-                style={{ width: `${getProgressPercentage(allowance.current_month_auto || 0, ((allowance.max_auto_per_month || 0) + approvedAuto))}%` }}
+                className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${Math.max(allowance.current_month_auto ? 5 : 0, getProgressPercentage(allowance.current_month_auto || 0, ((allowance.max_auto_per_month || 0) + approvedAuto)))}%` }}
               ></div>
             </div>
             {existingAutoReq && (
-              <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[9px] font-bold shrink-0">
+              <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8px] font-bold shrink-0">
                 <span className="text-slate-400">Request:</span>
                 <span className={
                   existingAutoReq.status === "Approved" ? "text-green-600 font-black" :
