@@ -241,6 +241,9 @@ export async function handleServeFile(request, env, params, query) {
       if (!obj && fileKey !== fileKeyDecoded) {
         obj = await bucket.get(fileKey);
       }
+      if (!obj && fileKeyDecoded.startsWith("/")) {
+        obj = await bucket.get(fileKeyDecoded.slice(1));
+      }
       if (!obj && fileKeyDecoded.includes("/")) {
         const lastPart = fileKeyDecoded.split("/").pop();
         if (lastPart) obj = await bucket.get(lastPart);
@@ -250,7 +253,16 @@ export async function handleServeFile(request, env, params, query) {
         if (lastPart) obj = await bucket.get(lastPart);
       }
       if (obj) {
-        const contentType = obj.httpMetadata?.contentType || "application/octet-stream";
+        let contentType = obj.httpMetadata?.contentType;
+        if (!contentType || contentType === "application/octet-stream") {
+          const lowerKey = fileKeyDecoded.toLowerCase();
+          if (lowerKey.endsWith(".png")) contentType = "image/png";
+          else if (lowerKey.endsWith(".webp")) contentType = "image/webp";
+          else if (lowerKey.endsWith(".gif")) contentType = "image/gif";
+          else if (lowerKey.endsWith(".pdf")) contentType = "application/pdf";
+          else contentType = "image/jpeg";
+        }
+
         const etag = obj.etag || obj.httpEtag;
         const isImage = contentType.startsWith("image/");
         const isPdf = contentType.includes("pdf");
@@ -258,33 +270,13 @@ export async function handleServeFile(request, env, params, query) {
         // ── ETag / 304 Not Modified ──────────────────────────────────────────
         const ifNoneMatch = request.headers.get("If-None-Match");
         if (etag && ifNoneMatch && (ifNoneMatch === etag || ifNoneMatch === `"${etag}"`)) {
-          return new Response(null, { status: 304 });
-        }
-
-        // ── Format negotiation for images ────────────────────────────────────
-        // Use Cloudflare's image transformation (cf.image) to serve AVIF/WebP
-        // automatically when the browser supports it. This works only when the
-        // Worker is deployed behind Cloudflare (not in local wrangler dev).
-        if (isImage && (supportsAvif || supportsWebp) && (resizeWidth > 0 || supportsAvif || supportsWebp)) {
-          try {
-            // Build a self-referencing request with cf.image options
-            // This re-fetches from the same URL but lets Cloudflare convert the format
-            const cfFormat = supportsAvif ? "avif" : "webp";
-            const cfReq = new Request(request.url, {
-              cf: {
-                image: {
-                  format: cfFormat,
-                  quality: 82,
-                  ...(resizeWidth > 0 ? { width: resizeWidth, fit: "contain" } : {})
-                }
-              }
-            });
-            // NOTE: cf.image transformation only works when deployed on Cloudflare edge.
-            // If not available (local dev), this will behave identically to regular fetch.
-            // We serve R2 body directly as a safe fallback below.
-          } catch (_) {
-            // cf.image not available — fall through to serve original
-          }
+          return new Response(null, {
+            status: 304,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS"
+            }
+          });
         }
 
         return new Response(obj.body, {
@@ -296,9 +288,10 @@ export async function handleServeFile(request, env, params, query) {
             "ETag": etag ? `"${etag}"` : "",
             "Vary": isImage ? "Accept" : "",
             "Content-Disposition": isPdf ? 'inline; filename="document.pdf"' : "inline",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
             "X-Content-Type-Options": "nosniff",
-            "X-Source": "r2-direct",
-            "X-Frame-Options": isPdf ? "SAMEORIGIN" : "DENY",
+            "X-Source": "r2-direct"
           },
         });
       }
