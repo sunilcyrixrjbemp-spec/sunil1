@@ -3037,6 +3037,38 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const toLoc = iti.to || iti.to_location || toDist;
     const isCommute = !hasOutdoorLeg && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
     
+    let itiAssigned = 0;
+    let itiCompleted = 0;
+    let itiPms = 0;
+    let itiAsset = 0;
+    let actDetails = null;
+
+    if (iti.activity_details) {
+      try {
+        actDetails = typeof iti.activity_details === "string" ? JSON.parse(iti.activity_details) : iti.activity_details;
+      } catch (e) {}
+    }
+
+    if (actDetails) {
+      const callsList = Array.isArray(actDetails.calls_list) ? actDetails.calls_list : [];
+      const pmsList = Array.isArray(actDetails.pms_list) ? actDetails.pms_list : [];
+      const assetsList = Array.isArray(actDetails.assets_list) ? actDetails.assets_list : [];
+
+      if (callsList.length > 0) {
+        itiCompleted = callsList.filter(c => c.barcode || c.status === "Close" || c.status === "Attend & Close").length;
+        itiAssigned = callsList.length;
+        if (itiAssigned < itiCompleted) itiAssigned = itiCompleted;
+      }
+      if (pmsList.length > 0) {
+        itiPms = pmsList.filter(p => p.barcode || p.status === "Verified Inventory" || p.verified).length;
+      }
+      if (assetsList.length > 0) {
+        itiAsset = assetsList.length;
+      }
+    }
+
+    const cleanPurpose = iti.visit_purpose || "Field visit";
+
     dbBatchStatements.push({
       sql: `
         INSERT INTO expense_itineraries (
@@ -3069,12 +3101,6 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       ]
     });
 
-    let actDetails = null;
-    if (iti.activity_details) {
-      try {
-        actDetails = typeof iti.activity_details === "string" ? JSON.parse(iti.activity_details) : iti.activity_details;
-      } catch (e) {}
-    }
     if (actDetails) {
       const selectedActs = actDetails.selected_activities || [];
       
