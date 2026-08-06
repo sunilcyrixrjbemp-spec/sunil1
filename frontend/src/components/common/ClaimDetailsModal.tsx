@@ -1114,44 +1114,65 @@ const LegDetailCard = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
             {/* 1. Distance KM */}
             <div>
-              <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Distance (KM)</label>
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="block text-[9px] font-bold text-slate-600">Distance (KM)</label>
+                {parseFloat(String(km ?? 0)) <= 0 && (
+                  <span className="text-[8px] text-slate-400 font-medium">(Fixed Mode)</span>
+                )}
+              </div>
               <input
                 type="number"
                 min="0"
                 step="0.1"
+                disabled={!isEditing || parseFloat(String(km ?? 0)) <= 0}
                 value={editedLeg?.km ?? km}
                 onChange={(e) => onLegAmountChange(index, "km", e.target.value)}
-                className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none"
+                className={`w-full text-xs font-mono font-bold p-1 border rounded focus:border-[#4A6A8A] focus:outline-none ${
+                  parseFloat(String(km ?? 0)) > 0 ? "border-slate-300 bg-white text-slate-900" : "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                }`}
               />
-              {editedLeg && parseFloat(String(editedLeg.km)) !== parseFloat(String(leg.km ?? 0)) && (
+              {editedLeg && parseFloat(String(editedLeg.km ?? 0)) !== parseFloat(String(leg.km ?? 0)) && (
                 <input
                   type="text"
                   placeholder="Reason for KM edit *"
-                  value={editedLeg?.remarks?.distance_km || editedLeg?.remarks?.km || ""}
-                  onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "distance_km", e.target.value)}
-                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                  value={editedLeg?.remarks?.distance_km || editedLeg?.remarks?.km || editedLeg?.remarks?.travel_amount || ""}
+                  onChange={(e) => {
+                    if (onLegRemarkChange) {
+                      onLegRemarkChange(index, "distance_km", e.target.value);
+                      onLegRemarkChange(index, "travel_amount", e.target.value);
+                    }
+                  }}
+                  className="w-full text-[10px] p-1 border border-rose-300 rounded bg-rose-50 text-rose-950 font-medium placeholder:text-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400 mt-1 shadow-2xs"
                 />
               )}
             </div>
 
             {/* 2. Travel TA */}
             <div>
-              <label className="block text-[9px] font-bold text-slate-600 mb-0.5">Travel TA (₹)</label>
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="block text-[9px] font-bold text-slate-600">Travel TA (₹)</label>
+                {parseFloat(String(km ?? 0)) > 0 && (
+                  <span className="text-[8px] text-indigo-600 font-bold">(Auto-Calc)</span>
+                )}
+              </div>
               <input
                 type="number"
                 min="0"
                 step="1"
+                disabled={!isEditing || parseFloat(String(km ?? 0)) > 0}
                 value={editedLeg?.travel_amount ?? taAmt}
                 onChange={(e) => onLegAmountChange(index, "travel_amount", e.target.value)}
-                className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none"
+                className={`w-full text-xs font-mono font-bold p-1 border rounded focus:border-[#4A6A8A] focus:outline-none ${
+                  parseFloat(String(km ?? 0)) > 0 ? "border-slate-200 bg-slate-100 text-slate-600 cursor-not-allowed" : "border-slate-300 bg-white text-slate-900"
+                }`}
               />
-              {editedLeg && Math.abs(parseFloat(String(editedLeg.travel_amount ?? 0)) - parseFloat(String(taAmt ?? 0))) > 0.01 && (
+              {editedLeg && parseFloat(String(km ?? 0)) <= 0 && Math.abs(parseFloat(String(editedLeg.travel_amount ?? 0)) - parseFloat(String(taAmt ?? 0))) > 0.01 && (
                 <input
                   type="text"
                   placeholder="Reason for TA edit *"
                   value={editedLeg?.remarks?.travel_amount || ""}
                   onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "travel_amount", e.target.value)}
-                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                  className="w-full text-[10px] p-1 border border-rose-300 rounded bg-rose-50 text-rose-950 font-medium placeholder:text-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400 mt-1 shadow-2xs"
                 />
               )}
             </div>
@@ -1164,6 +1185,7 @@ const LegDetailCard = ({
                   type="number"
                   min="0"
                   step="1"
+                  disabled={!isEditing}
                   value={editedLeg?.da ?? daAmt}
                   onChange={(e) => onLegAmountChange(index, "da", e.target.value)}
                   className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-emerald-800"
@@ -1174,7 +1196,7 @@ const LegDetailCard = ({
                     placeholder="Reason for DA edit *"
                     value={editedLeg?.remarks?.da_amount || editedLeg?.remarks?.da || ""}
                     onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "da_amount", e.target.value)}
-                    className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                    className="w-full text-[10px] p-1 border border-rose-300 rounded bg-rose-50 text-rose-950 font-medium placeholder:text-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400 mt-1 shadow-2xs"
                   />
                 )}
               </div>
@@ -1187,6 +1209,7 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                disabled={!isEditing}
                 value={editedLeg?.sub_amount ?? 0}
                 onChange={(e) => onLegAmountChange(index, "sub_amount", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-indigo-800"
@@ -1197,7 +1220,7 @@ const LegDetailCard = ({
                   placeholder="Reason for Conveyance edit *"
                   value={editedLeg?.remarks?.sub_amount || ""}
                   onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "sub_amount", e.target.value)}
-                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                  className="w-full text-[10px] p-1 border border-rose-300 rounded bg-rose-50 text-rose-950 font-medium placeholder:text-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400 mt-1 shadow-2xs"
                 />
               )}
             </div>
@@ -1209,6 +1232,7 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                disabled={!isEditing}
                 value={editedLeg?.hotel_amount ?? hotelAmt}
                 onChange={(e) => onLegAmountChange(index, "hotel_amount", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-purple-800"
@@ -1219,7 +1243,7 @@ const LegDetailCard = ({
                   placeholder="Reason for Hotel edit *"
                   value={editedLeg?.remarks?.hotel_amount || ""}
                   onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "hotel_amount", e.target.value)}
-                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                  className="w-full text-[10px] p-1 border border-rose-300 rounded bg-rose-50 text-rose-950 font-medium placeholder:text-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400 mt-1 shadow-2xs"
                 />
               )}
             </div>
@@ -1231,6 +1255,7 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                disabled={!isEditing}
                 value={editedLeg?.local_purchase ?? localPur}
                 onChange={(e) => onLegAmountChange(index, "local_purchase", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-amber-800"
@@ -1241,7 +1266,7 @@ const LegDetailCard = ({
                   placeholder="Reason for Purchase edit *"
                   value={editedLeg?.remarks?.local_purchase || ""}
                   onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "local_purchase", e.target.value)}
-                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                  className="w-full text-[10px] p-1 border border-rose-300 rounded bg-rose-50 text-rose-950 font-medium placeholder:text-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400 mt-1 shadow-2xs"
                 />
               )}
             </div>
@@ -1253,6 +1278,7 @@ const LegDetailCard = ({
                 type="number"
                 min="0"
                 step="1"
+                disabled={!isEditing}
                 value={editedLeg?.other_amount ?? othAmt}
                 onChange={(e) => onLegAmountChange(index, "other_amount", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-amber-700"
@@ -1263,7 +1289,7 @@ const LegDetailCard = ({
                   placeholder="Reason for Other Exp edit *"
                   value={editedLeg?.remarks?.other_amount || ""}
                   onChange={(e) => onLegRemarkChange && onLegRemarkChange(index, "other_amount", e.target.value)}
-                  className="w-full text-[9px] p-0.5 border border-rose-300 rounded bg-rose-50 text-rose-900 mt-1 focus:outline-none"
+                  className="w-full text-[10px] p-1 border border-rose-300 rounded bg-rose-50 text-rose-950 font-medium placeholder:text-rose-400 focus:outline-none focus:ring-1 focus:ring-rose-400 mt-1 shadow-2xs"
                 />
               )}
             </div>

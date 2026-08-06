@@ -594,9 +594,10 @@ export default function ApprovalPage() {
             : (Array.isArray(expenseDetails?.legs) ? expenseDetails.legs : []);
           const originalLeg = rawLegs[i] || {};
           
+          const isKmLeg = parseFloat(String(originalLeg.km ?? originalLeg.distance_km ?? 0)) > 0;
           const checks = [
-            { field: "distance_km", keyInRemarks: ["distance_km", "km"], name: "Distance (KM)", current: leg.km, original: originalLeg.km ?? originalLeg.distance_km ?? 0 },
-            { field: "travel_amount", keyInRemarks: ["travel_amount"], name: "Travel TA", current: leg.travel_amount, original: originalLeg.amount ?? originalLeg.travel_amount ?? 0 },
+            { field: "distance_km", keyInRemarks: ["distance_km", "km", "travel_amount"], name: "Distance (KM)", current: leg.km, original: originalLeg.km ?? originalLeg.distance_km ?? 0 },
+            { field: "travel_amount", keyInRemarks: isKmLeg ? ["travel_amount", "distance_km", "km"] : ["travel_amount"], name: "Travel TA", current: leg.travel_amount, original: originalLeg.amount ?? originalLeg.travel_amount ?? 0 },
             { field: "sub_amount", keyInRemarks: ["sub_amount"], name: "Local Conveyance", current: leg.sub_amount, original: originalLeg.sub_amount ?? 0 },
             { field: "hotel_amount", keyInRemarks: ["hotel_amount"], name: "Hotel stay", current: leg.hotel_amount, original: originalLeg.hotel ?? originalLeg.hotel_amount ?? 0 },
             { field: "local_purchase", keyInRemarks: ["local_purchase"], name: "Local Purchase", current: leg.local_purchase, original: originalLeg.local_purchase ?? 0 },
