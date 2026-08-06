@@ -1083,7 +1083,11 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
     const expenseCodes = expenses.map(e => e.expense_code).filter(Boolean);
     let allLegs = [];
     if (expenseCodes.length > 0) {
-      allLegs = await queryInChunks(env.DB, "SELECT * FROM expense_itineraries WHERE exp_id IN (?)", expenseCodes);
+      allLegs = await queryInChunks(
+        env.DB,
+        "SELECT exp_id, itinerary_id, leg_number, travel_mode, sub_mode, distance_km, travel_amount, sub_amount, calls_assigned, calls_completed, pms_count, asset_tagging, calibration_count, mobilise_count FROM expense_itineraries WHERE exp_id IN (?)",
+        expenseCodes
+      );
     }
 
     const legsByCode = {};
@@ -3777,8 +3781,8 @@ export async function handleGetMonthSummary(request, env, params, query, user) {
   const bindings = [];
 
   if (month) {
-    whereClauses.push("UPPER(e.month) = UPPER(?)");
-    bindings.push(month);
+    whereClauses.push("(e.month = ? OR LOWER(e.month) = LOWER(?))");
+    bindings.push(month, month);
   }
   if (year) {
     whereClauses.push("e.year = ?");
