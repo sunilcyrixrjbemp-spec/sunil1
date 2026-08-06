@@ -14,7 +14,7 @@ import {
 import { approvalService } from "../services/approvalService";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
-import Loader from "../components/common/Loader";
+import ApprovalSkeleton from "../components/common/ApprovalSkeleton";
 
 import { prefetchManager } from "../utils/prefetchManager";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
@@ -1238,7 +1238,7 @@ export default function ApprovalPage() {
           </span>
         </div>
         {loading ? (
-          <Loader message="Loading pending reviews..." />
+          <ApprovalSkeleton />
         ) : claimRequests.length === 0 ? (
           <div className="py-12 text-center text-slate-400 text-xs font-bold">
             No pending claims awaiting review.
