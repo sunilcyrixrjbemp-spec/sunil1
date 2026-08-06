@@ -5538,14 +5538,14 @@ export default function ExpensePage() {
           </div>
           
           {/* Custom Sharp Tab Buttons */}
-          <div className="flex gap-1.5 bg-white/10 p-1 rounded-none border border-white/20">
+          <div className="flex gap-1.5 bg-black/20 p-1 rounded-lg border border-white/10">
             <button
               type="button"
               onClick={() => { setActiveClaimsTab("sheets"); setMyClaimsPage(1); }}
-              className={`px-3 py-1 text-xs font-black rounded-none border transition-all cursor-pointer ${
+              className={`px-3 py-1 text-xs font-extrabold rounded-md transition-all cursor-pointer ${
                 activeClaimsTab === "sheets"
-                  ? "bg-white text-[#4A6A8A] border-white shadow-2xs"
-                  : "bg-transparent text-white/80 border-transparent hover:bg-white/15"
+                  ? "bg-white text-[#4A6A8A] shadow-xs"
+                  : "bg-transparent text-white/80 hover:bg-white/10"
               }`}
             >
               Expense Sheets ({getFilteredClaims().length})
@@ -5553,10 +5553,10 @@ export default function ExpensePage() {
             <button
               type="button"
               onClick={() => { setActiveClaimsTab("legs"); setMyClaimsPage(1); }}
-              className={`px-3 py-1 text-xs font-black rounded-none border transition-all cursor-pointer ${
+              className={`px-3 py-1 text-xs font-extrabold rounded-md transition-all cursor-pointer ${
                 activeClaimsTab === "legs"
-                  ? "bg-white text-[#4A6A8A] border-white shadow-2xs"
-                  : "bg-transparent text-white/80 border-transparent hover:bg-white/15"
+                  ? "bg-white text-[#4A6A8A] shadow-xs"
+                  : "bg-transparent text-white/80 hover:bg-white/10"
               }`}
             >
               Legs Details ({getFilteredLegs().length})
@@ -5564,35 +5564,38 @@ export default function ExpensePage() {
           </div>
         </div>
 
-        {/* High-Density Sharp Filter Toolbar */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* High-Density Responsive Filter Toolbar */}
+        <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Search Box with Non-Overlapping Magnifying Glass */}
           <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
             <input
               type="text"
-              placeholder="Search code, purpose, mode, route, amount..."
+              placeholder="Search code, route, amount..."
               value={claimsSearch}
               onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
-              className="input-lte pl-9 pr-7 rounded-none font-semibold text-xs border-slate-300 shadow-2xs"
+              style={{ paddingLeft: "2.25rem", paddingRight: "2rem" }}
+              className="w-full h-9 rounded-lg font-semibold text-xs border border-slate-300 bg-white shadow-2xs focus:border-blue-500 focus:outline-none"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
             {claimsSearch && (
               <button
                 type="button"
                 onClick={() => { setClaimsSearch(""); setMyClaimsPage(1); }}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 border-0 bg-transparent cursor-pointer text-xs font-bold"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 border-0 bg-transparent cursor-pointer text-xs font-bold"
               >
                 ✕
               </button>
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-3 w-full md:w-auto md:flex md:items-center">
-            <div className="flex flex-col gap-1 w-full md:w-auto">
-              <span className="text-[9px] font-extrabold uppercase text-slate-500 tracking-wider">MONTH</span>
+          {/* Filters Grid with Full Width Option Support */}
+          <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
+            <div className="flex flex-col gap-0.5 w-full md:w-auto">
+              <span className="text-[8.5px] font-extrabold uppercase text-slate-500 tracking-wider">MONTH</span>
               <select
                 value={claimsMonthFilter}
                 onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
-                className="input-lte w-full md:w-36 text-xs font-bold border-slate-300 rounded-none cursor-pointer"
+                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-slate-300 bg-white rounded-lg cursor-pointer focus:border-blue-500 focus:outline-none"
               >
                 <option value="all">All Months</option>
                 {getUniqueMonths().map(m => (
@@ -5601,33 +5604,33 @@ export default function ExpensePage() {
               </select>
             </div>
 
-            <div className="flex flex-col gap-1 w-full md:w-auto">
-              <span className="text-[9px] font-extrabold uppercase text-slate-500 tracking-wider">STATUS</span>
+            <div className="flex flex-col gap-0.5 w-full md:w-auto">
+              <span className="text-[8.5px] font-extrabold uppercase text-slate-500 tracking-wider">STATUS</span>
               <select
                 value={claimsStatusFilter}
                 onChange={(e) => { setClaimsStatusFilter(e.target.value as any); setMyClaimsPage(1); }}
-                className="input-lte w-full md:w-36 text-xs font-bold border-slate-300 rounded-none cursor-pointer"
+                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-slate-300 bg-white rounded-lg cursor-pointer focus:border-blue-500 focus:outline-none"
               >
-                <option value="all">All Statuses</option>
+                <option value="all">All Status</option>
                 <option value="draft">Draft</option>
                 <option value="submitted">Submitted</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
-                <option value="returned_to_draft">Returned / Edit</option>
+                <option value="returned_to_draft">Returned</option>
               </select>
             </div>
 
-            <div className="flex flex-col gap-1 w-full md:w-auto">
-              <span className="text-[9px] font-extrabold uppercase text-slate-500 tracking-wider">SORT</span>
+            <div className="flex flex-col gap-0.5 w-full md:w-auto">
+              <span className="text-[8.5px] font-extrabold uppercase text-slate-500 tracking-wider">SORT</span>
               <select
                 value={claimsSortOrder}
                 onChange={(e) => { setClaimsSortOrder(e.target.value as any); setMyClaimsPage(1); }}
-                className="input-lte w-full md:w-36 text-xs font-bold border-slate-300 rounded-none cursor-pointer"
+                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-slate-300 bg-white rounded-lg cursor-pointer focus:border-blue-500 focus:outline-none"
               >
-                <option value="date_desc">Newest Date</option>
-                <option value="date_asc">Oldest Date</option>
-                <option value="amount_desc">Highest Amount</option>
-                <option value="amount_asc">Lowest Amount</option>
+                <option value="date_desc">Newest</option>
+                <option value="date_asc">Oldest</option>
+                <option value="amount_desc">High Amt</option>
+                <option value="amount_asc">Low Amt</option>
               </select>
             </div>
           </div>
