@@ -220,6 +220,7 @@ export async function fetchPendingApprovals(env, user) {
       JOIN expenses e ON a.expense_id = e.id
       LEFT JOIN users u ON e.user_id = u.id
       WHERE a.approver_id = ? AND a.status = 'pending'
+        AND (e.processing_status IS NULL OR e.processing_status != 'QUEUED')
         AND EXISTS (
           SELECT 1 
           FROM hierarchy_requesters hr 
@@ -1183,12 +1184,16 @@ async function processBulkApprovalInBackground(requestUrl, env, params, query, u
       }
 
       if (res && res.status >= 200 && res.status < 300) {
+        await env.DB.prepare(`UPDATE expenses SET processing_status = NULL WHERE id = ?`).bind(expId).run().catch(() => {});
         successCount++;
       } else {
+        // If approval fails in background, reset processing_status so claim reappears in Approval Center for retry
+        await env.DB.prepare(`UPDATE expenses SET processing_status = NULL WHERE id = ?`).bind(expId).run().catch(() => {});
         failCount++;
       }
     } catch (err) {
       console.error(`Error processing background bulk claim ID ${expId}:`, err);
+      await env.DB.prepare(`UPDATE expenses SET processing_status = NULL WHERE id = ?`).bind(expId).run().catch(() => {});
       failCount++;
     }
   }
@@ -1216,6 +1221,16 @@ export async function handleBulkApprove(request, env, params, query, user) {
   const { expense_ids, action_type, comments } = body;
   if (!Array.isArray(expense_ids) || expense_ids.length === 0) {
     return jsonResponse({ error: "Invalid or empty expense_ids array" }, 400);
+  }
+
+  // Immediately tag all selected claims as QUEUED in database so they disappear from pending list instantly
+  try {
+    const placeholders = expense_ids.map(() => "?").join(",");
+    await env.DB.prepare(
+      `UPDATE expenses SET processing_status = 'QUEUED' WHERE id IN (${placeholders})`
+    ).bind(...expense_ids).run();
+  } catch (e) {
+    console.error("Failed to tag queued status for bulk claims:", e);
   }
 
   // Fire background queue execution instantly so user gets 0.01ms response
