@@ -2729,10 +2729,14 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       const pmsList = Array.isArray(actDetails.pms_list) ? actDetails.pms_list : [];
       const assetsList = Array.isArray(actDetails.assets_list) ? actDetails.assets_list : [];
 
-      if (callsList.length > 0) {
-        itiCompleted = callsList.filter(c => c.barcode || c.status === "Close" || c.status === "Attend & Close").length;
-        itiAssigned = itiCompleted;
+      const validCallsList = callsList.filter(c => c && c.barcode && String(c.barcode).trim() !== "");
+      if (validCallsList.length > 0) {
+        itiCompleted = validCallsList.length;
+        itiAssigned = validCallsList.length;
         sanitizedActs.push("Calls");
+      } else {
+        itiCompleted = 0;
+        itiAssigned = 0;
       }
 
       if (pmsList.length > 0) {
@@ -3098,6 +3102,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       
       if (selectedActs.includes("Calls")) {
         for (const call of actDetails.calls_list || []) {
+          if (!call || !call.barcode || !String(call.barcode).trim()) continue;
           const asset = call.asset_details || {};
           dbBatchStatements.push({
             sql: `

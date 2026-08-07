@@ -1009,8 +1009,8 @@ export default function HomePage() {
         if (callsComp === 0) callsAssign = 0;
         if (callsAssign > callsComp && callsComp > 0) callsAssign = callsComp;
 
-        if (callsAssign > 0 || callsComp > 0) {
-          const text = callsAssign > 0 ? `${callsComp}/${callsAssign} Calls` : `${callsComp} Calls`;
+        if (callsAssign > 0 && callsComp > 0) {
+          const text = `${callsComp}/${callsAssign} Calls`;
           boxes.push(
             <span
               key="calls"

@@ -439,17 +439,23 @@ export async function fetchPendingApprovals(env, user) {
  * Retrieve pending approvals for a user
  */
 export async function handleGetApprovals(request, env, params, query, user) {
-  // Trigger background cleanup for legacy rows with 0 completed calls
+  // Trigger background cleanup for legacy rows with 0 completed calls or 0 breakdown barcodes
   if (env.DB) {
     env.DB.prepare(`
       UPDATE expenses 
       SET calls_assigned = 0, 
+          calls_completed = 0,
           description = CASE 
             WHEN description LIKE '%Activities: Calls, %' THEN REPLACE(description, 'Activities: Calls, ', 'Activities: ')
             WHEN description LIKE '%Activities: Calls%' THEN REPLACE(description, 'Activities: Calls', 'Activities: Other')
             ELSE description 
           END 
-      WHERE calls_assigned > 0 AND (calls_completed = 0 OR calls_completed IS NULL)
+      WHERE (calls_assigned > 0 OR calls_completed > 0)
+        AND expense_code NOT IN (
+          SELECT DISTINCT exp_id FROM expense_itineraries i
+          JOIN expense_breakdown_calls c ON i.itinerary_id = c.itinerary_id
+          WHERE c.barcode IS NOT NULL AND TRIM(c.barcode) != ''
+        )
     `).run().catch(() => {});
 
     env.DB.prepare(`
@@ -461,12 +467,17 @@ export async function handleGetApprovals(request, env, params, query, user) {
     env.DB.prepare(`
       UPDATE expense_itineraries 
       SET calls_assigned = 0, 
+          calls_completed = 0,
           visit_purpose = CASE 
             WHEN visit_purpose LIKE '%Activities: Calls, %' THEN REPLACE(visit_purpose, 'Activities: Calls, ', 'Activities: ')
             WHEN visit_purpose LIKE '%Activities: Calls%' THEN REPLACE(visit_purpose, 'Activities: Calls', 'Activities: Other')
             ELSE visit_purpose 
           END 
-      WHERE calls_assigned > 0 AND (calls_completed = 0 OR calls_completed IS NULL)
+      WHERE (calls_assigned > 0 OR calls_completed > 0)
+        AND itinerary_id NOT IN (
+          SELECT DISTINCT itinerary_id FROM expense_breakdown_calls
+          WHERE barcode IS NOT NULL AND TRIM(barcode) != ''
+        )
     `).run().catch(() => {});
 
     env.DB.prepare(`
