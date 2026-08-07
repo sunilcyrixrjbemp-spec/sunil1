@@ -1959,11 +1959,19 @@ export async function handleSaveFacility(request, env) {
         }, 400);
       }
 
-      await runWrite(
-        env,
-        "INSERT INTO facility_details (facility_name, district_name) VALUES (?, ?)",
-        [facilityName, districtName]
-      );
+      try {
+        await runWrite(
+          env,
+          "INSERT INTO facility_details (facility_name, district_name, facility_incharge) VALUES (?, ?, ?)",
+          [facilityName, districtName, "N/A"]
+        );
+      } catch (_) {
+        await runWrite(
+          env,
+          "INSERT INTO facility_details (facility_name, district_name) VALUES (?, ?)",
+          [facilityName, districtName]
+        );
+      }
     } else {
       // Check duplicate in no_ta_da_hospitals
       const existing = await env.DB.prepare(
