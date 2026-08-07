@@ -1209,6 +1209,8 @@ export async function handleBulkApprove(request, env, params, query, user) {
     successCount,
     failCount
   });
+}
+
 export async function handleGetRouteBenchmark(request, env, params, query, user) {
   try {
     const fromLoc = (query.get("from") || "").trim();
