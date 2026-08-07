@@ -191,7 +191,16 @@ export const adminService = {
     return response.data;
   },
 
-  saveFacility: async (data: { facility_name: string; district_name: string; target_table: "standard" | "no_ta_da" }): Promise<any> => {
+  saveFacility: async (data: {
+    facility_name: string;
+    district_name: string;
+    target_table: "standard" | "no_ta_da";
+    facility_incharge?: string;
+    dm_name?: string;
+    coordinator_name?: string;
+    facility_type?: string;
+    zone_name?: string;
+  }): Promise<any> => {
     const response = await api.post("/admin/facilities", data);
     return response.data;
   },

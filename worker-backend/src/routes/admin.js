@@ -1897,8 +1897,8 @@ export async function handleGetFacilities(request, env) {
   try {
     const [noTaDaRes, stdRes, assetHospRes] = await Promise.all([
       env.DB.prepare("SELECT ROWID as id, hospital_name, district_name, created_at FROM no_ta_da_hospitals ORDER BY hospital_name ASC").all().catch(() => ({ results: [] })),
-      env.DB.prepare("SELECT ROWID as id, facility_name, district_name FROM facility_details ORDER BY facility_name ASC").all().catch(() => ({ results: [] })),
-      env.DB.prepare("SELECT DISTINCT hospital_name as facility_name, district_name FROM assets_inventory WHERE hospital_name IS NOT NULL AND hospital_name != ''").all().catch(() => ({ results: [] }))
+      env.DB.prepare("SELECT ROWID as id, facility_name, district_name, facility_incharge, dm_name, coordinator_name, facility_type, zone_name FROM facility_details ORDER BY facility_name ASC").all().catch(() => ({ results: [] })),
+      env.DB.prepare("SELECT DISTINCT hospital_name as facility_name, district_name, facility_type, zone_name, di_name as dm_name FROM assets_inventory WHERE hospital_name IS NOT NULL AND hospital_name != ''").all().catch(() => ({ results: [] }))
     ]);
 
     const stdMap = new Map();
@@ -1908,7 +1908,17 @@ export async function handleGetFacilities(request, env) {
     for (const f of (stdRes.results || [])) {
       const k = (f.facility_name || "").trim().toLowerCase();
       if (k) {
-        stdMap.set(k, { id: f.id, facility_name: f.facility_name, district_name: f.district_name || "General", source: "facility_details" });
+        stdMap.set(k, {
+          id: f.id,
+          facility_name: f.facility_name,
+          district_name: f.district_name || "General",
+          facility_incharge: f.facility_incharge || "N/A",
+          dm_name: f.dm_name || "N/A",
+          coordinator_name: f.coordinator_name || "N/A",
+          facility_type: f.facility_type || "Standard Facility",
+          zone_name: f.zone_name || "Rajasthan",
+          source: "facility_details"
+        });
       }
     }
 
@@ -1917,7 +1927,17 @@ export async function handleGetFacilities(request, env) {
       const k = (f.facility_name || "").trim().toLowerCase();
       if (k && !stdMap.has(k)) {
         virtualId++;
-        stdMap.set(k, { id: virtualId, facility_name: f.facility_name, district_name: f.district_name || "General", source: "assets_inventory" });
+        stdMap.set(k, {
+          id: virtualId,
+          facility_name: f.facility_name,
+          district_name: f.district_name || "General",
+          facility_incharge: "N/A",
+          dm_name: f.dm_name || "N/A",
+          coordinator_name: "N/A",
+          facility_type: f.facility_type || "Hospital",
+          zone_name: f.zone_name || "Rajasthan",
+          source: "assets_inventory"
+        });
       }
     }
 
@@ -1938,6 +1958,11 @@ export async function handleSaveFacility(request, env) {
     const body = await request.json();
     const facilityName = (body.facility_name || body.hospital_name || body.facilityName || body.hospitalName || "").trim();
     const districtName = (body.district_name || body.districtName || "").trim();
+    const facilityIncharge = (body.facility_incharge || body.facilityIncharge || "N/A").trim();
+    const dmName = (body.dm_name || body.dmName || "N/A").trim();
+    const coordinatorName = (body.coordinator_name || body.coordinatorName || "N/A").trim();
+    const facilityType = (body.facility_type || body.facilityType || "Standard Facility").trim();
+    const zoneName = (body.zone_name || body.zoneName || "Rajasthan").trim();
     const targetTable = (body.target_table || (body.is_no_ta_da ? "no_ta_da" : "standard")).trim().toLowerCase();
 
     if (!facilityName || !districtName) {
@@ -1962,15 +1987,23 @@ export async function handleSaveFacility(request, env) {
       try {
         await runWrite(
           env,
-          "INSERT INTO facility_details (facility_name, district_name, facility_incharge) VALUES (?, ?, ?)",
-          [facilityName, districtName, "N/A"]
+          "INSERT INTO facility_details (facility_name, district_name, facility_incharge, dm_name, coordinator_name, facility_type, zone_name) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [facilityName, districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName]
         );
       } catch (_) {
-        await runWrite(
-          env,
-          "INSERT INTO facility_details (facility_name, district_name) VALUES (?, ?)",
-          [facilityName, districtName]
-        );
+        try {
+          await runWrite(
+            env,
+            "INSERT INTO facility_details (facility_name, district_name, facility_incharge) VALUES (?, ?, ?)",
+            [facilityName, districtName, facilityIncharge]
+          );
+        } catch (e2) {
+          await runWrite(
+            env,
+            "INSERT INTO facility_details (facility_name, district_name) VALUES (?, ?)",
+            [facilityName, districtName]
+          );
+        }
       }
     } else {
       // Check duplicate in no_ta_da_hospitals

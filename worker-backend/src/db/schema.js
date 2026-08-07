@@ -345,6 +345,11 @@ export const facilityDetails = sqliteTable("facility_details", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   districtName: text("district_name").notNull(),
   facilityName: text("facility_name").notNull(),
+  facilityIncharge: text("facility_incharge"),
+  dmName: text("dm_name"),
+  coordinatorName: text("coordinator_name"),
+  facilityType: text("facility_type"),
+  zoneName: text("zone_name"),
 });
 
 // 23. RJ Penalties Table

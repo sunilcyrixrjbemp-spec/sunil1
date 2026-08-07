@@ -218,6 +218,11 @@ export default function AdminPage() {
   const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
   const [newFacilityName, setNewFacilityName] = useState("");
   const [newFacilityDistrict, setNewFacilityDistrict] = useState("");
+  const [newFacilityIncharge, setNewFacilityIncharge] = useState("");
+  const [newFacilityDmName, setNewFacilityDmName] = useState("");
+  const [newFacilityCoordinatorName, setNewFacilityCoordinatorName] = useState("");
+  const [newFacilityType, setNewFacilityType] = useState("District Hospital (DH)");
+  const [newFacilityZone, setNewFacilityZone] = useState("Zone Jaipur");
   const [newFacilityTargetTable, setNewFacilityTargetTable] = useState<"standard" | "no_ta_da">("standard");
 
   const fetchFacilities = async () => {
@@ -245,11 +250,19 @@ export default function AdminPage() {
         facility_name: newFacilityName.trim(),
         district_name: newFacilityDistrict.trim(),
         target_table: newFacilityTargetTable,
+        facility_incharge: newFacilityIncharge.trim() || "N/A",
+        dm_name: newFacilityDmName.trim() || "N/A",
+        coordinator_name: newFacilityCoordinatorName.trim() || "N/A",
+        facility_type: newFacilityType.trim() || "District Hospital (DH)",
+        zone_name: newFacilityZone.trim() || "Zone Jaipur",
       });
       toast.success(res.message || "Facility added successfully!");
       setIsAddFacilityModalOpen(false);
       setNewFacilityName("");
       setNewFacilityDistrict("");
+      setNewFacilityIncharge("");
+      setNewFacilityDmName("");
+      setNewFacilityCoordinatorName("");
       fetchFacilities();
     } catch (e: any) {
       toast.error(e.response?.data?.error || e.message || "Failed to add facility");
@@ -2785,8 +2798,12 @@ export default function AdminPage() {
                       <tr className="bg-slate-800 text-white border-b border-slate-700 font-black text-[10px] uppercase tracking-wider font-mono">
                         <th className="py-2.5 px-3"># ID</th>
                         <th className="py-2.5 px-3">Facility Name (facility_name)</th>
-                        <th className="py-2.5 px-3">District Name (district_name)</th>
-                        <th className="py-2.5 px-3">Database Master Table</th>
+                        <th className="py-2.5 px-3">District (district_name)</th>
+                        <th className="py-2.5 px-3">Facility Type (facility_type)</th>
+                        <th className="py-2.5 px-3">Zone (zone_name)</th>
+                        <th className="py-2.5 px-3">Facility Incharge (facility_incharge)</th>
+                        <th className="py-2.5 px-3">DM Name (dm_name)</th>
+                        <th className="py-2.5 px-3">Coordinator (coordinator_name)</th>
                         <th className="py-2.5 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -2797,7 +2814,12 @@ export default function AdminPage() {
                           const q = facilitySearch.toLowerCase();
                           return (
                             (f.facility_name || "").toLowerCase().includes(q) ||
-                            (f.district_name || "").toLowerCase().includes(q)
+                            (f.district_name || "").toLowerCase().includes(q) ||
+                            (f.facility_incharge || "").toLowerCase().includes(q) ||
+                            (f.dm_name || "").toLowerCase().includes(q) ||
+                            (f.coordinator_name || "").toLowerCase().includes(q) ||
+                            (f.facility_type || "").toLowerCase().includes(q) ||
+                            (f.zone_name || "").toLowerCase().includes(q)
                           );
                         })
                         .map((f, idx) => (
@@ -2805,11 +2827,11 @@ export default function AdminPage() {
                             <td className="py-2 px-3 font-mono font-bold text-slate-500">#{f.id}</td>
                             <td className="py-2 px-3 font-extrabold text-slate-900">{f.facility_name}</td>
                             <td className="py-2 px-3 font-bold text-blue-800 font-mono">{f.district_name}</td>
-                            <td className="py-2 px-3">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-mono font-bold">
-                                facility_details
-                              </span>
-                            </td>
+                            <td className="py-2 px-3 font-bold text-slate-700">{f.facility_type || "Hospital"}</td>
+                            <td className="py-2 px-3 font-bold text-slate-600">{f.zone_name || "Rajasthan"}</td>
+                            <td className="py-2 px-3 font-semibold text-slate-800">{f.facility_incharge || "N/A"}</td>
+                            <td className="py-2 px-3 font-semibold text-slate-800">{f.dm_name || "N/A"}</td>
+                            <td className="py-2 px-3 font-semibold text-slate-800">{f.coordinator_name || "N/A"}</td>
                             <td className="py-2 px-3 text-right">
                               <Popconfirm
                                 title="Delete Expense Facility"
@@ -2827,7 +2849,7 @@ export default function AdminPage() {
                         ))}
                       {standardFacilities.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="py-6 text-center text-slate-400 font-bold">
+                          <td colSpan={9} className="py-6 text-center text-slate-400 font-bold">
                             No Expense Facilities found in facility_details table.
                           </td>
                         </tr>
@@ -3003,6 +3025,91 @@ export default function AdminPage() {
                   ))}
                 </select>
               </div>
+
+              {newFacilityTargetTable === "standard" && (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                        Facility Type (facility_type)
+                      </label>
+                      <select
+                        value={newFacilityType}
+                        onChange={(e) => setNewFacilityType(e.target.value)}
+                        className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9 cursor-pointer"
+                      >
+                        <option value="District Hospital (DH)">District Hospital (DH)</option>
+                        <option value="Sub-District Hospital (SDH)">Sub-District Hospital (SDH)</option>
+                        <option value="Medical College / Hospital">Medical College / Hospital</option>
+                        <option value="Community Health Centre (CHC)">Community Health Centre (CHC)</option>
+                        <option value="Primary Health Centre (PHC)">Primary Health Centre (PHC)</option>
+                        <option value="Base Working Location / Hub">Base Working Location / Hub</option>
+                        <option value="Other Facility">Other Facility</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                        Zone Name (zone_name)
+                      </label>
+                      <select
+                        value={newFacilityZone}
+                        onChange={(e) => setNewFacilityZone(e.target.value)}
+                        className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9 cursor-pointer"
+                      >
+                        <option value="Zone Jaipur">Zone Jaipur</option>
+                        <option value="Zone Jodhpur">Zone Jodhpur</option>
+                        <option value="Zone Bikaner">Zone Bikaner</option>
+                        <option value="Zone Ajmer">Zone Ajmer</option>
+                        <option value="Zone Udaipur">Zone Udaipur</option>
+                        <option value="Zone Kota">Zone Kota</option>
+                        <option value="Zone Bharatpur">Zone Bharatpur</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                      Facility Incharge (facility_incharge)
+                    </label>
+                    <input
+                      type="text"
+                      value={newFacilityIncharge}
+                      onChange={(e) => setNewFacilityIncharge(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9"
+                      placeholder="e.g. Dr. R. K. Sharma / MoIC"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                        DM Name (dm_name)
+                      </label>
+                      <input
+                        type="text"
+                        value={newFacilityDmName}
+                        onChange={(e) => setNewFacilityDmName(e.target.value)}
+                        className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9"
+                        placeholder="District Manager"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                        Coordinator Name (coordinator_name)
+                      </label>
+                      <input
+                        type="text"
+                        value={newFacilityCoordinatorName}
+                        onChange={(e) => setNewFacilityCoordinatorName(e.target.value)}
+                        className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9"
+                        placeholder="Coordinator Name"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
                 <button

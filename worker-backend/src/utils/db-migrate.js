@@ -101,9 +101,19 @@ export async function runMigrations(db) {
     `CREATE TABLE IF NOT EXISTS facility_details (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       facility_name TEXT NOT NULL,
-      district_name TEXT NOT NULL
+      district_name TEXT NOT NULL,
+      facility_incharge TEXT,
+      dm_name TEXT,
+      coordinator_name TEXT,
+      facility_type TEXT,
+      zone_name TEXT
     )`,
     `ALTER TABLE facility_details ADD COLUMN id INTEGER`,
+    `ALTER TABLE facility_details ADD COLUMN facility_incharge TEXT`,
+    `ALTER TABLE facility_details ADD COLUMN dm_name TEXT`,
+    `ALTER TABLE facility_details ADD COLUMN coordinator_name TEXT`,
+    `ALTER TABLE facility_details ADD COLUMN facility_type TEXT`,
+    `ALTER TABLE facility_details ADD COLUMN zone_name TEXT`,
     // Add base_reporting_location column to users if not present
     `ALTER TABLE users ADD COLUMN base_reporting_location TEXT`,
     // Add district_type column to expenses if not present
