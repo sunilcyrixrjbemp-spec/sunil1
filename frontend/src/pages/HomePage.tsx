@@ -1025,25 +1025,29 @@ export default function HomePage() {
 
         if (record.itineraries && Array.isArray(record.itineraries) && record.itineraries.length > 0) {
           let hasBarcodes = false;
+          let totalLegCalls = 0;
+          let closedLegCalls = 0;
           for (const leg of record.itineraries) {
             let actObj = leg.activity_details;
             if (typeof actObj === "string") {
               try { actObj = JSON.parse(actObj); } catch (_) { actObj = null; }
             }
             const cList = Array.isArray(actObj?.calls_list) ? actObj.calls_list : [];
-            if (cList.some((c: any) => c && c.barcode && String(c.barcode).trim() !== "")) {
+            const validCalls = cList.filter((c: any) => c && c.barcode && String(c.barcode).trim() !== "");
+            if (validCalls.length > 0) {
               hasBarcodes = true;
-              break;
+              totalLegCalls += validCalls.length;
+              closedLegCalls += validCalls.filter((c: any) => c.status === "Close" || c.status === "Attend & Close").length;
             }
           }
           if (!hasBarcodes) {
             callsComp = 0;
             callsAssign = 0;
+          } else {
+            callsAssign = totalLegCalls;
+            callsComp = closedLegCalls > 0 ? closedLegCalls : totalLegCalls;
           }
         }
-
-        if (callsComp === 0) callsAssign = 0;
-        if (callsAssign > callsComp && callsComp > 0) callsAssign = callsComp;
 
         const descUpper = (record.description || record.purpose || record.visit_purpose || "").toUpperCase();
         const hasCallsInDesc = descUpper.includes("CALLS") || descUpper.includes("CALL");

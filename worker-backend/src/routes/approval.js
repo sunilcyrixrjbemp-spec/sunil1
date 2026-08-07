@@ -307,25 +307,30 @@ export async function fetchPendingApprovals(env, user) {
     const districtType = distInfo.districtType;
     const hasMismatch = distInfo.hasMismatch;
 
-    let hasValidCallBarcodes = false;
+    let totalValidCallsInLegs = 0;
+    let totalClosedCallsInLegs = 0;
     for (const l of legs) {
       if (l.activity_details) {
         try {
           const act = typeof l.activity_details === "string" ? JSON.parse(l.activity_details) : l.activity_details;
           const callsList = Array.isArray(act?.calls_list) ? act.calls_list : [];
-          if (callsList.some(c => c && c.barcode && String(c.barcode).trim() !== "")) {
-            hasValidCallBarcodes = true;
-            break;
+          const validCalls = callsList.filter(c => c && c.barcode && String(c.barcode).trim() !== "");
+          if (validCalls.length > 0) {
+            totalValidCallsInLegs += validCalls.length;
+            totalClosedCallsInLegs += validCalls.filter(c => c.status === "Close" || c.status === "Attend & Close").length;
           }
         } catch (_) {}
       }
     }
 
-    let callsAssigned = hasValidCallBarcodes ? (app.calls_assigned || 0) : 0;
-    let callsCompleted = hasValidCallBarcodes ? (app.calls_completed || 0) : 0;
+    let callsAssigned = 0;
+    let callsCompleted = 0;
     let cleanPurpose = computeCombinedPurpose(legs, app.description || "");
 
-    if (!hasValidCallBarcodes || callsCompleted === 0) {
+    if (totalValidCallsInLegs > 0) {
+      callsAssigned = totalValidCallsInLegs;
+      callsCompleted = totalClosedCallsInLegs > 0 ? totalClosedCallsInLegs : totalValidCallsInLegs;
+    } else {
       callsAssigned = 0;
       callsCompleted = 0;
       if (cleanPurpose.includes("Calls")) {
@@ -335,8 +340,6 @@ export async function fetchPendingApprovals(env, user) {
                                    .replace("Calls", "").trim();
         if (cleanPurpose === "Activities:" || !cleanPurpose) cleanPurpose = "Field visit";
       }
-    } else if (callsCompleted > 0 && callsAssigned > callsCompleted) {
-      callsAssigned = callsCompleted;
     }
 
     result.push({
@@ -410,25 +413,30 @@ export async function fetchPendingApprovals(env, user) {
         const legList = legacyLegsMap[row.exp_id] || [];
         const districtType = computeDistrictType(row.submitter_district, legList);
 
-        let hasValidCallBarcodesLeg = false;
+        let totalValidCallsInLegsLeg = 0;
+        let totalClosedCallsInLegsLeg = 0;
         for (const l of legList) {
           if (l.activity_details) {
             try {
               const act = typeof l.activity_details === "string" ? JSON.parse(l.activity_details) : l.activity_details;
               const callsList = Array.isArray(act?.calls_list) ? act.calls_list : [];
-              if (callsList.some(c => c && c.barcode && String(c.barcode).trim() !== "")) {
-                hasValidCallBarcodesLeg = true;
-                break;
+              const validCalls = callsList.filter(c => c && c.barcode && String(c.barcode).trim() !== "");
+              if (validCalls.length > 0) {
+                totalValidCallsInLegsLeg += validCalls.length;
+                totalClosedCallsInLegsLeg += validCalls.filter(c => c.status === "Close" || c.status === "Attend & Close").length;
               }
             } catch (_) {}
           }
         }
 
-        let callsAssigned = hasValidCallBarcodesLeg ? (row.calls_assigned || 0) : 0;
-        let callsCompleted = hasValidCallBarcodesLeg ? (row.calls_completed || 0) : 0;
+        let callsAssigned = 0;
+        let callsCompleted = 0;
         let cleanPurpose = computeCombinedPurpose(legList, row.visit_purpose || "");
 
-        if (!hasValidCallBarcodesLeg || callsCompleted === 0) {
+        if (totalValidCallsInLegsLeg > 0) {
+          callsAssigned = totalValidCallsInLegsLeg;
+          callsCompleted = totalClosedCallsInLegsLeg > 0 ? totalClosedCallsInLegsLeg : totalValidCallsInLegsLeg;
+        } else {
           callsAssigned = 0;
           callsCompleted = 0;
           if (cleanPurpose.includes("Calls")) {
