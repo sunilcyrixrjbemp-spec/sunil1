@@ -219,48 +219,55 @@ export async function handleLogin(request, env) {
   try { body = await request.json(); }
   catch { return jsonResponse({ error: "Invalid JSON body" }, 400); }
 
-  const { user_id, password, force } = body;
-  const ipAddress = request.headers.get("CF-Connecting-IP") || "127.0.0.1";
-  const userAgent = request.headers.get("User-Agent") || "";
+  const cleanUserId = (user_id || "").trim();
+  const cleanPassword = (password || "").trim();
 
-  if (!user_id || !password)
+  if (!cleanUserId || !cleanPassword)
     return jsonResponse({ error: "User ID and Password are required" }, 400);
 
-  // 1. Fetch user
+  // 1. Fetch user (supports case-insensitive match on user_id, e_code, mail_id, or mobile_number)
   const user = await env.DB.prepare(
     `SELECT u.*, COALESCE(r.role, u.role) as role FROM users u
      LEFT JOIN user_roles r ON u.user_id = r.user_id
-     WHERE u.user_id = ? LIMIT 1`
-  ).bind(user_id).first();
+     WHERE LOWER(TRIM(u.user_id)) = LOWER(?)
+        OR LOWER(TRIM(u.e_code)) = LOWER(?)
+        OR LOWER(TRIM(u.mail_id)) = LOWER(?)
+        OR TRIM(u.mobile_number) = ?
+     LIMIT 1`
+  ).bind(cleanUserId, cleanUserId, cleanUserId, cleanUserId).first();
 
   if (!user) {
-    await logLogin(env, user_id, ipAddress, userAgent, "failed");
+    await logLogin(env, cleanUserId, ipAddress, userAgent, "failed");
     return jsonResponse({ error: "Invalid User ID or Password", detail: "Invalid User ID or Password" }, 401);
   }
 
+  const targetUserId = user.user_id;
+
   // 2. Status checks
   if (user.user_status === "disabled") {
-    await logLogin(env, user_id, ipAddress, userAgent, "failed");
+    await logLogin(env, targetUserId, ipAddress, userAgent, "failed");
     return jsonResponse({ error: "Your account is disabled. Please contact the administrator." }, 403);
   }
   if (user.user_status === "locked") {
-    await logLogin(env, user_id, ipAddress, userAgent, "locked");
+    await logLogin(env, targetUserId, ipAddress, userAgent, "locked");
     return jsonResponse({ error: "Your account is locked. Please use the Unlock Account option." }, 403);
   }
 
-  // 3. Verify password
-  const passwordCorrect = await verifyPassword(password, user.hashed_password);
+  // 3. Verify password (checks both hashed_password and legacy password column)
+  const userHash = user.hashed_password || user.password || "";
+  const passwordCorrect = (await verifyPassword(password, userHash)) || (await verifyPassword(cleanPassword, userHash));
+
   if (!passwordCorrect) {
     const failedAttempts = (user.failed_attempt || 0) + 1;
     if (failedAttempts >= 5) {
       await env.DB.prepare(`UPDATE users SET failed_attempt = ?, user_status = 'locked' WHERE user_id = ?`)
-        .bind(failedAttempts, user_id).run();
-      await logLogin(env, user_id, ipAddress, userAgent, "locked");
+        .bind(failedAttempts, targetUserId).run();
+      await logLogin(env, targetUserId, ipAddress, userAgent, "locked");
       return jsonResponse({ error: "Your account has been locked due to 5 failed login attempts." }, 403);
     }
     await env.DB.prepare(`UPDATE users SET failed_attempt = ? WHERE user_id = ?`)
-      .bind(failedAttempts, user_id).run();
-    await logLogin(env, user_id, ipAddress, userAgent, "failed");
+      .bind(failedAttempts, targetUserId).run();
+    await logLogin(env, targetUserId, ipAddress, userAgent, "failed");
     return jsonResponse({ error: `Invalid User ID or Password. ${5 - failedAttempts} attempts remaining.` }, 401);
   }
 
@@ -271,8 +278,8 @@ export async function handleLogin(request, env) {
   // 5. Success
   const sessionId = crypto.randomUUID();
   await env.DB.prepare(`UPDATE users SET active_session_id = ?, failed_attempt = 0 WHERE user_id = ?`)
-    .bind(sessionId, user_id).run();
-  await logLogin(env, user_id, ipAddress, userAgent, "success");
+    .bind(sessionId, targetUserId).run();
+  await logLogin(env, targetUserId, ipAddress, userAgent, "success");
 
   const secretKey = env.API_SECRET;
   const now = Math.floor(Date.now() / 1000);

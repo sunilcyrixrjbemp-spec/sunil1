@@ -18,16 +18,14 @@ import bcrypt from "./bcrypt.js";
 
 // ─── Password Utilities ───────────────────────────────────────────────────────
 
-/**
- * Verify a plain text password against a PBKDF2 SHA256 or bcrypt hashed password.
- * @param {string} plainPassword
- * @param {string} hashedPassword
- * @returns {Promise<boolean>}
- */
 export async function verifyPassword(plainPassword, hashedPassword) {
   try {
-    if (hashedPassword.startsWith("pbkdf2_sha256$")) {
-      const parts = hashedPassword.split("$");
+    if (!plainPassword || !hashedPassword) return false;
+    const strPassword = String(plainPassword);
+    const strHash = String(hashedPassword).trim();
+
+    if (strHash.startsWith("pbkdf2_sha256$")) {
+      const parts = strHash.split("$");
       if (parts.length !== 4) return false;
       const iterations = parseInt(parts[1], 10);
       const salt = parts[2];
@@ -35,7 +33,7 @@ export async function verifyPassword(plainPassword, hashedPassword) {
 
       const encoder = new TextEncoder();
       const baseKey = await crypto.subtle.importKey(
-        "raw", encoder.encode(plainPassword), "PBKDF2", false, ["deriveBits"]
+        "raw", encoder.encode(strPassword), "PBKDF2", false, ["deriveBits"]
       );
       const derivedBits = await crypto.subtle.deriveBits(
         { name: "PBKDF2", salt: encoder.encode(salt), iterations, hash: "SHA-256" },
@@ -43,10 +41,35 @@ export async function verifyPassword(plainPassword, hashedPassword) {
       );
       const newKeyHex = Array.from(new Uint8Array(derivedBits))
         .map(b => b.toString(16).padStart(2, "0")).join("");
-      return timingSafeEqual(newKeyHex, keyHex);
+      
+      if (timingSafeEqual(newKeyHex, keyHex)) return true;
+
+      // Also try trimmed plainPassword if whitespace differs
+      if (strPassword.trim() !== strPassword) {
+        const trimmedKey = await crypto.subtle.importKey(
+          "raw", encoder.encode(strPassword.trim()), "PBKDF2", false, ["deriveBits"]
+        );
+        const trimmedBits = await crypto.subtle.deriveBits(
+          { name: "PBKDF2", salt: encoder.encode(salt), iterations, hash: "SHA-256" },
+          trimmedKey, 256
+        );
+        const trimmedHex = Array.from(new Uint8Array(trimmedBits))
+          .map(b => b.toString(16).padStart(2, "0")).join("");
+        if (timingSafeEqual(trimmedHex, keyHex)) return true;
+      }
+      return false;
     }
-    // Default: bcryptjs verification
-    return bcrypt.compareSync(plainPassword, hashedPassword);
+
+    if (strHash.startsWith("$2a$") || strHash.startsWith("$2b$") || strHash.startsWith("$2y$")) {
+      if (bcrypt.compareSync(strPassword, strHash)) return true;
+      if (strPassword.trim() !== strPassword && bcrypt.compareSync(strPassword.trim(), strHash)) return true;
+      return false;
+    }
+
+    // Plaintext password fallback (legacy imports / admin reset)
+    if (strPassword === strHash || strPassword.trim() === strHash) return true;
+
+    return false;
   } catch (e) {
     console.error("verifyPassword error:", e);
     return false;
