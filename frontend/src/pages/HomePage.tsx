@@ -908,7 +908,23 @@ export default function HomePage() {
       width: "18%",
       render: (text: string, record: any) => {
         let desc = text || record.purpose || "Field visit & operational claim";
-        const callsComp = record.calls_completed ?? record.calls ?? 0;
+        let callsComp = record.calls_completed ?? record.calls ?? 0;
+
+        if (record.itineraries && Array.isArray(record.itineraries) && record.itineraries.length > 0) {
+          let hasBarcodes = false;
+          for (const leg of record.itineraries) {
+            let actObj = leg.activity_details;
+            if (typeof actObj === "string") {
+              try { actObj = JSON.parse(actObj); } catch (_) { actObj = null; }
+            }
+            const cList = Array.isArray(actObj?.calls_list) ? actObj.calls_list : [];
+            if (cList.some((c: any) => c && c.barcode && String(c.barcode).trim() !== "")) {
+              hasBarcodes = true;
+              break;
+            }
+          }
+          if (!hasBarcodes) callsComp = 0;
+        }
         
         if (callsComp === 0) {
           if (desc.includes("Calls")) {
@@ -1004,8 +1020,28 @@ export default function HomePage() {
         const boxes: React.ReactNode[] = [];
 
         // 1. Calls Box (Blue)
-        const callsComp = record.calls_completed ?? record.calls ?? 0;
+        let callsComp = record.calls_completed ?? record.calls ?? 0;
         let callsAssign = record.calls_assigned ?? 0;
+
+        if (record.itineraries && Array.isArray(record.itineraries) && record.itineraries.length > 0) {
+          let hasBarcodes = false;
+          for (const leg of record.itineraries) {
+            let actObj = leg.activity_details;
+            if (typeof actObj === "string") {
+              try { actObj = JSON.parse(actObj); } catch (_) { actObj = null; }
+            }
+            const cList = Array.isArray(actObj?.calls_list) ? actObj.calls_list : [];
+            if (cList.some((c: any) => c && c.barcode && String(c.barcode).trim() !== "")) {
+              hasBarcodes = true;
+              break;
+            }
+          }
+          if (!hasBarcodes) {
+            callsComp = 0;
+            callsAssign = 0;
+          }
+        }
+
         if (callsComp === 0) callsAssign = 0;
         if (callsAssign > callsComp && callsComp > 0) callsAssign = callsComp;
 

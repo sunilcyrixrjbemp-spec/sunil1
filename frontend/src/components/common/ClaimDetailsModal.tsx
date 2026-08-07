@@ -452,6 +452,16 @@ const LegDetailCard = ({
   const daDeductionReason = isFirstLeg ? (leg.da_deduction_reason || leg.system_da_reason || "") : "";
   const baseLocationDeductionReason = leg.base_location_deduction_reason || leg.base_location_reason || leg.base_location_policy || leg.location_policy_reason || "";
 
+  // Work Metrics (Strict Barcode Check)
+  const validCallsInList = (act.callsList && Array.isArray(act.callsList))
+    ? act.callsList.filter((c: any) => c && c.barcode && String(c.barcode).trim() !== "").length
+    : 0;
+  const callsClosed = validCallsInList > 0 ? validCallsInList : 0;
+  const pmsCount = leg.pms_count || leg.ws_pms || 0;
+  const calibCount = leg.calibration_count || 0;
+  const mobiCount = leg.mobilise_count || leg.mobilise_asset_count || 0;
+  const assetTagging = leg.asset_tagging || leg.ws_asset || 0;
+
   const isKmEdited = origKm && parseFloat(origKm) !== parseFloat(km);
   const isTaEdited = estimatedSubmittedTa > taAmt;
   
