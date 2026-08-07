@@ -470,6 +470,8 @@ export async function getAssetCostsMap(env) {
     }
   } catch (e) {
     console.warn("Failed to load assets_inventory fallback:", e.message);
+  }
+
   memoryAssetCostsMap = assetCosts;
   memoryAssetCostsExpiry = Date.now() + 3600000; // 1 hour TTL in Worker isolate memory
   return assetCosts;
