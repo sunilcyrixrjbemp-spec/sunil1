@@ -2759,7 +2759,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       const pmsList = Array.isArray(actDetails.pms_list) ? actDetails.pms_list : [];
       const assetsList = Array.isArray(actDetails.assets_list) ? actDetails.assets_list : [];
 
-      const validCallsList = callsList.filter(c => c && c.barcode && String(c.barcode).trim() !== "");
+      const validCallsList = callsList.filter(c => c && c.barcode && String(c.barcode).trim() !== "" && c.photo_url && String(c.photo_url).trim() !== "");
       if (validCallsList.length > 0) {
         itiCompleted = validCallsList.length;
         itiAssigned = validCallsList.length;

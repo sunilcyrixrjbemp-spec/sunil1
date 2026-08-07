@@ -1009,7 +1009,10 @@ export default function HomePage() {
         if (callsComp === 0) callsAssign = 0;
         if (callsAssign > callsComp && callsComp > 0) callsAssign = callsComp;
 
-        if (callsAssign > 0 && callsComp > 0) {
+        const descUpper = (record.description || record.purpose || record.visit_purpose || "").toUpperCase();
+        const hasCallsInDesc = descUpper.includes("CALLS") || descUpper.includes("CALL");
+
+        if (callsAssign > 0 && callsComp > 0 && hasCallsInDesc) {
           const text = `${callsComp}/${callsAssign} Calls`;
           boxes.push(
             <span
