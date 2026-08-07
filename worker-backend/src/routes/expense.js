@@ -2288,11 +2288,32 @@ export async function handleReverseExpense(request, env, params, query, user) {
 async function ensureExpenseColumnsExist(db) {
   if (!db) return;
   const columnsToAdd = [
+    // expenses table additions
     "ALTER TABLE expenses ADD COLUMN district_type TEXT",
     "ALTER TABLE expenses ADD COLUMN policy_case INTEGER",
     "ALTER TABLE expenses ADD COLUMN policy_rule_name TEXT",
     "ALTER TABLE expenses ADD COLUMN queue_job_id TEXT",
-    "ALTER TABLE expenses ADD COLUMN processing_status TEXT DEFAULT 'complete'"
+    "ALTER TABLE expenses ADD COLUMN processing_status TEXT DEFAULT 'complete'",
+
+    // expense_itineraries table additions
+    "ALTER TABLE expense_itineraries ADD COLUMN from_state TEXT",
+    "ALTER TABLE expense_itineraries ADD COLUMN to_state TEXT",
+    "ALTER TABLE expense_itineraries ADD COLUMN state TEXT",
+    "ALTER TABLE expense_itineraries ADD COLUMN dest_state TEXT",
+    "ALTER TABLE expense_itineraries ADD COLUMN from_district TEXT",
+    "ALTER TABLE expense_itineraries ADD COLUMN to_district TEXT",
+    "ALTER TABLE expense_itineraries ADD COLUMN sub_mode TEXT",
+    "ALTER TABLE expense_itineraries ADD COLUMN sub_km REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN sub_amount REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN original_distance_km REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN original_travel_amount REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN original_sub_amount REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN original_da_amount REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN original_hotel_amount REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN original_other_amount REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN original_local_purchase REAL",
+    "ALTER TABLE expense_itineraries ADD COLUMN calibration_count INTEGER",
+    "ALTER TABLE expense_itineraries ADD COLUMN mobilise_count INTEGER"
   ];
 
   for (const sql of columnsToAdd) {
