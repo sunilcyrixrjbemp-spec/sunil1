@@ -59,7 +59,8 @@ import {
   handleGetSystemSettings, handleSaveSystemSettings,
   handleSearchRejectedExpenses, handleResubmitRejectedExpense,
   handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates,
-  handleTestTime, handleRevertClaimDeductions, handleBulkToggleBulkApproval
+  handleTestTime, handleRevertClaimDeductions, handleBulkToggleBulkApproval,
+  handleGetFacilities, handleSaveFacility, handleDeleteFacility
 } from "./routes/admin.js";
 
 // Ticket handlers
@@ -247,6 +248,9 @@ router.post("/api/admin/hierarchies", handleSaveHierarchy, true, ["Admin"]);
 router.delete("/api/admin/hierarchies/:id", handleDeleteHierarchy, true, ["Admin"]);
 router.post("/api/admin/logout-all", handleLogoutAllUsers, true, ["Admin"]);
 router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true, ["Admin"]);
+router.get("/api/admin/facilities", handleGetFacilities, true, ["Admin"]);
+router.post("/api/admin/facilities", handleSaveFacility, true, ["Admin"]);
+router.delete("/api/admin/facilities/:id", handleDeleteFacility, true, ["Admin"]);
 
 // Admin migrations
 router.post("/api/admin/run-migrations", async (req, env, params, query, user) => {

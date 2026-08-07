@@ -184,5 +184,20 @@ export const adminService = {
   saveAllowanceRates: async (rates: any[]): Promise<any> => {
     const response = await api.post("/admin/allowance-rates", { rates });
     return response.data;
+  },
+
+  getFacilities: async (): Promise<any> => {
+    const response = await api.get("/admin/facilities");
+    return response.data;
+  },
+
+  saveFacility: async (data: { hospital_name: string; district_name: string; is_no_ta_da?: boolean }): Promise<any> => {
+    const response = await api.post("/admin/facilities", data);
+    return response.data;
+  },
+
+  deleteFacility: async (id: number): Promise<any> => {
+    const response = await api.delete(`/admin/facilities/${id}`);
+    return response.data;
   }
 };

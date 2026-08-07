@@ -206,17 +206,72 @@ const ALL_WINDOWS = [
 
 export default function AdminPage() {
   const [adminUserPageSize, setAdminUserPageSize] = useState(25);
-  const [activeTab, setActiveTab] = useState<"users" | "approvals" | "analytics" | "settings">((() => {
-    return (localStorage.getItem("admin_active_tab") as "users" | "approvals" | "analytics" | "settings") || "users";
+  const [activeTab, setActiveTab] = useState<"users" | "approvals" | "analytics" | "settings" | "facilities">((() => {
+    return (localStorage.getItem("admin_active_tab") as "users" | "approvals" | "analytics" | "settings" | "facilities") || "users";
   }));
 
-  const handleTabChange = (tab: "users" | "approvals" | "analytics" | "settings") => {
+  const [facilities, setFacilities] = useState<any[]>([]);
+  const [facilityLoading, setFacilityLoading] = useState(false);
+  const [facilitySearch, setFacilitySearch] = useState("");
+  const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
+  const [newFacilityHospital, setNewFacilityHospital] = useState("");
+  const [newFacilityDistrict, setNewFacilityDistrict] = useState("");
+  const [newFacilityIsNoTaDa, setNewFacilityIsNoTaDa] = useState(true);
+
+  const fetchFacilities = async () => {
+    setFacilityLoading(true);
+    try {
+      const res = await adminService.getFacilities();
+      if (res && res.facilities) {
+        setFacilities(res.facilities);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load facilities");
+    } finally {
+      setFacilityLoading(false);
+    }
+  };
+
+  const handleCreateFacility = async () => {
+    if (!newFacilityHospital.trim() || !newFacilityDistrict.trim()) {
+      toast.error("Hospital/Facility Name and District Name are required!");
+      return;
+    }
+    try {
+      const res = await adminService.saveFacility({
+        hospital_name: newFacilityHospital.trim(),
+        district_name: newFacilityDistrict.trim(),
+        is_no_ta_da: newFacilityIsNoTaDa,
+      });
+      toast.success(res.message || "Facility added successfully!");
+      setIsAddFacilityModalOpen(false);
+      setNewFacilityHospital("");
+      setNewFacilityDistrict("");
+      fetchFacilities();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || e.message || "Failed to add facility");
+    }
+  };
+
+  const handleDeleteFacility = async (id: number) => {
+    try {
+      const res = await adminService.deleteFacility(id);
+      toast.success(res.message || "Facility removed");
+      fetchFacilities();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete facility");
+    }
+  };
+
+  const handleTabChange = (tab: "users" | "approvals" | "analytics" | "settings" | "facilities") => {
     setActiveTab(tab);
     localStorage.setItem("admin_active_tab", tab);
     window.scrollTo({ top: 0, behavior: "instant" });
     if (tab === "settings") {
       fetchRejectedClaims("");
       fetchAllowanceRates();
+    } else if (tab === "facilities") {
+      fetchFacilities();
     }
   };
   const [users, setUsers] = useState<any[]>(() => {
@@ -1566,6 +1621,19 @@ export default function AdminPage() {
             <SettingOutlined className="text-xs" />
             <span>System Settings</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange("facilities")}
+            className={`flex-1 py-1.5 px-2.5 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === "facilities"
+                ? "bg-white text-[#1e3a8a] shadow-xs scale-[1.01]"
+                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            <DatabaseOutlined className="text-xs" />
+            <span>Facilities & No TA/DA ({facilities.length})</span>
+          </button>
         </div>
 
         {error && (
@@ -2594,12 +2662,194 @@ export default function AdminPage() {
                     ))}
                   </tbody>
                 </table>
+          </div>
+        </div>
+      ) : activeTab === "facilities" ? (
+        /* ================= FACILITIES & NO TA/DA TAB ================= */
+        <div className="space-y-3">
+          {/* Header Bar */}
+          <div className="flex flex-wrap justify-between items-center bg-white border border-slate-200/90 rounded-xl p-3 shadow-2xs gap-2">
+            <div>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider leading-none m-0 flex items-center gap-2">
+                <DatabaseOutlined className="text-blue-700" /> Facilities & Hospital Master Directory
+              </h3>
+              <p className="text-slate-500 text-[10px] mt-1 font-semibold leading-none">
+                Register medical facilities, hospitals, and configure "No TA / DA" policy exceptions per hospital.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={facilitySearch}
+                onChange={(e) => setFacilitySearch(e.target.value)}
+                placeholder="Search facility name or district..."
+                className="px-2.5 py-1 text-xs font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg outline-none h-8 w-60"
+              />
+              <button
+                type="button"
+                onClick={() => setIsAddFacilityModalOpen(true)}
+                className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs transition-all flex items-center gap-1.5 h-8"
+              >
+                <Plus size={14} /> Add Facility / Hospital
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white border border-slate-300 rounded-xl shadow-2xs overflow-hidden">
+            {facilityLoading ? (
+              <div className="p-8 text-center text-slate-500 font-bold text-xs">
+                <LteSpinner /> Loading Facilities...
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-black text-[10px] uppercase tracking-wider">
+                      <th className="py-2.5 px-3">#</th>
+                      <th className="py-2.5 px-3">Facility / Hospital Name</th>
+                      <th className="py-2.5 px-3">District</th>
+                      <th className="py-2.5 px-3">Allowance Policy</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 font-medium text-slate-800">
+                    {facilities
+                      .filter((f) => {
+                        if (!facilitySearch.trim()) return true;
+                        const q = facilitySearch.toLowerCase();
+                        return (
+                          (f.hospital_name || "").toLowerCase().includes(q) ||
+                          (f.district_name || "").toLowerCase().includes(q)
+                        );
+                      })
+                      .map((f, idx) => (
+                        <tr key={f.id || idx} className="hover:bg-blue-50/40">
+                          <td className="py-2 px-3 font-bold text-slate-500">{idx + 1}</td>
+                          <td className="py-2 px-3 font-bold text-slate-900">{f.hospital_name}</td>
+                          <td className="py-2 px-3 font-bold text-blue-800">{f.district_name}</td>
+                          <td className="py-2 px-3 font-bold">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-300 text-[10px]">
+                              🛑 No TA / DA Policy
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <Popconfirm
+                              title="Delete Facility"
+                              description="Are you sure you want to remove this facility from No TA/DA policy list?"
+                              onConfirm={() => handleDeleteFacility(f.id)}
+                              okText="Yes, Delete"
+                              cancelText="Cancel"
+                            >
+                              <button type="button" className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded border border-rose-200 text-[10px] font-extrabold cursor-pointer">
+                                Delete
+                              </button>
+                            </Popconfirm>
+                          </td>
+                        </tr>
+                      ))}
+                    {facilities.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-400 font-bold">
+                          No Facilities registered yet. Click "Add Facility / Hospital" above to add one.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
-      )}
+      ) : null}
       </div>
+
+      {/* ================= MODAL: ADD FACILITY / NO TA DA HOSPITAL ================= */}
+      {isAddFacilityModalOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono flex items-center gap-2">
+                <DatabaseOutlined /> Register New Facility / Hospital
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddFacilityModalOpen(false)}
+                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleCreateFacility();
+              }}
+              className="p-4 space-y-4"
+            >
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                  Hospital / Facility Name *
+                </label>
+                <input
+                  type="text"
+                  value={newFacilityHospital}
+                  onChange={(e) => setNewFacilityHospital(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
+                  placeholder="e.g. Mathura Das Mathur Hospital"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                  District Name *
+                </label>
+                <input
+                  type="text"
+                  value={newFacilityDistrict}
+                  onChange={(e) => setNewFacilityDistrict(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
+                  placeholder="e.g. Jodhpur, Ajmer, Jaipur"
+                  required
+                />
+              </div>
+
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-rose-900">
+                    No TA / DA Policy Facility
+                  </span>
+                  <Switch
+                    checked={newFacilityIsNoTaDa}
+                    onChange={(checked) => setNewFacilityIsNoTaDa(checked)}
+                  />
+                </div>
+                <p className="text-[10px] text-rose-700 font-semibold m-0 leading-tight">
+                  When enabled, visits to this hospital/facility will attract 0 TA and 0 DA as per company policy.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsAddFacilityModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors"
+                >
+                  Add Facility
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ================= MODAL: CREATE SINGLE USER ================= */}
       {showSingleUserModal && (

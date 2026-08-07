@@ -1889,3 +1889,67 @@ export async function handleBulkToggleBulkApproval(request, env) {
     updated_count: targets.length
   });
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🏥 Facility & No TA/DA Hospital Management
+// ═══════════════════════════════════════════════════════════════════════════
+export async function handleGetFacilities(request, env) {
+  try {
+    const res = await env.DB.prepare(
+      "SELECT id, hospital_name, district_name, created_at FROM no_ta_da_hospitals ORDER BY hospital_name ASC"
+    ).all();
+    return jsonResponse({
+      success: true,
+      facilities: res.results || []
+    });
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.message || "Failed to fetch facilities" }, 500);
+  }
+}
+
+export async function handleSaveFacility(request, env) {
+  try {
+    const body = await request.json();
+    const hospitalName = (body.hospital_name || body.hospitalName || "").trim();
+    const districtName = (body.district_name || body.districtName || "").trim();
+    
+    if (!hospitalName || !districtName) {
+      return jsonResponse({ success: false, error: "Hospital name and district name are required" }, 400);
+    }
+
+    const timestamp = new Date().toISOString();
+
+    const existing = await env.DB.prepare(
+      "SELECT id FROM no_ta_da_hospitals WHERE LOWER(TRIM(hospital_name)) = LOWER(TRIM(?)) AND LOWER(TRIM(district_name)) = LOWER(TRIM(?))"
+    ).bind(hospitalName, districtName).first();
+
+    if (existing) {
+      return jsonResponse({ success: false, error: "Facility already registered in this district" }, 400);
+    }
+
+    await runWrite(
+      env,
+      "INSERT INTO no_ta_da_hospitals (hospital_name, district_name, created_at) VALUES (?, ?, ?)",
+      [hospitalName, districtName, timestamp]
+    );
+
+    return jsonResponse({
+      success: true,
+      message: `Facility '${hospitalName}' added successfully as No TA/DA hospital.`
+    });
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.message || "Failed to save facility" }, 500);
+  }
+}
+
+export async function handleDeleteFacility(request, env, params) {
+  try {
+    const facilityId = params.id;
+    if (!facilityId) return jsonResponse({ success: false, error: "Facility ID required" }, 400);
+
+    await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE id = ?", [facilityId]);
+    return jsonResponse({ success: true, message: "Facility removed successfully." });
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.message || "Failed to delete facility" }, 500);
+  }
+}
