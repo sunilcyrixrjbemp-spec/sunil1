@@ -383,6 +383,8 @@ router.get("/expenses/*", handleServeFile, false);
 router.get("/expenses/:key", handleServeFile, false);
 router.get("/gdrive/*", handleServeFile, false);
 router.get("/gdrive/:key", handleServeFile, false);
+router.get("/api/upload/file/gdrive/*", handleServeFile, false);
+router.get("/api/upload/file/gdrive/:key", handleServeFile, false);
 router.get("/profiles/*", handleServeFile, false);
 router.get("/profiles/:key", handleServeFile, false);
 

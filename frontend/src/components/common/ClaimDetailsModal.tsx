@@ -73,6 +73,12 @@ export const formatImageUrl = (url: any): string => {
   }
 
   // 4. Raw Google Drive File ID (25-50 chars)
+  if (str.includes("/gdrive/")) {
+    const rawId = str.split("/gdrive/").pop()?.split("?")[0]?.replace(/\.(jpg|jpeg|png|webp)$/i, "") || "";
+    if (rawId && /^[a-zA-Z0-9_-]{20,}$/.test(rawId)) {
+      return `${API_BASE}/api/r2/gdrive-proxy?id=${rawId}`;
+    }
+  }
   if (/^[a-zA-Z0-9_-]{25,50}$/.test(str) && !str.startsWith("http")) {
     return `${API_BASE}/api/r2/gdrive-proxy?id=${str}`;
   }
