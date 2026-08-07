@@ -1896,33 +1896,14 @@ export async function handleBulkToggleBulkApproval(request, env) {
 export async function handleGetFacilities(request, env) {
   try {
     const [noTaDaRes, stdRes] = await Promise.all([
-      env.DB.prepare("SELECT id, hospital_name as facility_name, district_name, created_at, 1 as is_no_ta_da FROM no_ta_da_hospitals").all().catch(() => ({ results: [] })),
-      env.DB.prepare("SELECT id, facility_name, district_name, NULL as created_at, 0 as is_no_ta_da FROM facility_details").all().catch(() => ({ results: [] }))
+      env.DB.prepare("SELECT id, hospital_name, district_name, created_at FROM no_ta_da_hospitals ORDER BY hospital_name ASC").all().catch(() => ({ results: [] })),
+      env.DB.prepare("SELECT id, facility_name, district_name FROM facility_details ORDER BY facility_name ASC").all().catch(() => ({ results: [] }))
     ]);
-
-    const combinedMap = new Map();
-    
-    // Add No TA/DA Hospitals
-    for (const item of (noTaDaRes.results || [])) {
-      const key = `${(item.facility_name || "").trim().toLowerCase()}::${(item.district_name || "").trim().toLowerCase()}`;
-      combinedMap.set(key, { ...item, hospital_name: item.facility_name, is_no_ta_da: true });
-    }
-
-    // Add Standard Facilities (if not already tagged as No TA/DA)
-    for (const item of (stdRes.results || [])) {
-      const key = `${(item.facility_name || "").trim().toLowerCase()}::${(item.district_name || "").trim().toLowerCase()}`;
-      if (!combinedMap.has(key)) {
-        combinedMap.set(key, { ...item, hospital_name: item.facility_name, is_no_ta_da: false });
-      }
-    }
-
-    const facilities = Array.from(combinedMap.values()).sort((a, b) => 
-      a.hospital_name.localeCompare(b.hospital_name)
-    );
 
     return jsonResponse({
       success: true,
-      facilities
+      standard_facilities: stdRes.results || [],
+      no_ta_da_hospitals: noTaDaRes.results || []
     });
   } catch (e) {
     return jsonResponse({ success: false, error: e.message || "Failed to fetch facilities" }, 500);
@@ -1932,74 +1913,77 @@ export async function handleGetFacilities(request, env) {
 export async function handleSaveFacility(request, env) {
   try {
     const body = await request.json();
-    const hospitalName = (body.hospital_name || body.hospitalName || "").trim();
+    const facilityName = (body.facility_name || body.hospital_name || body.facilityName || body.hospitalName || "").trim();
     const districtName = (body.district_name || body.districtName || "").trim();
-    const isNoTaDa = Boolean(body.is_no_ta_da ?? body.isNoTaDa ?? true);
+    const targetTable = (body.target_table || (body.is_no_ta_da ? "no_ta_da" : "standard")).trim().toLowerCase();
 
-    if (!hospitalName || !districtName) {
-      return jsonResponse({ success: false, error: "Hospital name and district name are required" }, 400);
+    if (!facilityName || !districtName) {
+      return jsonResponse({ success: false, error: "Facility name and district name are required" }, 400);
     }
 
     const timestamp = new Date().toISOString();
 
-    // Check duplicate in no_ta_da_hospitals
-    const existingNoTaDa = await env.DB.prepare(
-      "SELECT id, district_name FROM no_ta_da_hospitals WHERE LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))"
-    ).bind(hospitalName).first();
+    if (targetTable === "standard") {
+      // Check duplicate in facility_details
+      const existing = await env.DB.prepare(
+        "SELECT id, district_name FROM facility_details WHERE LOWER(TRIM(facility_name)) = LOWER(TRIM(?))"
+      ).bind(facilityName).first();
 
-    // Check duplicate in facility_details
-    const existingStd = await env.DB.prepare(
-      "SELECT id, district_name FROM facility_details WHERE LOWER(TRIM(facility_name)) = LOWER(TRIM(?))"
-    ).bind(hospitalName).first();
+      if (existing) {
+        return jsonResponse({
+          success: false,
+          error: `Expense facility '${facilityName}' is already registered in facility_details (in district '${existing.district_name}').`
+        }, 400);
+      }
 
-    if (existingNoTaDa || existingStd) {
-      const existingDist = (existingNoTaDa || existingStd).district_name;
-      return jsonResponse({
-        success: false,
-        error: `Facility '${hospitalName}' is already registered (in district '${existingDist}'). Duplicate entries are strictly prohibited.`
-      }, 400);
-    }
+      await runWrite(
+        env,
+        "INSERT INTO facility_details (facility_name, district_name) VALUES (?, ?)",
+        [facilityName, districtName]
+      );
+    } else {
+      // Check duplicate in no_ta_da_hospitals
+      const existing = await env.DB.prepare(
+        "SELECT id, district_name FROM no_ta_da_hospitals WHERE LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))"
+      ).bind(facilityName).first();
 
-    if (isNoTaDa) {
+      if (existing) {
+        return jsonResponse({
+          success: false,
+          error: `No TA/DA Hospital '${facilityName}' is already registered in no_ta_da_hospitals (in district '${existing.district_name}').`
+        }, 400);
+      }
+
       await runWrite(
         env,
         "INSERT INTO no_ta_da_hospitals (hospital_name, district_name, created_at) VALUES (?, ?, ?)",
-        [hospitalName, districtName, timestamp]
+        [facilityName, districtName, timestamp]
       );
     }
 
-    // Always insert into facility_details so it is selectable on Expense Page
-    await runWrite(
-      env,
-      "INSERT INTO facility_details (facility_name, district_name) VALUES (?, ?)",
-      [hospitalName, districtName]
-    );
-
-    // Invalidate KV cache if present
     if (env.OTPS_KV) {
       env.OTPS_KV.delete("cache:ref:facilities_dict:v1").catch(() => {});
     }
 
     return jsonResponse({
       success: true,
-      message: `Facility '${hospitalName}' added successfully as ${isNoTaDa ? "No TA/DA Exception" : "Standard Expense"} facility.`
+      message: `Facility '${facilityName}' added successfully to ${targetTable === "standard" ? "facility_details (Expense Page Facilities)" : "no_ta_da_hospitals (No TA/DA Exception)"}.`
     });
   } catch (e) {
     return jsonResponse({ success: false, error: e.message || "Failed to save facility" }, 500);
   }
 }
 
-export async function handleDeleteFacility(request, env, params) {
+export async function handleDeleteFacility(request, env, params, query) {
   try {
     const facilityId = params.id;
+    const targetTable = (query?.get("type") || "all").trim().toLowerCase();
     if (!facilityId) return jsonResponse({ success: false, error: "Facility ID required" }, 400);
 
-    const fac = await env.DB.prepare("SELECT hospital_name FROM no_ta_da_hospitals WHERE id = ?").bind(facilityId).first()
-      || await env.DB.prepare("SELECT facility_name as hospital_name FROM facility_details WHERE id = ?").bind(facilityId).first();
-
-    if (fac && fac.hospital_name) {
-      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))", [fac.hospital_name]);
-      await runWrite(env, "DELETE FROM facility_details WHERE LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [fac.hospital_name]);
+    if (targetTable === "standard") {
+      await runWrite(env, "DELETE FROM facility_details WHERE id = ?", [facilityId]);
+    } else if (targetTable === "no_ta_da") {
+      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE id = ?", [facilityId]);
     } else {
       await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE id = ?", [facilityId]);
       await runWrite(env, "DELETE FROM facility_details WHERE id = ?", [facilityId]);

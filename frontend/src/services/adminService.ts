@@ -191,13 +191,13 @@ export const adminService = {
     return response.data;
   },
 
-  saveFacility: async (data: { hospital_name: string; district_name: string; is_no_ta_da?: boolean }): Promise<any> => {
+  saveFacility: async (data: { facility_name: string; district_name: string; target_table: "standard" | "no_ta_da" }): Promise<any> => {
     const response = await api.post("/admin/facilities", data);
     return response.data;
   },
 
-  deleteFacility: async (id: number): Promise<any> => {
-    const response = await api.delete(`/admin/facilities/${id}`);
+  deleteFacility: async (id: number, type?: "standard" | "no_ta_da"): Promise<any> => {
+    const response = await api.delete(`/admin/facilities/${id}${type ? `?type=${type}` : ""}`);
     return response.data;
   }
 };
