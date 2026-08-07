@@ -1895,14 +1895,37 @@ export async function handleBulkToggleBulkApproval(request, env) {
 // ═══════════════════════════════════════════════════════════════════════════
 export async function handleGetFacilities(request, env) {
   try {
-    const [noTaDaRes, stdRes] = await Promise.all([
+    const [noTaDaRes, stdRes, assetHospRes] = await Promise.all([
       env.DB.prepare("SELECT id, hospital_name, district_name, created_at FROM no_ta_da_hospitals ORDER BY hospital_name ASC").all().catch(() => ({ results: [] })),
-      env.DB.prepare("SELECT id, facility_name, district_name FROM facility_details ORDER BY facility_name ASC").all().catch(() => ({ results: [] }))
+      env.DB.prepare("SELECT id, facility_name, district_name FROM facility_details ORDER BY facility_name ASC").all().catch(() => ({ results: [] })),
+      env.DB.prepare("SELECT DISTINCT hospital_name as facility_name, district_name FROM assets_inventory WHERE hospital_name IS NOT NULL AND hospital_name != ''").all().catch(() => ({ results: [] }))
     ]);
+
+    const stdMap = new Map();
+    let virtualId = 10000;
+
+    // 1. Add explicitly registered facility_details
+    for (const f of (stdRes.results || [])) {
+      const k = (f.facility_name || "").trim().toLowerCase();
+      if (k) {
+        stdMap.set(k, { id: f.id, facility_name: f.facility_name, district_name: f.district_name || "General", source: "facility_details" });
+      }
+    }
+
+    // 2. Fallback / Merge from assets_inventory distinct hospitals so standard facilities list is full
+    for (const f of (assetHospRes.results || [])) {
+      const k = (f.facility_name || "").trim().toLowerCase();
+      if (k && !stdMap.has(k)) {
+        virtualId++;
+        stdMap.set(k, { id: virtualId, facility_name: f.facility_name, district_name: f.district_name || "General", source: "assets_inventory" });
+      }
+    }
+
+    const standardFacilities = Array.from(stdMap.values()).sort((a, b) => a.facility_name.localeCompare(b.facility_name));
 
     return jsonResponse({
       success: true,
-      standard_facilities: stdRes.results || [],
+      standard_facilities: standardFacilities,
       no_ta_da_hospitals: noTaDaRes.results || []
     });
   } catch (e) {
