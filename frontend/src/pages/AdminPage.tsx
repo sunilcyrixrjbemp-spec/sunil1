@@ -2841,19 +2841,57 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-rose-900">
-                    No TA / DA Policy Facility
-                  </span>
-                  <Switch
-                    checked={newFacilityIsNoTaDa}
-                    onChange={(checked) => setNewFacilityIsNoTaDa(checked)}
-                  />
+              <div className="space-y-1.5 pt-1">
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-700">
+                  Facility TA / DA Expense Policy Category *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div
+                    onClick={() => setNewFacilityIsNoTaDa(false)}
+                    className={`p-2.5 border rounded-lg cursor-pointer transition-all ${
+                      !newFacilityIsNoTaDa
+                        ? "bg-blue-50 border-blue-500 text-blue-950 ring-1 ring-blue-500"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name="facilityPolicy"
+                        checked={!newFacilityIsNoTaDa}
+                        onChange={() => setNewFacilityIsNoTaDa(false)}
+                        className="accent-blue-600 cursor-pointer"
+                      />
+                      <span className="text-xs font-black">Standard Expense Facility</span>
+                    </div>
+                    <p className="text-[9.5px] font-semibold text-slate-500 mt-1 m-0 leading-tight">
+                      Available for regular expense claims. Standard TA/DA calculation rules apply.
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => setNewFacilityIsNoTaDa(true)}
+                    className={`p-2.5 border rounded-lg cursor-pointer transition-all ${
+                      newFacilityIsNoTaDa
+                        ? "bg-rose-50 border-rose-500 text-rose-950 ring-1 ring-rose-500"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name="facilityPolicy"
+                        checked={newFacilityIsNoTaDa}
+                        onChange={() => setNewFacilityIsNoTaDa(true)}
+                        className="accent-rose-600 cursor-pointer"
+                      />
+                      <span className="text-xs font-black text-rose-900">No TA / DA Policy Facility</span>
+                    </div>
+                    <p className="text-[9.5px] font-semibold text-rose-700 mt-1 m-0 leading-tight">
+                      Special policy exception: Visits attract ₹0 TA and ₹0 DA.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[10px] text-rose-700 font-semibold m-0 leading-tight">
-                  When enabled, visits to this hospital/facility will attract 0 TA and 0 DA as per company policy.
-                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">

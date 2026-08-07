@@ -144,22 +144,54 @@ export default function AssetUploadPage() {
   // Dependent combinations from backend
   const [combinations, setCombinations] = useState<any[]>([]);
   const [months, setMonths] = useState<string[]>([]);
+  const [hospitalsByDistrictMap, setHospitalsByDistrictMap] = useState<Record<string, string[]>>({});
 
   // State to toggle inline upload panel
   const [showUploadPanel, setShowUploadPanel] = useState(false);
 
   // Manual Add Equipment States
   const [showManualAddModal, setShowManualAddModal] = useState(false);
-  const [manualHospital, setManualHospital] = useState("");
+  const [manualZone, setManualZone] = useState("");
   const [manualDistrict, setManualDistrict] = useState("");
+  const [manualHospital, setManualHospital] = useState("");
   const [manualEquipmentName, setManualEquipmentName] = useState("");
   const [manualModelName, setManualModelName] = useState("");
   const [manualSerialNo, setManualSerialNo] = useState("");
   const [manualQrCode, setManualQrCode] = useState("");
   const [manualDepartment, setManualDepartment] = useState("");
   const [manualCategory, setManualCategory] = useState("Critical");
-  const [manualStatus, setManualStatus] = useState("Operational");
+  const [manualEqType, setManualEqType] = useState("Biomedical");
+  const [manualStatus, setManualStatus] = useState("Functional Installed");
+  const [manualDiName, setManualDiName] = useState("");
   const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [barcodeCheckResult, setBarcodeCheckResult] = useState<{ valid: boolean; message: string } | null>(null);
+
+  const handleVerifyBarcodeCheck = async (code: string) => {
+    if (!code.trim()) return;
+    try {
+      const res = await api.get(`/expense/verify-barcode?barcode=${encodeURIComponent(code.trim())}`);
+      if (res.data && res.data.found) {
+        const item = res.data.item || {};
+        setBarcodeCheckResult({
+          valid: false,
+          message: `⚠️ Barcode ${code} is already registered for '${item.equipment_name || item.equipment || "Equipment"}' at '${item.hospital_name || item.hospital || "Hospital"}'.`
+        });
+        if (item.hospital_name) setManualHospital(item.hospital_name);
+        if (item.district_name) setManualDistrict(item.district_name);
+        if (item.equipment_name) setManualEquipmentName(item.equipment_name);
+        if (item.model_name) setManualModelName(item.model_name);
+        if (item.serial_no) setManualSerialNo(item.serial_no);
+        if (item.department_name) setManualDepartment(item.department_name);
+      } else {
+        setBarcodeCheckResult({
+          valid: true,
+          message: `✅ Barcode ${code} is available for new equipment registration!`
+        });
+      }
+    } catch (_) {
+      setBarcodeCheckResult({ valid: true, message: `✅ Barcode ready for assignment.` });
+    }
+  };
 
   const handleManualAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +203,7 @@ export default function AssetUploadPage() {
     setManualSubmitting(true);
     try {
       const res = await api.post("/reports/assets/manual", {
+        zone_name: manualZone,
         district_name: manualDistrict,
         hospital_name: manualHospital,
         department_name: manualDepartment,
@@ -179,7 +212,9 @@ export default function AssetUploadPage() {
         serial_no: manualSerialNo,
         qr_code: manualQrCode,
         equipment_category: manualCategory,
+        equipment_type: manualEqType,
         equipment_status: manualStatus,
+        di_name: manualDiName,
       });
 
       if (res.data.success) {
@@ -241,6 +276,7 @@ export default function AssetUploadPage() {
       if (res.data.success) {
         setCombinations(res.data.combinations || []);
         setMonths(res.data.months || []);
+        setHospitalsByDistrictMap(res.data.hospitals_by_district || {});
       }
     } catch (_) {}
   };
@@ -1074,29 +1110,99 @@ export default function AssetUploadPage() {
       {/* ── MODAL: MANUAL ADD EQUIPMENT ── */}
       {showManualAddModal && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300 shrink-0">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono flex items-center gap-2">
-                <Package className="w-4 h-4" /> Manually Add New Equipment Asset
+                <Package className="w-4 h-4 text-amber-300" /> Add Equipment Asset (Dependent Master Dropdowns)
               </h3>
               <button
                 type="button"
-                onClick={() => setShowManualAddModal(false)}
+                onClick={() => {
+                  setShowManualAddModal(false);
+                  setBarcodeCheckResult(null);
+                }}
                 className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleManualAddSubmit} className="p-4 space-y-3">
-              <div className="grid grid-cols-2 gap-2.5">
+            <form onSubmit={handleManualAddSubmit} className="p-4 space-y-3.5 overflow-y-auto flex-1">
+              
+              {/* Row 0: Expense-Style Barcode Verification System */}
+              <div className="bg-slate-50 border border-slate-300 p-2.5 rounded-none space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-700 font-mono flex items-center gap-1">
+                    <QrCode className="w-3.5 h-3.5 text-blue-600" /> Equipment Barcode / QR Code (Asset Tag) *
+                  </label>
+                  <span className="text-[9px] text-slate-400 font-bold">Same verification as Expense Page</span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={manualQrCode}
+                    onChange={(e) => {
+                      setManualQrCode(e.target.value);
+                      setBarcodeCheckResult(null);
+                    }}
+                    onBlur={() => {
+                      if (manualQrCode.trim()) handleVerifyBarcodeCheck(manualQrCode.trim());
+                    }}
+                    className="flex-1 px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
+                    placeholder="e.g. 75029031 or scan barcode..."
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleVerifyBarcodeCheck(manualQrCode.trim())}
+                    className="px-3 py-1.5 bg-[#4A6A8A] hover:bg-[#39536e] text-white text-xs font-bold uppercase tracking-wider rounded-none cursor-pointer border-0 shadow-2xs h-8.5 transition-colors"
+                  >
+                    Verify Barcode
+                  </button>
+                </div>
+                {barcodeCheckResult && (
+                  <div className={`text-[10.5px] font-bold p-1.5 border rounded-none leading-snug ${
+                    barcodeCheckResult.valid 
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-300" 
+                      : "bg-amber-50 text-amber-900 border-amber-300"
+                  }`}>
+                    {barcodeCheckResult.message}
+                  </div>
+                )}
+              </div>
+
+              {/* Row 1: Zone -> District -> Hospital (Dependent Chain) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div>
                   <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    District *
+                    Zone (Dropdown)
+                  </label>
+                  <select
+                    value={manualZone}
+                    onChange={(e) => {
+                      setManualZone(e.target.value);
+                      setManualDistrict("");
+                      setManualHospital("");
+                    }}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
+                  >
+                    <option value="">-- All / Select Zone --</option>
+                    {["Zone Jodhpur", "Zone Bikaner", "Zone Ajmer", "Zone Jaipur", "Zone Udaipur", "Zone Kota", "Zone Bharatpur"].map((z) => (
+                      <option key={z} value={z}>{z}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    District (Dependent Dropdown) *
                   </label>
                   <select
                     value={manualDistrict}
-                    onChange={(e) => setManualDistrict(e.target.value)}
+                    onChange={(e) => {
+                      setManualDistrict(e.target.value);
+                      setManualHospital("");
+                    }}
                     className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
                     required
                   >
@@ -1109,66 +1215,111 @@ export default function AssetUploadPage() {
 
                 <div>
                   <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    Hospital / Facility Name *
+                    Hospital / Facility (Dependent Dropdown) *
                   </label>
-                  <input
-                    type="text"
-                    value={manualHospital}
-                    onChange={(e) => setManualHospital(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
-                    placeholder="e.g. Mathura Das Mathur Hospital"
-                    required
-                  />
+                  {manualDistrict && (hospitalsByDistrictMap[manualDistrict] || []).length > 0 ? (
+                    <select
+                      value={manualHospital}
+                      onChange={(e) => setManualHospital(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
+                      required
+                    >
+                      <option value="">-- Select Hospital --</option>
+                      {(hospitalsByDistrictMap[manualDistrict] || []).map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={manualHospital}
+                      onChange={(e) => setManualHospital(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
+                      placeholder="e.g. Mathura Das Mathur Hospital"
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* Row 2: Department & Equipment (Dropdown + Typeable) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    Equipment Name *
+                    Department (Dropdown / Typeable)
                   </label>
                   <input
                     type="text"
+                    list="department-options"
+                    value={manualDepartment}
+                    onChange={(e) => setManualDepartment(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
+                    placeholder="Select or type Department (e.g. ICU, OT 1)"
+                  />
+                  <datalist id="department-options">
+                    <option value="ICU" />
+                    <option value="Operation Theatre (OT)" />
+                    <option value="Emergency / Casualty" />
+                    <option value="Radiology / X-Ray" />
+                    <option value="BME Lab" />
+                    <option value="OPD" />
+                    <option value="Pediatrics" />
+                    <option value="Cardiology" />
+                    <option value="Dialysis Unit" />
+                    <option value="Central Store" />
+                    <option value="General Ward" />
+                  </datalist>
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Equipment Name (Dropdown / Typeable) *
+                  </label>
+                  <input
+                    type="text"
+                    list="equipment-name-options"
                     value={manualEquipmentName}
                     onChange={(e) => setManualEquipmentName(e.target.value)}
                     className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
-                    placeholder="e.g. Anaesthesia Workstation"
+                    placeholder="Select or type Equipment Name"
                     required
                   />
-                </div>
-
-                <div>
-                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    Barcode / QR Code *
-                  </label>
-                  <input
-                    type="text"
-                    value={manualQrCode}
-                    onChange={(e) => setManualQrCode(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 font-mono"
-                    placeholder="e.g. 75029031"
-                    required
-                  />
+                  <datalist id="equipment-name-options">
+                    <option value="Anaesthesia Workstation" />
+                    <option value="Cautry Machine" />
+                    <option value="Defibrillator" />
+                    <option value="Ventilator" />
+                    <option value="ECG Machine" />
+                    <option value="Ultrasound Machine" />
+                    <option value="X-Ray Machine" />
+                    <option value="Patient Monitor" />
+                    <option value="Infusion Pump" />
+                    <option value="Suction Machine" />
+                    <option value="OT Light" />
+                    <option value="Autoclave" />
+                    <option value="Oxygen Concentrator" />
+                  </datalist>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5">
+              {/* Row 3: Model Name & Serial No */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    Model Name
+                    Model Name (Typeable)
                   </label>
                   <input
                     type="text"
                     value={manualModelName}
                     onChange={(e) => setManualModelName(e.target.value)}
                     className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
-                    placeholder="e.g. Model X200"
+                    placeholder="e.g. Model X200 / Prima 450"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    Serial No.
+                    Serial No. (Typeable)
                   </label>
                   <input
                     type="text"
@@ -1178,57 +1329,86 @@ export default function AssetUploadPage() {
                     placeholder="e.g. SN-884920"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    Department
-                  </label>
-                  <input
-                    type="text"
-                    value={manualDepartment}
-                    onChange={(e) => setManualDepartment(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
-                    placeholder="e.g. ICU / OT 1"
-                  />
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              {/* Row 4: Type -> Category -> Status -> DI Name (All Dropdowns) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 <div>
                   <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    Equipment Category
+                    Equipment Type (Dropdown)
+                  </label>
+                  <select
+                    value={manualEqType}
+                    onChange={(e) => setManualEqType(e.target.value)}
+                    className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
+                  >
+                    <option value="Biomedical">Biomedical</option>
+                    <option value="Non-Biomedical">Non-Biomedical</option>
+                    <option value="IT">IT / Electrical</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Category (Dropdown)
                   </label>
                   <select
                     value={manualCategory}
                     onChange={(e) => setManualCategory(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
+                    className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
                   >
                     <option value="Critical">Critical</option>
-                    <option value="Biomedical">Biomedical</option>
                     <option value="General">General</option>
+                    <option value="High Value">High Value</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                    Equipment Status
+                    Status (Dropdown)
                   </label>
                   <select
                     value={manualStatus}
                     onChange={(e) => setManualStatus(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
+                    className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
                   >
+                    <option value="Functional Installed">Functional Installed</option>
                     <option value="Operational">Operational</option>
                     <option value="Under Maintenance">Under Maintenance</option>
-                    <option value="Installed">Installed</option>
+                    <option value="Scrapped">Scrapped</option>
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    DI Name (Dropdown)
+                  </label>
+                  <input
+                    type="text"
+                    list="di-name-options"
+                    value={manualDiName}
+                    onChange={(e) => setManualDiName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
+                    placeholder="Select DI Name"
+                  />
+                  <datalist id="di-name-options">
+                    <option value="Abhilash A" />
+                    <option value="Vinod Jain" />
+                    <option value="Sunil Vishnoi" />
+                    <option value="Rajesh Kumar" />
+                    <option value="Deepak Sharma" />
+                  </datalist>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 shrink-0">
                 <button
                   type="button"
-                  onClick={() => setShowManualAddModal(false)}
+                  onClick={() => {
+                    setShowManualAddModal(false);
+                    setBarcodeCheckResult(null);
+                  }}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
                 >
                   Cancel
@@ -1239,7 +1419,7 @@ export default function AssetUploadPage() {
                   className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-1.5 disabled:opacity-60"
                 >
                   {manualSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Save Equipment</span>
+                  <span>Save Equipment to Master</span>
                 </button>
               </div>
             </form>

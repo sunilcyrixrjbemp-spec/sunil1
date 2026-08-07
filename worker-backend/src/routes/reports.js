@@ -252,13 +252,30 @@ export async function handleGetAssetsFilters(request, env, params, query, user) 
 
   const months = (monthRows.results || []).map(r => `${r.moic_year}-${String(r.moic_month).padStart(2, "0")}`);
 
+  const hospRows = await env.DB.prepare(`
+    SELECT DISTINCT district_name, hospital_name 
+    FROM assets_inventory 
+    WHERE hospital_name IS NOT NULL AND hospital_name != ''
+  `).all().catch(() => ({ results: [] }));
+
+  const hospitalsByDistrict = {};
+  for (const r of (hospRows.results || [])) {
+    const d = (r.district_name || "").trim();
+    const h = (r.hospital_name || "").trim();
+    if (d && h) {
+      if (!hospitalsByDistrict[d]) hospitalsByDistrict[d] = [];
+      if (!hospitalsByDistrict[d].includes(h)) hospitalsByDistrict[d].push(h);
+    }
+  }
+
   const payload = {
     success: true,
     zones: Array.from(zonesSet).sort(),
     districts: Array.from(districtsSet).sort(),
     di_names: Array.from(diNamesSet).sort(),
     months,
-    combinations
+    combinations,
+    hospitals_by_district: hospitalsByDistrict
   };
 
   if (env.OTPS_KV) {
@@ -961,18 +978,19 @@ export async function handleManualAddAsset(request, env) {
     const invStatus = (body.inventory_status || body.inventoryStatus || "Installed").trim();
     const eqStatus = (body.equipment_status || body.equipmentStatus || "Operational").trim();
     const zoneName = (body.zone_name || body.zoneName || "Zone Jodhpur").trim();
+    const diName = (body.di_name || body.diName || "").trim();
 
     await runWrite(
       env,
       `INSERT INTO assets_inventory (
         district_name, hospital_name, department_name, equipment_name,
         model_name, serial_no, qr_code, equipment_category, equipment_type,
-        facility_type, inventory_status, equipment_status, zone_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        facility_type, inventory_status, equipment_status, zone_name, di_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         districtName, hospitalName, deptName, equipmentName,
         modelName, serialNo, qrCode, eqCategory, eqType,
-        facilityType, invStatus, eqStatus, zoneName
+        facilityType, invStatus, eqStatus, zoneName, diName
       ]
     );
 
