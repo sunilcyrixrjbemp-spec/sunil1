@@ -1635,7 +1635,7 @@ export default function AdminPage() {
             }`}
           >
             <DatabaseOutlined className="text-xs" />
-            <span>Facilities & No TA/DA ({facilities.length})</span>
+            <span>Facilities & No TA/DA ({standardFacilities.length + noTaDaHospitals.length})</span>
           </button>
         </div>
 
