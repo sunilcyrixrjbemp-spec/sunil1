@@ -218,8 +218,12 @@ export async function handleLogin(request, env) {
   let body;
   try { body = await request.json(); }
   catch { return jsonResponse({ error: "Invalid JSON body" }, 400); }
+  const { user_id, password, force } = body || {};
+  const ipAddress = request.headers.get("CF-Connecting-IP") || "127.0.0.1";
+  const userAgent = request.headers.get("User-Agent") || "";
 
   const cleanUserId = (user_id || "").trim();
+  const lowerUserId = cleanUserId.toLowerCase();
   const cleanPassword = (password || "").trim();
 
   if (!cleanUserId || !cleanPassword)
@@ -229,12 +233,14 @@ export async function handleLogin(request, env) {
   const user = await env.DB.prepare(
     `SELECT u.*, COALESCE(r.role, u.role) as role FROM users u
      LEFT JOIN user_roles r ON u.user_id = r.user_id
-     WHERE LOWER(TRIM(u.user_id)) = LOWER(?)
-        OR LOWER(TRIM(u.e_code)) = LOWER(?)
-        OR LOWER(TRIM(u.mail_id)) = LOWER(?)
+     WHERE LOWER(TRIM(u.user_id)) = ?
+        OR LOWER(TRIM(u.e_code))  = ?
+        OR LOWER(TRIM(u.mail_id)) = ?
         OR TRIM(u.mobile_number) = ?
+        OR u.user_id = ?
+        OR u.e_code = ?
      LIMIT 1`
-  ).bind(cleanUserId, cleanUserId, cleanUserId, cleanUserId).first();
+  ).bind(lowerUserId, lowerUserId, lowerUserId, cleanUserId, cleanUserId, cleanUserId).first();
 
   if (!user) {
     await logLogin(env, cleanUserId, ipAddress, userAgent, "failed");
