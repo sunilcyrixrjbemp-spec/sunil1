@@ -1896,8 +1896,8 @@ export async function handleBulkToggleBulkApproval(request, env) {
 export async function handleGetFacilities(request, env) {
   try {
     const [noTaDaRes, stdRes, assetHospRes] = await Promise.all([
-      env.DB.prepare("SELECT id, hospital_name, district_name, created_at FROM no_ta_da_hospitals ORDER BY hospital_name ASC").all().catch(() => ({ results: [] })),
-      env.DB.prepare("SELECT id, facility_name, district_name FROM facility_details ORDER BY facility_name ASC").all().catch(() => ({ results: [] })),
+      env.DB.prepare("SELECT ROWID as id, hospital_name, district_name, created_at FROM no_ta_da_hospitals ORDER BY hospital_name ASC").all().catch(() => ({ results: [] })),
+      env.DB.prepare("SELECT ROWID as id, facility_name, district_name FROM facility_details ORDER BY facility_name ASC").all().catch(() => ({ results: [] })),
       env.DB.prepare("SELECT DISTINCT hospital_name as facility_name, district_name FROM assets_inventory WHERE hospital_name IS NOT NULL AND hospital_name != ''").all().catch(() => ({ results: [] }))
     ]);
 
@@ -1949,7 +1949,7 @@ export async function handleSaveFacility(request, env) {
     if (targetTable === "standard") {
       // Check duplicate in facility_details
       const existing = await env.DB.prepare(
-        "SELECT id, district_name FROM facility_details WHERE LOWER(TRIM(facility_name)) = LOWER(TRIM(?))"
+        "SELECT district_name FROM facility_details WHERE LOWER(TRIM(facility_name)) = LOWER(TRIM(?))"
       ).bind(facilityName).first();
 
       if (existing) {
@@ -1967,7 +1967,7 @@ export async function handleSaveFacility(request, env) {
     } else {
       // Check duplicate in no_ta_da_hospitals
       const existing = await env.DB.prepare(
-        "SELECT id, district_name FROM no_ta_da_hospitals WHERE LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))"
+        "SELECT district_name FROM no_ta_da_hospitals WHERE LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))"
       ).bind(facilityName).first();
 
       if (existing) {
@@ -2004,12 +2004,12 @@ export async function handleDeleteFacility(request, env, params, query) {
     if (!facilityId) return jsonResponse({ success: false, error: "Facility ID required" }, 400);
 
     if (targetTable === "standard") {
-      await runWrite(env, "DELETE FROM facility_details WHERE id = ?", [facilityId]);
+      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [facilityId, facilityId]);
     } else if (targetTable === "no_ta_da") {
-      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE id = ?", [facilityId]);
+      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR id = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
     } else {
-      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE id = ?", [facilityId]);
-      await runWrite(env, "DELETE FROM facility_details WHERE id = ?", [facilityId]);
+      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR id = ?", [facilityId, facilityId]);
+      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ?", [facilityId]);
     }
 
     if (env.OTPS_KV) {
