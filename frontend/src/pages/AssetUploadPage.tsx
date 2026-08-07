@@ -159,6 +159,11 @@ export default function AssetUploadPage() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
+  // Reset to page 1 whenever debouncedSearch or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterZone, filterDistrict, filterDI, filterMonth]);
+
   useEffect(() => {
     // Only fetchFilters on mount, fetchStats is triggered by filter changes (which run on mount automatically)
     fetchFilters();

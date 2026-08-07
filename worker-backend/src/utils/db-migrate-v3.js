@@ -100,6 +100,32 @@ const MIGRATIONS_V3 = [
   {
     name: "alter_expenses_add_processing_status",
     sql: "ALTER TABLE expenses ADD COLUMN processing_status TEXT DEFAULT 'complete'"
+  },
+
+  // ── Performance & Scaling Indexes ──────────────────────────────────────────
+  {
+    name: "idx_users_manager_clean",
+    sql: "CREATE INDEX IF NOT EXISTS idx_users_manager_clean ON users(manager)"
+  },
+  {
+    name: "idx_users_zonal_manager_clean",
+    sql: "CREATE INDEX IF NOT EXISTS idx_users_zonal_manager_clean ON users(zonal_manager)"
+  },
+  {
+    name: "idx_users_coordinator_clean",
+    sql: "CREATE INDEX IF NOT EXISTS idx_users_coordinator_clean ON users(coordinator)"
+  },
+  {
+    name: "idx_expenses_user_year_month",
+    sql: "CREATE INDEX IF NOT EXISTS idx_expenses_user_year_month ON expenses(user_id, year, month)"
+  },
+  {
+    name: "idx_facility_details_district",
+    sql: "CREATE INDEX IF NOT EXISTS idx_facility_details_district ON facility_details(district_name)"
+  },
+  {
+    name: "idx_assets_inventory_zone_district",
+    sql: "CREATE INDEX IF NOT EXISTS idx_assets_inventory_zone_district ON assets_inventory(zone_name, district_name)"
   }
 ];
 

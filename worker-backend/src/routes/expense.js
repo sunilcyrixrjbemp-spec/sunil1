@@ -415,7 +415,15 @@ export function buildPolicyComment(baseLocations, itineraries, isDaAllowed, date
   return `[Policy] ${casePrefix}Base: ${baseLabel} — ${parts.join("; ")}. Applied: ${date}.`;
 }
 
+let memoryAssetCostsMap = null;
+let memoryAssetCostsExpiry = 0;
+
 export async function getAssetCostsMap(env) {
+  const now = Date.now();
+  if (memoryAssetCostsMap && now < memoryAssetCostsExpiry) {
+    return memoryAssetCostsMap;
+  }
+
   const assetCosts = {};
   // 1. Primary: asset_value_master
   try {
@@ -462,8 +470,8 @@ export async function getAssetCostsMap(env) {
     }
   } catch (e) {
     console.warn("Failed to load assets_inventory fallback:", e.message);
-  }
-
+  memoryAssetCostsMap = assetCosts;
+  memoryAssetCostsExpiry = Date.now() + 3600000; // 1 hour TTL in Worker isolate memory
   return assetCosts;
 }
 
@@ -737,9 +745,21 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
 
   const gradeToLookup = (targetUser.designation || "").toLowerCase().includes("specialist") ? "O1" : targetUser.grade;
 
-  // Run all 11 independent DB queries in PARALLEL — reduces round trips to 1
-  // BUG2A FIX: Fetch Bike and Car rates separately by grade+vehicle_type so both
-  // rates are grade-accurate regardless of employee's primary vehicle type.
+  // ── KV Cache Lookup for Facilities ────────────────────────────────────────
+  const FACILITIES_KV_KEY = "cache:ref:facilities_dict:v1";
+  let cachedFacilities = null;
+
+  if (env.OTPS_KV) {
+    try {
+      cachedFacilities = await env.OTPS_KV.get(FACILITIES_KV_KEY, "json");
+    } catch (_) {}
+  }
+
+  const facilitiesPromise = cachedFacilities
+    ? Promise.resolve(null)
+    : env.DB.prepare(`SELECT DISTINCT district_name, facility_name FROM facility_details`).all();
+
+  // Run all independent DB queries in PARALLEL — reduces round trips to 1
   const [
     facilitiesRows,
     submittedRows,
@@ -753,7 +773,7 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     statsRes,
     settingsRows
   ] = await Promise.all([
-    env.DB.prepare(`SELECT DISTINCT district_name, facility_name FROM facility_details`).all(),
+    facilitiesPromise,
     env.DB.prepare(`SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ?`
     ).bind(targetUser.id, monthName, yearVal).all(),
     env.DB.prepare(`
@@ -786,11 +806,17 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     env.DB.prepare(`SELECT key, value FROM system_settings WHERE key IN ('max_past_days_limit', 'monthly_cutoff_day')`).all()
   ]);
 
-  // Build facilities map
-  const facilities = {};
-  for (const f of (facilitiesRows.results || [])) {
-    if (!facilities[f.district_name]) facilities[f.district_name] = [];
-    facilities[f.district_name].push(f.facility_name);
+  // Build facilities map (or use cached dictionary)
+  let facilities = cachedFacilities;
+  if (!facilities) {
+    facilities = {};
+    for (const f of (facilitiesRows?.results || [])) {
+      if (!facilities[f.district_name]) facilities[f.district_name] = [];
+      facilities[f.district_name].push(f.facility_name);
+    }
+    if (env.OTPS_KV) {
+      env.OTPS_KV.put(FACILITIES_KV_KEY, JSON.stringify(facilities), { expirationTtl: 86400 }).catch(() => {});
+    }
   }
 
   const sysSettingsMap = {};

@@ -145,10 +145,28 @@ export async function handleUploadDocument(request, env, params, query, user) {
  */
 export async function handleServeFile(request, env, params, query) {
   const urlObj = new URL(request.url);
+
+  // ── 0. Check Workers Edge Cache API first ─────────────────────────────────
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const cacheKey = new Request(urlObj.toString(), request);
+  if (cache) {
+    try {
+      const cachedResponse = await cache.match(cacheKey);
+      if (cachedResponse) {
+        const cachedHeaders = new Headers(cachedResponse.headers);
+        cachedHeaders.set("X-Cache-Status", "HIT-EDGE");
+        return new Response(cachedResponse.body, {
+          status: cachedResponse.status,
+          statusText: cachedResponse.statusText,
+          headers: cachedHeaders,
+        });
+      }
+    } catch (_) {}
+  }
+
   let fileKey = params?.key || params?.["*"] || query?.get("key");
 
   if (!fileKey) {
-    const p = urlObj.pathname;
     const prefixes = [
       "/api/r2/file/",
       "/api/files/",
@@ -160,8 +178,8 @@ export async function handleServeFile(request, env, params, query) {
       "/profiles/"
     ];
     for (const prefix of prefixes) {
-      if (p.includes(prefix)) {
-        fileKey = p.split(prefix)[1];
+      if (urlObj.pathname.includes(prefix)) {
+        fileKey = urlObj.pathname.split(prefix)[1];
         if (prefix === "/expenses/") {
           fileKey = `expenses/${fileKey}`;
         } else if (prefix === "/gdrive/") {
@@ -205,16 +223,21 @@ export async function handleServeFile(request, env, params, query) {
         const thumbKey = `thumb/${fileKeyDecoded}`;
         let thumbObj = await bucket.get(thumbKey);
         if (thumbObj) {
-          return new Response(thumbObj.body, {
+          const thumbResp = new Response(thumbObj.body, {
             status: 200,
             headers: {
               "Content-Type": "image/webp",
               "Cache-Control": "public, max-age=3600, s-maxage=86400",
               "Access-Control-Allow-Origin": "*",
               "Vary": "Accept",
-              "X-Thumb": "cached"
+              "X-Thumb": "cached",
+              "X-Cache-Status": "MISS-STORED"
             }
           });
+          if (cache && env.ctx && typeof env.ctx.waitUntil === "function") {
+            env.ctx.waitUntil(cache.put(cacheKey, thumbResp.clone()));
+          }
+          return thumbResp;
         }
       }
 
@@ -246,19 +269,26 @@ export async function handleServeFile(request, env, params, query) {
             });
           }
 
-          return new Response(obj.body, {
+          const fileResp = new Response(obj.body, {
             status: 200,
             headers: {
               "Content-Type": contentType,
               "Content-Length": String(obj.size),
-              "Cache-Control": "public, max-age=31536000, immutable",
+              "Cache-Control": "public, max-age=2592000, s-maxage=31536000, immutable",
               "ETag": etag ? `"${etag}"` : "",
               "Content-Disposition": isPdf ? 'inline; filename="document.pdf"' : "inline",
               "Access-Control-Allow-Origin": "*",
               "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-              "X-Source": "r2-direct"
+              "X-Source": "r2-direct",
+              "X-Cache-Status": "MISS-STORED"
             },
           });
+
+          if (cache && env.ctx && typeof env.ctx.waitUntil === "function") {
+            env.ctx.waitUntil(cache.put(cacheKey, fileResp.clone()));
+          }
+
+          return fileResp;
         }
       }
     } catch (_) {}

@@ -192,6 +192,23 @@ export async function handleGetAssetsInventory(request, env, params, query, user
  * GET /api/reports/assets-filters
  */
 export async function handleGetAssetsFilters(request, env, params, query, user) {
+  const ASSETS_FILTERS_KV_KEY = "cache:reports:assets_filters:v1";
+  const bust = query?.get("bust") === "1";
+
+  if (env.OTPS_KV && !bust) {
+    try {
+      const cached = await env.OTPS_KV.get(ASSET_FILTERS_KV_KEY || ASSETS_FILTERS_KV_KEY, "json");
+      if (cached) {
+        return jsonResponse(
+          { ...cached, _cache: "hit" },
+          200,
+          null,
+          { "Cache-Control": "public, max-age=1800, s-maxage=43200, stale-while-revalidate=43200" }
+        );
+      }
+    } catch (_) {}
+  }
+
   const combRows = await env.DB.prepare(`
     SELECT DISTINCT zone_name, district_name, di_name 
     FROM assets_inventory 
@@ -235,14 +252,25 @@ export async function handleGetAssetsFilters(request, env, params, query, user) 
 
   const months = (monthRows.results || []).map(r => `${r.moic_year}-${String(r.moic_month).padStart(2, "0")}`);
 
-  return jsonResponse({
+  const payload = {
     success: true,
     zones: Array.from(zonesSet).sort(),
     districts: Array.from(districtsSet).sort(),
     di_names: Array.from(diNamesSet).sort(),
     months,
     combinations
-  });
+  };
+
+  if (env.OTPS_KV) {
+    env.OTPS_KV.put(ASSETS_FILTERS_KV_KEY, JSON.stringify(payload), { expirationTtl: 43200 }).catch(() => {});
+  }
+
+  return jsonResponse(
+    { ...payload, _cache: "miss" },
+    200,
+    null,
+    { "Cache-Control": "public, max-age=1800, s-maxage=43200, stale-while-revalidate=43200" }
+  );
 }
 
 /**

@@ -135,7 +135,7 @@ export async function getBootstrapDataHelper(env, user) {
          FROM expenses e
          INNER JOIN users u ON e.user_id = u.id
          WHERE e.year = ? AND e.month = ?
-         ORDER BY e.id DESC LIMIT 10000`
+         ORDER BY e.id DESC LIMIT 250`
       ).bind(currentYear, currentMonthName).all();
       teamExpenses = (teamRes?.results || []).map(e => ({
         ...mapExpense(e),
@@ -387,7 +387,12 @@ export async function handleGetDropdowns(request, env) {
     try {
       const cached = await env.OTPS_KV.get(DROPDOWNS_KV_KEY, "json");
       if (cached) {
-        return jsonResponse({ ...cached, _cache: "hit" });
+        return jsonResponse(
+          { ...cached, _cache: "hit" },
+          200,
+          null,
+          { "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400" }
+        );
       }
     } catch (_) {
       // KV error — fall through to DB
@@ -419,7 +424,12 @@ export async function handleGetDropdowns(request, env) {
     }).catch(() => {/* silently ignore KV write errors */});
   }
 
-  return jsonResponse({ ...payload, _cache: "miss" });
+  return jsonResponse(
+    { ...payload, _cache: "miss" },
+    200,
+    null,
+    { "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400" }
+  );
 }
 
 // ─── POST /api/auth/forgot-password ──────────────────────────────────────────

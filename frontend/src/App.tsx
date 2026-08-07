@@ -89,11 +89,9 @@ function App() {
     };
   }, []);
 
-  // Non-blocking ping to wake up backend worker on app startup & prefetch dropdowns
+  // Non-blocking prefetch of static master data on app startup
   useEffect(() => {
-    fetch("https://fieldops-api.sunilbishnoi.workers.dev/api/health").catch(() => {});
     initOtaUpdates();
-    // Non-blocking prefetch of static master data (dropdowns)
     fetch("https://fieldops-api.sunilbishnoi.workers.dev/api/auth/dropdowns").catch(() => {});
   }, []);
 

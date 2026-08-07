@@ -1751,6 +1751,9 @@ export async function handleSaveAllowanceRates(request, env, params, query, admi
 
     if (statements.length > 0) {
       await runBatchWrite(env, statements);
+      if (env.OTPS_KV) {
+        try { await env.OTPS_KV.delete("cache:auth:dropdowns:v1"); } catch (_) {}
+      }
     }
 
     return jsonResponse({ status: "success", message: "Allowance rates updated successfully." });
