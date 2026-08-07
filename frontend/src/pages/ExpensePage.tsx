@@ -6182,11 +6182,7 @@ export default function ExpensePage() {
               <button
                 type="button"
                 onClick={() => {
-                  const wasSuccess = submitStatus.type === "success";
                   setSubmitStatus(null);
-                  if (wasSuccess) {
-                    navigate("/home");
-                  }
                 }}
                 className={`w-full py-2.5 px-4 rounded-none text-xs font-black uppercase tracking-wider transition-all border cursor-pointer shadow-2xs flex items-center justify-center gap-2 ${
                   submitStatus.type === "success"
