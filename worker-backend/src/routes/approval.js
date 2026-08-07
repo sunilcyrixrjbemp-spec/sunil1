@@ -12,18 +12,23 @@ function computeCombinedPurpose(legs, fallbackPurpose) {
   const activitiesSet = new Set();
   
   for (const leg of legs) {
+    let hasValidCallsInLeg = false;
     if (leg.activity_details) {
       try {
         const parsed = typeof leg.activity_details === "string" ? JSON.parse(leg.activity_details) : leg.activity_details;
         if (parsed.selected_activities && Array.isArray(parsed.selected_activities)) {
           parsed.selected_activities.forEach(a => {
-            if (a && a.trim() && a !== "—") {
+            if (a && a.trim() && a !== "—" && a !== "Calls") {
               activitiesSet.add(a.trim());
             }
           });
         }
-        if (parsed.calls_list && parsed.calls_list.length > 0) {
-          activitiesSet.add("Calls");
+        if (parsed.calls_list && Array.isArray(parsed.calls_list)) {
+          const validCalls = parsed.calls_list.filter(c => c && c.barcode && String(c.barcode).trim() !== "");
+          if (validCalls.length > 0) {
+            hasValidCallsInLeg = true;
+            activitiesSet.add("Calls");
+          }
         }
         if (parsed.pms_list && parsed.pms_list.length > 0) {
           activitiesSet.add("PMS");
@@ -32,7 +37,7 @@ function computeCombinedPurpose(legs, fallbackPurpose) {
     }
     if (leg.visit_purpose) {
       const purp = String(leg.visit_purpose);
-      if (purp.includes("Calls")) activitiesSet.add("Calls");
+      if (purp.includes("Calls") && hasValidCallsInLeg) activitiesSet.add("Calls");
       if (purp.includes("PMS")) activitiesSet.add("PMS");
       if (purp.includes("Asset Tagging")) activitiesSet.add("Asset Tagging");
       if (purp.includes("Calibration")) activitiesSet.add("Calibration");
@@ -302,12 +307,27 @@ export async function fetchPendingApprovals(env, user) {
     const districtType = distInfo.districtType;
     const hasMismatch = distInfo.hasMismatch;
 
-    let callsAssigned = app.calls_assigned || 0;
-    let callsCompleted = app.calls_completed || 0;
+    let hasValidCallBarcodes = false;
+    for (const l of legs) {
+      if (l.activity_details) {
+        try {
+          const act = typeof l.activity_details === "string" ? JSON.parse(l.activity_details) : l.activity_details;
+          const callsList = Array.isArray(act?.calls_list) ? act.calls_list : [];
+          if (callsList.some(c => c && c.barcode && String(c.barcode).trim() !== "")) {
+            hasValidCallBarcodes = true;
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
+    let callsAssigned = hasValidCallBarcodes ? (app.calls_assigned || 0) : 0;
+    let callsCompleted = hasValidCallBarcodes ? (app.calls_completed || 0) : 0;
     let cleanPurpose = computeCombinedPurpose(legs, app.description || "");
 
-    if (callsCompleted === 0) {
+    if (!hasValidCallBarcodes || callsCompleted === 0) {
       callsAssigned = 0;
+      callsCompleted = 0;
       if (cleanPurpose.includes("Calls")) {
         cleanPurpose = cleanPurpose.replace("Activities: Calls, ", "Activities: ")
                                    .replace("Activities: Calls", "Activities: Other")
@@ -390,12 +410,27 @@ export async function fetchPendingApprovals(env, user) {
         const legList = legacyLegsMap[row.exp_id] || [];
         const districtType = computeDistrictType(row.submitter_district, legList);
 
-        let callsAssigned = row.calls_assigned || 0;
-        let callsCompleted = row.calls_completed || 0;
+        let hasValidCallBarcodesLeg = false;
+        for (const l of legList) {
+          if (l.activity_details) {
+            try {
+              const act = typeof l.activity_details === "string" ? JSON.parse(l.activity_details) : l.activity_details;
+              const callsList = Array.isArray(act?.calls_list) ? act.calls_list : [];
+              if (callsList.some(c => c && c.barcode && String(c.barcode).trim() !== "")) {
+                hasValidCallBarcodesLeg = true;
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+
+        let callsAssigned = hasValidCallBarcodesLeg ? (row.calls_assigned || 0) : 0;
+        let callsCompleted = hasValidCallBarcodesLeg ? (row.calls_completed || 0) : 0;
         let cleanPurpose = computeCombinedPurpose(legList, row.visit_purpose || "");
 
-        if (callsCompleted === 0) {
+        if (!hasValidCallBarcodesLeg || callsCompleted === 0) {
           callsAssigned = 0;
+          callsCompleted = 0;
           if (cleanPurpose.includes("Calls")) {
             cleanPurpose = cleanPurpose.replace("Activities: Calls, ", "Activities: ")
                                        .replace("Activities: Calls", "Activities: Other")
