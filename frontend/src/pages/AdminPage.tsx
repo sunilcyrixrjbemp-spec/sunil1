@@ -2242,7 +2242,7 @@ export default function AdminPage() {
             </div>
           )}
         </div>
-      ) : (
+      ) : activeTab === "settings" ? (
         /* ================= SYSTEM SETTINGS TAB ================= */
         <div className="space-y-4 animate-fadeIn max-w-5xl">
           <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs p-3.5 space-y-3">
