@@ -1151,6 +1151,50 @@ export async function handleAutoApprovalExpiry(env) {
   return { success: true, processed: results };
 }
 
+async function processBulkApprovalInBackground(requestUrl, env, params, query, user, expense_ids, action_type, comments, clientTimestamp) {
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const expId of expense_ids) {
+    try {
+      const bulkLabel = action_type === "reject" ? "Bulk Rejection" : "Bulk Approval";
+      const cleanUserComment = (comments || "").trim();
+      const formattedComment = cleanUserComment 
+        ? (cleanUserComment.startsWith("Bulk Approval") || cleanUserComment.startsWith("Bulk Rejection") 
+            ? cleanUserComment 
+            : `${bulkLabel} :- ${cleanUserComment}`)
+        : bulkLabel;
+
+      const mockParams = { expense_id: String(expId) };
+      const mockRequest = new Request(requestUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          comments: formattedComment,
+          client_timestamp: parseClientTimestamp(clientTimestamp)
+        })
+      });
+
+      let res;
+      if (action_type === "reject") {
+        res = await handleReject(mockRequest, env, mockParams, query, user);
+      } else {
+        res = await handleApprove(mockRequest, env, mockParams, query, user);
+      }
+
+      if (res && res.status >= 200 && res.status < 300) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+    } catch (err) {
+      console.error(`Error processing background bulk claim ID ${expId}:`, err);
+      failCount++;
+    }
+  }
+  console.log(`[Bulk Queue Job Finished] Action: ${action_type}, Processed ${successCount}/${expense_ids.length} successfully.`);
+}
+
 export async function handleBulkApprove(request, env, params, query, user) {
   const userRoleClean = (user.role || "").trim().toLowerCase();
   const allowedBulkRoles = ["coordinator", "project head"];
@@ -1174,51 +1218,23 @@ export async function handleBulkApprove(request, env, params, query, user) {
     return jsonResponse({ error: "Invalid or empty expense_ids array" }, 400);
   }
 
-  let successCount = 0;
-  let failCount = 0;
+  // Fire background queue execution instantly so user gets 0.01ms response
+  const bgPromise = processBulkApprovalInBackground(
+    request.url, env, params, query, user, expense_ids, action_type, comments, body.client_timestamp
+  );
 
-  for (const expId of expense_ids) {
-    try {
-      const bulkLabel = action_type === "reject" ? "Bulk Rejection" : "Bulk Approval";
-      const cleanUserComment = (comments || "").trim();
-      const formattedComment = cleanUserComment 
-        ? (cleanUserComment.startsWith("Bulk Approval") || cleanUserComment.startsWith("Bulk Rejection") 
-            ? cleanUserComment 
-            : `${bulkLabel} :- ${cleanUserComment}`)
-        : bulkLabel;
-
-      const mockParams = { expense_id: String(expId) };
-      const mockRequest = new Request(request.url, {
-        method: "POST",
-        headers: request.headers,
-        body: JSON.stringify({
-          comments: formattedComment,
-          client_timestamp: parseClientTimestamp(body.client_timestamp)
-        })
-      });
-
-      let res;
-      if (action_type === "reject") {
-        res = await handleReject(mockRequest, env, mockParams, query, user);
-      } else {
-        res = await handleApprove(mockRequest, env, mockParams, query, user);
-      }
-
-      if (res && res.status >= 200 && res.status < 300) {
-        successCount++;
-      } else {
-        failCount++;
-      }
-    } catch (err) {
-      console.error(`Error processing bulk claim ID ${expId}:`, err);
-      failCount++;
-    }
+  if (env.ctx && typeof env.ctx.waitUntil === "function") {
+    env.ctx.waitUntil(bgPromise);
+  } else {
+    bgPromise.catch(err => console.error("Background bulk approval error:", err));
   }
 
   return jsonResponse({
-    message: "Bulk operation completed",
-    successCount,
-    failCount
+    status: "success",
+    message: `Bulk ${action_type === "reject" ? "rejection" : "approval"} request for ${expense_ids.length} entries queued successfully. Processing in background.`,
+    successCount: expense_ids.length,
+    failCount: 0,
+    queued: true
   });
 }
 
