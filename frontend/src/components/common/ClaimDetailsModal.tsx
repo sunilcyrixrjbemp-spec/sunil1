@@ -467,6 +467,9 @@ const LegDetailCard = ({
   // DA is edited ONLY if isFirstLeg is true!
   const isDaEdited = isFirstLeg && (estimatedSubmittedDa > daAmt);
 
+  // STRICT PER-LEG DEDUCTION CHECK: Only show if there's an explicit per-leg adjustment
+  const hasLegDeduction = (calculatedDeduction > 0 || isTaEdited || isDaEdited || isKmEdited || isValidText(kmDeductionReason) || isValidText(daDeductionReason) || (isFirstLeg && isValidText(baseLocationDeductionReason)));
+
   // Work Metrics
   const callsClosed = validCallsInList > 0 ? validCallsInList : 0;
   const pmsCount = leg.pms_count || leg.ws_pms || 0;
