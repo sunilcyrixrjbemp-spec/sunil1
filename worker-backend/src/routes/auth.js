@@ -434,12 +434,18 @@ export async function handleForgotPassword(request, env) {
     if (!user_id || !date_of_birth)
       return jsonResponse({ error: "user_id and date_of_birth are required" }, 400);
 
+    const cleanUserIdInput = (user_id || "").trim();
     const user = await env.DB.prepare(
-      `SELECT user_id, name, mail_id, date_of_birth FROM users WHERE user_id = ? LIMIT 1`
-    ).bind(user_id).first();
+      `SELECT user_id, name, mail_id, date_of_birth FROM users
+       WHERE LOWER(TRIM(user_id)) = LOWER(?)
+          OR LOWER(TRIM(e_code))  = LOWER(?)
+          OR LOWER(TRIM(mail_id)) = LOWER(?)
+       LIMIT 1`
+    ).bind(cleanUserIdInput, cleanUserIdInput, cleanUserIdInput).first();
 
-    if (!user) return jsonResponse({ error: "No user found with that User ID" }, 404);
+    if (!user) return jsonResponse({ error: "No user found with that User ID or Employee Code" }, 404);
 
+    const canonicalUserId = user.user_id;
     const dobNormInput  = normalizeDateStr(date_of_birth);
     const dobNormStored = normalizeDateStr(user.date_of_birth);
     const dobMatch      = dobNormInput === dobNormStored || dobNormInput.split("-").reverse().join("-") === dobNormStored;
@@ -453,11 +459,14 @@ export async function handleForgotPassword(request, env) {
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     if (env.OTPS_KV) {
-      await env.OTPS_KV.put(`otp:${user_id}:forgot_password`, otp, { expirationTtl: 600 });
+      await Promise.all([
+        env.OTPS_KV.put(`otp:${cleanUserIdInput}:forgot_password`, otp, { expirationTtl: 600 }),
+        env.OTPS_KV.put(`otp:${canonicalUserId}:forgot_password`, otp, { expirationTtl: 600 })
+      ]);
     }
 
     const emailPromise = sendOTPEmail(env, {
-      to: email, name: user.name, otp, userId: user_id, purpose: "Password Reset Request"
+      to: email, name: user.name, otp, userId: canonicalUserId, purpose: "Password Reset Request"
     }).catch(emailErr => console.error("[ForgotPassword] Email dispatch error:", emailErr.message));
 
     if (env.ctx && typeof env.ctx.waitUntil === "function") {
@@ -484,9 +493,11 @@ export async function handleVerifyOtp(request, env) {
   if (!user_id || !otp || !otp_type)
     return jsonResponse({ error: "user_id, otp, and otp_type are required" }, 400);
 
+  const cleanUserId = String(user_id || "").trim();
   const normalizedType = otp_type === "reset_password" ? "forgot_password" : otp_type;
-  const kvKey    = `otp:${user_id}:${normalizedType}`;
-  const strikeKey = `otp_strikes:${user_id}:${normalizedType}`;
+  const kvKey    = `otp:${cleanUserId}:${normalizedType}`;
+  const strikeKey = `otp_strikes:${cleanUserId}:${normalizedType}`;
+  const verifiedKey = `otp_verified:${cleanUserId}:${normalizedType}`;
 
   if (env.OTPS_KV) {
     const storedOtp = await env.OTPS_KV.get(kvKey);
@@ -495,7 +506,7 @@ export async function handleVerifyOtp(request, env) {
 
     let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
     if (strikes >= 5) {
-      await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
+      await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey), env.OTPS_KV.delete(verifiedKey)]);
       return jsonResponse({ error: "Too many failed attempts. Please request a new OTP." }, 400);
     }
 
@@ -503,13 +514,14 @@ export async function handleVerifyOtp(request, env) {
       const remaining = 5 - strikes - 1;
       await env.OTPS_KV.put(strikeKey, String(strikes + 1), { expirationTtl: 600 });
       if (remaining <= 0) {
-        await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
+        await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey), env.OTPS_KV.delete(verifiedKey)]);
         return jsonResponse({ error: "Invalid OTP. Too many failed attempts. OTP has been invalidated." }, 400);
       }
       return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
     }
 
-    await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
+    // Preserve verified token in KV for 15 minutes so reset-password step can verify it cleanly
+    await env.OTPS_KV.put(verifiedKey, String(otp).trim(), { expirationTtl: 900 });
   }
 
   return jsonResponse({ success: true, message: "OTP verified successfully." });
@@ -532,46 +544,61 @@ export async function handleResetPassword(request, env) {
   if (new_password.length < 8)
     return jsonResponse({ error: "Password must be at least 8 characters" }, 400);
 
-  const kvKey    = `otp:${user_id}:forgot_password`;
-  const strikeKey = `otp_strikes:${user_id}:forgot_password`;
+  const cleanUserId = String(user_id || "").trim();
+  const kvKey      = `otp:${cleanUserId}:forgot_password`;
+  const verifiedKey = `otp_verified:${cleanUserId}:forgot_password`;
+  const strikeKey   = `otp_strikes:${cleanUserId}:forgot_password`;
 
   if (!env.OTPS_KV) return jsonResponse({ error: "KV store not configured." }, 500);
 
-  const storedOtp = await env.OTPS_KV.get(kvKey);
-  if (!storedOtp) return jsonResponse({ error: "Invalid or expired OTP" }, 400);
+  const storedOtp   = await env.OTPS_KV.get(kvKey);
+  const verifiedOtp = await env.OTPS_KV.get(verifiedKey);
+
+  const inputOtpStr = String(otp).trim();
+  const isValidOtp  = (verifiedOtp && verifiedOtp.trim() === inputOtpStr) || (storedOtp && storedOtp.trim() === inputOtpStr);
+
+  if (!isValidOtp) {
+    return jsonResponse({ error: "Invalid or expired OTP. Please request a new OTP code." }, 400);
+  }
 
   let strikes = parseInt(await env.OTPS_KV.get(strikeKey) || "0", 10);
   if (strikes >= 5) {
-    await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
+    await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(verifiedKey), env.OTPS_KV.delete(strikeKey)]);
     return jsonResponse({ error: "OTP blocked. Please request a new code." }, 400);
   }
 
-  if (storedOtp.trim() !== String(otp).trim()) {
-    const remaining = 5 - strikes - 1;
-    await env.OTPS_KV.put(strikeKey, String(strikes + 1), { expirationTtl: 600 });
-    if (remaining <= 0) {
-      await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
-      return jsonResponse({ error: "Invalid OTP. Too many failed attempts." }, 400);
-    }
-    return jsonResponse({ error: `Invalid OTP. ${remaining} attempts remaining.` }, 400);
-  }
+  const user = await env.DB.prepare(
+    `SELECT id, user_id FROM users
+     WHERE LOWER(TRIM(user_id)) = LOWER(?)
+        OR LOWER(TRIM(e_code))  = LOWER(?)
+        OR LOWER(TRIM(mail_id)) = LOWER(?)
+     LIMIT 1`
+  ).bind(cleanUserId, cleanUserId, cleanUserId).first();
 
-  const user = await env.DB.prepare(`SELECT id FROM users WHERE user_id = ? LIMIT 1`).bind(user_id).first();
   if (!user) return jsonResponse({ error: "User not found" }, 404);
 
+  const targetUserId = user.user_id;
   const newHash = await getPasswordHash(new_password);
   const now     = new Date().toISOString();
 
   await env.DB.batch([
     env.DB.prepare(
-      `UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0, user_status = 'active' WHERE user_id = ?`
-    ).bind(newHash, user_id),
+      `UPDATE users SET hashed_password = ?, active_session_id = NULL, failed_attempt = 0, user_status = 'active' WHERE LOWER(TRIM(user_id)) = LOWER(?) OR LOWER(TRIM(e_code)) = LOWER(?)`
+    ).bind(newHash, targetUserId, cleanUserId),
     env.DB.prepare(
       `INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)`
     ).bind(user.id, newHash, now)
   ]);
 
-  await Promise.all([env.OTPS_KV.delete(kvKey), env.OTPS_KV.delete(strikeKey)]);
+  await Promise.all([
+    env.OTPS_KV.delete(kvKey),
+    env.OTPS_KV.delete(verifiedKey),
+    env.OTPS_KV.delete(strikeKey),
+    env.OTPS_KV.delete(`otp:${targetUserId}:forgot_password`),
+    env.OTPS_KV.delete(`otp_verified:${targetUserId}:forgot_password`),
+    env.OTPS_KV.delete(`otp_strikes:${targetUserId}:forgot_password`)
+  ]);
+
   return jsonResponse({ success: true, message: "Password has been reset successfully. Please login with your new password." });
 }
 
