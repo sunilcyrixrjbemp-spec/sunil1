@@ -2285,11 +2285,36 @@ export async function handleReverseExpense(request, env, params, query, user) {
 
 
 
+async function ensureExpenseColumnsExist(db) {
+  if (!db) return;
+  const columnsToAdd = [
+    "ALTER TABLE expenses ADD COLUMN district_type TEXT",
+    "ALTER TABLE expenses ADD COLUMN policy_case INTEGER",
+    "ALTER TABLE expenses ADD COLUMN policy_rule_name TEXT",
+    "ALTER TABLE expenses ADD COLUMN queue_job_id TEXT",
+    "ALTER TABLE expenses ADD COLUMN processing_status TEXT DEFAULT 'complete'"
+  ];
+
+  for (const sql of columnsToAdd) {
+    try {
+      await db.prepare(sql).run();
+    } catch (_) {
+      // Column already exists — ignore safely
+    }
+  }
+}
+
 /**
  * POST /api/expense/
  * Submit itinerary expense claim
  */
 export async function handleSubmitExpense(request, env, params, query, user) {
+  try {
+    await ensureExpenseColumnsExist(env.DB);
+  } catch (e) {
+    console.warn("[handleSubmitExpense] Column check error:", e.message);
+  }
+
   let formData = null;
   let jsonBody = null;
   let payloadStr = null;
