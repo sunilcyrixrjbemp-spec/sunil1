@@ -106,21 +106,45 @@ export async function getBootstrapDataHelper(env, user) {
   const dropdowns = { designations: DESIGNATIONS, zones: ZONE_DISTRICTS, roles: ROLES,
                       grades: grades.length ? grades : ["A","B","C","D"] };
 
-  const mapExpense = e => ({
-    ...e,
-    travel_mode: e.travel_mode, expense_code: e.expense_code,
-    da_amount: e.da_amount, hotel_amount: e.hotel_amount,
-    other_expense_amount: e.other_expense_amount,
-    calls_assigned: e.calls_assigned, calls_completed: e.calls_completed,
-    pms_count: e.pms_count, asset_tagging: e.asset_tagging,
-    local_purchase_amount: e.local_purchase_amount,
-    original_amount: e.original_amount, original_da_amount: e.original_da_amount,
-    original_hotel_amount: e.original_hotel_amount,
-    original_other_expense_amount: e.original_other_expense_amount,
-    original_local_purchase_amount: e.original_local_purchase_amount,
-    calibration_count: e.calibration_count, mobilise_count: e.mobilise_count,
-    created_at: e.created_at, updated_at: e.updated_at
-  });
+  const mapExpense = e => {
+    let callsComp = parseInt(e.calls_completed || 0, 10) || 0;
+    let callsAssign = parseInt(e.calls_assigned || 0, 10) || 0;
+    let desc = e.description || e.purpose || "";
+
+    // If description has "Calls" but calls_completed or calls_assigned is zero/invalid, clean description
+    if ((callsComp <= 0 || callsAssign <= 0) && desc.includes("Calls")) {
+      desc = desc
+        .replace(/Calls,\s*/gi, "")
+        .replace(/,\s*Calls/gi, "")
+        .replace(/Calls/gi, "")
+        .trim();
+      if (desc === "Activities:" || desc === "Activities" || !desc) {
+        desc = "Field visit";
+      } else if (desc.startsWith("Activities: ,")) {
+        desc = desc.replace("Activities: ,", "Activities: ");
+      }
+      callsComp = 0;
+      callsAssign = 0;
+    }
+
+    return {
+      ...e,
+      description: desc,
+      purpose: desc,
+      travel_mode: e.travel_mode, expense_code: e.expense_code,
+      da_amount: e.da_amount, hotel_amount: e.hotel_amount,
+      other_expense_amount: e.other_expense_amount,
+      calls_assigned: callsAssign, calls_completed: callsComp,
+      pms_count: e.pms_count, asset_tagging: e.asset_tagging,
+      local_purchase_amount: e.local_purchase_amount,
+      original_amount: e.original_amount, original_da_amount: e.original_da_amount,
+      original_hotel_amount: e.original_hotel_amount,
+      original_other_expense_amount: e.original_other_expense_amount,
+      original_local_purchase_amount: e.original_local_purchase_amount,
+      calibration_count: e.calibration_count, mobilise_count: e.mobilise_count,
+      created_at: e.created_at, updated_at: e.updated_at
+    };
+  };
 
   const myExpenses = (myExpensesResult?.results || []).map(mapExpense);
 

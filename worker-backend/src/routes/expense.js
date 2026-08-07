@@ -611,6 +611,37 @@ export async function serializeExpenses(env, expenses, submittersMap) {
     const districtType = exp.district_type || distInfo.districtType;
     const hasMismatch = (districtType === "OUT_DISTRICT") && distInfo.allLegsBaseDistrict;
 
+    let hasValidCallBarcodes = false;
+    for (const l of legs) {
+      if (l.activity_details) {
+        try {
+          const act = typeof l.activity_details === "string" ? JSON.parse(l.activity_details) : l.activity_details;
+          const callsList = Array.isArray(act?.calls_list) ? act.calls_list : [];
+          if (callsList.some(c => c && c.barcode && String(c.barcode).trim() !== "")) {
+            hasValidCallBarcodes = true;
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
+    const finalCallsAssigned = hasValidCallBarcodes ? totCallsAssigned : 0;
+    const finalCallsCompleted = hasValidCallBarcodes ? totCallsCompleted : 0;
+
+    let finalDesc = exp.description || "";
+    if (!hasValidCallBarcodes && finalDesc.includes("Calls")) {
+      finalDesc = finalDesc
+        .replace(/Calls,\s*/gi, "")
+        .replace(/,\s*Calls/gi, "")
+        .replace(/Calls/gi, "")
+        .trim();
+      if (finalDesc === "Activities:" || finalDesc === "Activities" || !finalDesc) {
+        finalDesc = "Field visit";
+      } else if (finalDesc.startsWith("Activities: ,")) {
+        finalDesc = finalDesc.replace("Activities: ,", "Activities: ");
+      }
+    }
+
     result.push({
       id: exp.id,
       expense_code: exp.expense_code,
@@ -623,14 +654,14 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       status: exp.status,
       travel_mode: exp.travel_mode,
       itinerary: exp.itinerary,
-      description: exp.description || "",
+      description: finalDesc,
       attachments: exp.attachments || "",
       da_amount: parseFloat(exp.da_amount || 0.0),
       hotel_amount: parseFloat(exp.hotel_amount || 0.0),
       other_expense_amount: parseFloat(exp.other_expense_amount || 0.0),
       local_purchase_amount: parseFloat(exp.local_purchase_amount || 0.0),
-      calls_assigned: totCallsAssigned,
-      calls_completed: totCallsCompleted,
+      calls_assigned: finalCallsAssigned,
+      calls_completed: finalCallsCompleted,
       pms_count: totPmsCount,
       asset_tagging: totAssetTagging,
       asset_tagging_value: totAssetTaggingVal,
@@ -651,7 +682,7 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       submitter_code: submitter?.user_id || exp.user_id || "",
       category: exp.category || exp.travel_mode || "Travel",
       date: exp.date || exp.itinerary || "",
-      purpose: exp.purpose || exp.description || "",
+      purpose: finalDesc,
       itineraries: legs.map(l => ({
         leg: l.leg_number,
         from_district: l.from_district,
