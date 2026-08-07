@@ -1920,11 +1920,14 @@ export async function handleSaveFacility(request, env) {
     const timestamp = new Date().toISOString();
 
     const existing = await env.DB.prepare(
-      "SELECT id FROM no_ta_da_hospitals WHERE LOWER(TRIM(hospital_name)) = LOWER(TRIM(?)) AND LOWER(TRIM(district_name)) = LOWER(TRIM(?))"
-    ).bind(hospitalName, districtName).first();
+      "SELECT id, district_name FROM no_ta_da_hospitals WHERE LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))"
+    ).bind(hospitalName).first();
 
     if (existing) {
-      return jsonResponse({ success: false, error: "Facility already registered in this district" }, 400);
+      return jsonResponse({
+        success: false,
+        error: `Facility '${hospitalName}' is already registered (in district '${existing.district_name}'). Duplicate entries are strictly prohibited.`
+      }, 400);
     }
 
     await runWrite(
