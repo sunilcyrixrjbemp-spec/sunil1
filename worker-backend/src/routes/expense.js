@@ -3062,8 +3062,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             params: [
-              itiId, call.barcode, call.type, call.status, asset.district_name, asset.hospital_name,
-              asset.equipment_name, asset.model_name, asset.inventory_status, call.photo_url || ""
+              itiId, call.barcode || null, call.type || null, call.status || null, asset.district_name || null, asset.hospital_name || null,
+              asset.equipment_name || null, asset.model_name || null, asset.inventory_status || null, call.photo_url || ""
             ]
           });
         }
@@ -3081,8 +3081,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             params: [
-              itiId, pms.barcode, pms.frequency, asset.district_name, asset.hospital_name,
-              asset.equipment_name, asset.model_name, asset.inventory_status, pms.photo_url || ""
+              itiId, pms.barcode || null, pms.frequency || null, asset.district_name || null, asset.hospital_name || null,
+              asset.equipment_name || null, asset.model_name || null, asset.inventory_status || null, pms.photo_url || ""
             ]
           });
         }
@@ -3095,7 +3095,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
               INSERT INTO expense_asset_taggings (itinerary_id, equipment_name, quantity)
               VALUES (?, ?, ?)
             `,
-            params: [itiId, asset.equipment_name, parseInt(asset.quantity || "0", 10)]
+            params: [itiId, asset.equipment_name || null, parseInt(asset.quantity || "0", 10)]
           });
         }
       }

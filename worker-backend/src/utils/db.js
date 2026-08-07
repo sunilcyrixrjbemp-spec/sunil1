@@ -92,14 +92,20 @@ function getDB(env) {
  * @param {Array} params
  * @returns {Promise<D1Result>}
  */
+function sanitizeParams(params = []) {
+  if (!Array.isArray(params)) return [];
+  return params.map(p => (p === undefined ? null : p));
+}
+
 export async function runRead(env, sql, params = []) {
-  const cached = getCachedResult(sql, params);
+  const cleanParams = sanitizeParams(params);
+  const cached = getCachedResult(sql, cleanParams);
   if (cached) return cached;
 
   const db = getDB(env);
   try {
-    const result = await db.prepare(sql).bind(...params).all();
-    setCachedResult(sql, params, result);
+    const result = await db.prepare(sql).bind(...cleanParams).all();
+    setCachedResult(sql, cleanParams, result);
     return result;
   } catch (err) {
     throw new Error(`DB Read Error: ${err.message} | SQL: ${sql.slice(0, 120)}`);
@@ -122,8 +128,9 @@ export async function runWrite(env, sql, params = []) {
 
   invalidateCacheOnWrite(sql);
   const db = getDB(env);
+  const cleanParams = sanitizeParams(params);
   try {
-    return await db.prepare(sql).bind(...params).run();
+    return await db.prepare(sql).bind(...cleanParams).run();
   } catch (err) {
     throw new Error(`DB Write Error: ${err.message} | SQL: ${sql.slice(0, 120)}`);
   }
@@ -153,7 +160,10 @@ export async function runBatchWrite(env, statements) {
   for (const s of active) invalidateCacheOnWrite(s.sql);
 
   const db = getDB(env);
-  const batch = active.map(s => db.prepare(s.sql).bind(...(s.params || [])));
+  const batch = active.map(s => {
+    const cleanParams = sanitizeParams(s.params || []);
+    return db.prepare(s.sql).bind(...cleanParams);
+  });
 
   try {
     const results = await db.batch(batch);
