@@ -79,7 +79,7 @@ import {
 import {
   handleGetMisDashboard, handleGetAssetsInventory, handleGetAssetsFilters,
   handleGetAssetsStats, handleUploadAssetsCSV, handleUploadAssetsChunk,
-  handleGetAssetsCsvTemplate, handleGetDistrictFacilitiesSummary
+  handleGetAssetsCsvTemplate, handleGetDistrictFacilitiesSummary, handleManualAddAsset
 } from "./routes/reports.js";
 
 // Expense handlers
@@ -401,6 +401,7 @@ router.get("/api/reports/district-facilities-summary", handleGetDistrictFaciliti
 router.get("/api/reports/assets-csv-template", handleGetAssetsCsvTemplate, true);
 router.post("/api/reports/upload-assets-csv", handleUploadAssetsCSV, true);
 router.post("/api/reports/upload-assets-chunk", handleUploadAssetsChunk, true);
+router.post("/api/reports/assets/manual", handleManualAddAsset, true);
 
 // ─── Attendance Endpoints ─────────────────────────────────────────────────────
 router.get("/api/attendance/summary", handleGetAttendanceSummary, true);

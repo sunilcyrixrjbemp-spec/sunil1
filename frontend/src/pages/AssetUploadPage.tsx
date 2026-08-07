@@ -148,6 +148,62 @@ export default function AssetUploadPage() {
   // State to toggle inline upload panel
   const [showUploadPanel, setShowUploadPanel] = useState(false);
 
+  // Manual Add Equipment States
+  const [showManualAddModal, setShowManualAddModal] = useState(false);
+  const [manualHospital, setManualHospital] = useState("");
+  const [manualDistrict, setManualDistrict] = useState("");
+  const [manualEquipmentName, setManualEquipmentName] = useState("");
+  const [manualModelName, setManualModelName] = useState("");
+  const [manualSerialNo, setManualSerialNo] = useState("");
+  const [manualQrCode, setManualQrCode] = useState("");
+  const [manualDepartment, setManualDepartment] = useState("");
+  const [manualCategory, setManualCategory] = useState("Critical");
+  const [manualStatus, setManualStatus] = useState("Operational");
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+
+  const handleManualAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualHospital.trim() || !manualEquipmentName.trim() || !manualQrCode.trim()) {
+      toast.error("Hospital Name, Equipment Name, and Barcode/QR Code are required.");
+      return;
+    }
+
+    setManualSubmitting(true);
+    try {
+      const res = await api.post("/reports/assets/manual", {
+        district_name: manualDistrict,
+        hospital_name: manualHospital,
+        department_name: manualDepartment,
+        equipment_name: manualEquipmentName,
+        model_name: manualModelName,
+        serial_no: manualSerialNo,
+        qr_code: manualQrCode,
+        equipment_category: manualCategory,
+        equipment_status: manualStatus,
+      });
+
+      if (res.data.success) {
+        toast.success(res.data.message || "Equipment added successfully to Asset Master!");
+        setShowManualAddModal(false);
+        setManualHospital("");
+        setManualDistrict("");
+        setManualEquipmentName("");
+        setManualModelName("");
+        setManualSerialNo("");
+        setManualQrCode("");
+        setManualDepartment("");
+        fetchAssets();
+        fetchStats();
+      } else {
+        toast.error(res.data.error || "Failed to add equipment");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.message || "Failed to add equipment");
+    } finally {
+      setManualSubmitting(false);
+    }
+  };
+
   // Tab: "inventory" | "analytics"
   const [activeTab, setActiveTab] = useState<"inventory" | "analytics">("inventory");
 
@@ -483,6 +539,13 @@ export default function AssetUploadPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowManualAddModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-emerald-600 rounded-none text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition-colors cursor-pointer"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-300" />
+            Manual Add Equipment
+          </button>
           <button
             onClick={() => setShowUploadPanel(prev => !prev)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#4A6A8A] rounded-none text-xs font-bold text-white bg-[#4A6A8A] hover:bg-[#3a5a7a] transition-colors cursor-pointer"
@@ -1006,6 +1069,182 @@ export default function AssetUploadPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── MODAL: MANUAL ADD EQUIPMENT ── */}
+      {showManualAddModal && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3">
+          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
+              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono flex items-center gap-2">
+                <Package className="w-4 h-4" /> Manually Add New Equipment Asset
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowManualAddModal(false)}
+                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleManualAddSubmit} className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    District *
+                  </label>
+                  <select
+                    value={manualDistrict}
+                    onChange={(e) => setManualDistrict(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
+                    required
+                  >
+                    <option value="">-- Select District --</option>
+                    {["Ajmer", "Alwar", "Banswara", "Baran", "Barmer", "Bharatpur", "Bhilwara", "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Dholpur", "Dungarpur", "Hanumangarh", "Jaipur", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu", "Jodhpur", "Karauli", "Kota", "Nagaur", "Pali", "Pratapgarh", "Rajsamand", "Sawai Madhopur", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur"].map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Hospital / Facility Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={manualHospital}
+                    onChange={(e) => setManualHospital(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
+                    placeholder="e.g. Mathura Das Mathur Hospital"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Equipment Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={manualEquipmentName}
+                    onChange={(e) => setManualEquipmentName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
+                    placeholder="e.g. Anaesthesia Workstation"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Barcode / QR Code *
+                  </label>
+                  <input
+                    type="text"
+                    value={manualQrCode}
+                    onChange={(e) => setManualQrCode(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 font-mono"
+                    placeholder="e.g. 75029031"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Model Name
+                  </label>
+                  <input
+                    type="text"
+                    value={manualModelName}
+                    onChange={(e) => setManualModelName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
+                    placeholder="e.g. Model X200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Serial No.
+                  </label>
+                  <input
+                    type="text"
+                    value={manualSerialNo}
+                    onChange={(e) => setManualSerialNo(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 font-mono"
+                    placeholder="e.g. SN-884920"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Department
+                  </label>
+                  <input
+                    type="text"
+                    value={manualDepartment}
+                    onChange={(e) => setManualDepartment(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5"
+                    placeholder="e.g. ICU / OT 1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Equipment Category
+                  </label>
+                  <select
+                    value={manualCategory}
+                    onChange={(e) => setManualCategory(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
+                  >
+                    <option value="Critical">Critical</option>
+                    <option value="Biomedical">Biomedical</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                    Equipment Status
+                  </label>
+                  <select
+                    value={manualStatus}
+                    onChange={(e) => setManualStatus(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-8.5 cursor-pointer"
+                  >
+                    <option value="Operational">Operational</option>
+                    <option value="Under Maintenance">Under Maintenance</option>
+                    <option value="Installed">Installed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowManualAddModal(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={manualSubmitting}
+                  className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-1.5 disabled:opacity-60"
+                >
+                  {manualSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Save Equipment</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
     </div>

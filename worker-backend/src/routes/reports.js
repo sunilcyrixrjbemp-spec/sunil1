@@ -921,3 +921,66 @@ export async function handleGetDistrictFacilitiesSummary(request, env, params, q
     return jsonResponse({ success: false, data: [], error: e.message });
   }
 }
+
+/**
+ * POST /api/reports/assets/manual
+ * Manually register new equipment into assets_inventory table
+ */
+export async function handleManualAddAsset(request, env) {
+  try {
+    const body = await request.json();
+    const hospitalName = (body.hospital_name || body.hospitalName || "").trim();
+    const districtName = (body.district_name || body.districtName || "").trim();
+    const equipmentName = (body.equipment_name || body.equipmentName || "").trim();
+    const qrCode = (body.qr_code || body.qrCode || body.barcode || "").trim();
+
+    if (!hospitalName || !equipmentName || !qrCode) {
+      return jsonResponse({
+        success: false,
+        error: "Hospital Name, Equipment Name, and Barcode/QR Code are required."
+      }, 400);
+    }
+
+    const existing = await env.DB.prepare(
+      "SELECT id FROM assets_inventory WHERE qr_code = ?"
+    ).bind(qrCode).first();
+
+    if (existing) {
+      return jsonResponse({
+        success: false,
+        error: `Equipment asset with Barcode/QR Code '${qrCode}' already exists in inventory.`
+      }, 400);
+    }
+
+    const deptName = (body.department_name || body.departmentName || "General").trim();
+    const modelName = (body.model_name || body.modelName || "").trim();
+    const serialNo = (body.serial_no || body.serialNo || "").trim();
+    const eqCategory = (body.equipment_category || body.equipmentCategory || "Critical").trim();
+    const eqType = (body.equipment_type || body.equipmentType || "Biomedical").trim();
+    const facilityType = (body.facility_type || body.facilityType || "Hospital").trim();
+    const invStatus = (body.inventory_status || body.inventoryStatus || "Installed").trim();
+    const eqStatus = (body.equipment_status || body.equipmentStatus || "Operational").trim();
+    const zoneName = (body.zone_name || body.zoneName || "Zone Jodhpur").trim();
+
+    await runWrite(
+      env,
+      `INSERT INTO assets_inventory (
+        district_name, hospital_name, department_name, equipment_name,
+        model_name, serial_no, qr_code, equipment_category, equipment_type,
+        facility_type, inventory_status, equipment_status, zone_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        districtName, hospitalName, deptName, equipmentName,
+        modelName, serialNo, qrCode, eqCategory, eqType,
+        facilityType, invStatus, eqStatus, zoneName
+      ]
+    );
+
+    return jsonResponse({
+      success: true,
+      message: `Equipment '${equipmentName}' (Barcode: ${qrCode}) added successfully to Asset Master.`
+    });
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.message || "Failed to add equipment manually" }, 500);
+  }
+}

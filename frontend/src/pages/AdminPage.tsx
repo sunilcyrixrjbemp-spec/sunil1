@@ -216,6 +216,7 @@ export default function AdminPage() {
   const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
   const [newFacilityHospital, setNewFacilityHospital] = useState("");
   const [newFacilityDistrict, setNewFacilityDistrict] = useState("");
+  const [newFacilityType, setNewFacilityType] = useState("District Hospital (DH)");
   const [newFacilityIsNoTaDa, setNewFacilityIsNoTaDa] = useState(true);
 
   const fetchFacilities = async () => {
@@ -2808,14 +2809,36 @@ export default function AdminPage() {
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
                   District Name *
                 </label>
-                <input
-                  type="text"
+                <select
                   value={newFacilityDistrict}
                   onChange={(e) => setNewFacilityDistrict(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                  placeholder="e.g. Jodhpur, Ajmer, Jaipur"
+                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
                   required
-                />
+                >
+                  <option value="">-- Select District --</option>
+                  {["Ajmer", "Alwar", "Banswara", "Baran", "Barmer", "Bharatpur", "Bhilwara", "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Dholpur", "Dungarpur", "Hanumangarh", "Jaipur", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu", "Jodhpur", "Karauli", "Kota", "Nagaur", "Pali", "Pratapgarh", "Rajsamand", "Sawai Madhopur", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur"].map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
+                  Facility Type
+                </label>
+                <select
+                  value={newFacilityType}
+                  onChange={(e) => setNewFacilityType(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
+                >
+                  <option value="District Hospital (DH)">District Hospital (DH)</option>
+                  <option value="Sub-District Hospital (SDH)">Sub-District Hospital (SDH)</option>
+                  <option value="Medical College / Hospital">Medical College / Hospital</option>
+                  <option value="Community Health Centre (CHC)">Community Health Centre (CHC)</option>
+                  <option value="Primary Health Centre (PHC)">Primary Health Centre (PHC)</option>
+                  <option value="Base Working Location / Hub">Base Working Location / Hub</option>
+                  <option value="Other Facility">Other Facility</option>
+                </select>
               </div>
 
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg space-y-1">
