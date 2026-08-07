@@ -10,6 +10,7 @@ import { DESIGNATIONS, ZONE_DISTRICTS, ROLES, MONTH_NAMES } from "../utils/const
 import { getExpenseInitData, getActualZone } from "./expense.js";
 import { fetchPendingApprovals } from "./approval.js";
 import { sendOTPEmail } from "../email/sender.js";
+import { resetRateLimit } from "../utils/rateLimit.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -286,6 +287,9 @@ export async function handleLogin(request, env) {
   await env.DB.prepare(`UPDATE users SET active_session_id = ?, failed_attempt = 0 WHERE user_id = ?`)
     .bind(sessionId, targetUserId).run();
   await logLogin(env, targetUserId, ipAddress, userAgent, "success");
+  if (env.OTPS_KV) {
+    await resetRateLimit(env.OTPS_KV, "ip_login", ipAddress);
+  }
 
   const secretKey = env.API_SECRET;
   const now = Math.floor(Date.now() / 1000);

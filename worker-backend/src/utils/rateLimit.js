@@ -20,16 +20,16 @@
 
 // ─── Rate Limit Configurations ────────────────────────────────────────────────
 const RATE_LIMITS = {
-  // IP-based limits (always enforced, no bypass)
-  ip_global:        { max: 60,  windowSec: 60,   keyPrefix: "rl:ip_global" },
-  ip_login:         { max: 5,   windowSec: 3600, keyPrefix: "rl:ip_login"  },
-  ip_forgot:        { max: 3,   windowSec: 3600, keyPrefix: "rl:ip_forgot" },
+  // IP-based limits (generous limits to prevent 429 lockouts on shared mobile/office IPs)
+  ip_global:        { max: 600, windowSec: 60,   keyPrefix: "rl:ip_global" },
+  ip_login:         { max: 60,  windowSec: 300,  keyPrefix: "rl:ip_login"  },
+  ip_forgot:        { max: 15,  windowSec: 300,  keyPrefix: "rl:ip_forgot" },
 
   // User-based limits (Admin role bypasses these)
-  user_api:         { max: 120, windowSec: 60,   keyPrefix: "rl:user_api"  },
-  user_otp:         { max: 3,   windowSec: 3600, keyPrefix: "rl:user_otp"  },
-  user_email:       { max: 3,   windowSec: 3600, keyPrefix: "rl:user_email"},
-  user_upload:      { max: 30,  windowSec: 60,   keyPrefix: "rl:user_upload"},
+  user_api:         { max: 300, windowSec: 60,   keyPrefix: "rl:user_api"  },
+  user_otp:         { max: 10,  windowSec: 300,  keyPrefix: "rl:user_otp"  },
+  user_email:       { max: 10,  windowSec: 300,  keyPrefix: "rl:user_email"},
+  user_upload:      { max: 100, windowSec: 60,   keyPrefix: "rl:user_upload"},
 };
 
 /**
