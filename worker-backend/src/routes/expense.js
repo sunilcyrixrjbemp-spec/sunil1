@@ -2483,9 +2483,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     console.error("Failed to verify submission policies:", err.message);
   }
 
-  // Duplicate Date Check (prevent submitting twice for the same date unless rejected)
-  let dupQuery = "SELECT id FROM expenses WHERE user_id = ? AND itinerary = ? AND status NOT IN ('rejected', 'returned_to_draft')";
-  let dupParams = [user.id, date];
+  // Duplicate Date Check (prevent submitting twice for the same date unless rejected / returned)
+  let dupQuery = "SELECT id FROM expenses WHERE (user_id = ? OR user_id = ? OR user_id = ?) AND itinerary = ? AND status NOT IN ('rejected', 'returned_to_draft', 'returned')";
+  let dupParams = [user.id, user.user_id || user.id, user.e_code || user.id, date];
   if (editExpenseId) {
     dupQuery += " AND id != ?";
     dupParams.push(editExpenseId);
@@ -2501,7 +2501,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   let newExpId = null;
 
   if (editExpenseId) {
-    existingExpense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ? AND user_id = ?").bind(editExpenseId, user.id).first();
+    existingExpense = await env.DB.prepare(
+      "SELECT * FROM expenses WHERE id = ? AND (user_id = ? OR user_id = ? OR user_id = ? OR CAST(user_id AS TEXT) = ?)"
+    ).bind(editExpenseId, user.id, user.user_id || user.id, user.e_code || user.id, String(user.id)).first();
     if (!existingExpense) {
       return jsonResponse({ error: "Expense claim to edit not found." }, 404);
     }

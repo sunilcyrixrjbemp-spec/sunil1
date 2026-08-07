@@ -3423,7 +3423,8 @@ export default function ExpensePage() {
                           const dateStr = current.format("YYYY-MM-DD");
                           if (maxDate && dateStr > maxDate) return true;
                           if (minDate && dateStr < minDate) return true;
-                          if (editExpenseId && dateStr === originalExpenseDate) return false;
+                          const cleanOrigDate = (originalExpenseDate || "").slice(0, 10);
+                          if (editExpenseId && dateStr === cleanOrigDate) return false;
                           if (allSubmittedDates.includes(dateStr)) return true;
                           return false;
                         }}
@@ -3432,7 +3433,8 @@ export default function ExpensePage() {
                           const dateStr = d.format("YYYY-MM-DD");
                           const isSubmitted = allSubmittedDates.includes(dateStr);
                           const isInRange = (!minDate || dateStr >= minDate) && (!maxDate || dateStr <= maxDate);
-                          const isEditOriginal = !!(editExpenseId && dateStr === originalExpenseDate);
+                          const cleanOrigDate = (originalExpenseDate || "").slice(0, 10);
+                          const isEditOriginal = !!(editExpenseId && dateStr === cleanOrigDate);
                           const isAvailable = isInRange && !isSubmitted;
                           return (
                             <div className="ant-picker-cell-inner" style={{ position: "relative" }}>
