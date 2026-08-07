@@ -96,6 +96,7 @@ export async function runMigrations(db) {
       district_name TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(hospital_name, district_name)
+    )`,
     // facility_details table
     `CREATE TABLE IF NOT EXISTS facility_details (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
