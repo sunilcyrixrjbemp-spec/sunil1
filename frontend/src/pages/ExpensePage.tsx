@@ -1330,20 +1330,12 @@ export default function ExpensePage() {
     }
   };
 
-  const instantCheckComplaintId = async (
-    legNum: number,
-    overrideVal?: string,
-    overrideBarcode?: string,
-    overrideType?: string
-  ) => {
+  const instantCheckComplaintId = async (legNum: number, typedVal?: string) => {
     const leg = itineraries.find(l => l.leg === legNum);
     if (!leg) return;
     
-    const complaintId = (overrideVal !== undefined ? overrideVal : leg.calls_complaint_id || "").trim();
-    const barcode = (overrideBarcode !== undefined ? overrideBarcode : leg.calls_barcode || "").trim();
-    const callType = (overrideType !== undefined ? overrideType : leg.calls_type || "Support Call").trim();
-
-    if (!complaintId && !barcode) {
+    const complaintId = (typedVal !== undefined ? typedVal : leg.calls_complaint_id || "").trim();
+    if (!complaintId || complaintId.length < 3) {
       setComplaintCheckStatusMap(prev => ({ ...prev, [legNum]: { status: "idle", message: "", count: 0 } }));
       return;
     }
@@ -1352,11 +1344,11 @@ export default function ExpensePage() {
 
     setComplaintCheckStatusMap(prev => ({
       ...prev,
-      [legNum]: { status: "checking", message: "Checking database for open calls...", count: 0 }
+      [legNum]: { status: "checking", message: "Checking database for complaint ID...", count: 0 }
     }));
 
     try {
-      const res = await expenseService.checkComplaintId(complaintId, barcode, callType);
+      const res = await expenseService.checkComplaintId(complaintId);
       const openCalls = res.openCalls || res.open_calls || [];
 
       if (res.success && openCalls.length > 0) {
@@ -1366,11 +1358,11 @@ export default function ExpensePage() {
         }));
         setOpenCallsModalData({
           legNum,
-          barcode: barcode || complaintId,
+          barcode: leg.calls_barcode || complaintId,
           hospitalName: hospitalName,
           openCalls: openCalls
         });
-        toast.success(`📋 ${openCalls.length} Active/Open Complaint(s) found in database for #${complaintId || barcode}! Opening popup.`);
+        toast.success(`📋 ${openCalls.length} Active/Open Complaint history found in database for #${complaintId}! Opening popup.`);
       } else {
         setComplaintCheckStatusMap(prev => ({
           ...prev,
@@ -4594,11 +4586,7 @@ export default function ExpensePage() {
                                   <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Call Type <span className="text-red-500">*</span></label>
                                   <select
                                     value={leg.calls_type || "Support Call"}
-                                    onChange={(e) => {
-                                      const newType = e.target.value;
-                                      handleItineraryChange(leg.leg, "calls_type", newType);
-                                      instantCheckComplaintId(leg.leg, leg.calls_complaint_id, leg.calls_barcode, newType);
-                                    }}
+                                    onChange={(e) => handleItineraryChange(leg.leg, "calls_type", e.target.value)}
                                     className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
                                   >
                                     <option value="Support Call">Support</option>
@@ -4621,9 +4609,9 @@ export default function ExpensePage() {
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       handleItineraryChange(leg.leg, "calls_complaint_id", val);
-                                      instantCheckComplaintId(leg.leg, val, leg.calls_barcode, leg.calls_type);
+                                      instantCheckComplaintId(leg.leg, val);
                                     }}
-                                    onBlur={() => instantCheckComplaintId(leg.leg, leg.calls_complaint_id, leg.calls_barcode, leg.calls_type)}
+                                    onBlur={() => instantCheckComplaintId(leg.leg)}
                                     className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
                                   />
                                 </div>
