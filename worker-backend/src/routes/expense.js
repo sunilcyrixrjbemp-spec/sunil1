@@ -5542,6 +5542,25 @@ export async function handleGetFieldAssetByBarcode(request, env, params, query, 
   }
 }
 
+function extractCallsFromLeg(leg) {
+  if (!leg) return [];
+  const list = [];
+  if (Array.isArray(leg.calls_list)) list.push(...leg.calls_list);
+  if (Array.isArray(leg.calls)) list.push(...leg.calls);
+  if (leg.activity_details) {
+    if (Array.isArray(leg.activity_details.calls_list)) list.push(...leg.activity_details.calls_list);
+    if (Array.isArray(leg.activity_details.calls)) list.push(...leg.activity_details.calls);
+    if (typeof leg.activity_details === 'string') {
+      try {
+        const parsed = JSON.parse(leg.activity_details);
+        if (parsed && Array.isArray(parsed.calls_list)) list.push(...parsed.calls_list);
+        if (parsed && Array.isArray(parsed.calls)) list.push(...parsed.calls);
+      } catch(e){}
+    }
+  }
+  return list;
+}
+
 export async function handleGetOpenCalls(request, env, params, query, user) {
   try {
     const barcode = (query.get("barcode") || "").trim();
@@ -5554,7 +5573,7 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
       SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
       FROM expenses
       WHERE LOWER(TRIM(status)) NOT IN ('cancelled', 'rejected')
-      ORDER BY id DESC LIMIT 150
+      ORDER BY id DESC LIMIT 200
     `, [], request);
 
     const expensesList = (expensesRes && expensesRes.results) || [];
@@ -5565,7 +5584,7 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
       try { itiArr = JSON.parse(row.itinerary || '[]'); } catch(e){}
       
       for (const leg of itiArr) {
-        const list = (leg.activity_details && leg.activity_details.calls_list) || [];
+        const list = extractCallsFromLeg(leg);
         for (const item of list) {
           if (!item) continue;
           const itemCId = String(item.calls_complaint_id || item.complaint_id || item.id || "").trim();
@@ -5586,7 +5605,7 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
             if (!complaintMap[keyId]) {
               complaintMap[keyId] = {
                 complaint_id: keyId,
-                barcode: itemBarcode,
+                barcode: itemBarcode || barcode,
                 call_type: item.calls_type || item.type || "Support Call",
                 status: item.calls_status || item.status || "Attend",
                 action_taken: item.calls_action_taken || item.action_taken || "",
@@ -5617,7 +5636,7 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
         SELECT c.*, e.user_name, e.created_at, e.expense_date
         FROM expense_breakdown_calls c
         LEFT JOIN expenses e ON (c.itinerary_id = e.expense_code OR c.itinerary_id = CAST(e.id AS TEXT))
-        ORDER BY c.id DESC LIMIT 50
+        ORDER BY c.id DESC LIMIT 100
       `, [], request);
 
       for (const cRow of (callsTableRes?.results || [])) {
