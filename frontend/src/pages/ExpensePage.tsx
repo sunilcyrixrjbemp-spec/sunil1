@@ -1300,7 +1300,7 @@ export default function ExpensePage() {
         }
 
         // Successfully matched!
-        toast.success("Barcode verified successfully! You can now enter Complaint ID and click 'Verify'.");
+        toast.success("Barcode verified successfully!");
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
           if (activityType === "Calls") {
@@ -1319,6 +1319,9 @@ export default function ExpensePage() {
             };
           }
         }));
+        if (activityType === "Calls") {
+          setTimeout(() => instantCheckComplaintId(legNum), 100);
+        }
       } else {
         toast.error(res.message || "Barcode not found in assets inventory.");
       }
@@ -4585,7 +4588,11 @@ export default function ExpensePage() {
                                   <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">Call Type <span className="text-red-500">*</span></label>
                                   <select
                                     value={leg.calls_type || "Support Call"}
-                                    onChange={(e) => handleItineraryChange(leg.leg, "calls_type", e.target.value)}
+                                    onChange={(e) => {
+                                      const newType = e.target.value;
+                                      handleItineraryChange(leg.leg, "calls_type", newType);
+                                      setTimeout(() => instantCheckComplaintId(leg.leg), 50);
+                                    }}
                                     className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
                                   >
                                     <option value="Support Call">Support</option>

@@ -5565,15 +5565,18 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
   try {
     const barcode = (query.get("barcode") || "").trim();
     const complaintId = (query.get("complaint_id") || "").trim();
+    const callTypeParam = (query.get("type") || "").trim().toLowerCase();
     const barcode8 = barcode.length >= 8 ? barcode.slice(-8).toLowerCase() : barcode.toLowerCase();
     const cleanComplaintId = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-    // Query expenses directly for maximum reliability across JSON itineraries
+    const isOnlineFilter = callTypeParam.includes("online");
+    const isSupportFilter = callTypeParam.includes("support") || callTypeParam.includes("offline");
+
     const expensesRes = await runRead(env, `
       SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
       FROM expenses
       WHERE LOWER(TRIM(status)) NOT IN ('cancelled', 'rejected')
-      ORDER BY id DESC LIMIT 200
+      ORDER BY id DESC LIMIT 250
     `, [], request);
 
     const expensesList = (expensesRes && expensesRes.results) || [];
@@ -5587,16 +5590,33 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
         const list = extractCallsFromLeg(leg);
         for (const item of list) {
           if (!item) continue;
-          const itemCId = String(item.calls_complaint_id || item.complaint_id || item.id || "").trim();
-          const cleanItemCId = itemCId.toLowerCase().replace(/[^a-z0-9]/g, "");
+          
           const itemBarcode = String(item.barcode || leg.calls_barcode || "").trim();
           const itemBarcode8 = itemBarcode.slice(-8).toLowerCase();
-          
-          let match = false;
-          if (cleanComplaintId && cleanItemCId && (cleanItemCId === cleanComplaintId || cleanItemCId.includes(cleanComplaintId) || cleanComplaintId.includes(cleanItemCId))) {
-            match = true;
+          const itemCId = String(item.calls_complaint_id || item.complaint_id || item.id || "").trim();
+          const cleanItemCId = itemCId.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const itemCallType = String(item.calls_type || item.type || row.call_type || "Support Call").toLowerCase();
+
+          // 1. Strict Barcode Match
+          if (barcode8 && itemBarcode8 && itemBarcode8 !== barcode8) {
+            continue;
           }
-          if (barcode8 && itemBarcode8 && itemBarcode8 === barcode8) {
+
+          // 2. Strict Call Type Match (Online vs Support/Offline)
+          if (isOnlineFilter && !itemCallType.includes("online")) {
+            continue;
+          }
+          if (isSupportFilter && itemCallType.includes("online")) {
+            continue;
+          }
+
+          // 3. Complaint ID Match
+          let match = false;
+          if (cleanComplaintId) {
+            if (cleanItemCId && (cleanItemCId === cleanComplaintId || cleanItemCId.includes(cleanComplaintId) || cleanComplaintId.includes(cleanItemCId))) {
+              match = true;
+            }
+          } else if (barcode8) {
             match = true;
           }
 
@@ -5606,7 +5626,7 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
               complaintMap[keyId] = {
                 complaint_id: keyId,
                 barcode: itemBarcode || barcode,
-                call_type: item.calls_type || item.type || "Support Call",
+                call_type: item.calls_type || item.type || (isOnlineFilter ? "Online Call" : "Support Call"),
                 status: item.calls_status || item.status || "Attend",
                 action_taken: item.calls_action_taken || item.action_taken || "",
                 spare_replaced: item.calls_spare_replaced || item.spare_replaced || "No",
@@ -5630,7 +5650,7 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
       }
     }
 
-    // Also check expense_breakdown_calls table as fallback
+    // Also check expense_breakdown_calls table as fallback with same strict filters
     try {
       const callsTableRes = await runRead(env, `
         SELECT c.*, e.user_name, e.created_at, e.expense_date
@@ -5640,15 +5660,21 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
       `, [], request);
 
       for (const cRow of (callsTableRes?.results || [])) {
+        const cBarcode8 = String(cRow.barcode || "").slice(-8).toLowerCase();
         const cId = String(cRow.calls_complaint_id || cRow.complaint_id || cRow.id || "").trim();
         const cleanCId = cId.toLowerCase().replace(/[^a-z0-9]/g, "");
-        const cBarcode8 = String(cRow.barcode || "").slice(-8).toLowerCase();
+        const cType = String(cRow.call_type || "").toLowerCase();
+
+        if (barcode8 && cBarcode8 && cBarcode8 !== barcode8) continue;
+        if (isOnlineFilter && !cType.includes("online")) continue;
+        if (isSupportFilter && cType.includes("online")) continue;
 
         let match = false;
-        if (cleanComplaintId && cleanCId && (cleanCId === cleanComplaintId || cleanCId.includes(cleanComplaintId) || cleanComplaintId.includes(cleanCId))) {
-          match = true;
-        }
-        if (barcode8 && cBarcode8 && cBarcode8 === barcode8) {
+        if (cleanComplaintId) {
+          if (cleanCId && (cleanCId === cleanComplaintId || cleanCId.includes(cleanComplaintId) || cleanComplaintId.includes(cleanCId))) {
+            match = true;
+          }
+        } else if (barcode8) {
           match = true;
         }
 
@@ -5657,8 +5683,8 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
           if (!complaintMap[keyId]) {
             complaintMap[keyId] = {
               complaint_id: keyId,
-              barcode: cRow.barcode || "",
-              call_type: cRow.call_type || "Support Call",
+              barcode: cRow.barcode || barcode,
+              call_type: cRow.call_type || (isOnlineFilter ? "Online Call" : "Support Call"),
               status: cRow.call_status || "Attend",
               action_taken: cRow.action_taken || "",
               spare_replaced: cRow.spare_replaced || "No",
