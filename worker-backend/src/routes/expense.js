@@ -5545,19 +5545,48 @@ export async function handleGetFieldAssetByBarcode(request, env, params, query, 
 function extractCallsFromLeg(leg) {
   if (!leg) return [];
   const list = [];
-  if (Array.isArray(leg.calls_list)) list.push(...leg.calls_list);
-  if (Array.isArray(leg.calls)) list.push(...leg.calls);
+
+  if (Array.isArray(leg.calls_list) && leg.calls_list.length > 0) {
+    list.push(...leg.calls_list);
+  }
+  if (Array.isArray(leg.calls) && leg.calls.length > 0) {
+    list.push(...leg.calls);
+  }
   if (leg.activity_details) {
-    if (Array.isArray(leg.activity_details.calls_list)) list.push(...leg.activity_details.calls_list);
-    if (Array.isArray(leg.activity_details.calls)) list.push(...leg.activity_details.calls);
+    if (Array.isArray(leg.activity_details.calls_list) && leg.activity_details.calls_list.length > 0) {
+      list.push(...leg.activity_details.calls_list);
+    }
+    if (Array.isArray(leg.activity_details.calls) && leg.activity_details.calls.length > 0) {
+      list.push(...leg.activity_details.calls);
+    }
     if (typeof leg.activity_details === 'string') {
       try {
         const parsed = JSON.parse(leg.activity_details);
-        if (parsed && Array.isArray(parsed.calls_list)) list.push(...parsed.calls_list);
-        if (parsed && Array.isArray(parsed.calls)) list.push(...parsed.calls);
+        if (parsed) {
+          if (Array.isArray(parsed.calls_list)) list.push(...parsed.calls_list);
+          if (Array.isArray(parsed.calls)) list.push(...parsed.calls);
+          if (parsed.calls_complaint_id || parsed.complaint_id) list.push(parsed);
+        }
       } catch(e){}
     }
   }
+
+  // Also include direct leg-level single call properties if present
+  if (leg.calls_complaint_id || leg.calls_barcode || leg.complaint_id || leg.barcode) {
+    list.push({
+      calls_complaint_id: leg.calls_complaint_id || leg.complaint_id || leg.id,
+      complaint_id: leg.calls_complaint_id || leg.complaint_id || leg.id,
+      barcode: leg.calls_barcode || leg.barcode,
+      calls_barcode: leg.calls_barcode || leg.barcode,
+      calls_type: leg.calls_type || leg.type || leg.call_type || "Support Call",
+      calls_status: leg.calls_status || leg.status || leg.call_status || "Attend",
+      calls_action_taken: leg.calls_action_taken || leg.action_taken || leg.calls_action || "",
+      calls_spare_replaced: leg.calls_spare_replaced || leg.spare_replaced || "No",
+      calls_spare_name: leg.calls_spare_name || leg.spare_name || "",
+      calls_photo_url: leg.calls_photo_url || leg.photo_url || ""
+    });
+  }
+
   return list;
 }
 
@@ -5568,12 +5597,26 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
     const barcode8 = barcode.length >= 8 ? barcode.slice(-8).toLowerCase() : barcode.toLowerCase();
     const cleanComplaintId = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
 
+    let whereClause = "WHERE LOWER(TRIM(status)) NOT IN ('cancelled', 'rejected')";
+    const sqlParams = [];
+
+    if (cleanComplaintId && barcode8) {
+      whereClause += " AND (itinerary LIKE ? OR itinerary LIKE ?)";
+      sqlParams.push(`%${cleanComplaintId}%`, `%${barcode8}%`);
+    } else if (cleanComplaintId) {
+      whereClause += " AND itinerary LIKE ?";
+      sqlParams.push(`%${cleanComplaintId}%`);
+    } else if (barcode8) {
+      whereClause += " AND itinerary LIKE ?";
+      sqlParams.push(`%${barcode8}%`);
+    }
+
     const expensesRes = await runRead(env, `
       SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
       FROM expenses
-      WHERE LOWER(TRIM(status)) NOT IN ('cancelled', 'rejected')
-      ORDER BY id DESC LIMIT 300
-    `, [], request);
+      ${whereClause}
+      ORDER BY id DESC LIMIT 500
+    `, sqlParams, request);
 
     const expensesList = (expensesRes && expensesRes.results) || [];
     const complaintMap = {};
