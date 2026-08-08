@@ -4443,9 +4443,6 @@ export default function ExpensePage() {
                         <div className="grid grid-cols-1 gap-4">
                           {/* Calls Sub-Form */}
                           {(leg.selected_activities || []).includes("Calls") && (() => {
-                            const toDistrict = leg.district || leg.to || "";
-                            const districtHospitals = getFacilitiesForDistrict(toDistrict);
-
                             return (
                             <div className="bg-blue-50/20 border border-blue-150 rounded p-2.5 flex flex-col gap-2">
                               <div className="flex items-center justify-between flex-wrap gap-1">
