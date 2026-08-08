@@ -791,6 +791,15 @@ export default function ExpensePage() {
     }>;
   } | null>(null);
 
+  // Live Complaint DB Status map per leg
+  const [complaintCheckStatusMap, setComplaintCheckStatusMap] = useState<{
+    [legNum: number]: {
+      status: "idle" | "checking" | "found" | "fresh";
+      message: string;
+      count: number;
+    };
+  }>({});
+
   // Edit Mode & Calendar Constraints states
   const [editExpenseId, setEditExpenseId] = useState<string | null>(null);
   const [_existingAttachments, setExistingAttachments] = useState<string[]>([]);
@@ -1324,47 +1333,49 @@ export default function ExpensePage() {
     
     const complaintId = (overrideVal !== undefined ? overrideVal : leg.calls_complaint_id || "").trim();
     const barcode = (leg.calls_barcode || "").trim();
-    if (!complaintId && !barcode) return;
-    if (complaintId.length < 3 && !barcode) return;
+    if (!complaintId && !barcode) {
+      setComplaintCheckStatusMap(prev => ({ ...prev, [legNum]: { status: "idle", message: "", count: 0 } }));
+      return;
+    }
 
     const callType = leg.calls_type || "Support Call";
     const hospitalName = leg.calls_asset_details?.hospital_name || leg.calls_hospital || leg.to || "Facility";
 
-    // 1. Instant 0.01ms Local Sync Check (if barcode asset pre-fetched open calls)
-    const localOpenCalls = leg.calls_asset_details?.open_calls || (leg as any).open_calls || [];
-    if (localOpenCalls.length > 0 && complaintId) {
-      const cleanTyped = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const matchedLocal = localOpenCalls.filter((c: any) => {
-        const cIdClean = String(c.complaint_id || c.calls_complaint_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-        return cIdClean === cleanTyped || (cleanTyped.length >= 4 && (cIdClean.includes(cleanTyped) || cleanTyped.includes(cIdClean)));
-      });
+    setComplaintCheckStatusMap(prev => ({
+      ...prev,
+      [legNum]: { status: "checking", message: "Checking database for open calls...", count: 0 }
+    }));
 
-      if (matchedLocal.length > 0) {
-        setOpenCallsModalData({
-          legNum,
-          barcode: barcode || complaintId,
-          hospitalName: hospitalName,
-          openCalls: matchedLocal
-        });
-        return;
-      }
-    }
-
-    // 2. Real-time Server API Check
     try {
       const res = await expenseService.checkComplaintId(complaintId, barcode, callType);
       const openCalls = res.openCalls || res.open_calls || [];
 
       if (res.success && openCalls.length > 0) {
+        setComplaintCheckStatusMap(prev => ({
+          ...prev,
+          [legNum]: { status: "found", message: `${openCalls.length} Open Complaint(s) Found in Database!`, count: openCalls.length }
+        }));
         setOpenCallsModalData({
           legNum,
           barcode: barcode || complaintId,
           hospitalName: hospitalName,
           openCalls: openCalls
         });
+        toast.success(`📋 ${openCalls.length} Active/Open Complaint(s) found in database for #${complaintId || barcode}! Opening popup.`);
+      } else {
+        setComplaintCheckStatusMap(prev => ({
+          ...prev,
+          [legNum]: { status: "fresh", message: `Fresh Entry: No open complaint found in database for #${complaintId}`, count: 0 }
+        }));
+        if (complaintId.length >= 4) {
+          toast.success(`✓ Checked database: No open complaint found for #${complaintId} (Fresh Entry).`);
+        }
       }
     } catch (e) {
-      // Silent catch on keystroke
+      setComplaintCheckStatusMap(prev => ({
+        ...prev,
+        [legNum]: { status: "fresh", message: `Fresh Entry: Ready to log call`, count: 0 }
+      }));
     }
   };
 
@@ -4601,6 +4612,43 @@ export default function ExpensePage() {
                                     }}
                                     className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
                                   />
+
+                                  {/* Live Complaint DB Check Status Badge */}
+                                  {(() => {
+                                    const checkStatus = complaintCheckStatusMap[leg.leg];
+                                    if (!checkStatus || checkStatus.status === "idle") return null;
+                                    if (checkStatus.status === "checking") {
+                                      return (
+                                        <div className="mt-1 text-[9px] font-bold text-amber-600 animate-pulse flex items-center gap-1">
+                                          <span>⏳ Checking database for open calls...</span>
+                                        </div>
+                                      );
+                                    }
+                                    if (checkStatus.status === "found") {
+                                      return (
+                                        <div className="mt-1 flex items-center justify-between bg-amber-50 p-1.5 rounded border border-amber-200 text-[10px]">
+                                          <span className="font-extrabold text-amber-900 flex items-center gap-1">
+                                            ⚡ {checkStatus.count} Active Call(s) in DB!
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => instantCheckComplaintId(leg.leg)}
+                                            className="text-[9px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white px-2 py-0.5 rounded shadow-xs"
+                                          >
+                                            View Popup
+                                          </button>
+                                        </div>
+                                      );
+                                    }
+                                    if (checkStatus.status === "fresh") {
+                                      return (
+                                        <div className="mt-1 flex items-center gap-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                                          <span>🟢 Fresh Entry: No open complaint found in database</span>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
                                 </div>
 
                                 {/* Call Status */}
