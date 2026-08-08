@@ -162,7 +162,15 @@ async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUs
   }
 
   // Refetch legs to recalculate expense totals
-  const legsRows = await env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ?").bind(expense.expense_code, String(expense.id)).all();
+  const appExpCodeStr = String(expense.expense_code || "");
+  const appExpIdStr = String(expense.id || "");
+  const appCodeParts = appExpCodeStr.split("-");
+  const appMonthPrefix = appCodeParts.length >= 2 ? `${appCodeParts[0]}-${appCodeParts[1]}` : "";
+  const appPkPaddedCode = appMonthPrefix ? `${appMonthPrefix}-${String(expense.id).padStart(6, "0")}` : appExpCodeStr;
+
+  const legsRows = await env.DB.prepare(
+    "SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?)"
+  ).bind(appExpCodeStr, appExpIdStr, appPkPaddedCode, appExpCodeStr).all();
   const legs = legsRows.results || [];
   
   const totalDa = legs.reduce((sum, l) => sum + parseFloat(l.da_amount || "0.0"), 0);

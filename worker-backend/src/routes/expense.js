@@ -2036,6 +2036,9 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
   const expCodeStr = String(expense.expense_code || "");
   const expIdStr = String(expense.id || "");
+  const codeParts = expCodeStr.split("-");
+  const monthPrefix = codeParts.length >= 2 ? `${codeParts[0]}-${codeParts[1]}` : "";
+  const pkPaddedCode = monthPrefix ? `${monthPrefix}-${String(expense.id).padStart(6, "0")}` : expCodeStr;
 
   // ⚡ FAST PARALLEL BATCH EXECUTION: Execute all 6 DB queries in 1 parallel round-trip!
   const [
@@ -2048,8 +2051,8 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
   ] = await Promise.all([
     env.DB.prepare("SELECT * FROM approvals WHERE expense_id = ? ORDER BY level_number").bind(expense.id).all().catch(() => ({ results: [] })),
     env.DB.prepare("SELECT * FROM users WHERE id = ? OR user_id = ? OR e_code = ?").bind(expense.user_id, String(expense.user_id), String(expense.user_id)).first().catch(() => null),
-    env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?) ORDER BY leg_number ASC").bind(expCodeStr, expIdStr, expCodeStr).all().catch(() => ({ results: [] })),
-    env.DB.prepare("SELECT * FROM expense_attachments WHERE exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?)").bind(expCodeStr, expIdStr, expCodeStr).all().catch(() => ({ results: [] })),
+    env.DB.prepare("SELECT * FROM expense_itineraries WHERE exp_id = ? OR exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?) ORDER BY leg_number ASC").bind(expCodeStr, expIdStr, pkPaddedCode, expCodeStr).all().catch(() => ({ results: [] })),
+    env.DB.prepare("SELECT * FROM expense_attachments WHERE exp_id = ? OR exp_id = ? OR exp_id = ? OR LOWER(exp_id) = LOWER(?)").bind(expCodeStr, expIdStr, pkPaddedCode, expCodeStr).all().catch(() => ({ results: [] })),
     env.DB.prepare("SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC").bind(expense.id).all().catch(() => ({ results: [] })),
     getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary).catch(() => ({ totalSubmitted: 0, totalApproved: 0 }))
   ]);
