@@ -369,7 +369,14 @@ export function checkIsCommuteLeg(leg, baseLocations, index, totalLegs) {
   const t = (leg.to || "").trim().toLowerCase();
 
   const RESIDENCE_WORDS = ["home", "residence", "room", "quarter", "house", "flat", "pg", "stay", "village", "vill", "rent", "address", "dera", "deri", "hotel"];
-  const WORK_WORDS = ["market", "bazaar", "bazar", "mandi", "haat", "station", "railway", "bus stand", "bus stop", "bus depot", "bus adda", "rly", "tower", "office", "repair", "collection", "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "store", "shop", "vendor", "customer", "site", "service", "work"];
+  const WORK_WORDS = [
+    "market", "bazaar", "bazar", "mandi", "haat", "shop", "store", "vendor", "dukan", "dukaan", "mart", "supermarket", "commercial market",
+    "courier", "parcel", "transport", "dispatch", "post office", "post", "speedpost", "speed post", "dtdc", "delhivery", "bluedart", "blue dart", "tci", "cargo", "godown", "warehouse",
+    "bus stand", "bus stop", "bus depot", "bus adda", "busstand", "busstop", "bus-stand", "bus-stop", "station", "railway", "rly", "rly station", "junction", "jn", "taxi stand", "auto stand",
+    "repair", "repairing", "service", "service center", "collection", "pickup", "workshop", "garage", "mechanic", "spare parts", "spares", "hardware", "tools",
+    "dealer", "distributor", "supplier", "agency", "firm", "surgicals", "surgical", "medical store", "chemist",
+    "hospital", "chc", "phc", "dh", "sdh", "clinic", "lab", "customer", "site", "work", "office", "tower"
+  ];
 
   const fromHasResidenceWord = RESIDENCE_WORDS.some(w => f.includes(w));
   const toHasResidenceWord   = RESIDENCE_WORDS.some(w => t.includes(w));
