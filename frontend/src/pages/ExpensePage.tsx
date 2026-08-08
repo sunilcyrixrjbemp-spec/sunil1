@@ -1272,12 +1272,14 @@ export default function ExpensePage() {
             return {
               ...l,
               calls_verified: true,
+              calls_hospital: hospitalName,
               calls_asset_details: res.data
             };
           } else {
             return {
               ...l,
               pms_verified: true,
+              pms_hospital: hospitalName,
               pms_asset_details: res.data
             };
           }
@@ -4536,31 +4538,24 @@ export default function ExpensePage() {
                                   </select>
                                 </div>
 
-                                {/* Hospital Dropdown (Destination District) */}
+                                {/* Hospital / Facility Name (Read-Only / Auto-filled from Verified Barcode) */}
                                 <div className="col-span-12 sm:col-span-6">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">
-                                    HOSPITAL NAME <span className="text-red-500">*</span>
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase flex items-center justify-between">
+                                    <span>FACILITY / HOSPITAL NAME <span className="text-red-500">*</span></span>
+                                    {leg.calls_verified && (
+                                      <span className="text-emerald-700 text-[8px] font-bold font-mono">
+                                        ✓ Verified Barcode Facility
+                                      </span>
+                                    )}
                                   </label>
-                                  {districtHospitals.length > 0 ? (
-                                    <select
-                                      value={leg.calls_hospital || leg.calls_asset_details?.hospital_name || ""}
-                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_hospital", e.target.value)}
-                                      className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
-                                    >
-                                      <option value="">-- Select Hospital --</option>
-                                      {districtHospitals.map((h, hIdx) => (
-                                        <option key={hIdx} value={h}>{h}</option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <input
-                                      type="text"
-                                      value={leg.calls_hospital || leg.calls_asset_details?.hospital_name || ""}
-                                      placeholder="Hospital / Facility Name"
-                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_hospital", e.target.value)}
-                                      className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
-                                    />
-                                  )}
+                                  <input
+                                    type="text"
+                                    readOnly
+                                    disabled
+                                    value={leg.calls_asset_details?.hospital_name || leg.calls_hospital || leg.to || "—"}
+                                    placeholder="Auto-filled from barcode verification"
+                                    className="input-lte text-[10px] font-extrabold h-8 py-1 px-2 bg-slate-100 border-slate-300 text-slate-800 cursor-not-allowed w-full shadow-inner"
+                                  />
                                 </div>
 
                                 {/* Action Taken Remark */}
