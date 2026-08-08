@@ -35,7 +35,7 @@ import {
   DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Pagination 
 } from "antd";
 import { 
-  EditOutlined, DeleteOutlined, CloseCircleOutlined, FileTextOutlined 
+  EditOutlined, CloseCircleOutlined, FileTextOutlined 
 } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 

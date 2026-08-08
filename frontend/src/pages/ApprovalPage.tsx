@@ -571,32 +571,6 @@ export default function ApprovalPage() {
         };
       }
 
-      // Auto-sync matching legs (return journey A->B & B->A, or identical original values)
-      rawLegs.forEach((otherRaw: any, otherIdx: number) => {
-        if (otherIdx === index) return;
-        const isSameRoute = (otherRaw.from_location && targetOriginal.from_location &&
-          ((otherRaw.from_location === targetOriginal.from_location && otherRaw.to_location === targetOriginal.to_location) ||
-           (otherRaw.from_location === targetOriginal.to_location && otherRaw.to_location === targetOriginal.from_location)));
-        const isSameOriginalValues = (otherRaw.km === targetOriginal.km || otherRaw.distance_km === targetOriginal.distance_km) &&
-          (otherRaw.travel_mode === targetOriginal.travel_mode || otherRaw.mode === targetOriginal.mode);
-
-        if (isSameRoute || isSameOriginalValues) {
-          const otherLeg = updated[otherIdx] || {};
-          if (field === "km") {
-            updated[otherIdx] = {
-              ...otherLeg,
-              km: newKm,
-              travel_amount: newTravelAmount
-            };
-          } else {
-            updated[otherIdx] = {
-              ...otherLeg,
-              [field]: numericValue
-            };
-          }
-        }
-      });
-
       return updated;
     });
   };
@@ -605,10 +579,6 @@ export default function ApprovalPage() {
     setEditedLegs(prev => {
       const updated = [...prev];
       const leg = updated[index] || {};
-      const rawLegs = Array.isArray(expenseDetails?.itineraries) && expenseDetails.itineraries.length > 0
-        ? expenseDetails.itineraries
-        : (Array.isArray(expenseDetails?.legs) ? expenseDetails.legs : []);
-      const targetOriginal = rawLegs[index] || {};
 
       updated[index] = {
         ...leg,
@@ -618,28 +588,6 @@ export default function ApprovalPage() {
           ...(field === "distance_km" ? { travel_amount: remark } : {})
         }
       };
-
-      // Auto-sync remarks to matching legs
-      rawLegs.forEach((otherRaw: any, otherIdx: number) => {
-        if (otherIdx === index) return;
-        const isSameRoute = (otherRaw.from_location && targetOriginal.from_location &&
-          ((otherRaw.from_location === targetOriginal.from_location && otherRaw.to_location === targetOriginal.to_location) ||
-           (otherRaw.from_location === targetOriginal.to_location && otherRaw.to_location === targetOriginal.from_location)));
-        const isSameOriginalValues = (otherRaw.km === targetOriginal.km || otherRaw.distance_km === targetOriginal.distance_km) &&
-          (otherRaw.travel_mode === targetOriginal.travel_mode || otherRaw.mode === targetOriginal.mode);
-
-        if (isSameRoute || isSameOriginalValues) {
-          const otherLeg = updated[otherIdx] || {};
-          updated[otherIdx] = {
-            ...otherLeg,
-            remarks: {
-              ...(otherLeg.remarks || {}),
-              [field]: remark,
-              ...(field === "distance_km" ? { travel_amount: remark } : {})
-            }
-          };
-        }
-      });
 
       return updated;
     });
