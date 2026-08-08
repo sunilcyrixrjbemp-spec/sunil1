@@ -807,7 +807,7 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     settingsRows
   ] = await Promise.all([
     facilitiesPromise,
-    env.DB.prepare(`SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ?`
+    env.DB.prepare(`SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ? AND LOWER(TRIM(status)) NOT IN ('cancelled')`
     ).bind(targetUser.id, monthName, yearVal).all(),
     env.DB.prepare(`
       SELECT 
@@ -2509,7 +2509,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   }
 
   // Duplicate Date Check (strictly block re-submitting for rejected dates; allow returned & cancelled)
-  let dupQuery = "SELECT id, status FROM expenses WHERE (user_id = ? OR user_id = ? OR user_id = ?) AND itinerary = ? AND status NOT IN ('returned_to_draft', 'returned', 'cancelled')";
+  let dupQuery = "SELECT id, status FROM expenses WHERE (user_id = ? OR user_id = ? OR user_id = ?) AND itinerary = ? AND LOWER(TRIM(status)) NOT IN ('returned_to_draft', 'returned', 'cancelled')";
   let dupParams = [user.id, user.user_id || user.id, user.e_code || user.id, date];
   if (editExpenseId) {
     dupQuery += " AND id != ?";

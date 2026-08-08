@@ -3388,7 +3388,10 @@ export default function ExpensePage() {
             
             {/* Date Selection card */}
             {(() => {
-              const claimDatesFromList = (claims || []).map((c: any) => (c.expense_date || c.date || "").slice(0, 10)).filter(Boolean);
+              const claimDatesFromList = (claims || [])
+                .filter((c: any) => String(c.status || "").toLowerCase().trim() !== "cancelled")
+                .map((c: any) => (c.expense_date || c.date || "").slice(0, 10))
+                .filter(Boolean);
               const allSubmittedDates = Array.from(new Set([...(submittedDates || []), ...claimDatesFromList]));
               const isCurrentDateSubmitted = !!(date && allSubmittedDates.includes(date) && (!editExpenseId || date !== originalExpenseDate));
 
