@@ -193,6 +193,7 @@ export const expenses = sqliteTable("expenses", {
   originalLocalPurchaseAmount: real("original_local_purchase_amount"),
   calibrationCount: integer("calibration_count").default(0),
   mobiliseCount: integer("mobilise_count").default(0),
+  totalLegs: integer("total_legs").default(0),
   createdAt: text("created_at"),
   updatedAt: text("updated_at"),
 }, (table) => ({

@@ -3039,6 +3039,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   const dbBatchStatements = [];
 
   if (existingExpense) {
+    const totalLegsCount = Array.isArray(itineraries) ? itineraries.length : 0;
     dbBatchStatements.push({
       sql: `
         UPDATE expenses 
@@ -3046,7 +3047,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
             da_amount = ?, hotel_amount = ?, other_expense_amount = ?, calls_assigned = ?, calls_completed = ?, 
             pms_count = ?, asset_tagging = ?, local_purchase_amount = ?, original_amount = ?, original_da_amount = ?, 
             original_hotel_amount = ?, original_other_expense_amount = ?, original_local_purchase_amount = ?, 
-            calibration_count = ?, mobilise_count = ?, updated_at = ?, district_type = ?,
+            calibration_count = ?, mobilise_count = ?, total_legs = ?, updated_at = ?, district_type = ?,
             policy_case = ?, policy_rule_name = ?
         WHERE id = ?
       `,
@@ -3054,27 +3055,28 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         claim_month, claim_year, amount, status, majorMode, date, firstPurpose,
         totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
         totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
-        totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
+        totalOther, totalLocalPurchase, totalCalibration, totalMobilise, totalLegsCount,
         timestamp, submittedDistrictType, policyCase, policyRuleName, newExpId
       ]
     });
   } else {
+    const totalLegsCount = Array.isArray(itineraries) ? itineraries.length : 0;
     dbBatchStatements.push({
       sql: `
         INSERT INTO expenses (
           user_id, month, year, amount, status, travel_mode, itinerary, description, expense_code, 
           da_amount, hotel_amount, other_expense_amount, calls_assigned, calls_completed, pms_count, 
           asset_tagging, local_purchase_amount, original_amount, original_da_amount, original_hotel_amount, 
-          original_other_expense_amount, original_local_purchase_amount, calibration_count, mobilise_count, 
+          original_other_expense_amount, original_local_purchase_amount, calibration_count, mobilise_count, total_legs,
           created_at, updated_at, district_type, policy_case, policy_rule_name
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       params: [
         user.id, claim_month, claim_year, amount, status, majorMode, date, firstPurpose, expenseCode,
         totalDa, totalHotel, totalOther, totalAssigned, totalCompleted, totalPms,
         totalAsset, totalLocalPurchase, amount, totalDa, totalHotel, 
-        totalOther, totalLocalPurchase, totalCalibration, totalMobilise,
+        totalOther, totalLocalPurchase, totalCalibration, totalMobilise, totalLegsCount,
         timestamp, timestamp, submittedDistrictType, policyCase, policyRuleName
       ]
     });

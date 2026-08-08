@@ -118,6 +118,7 @@ export async function runMigrations(db) {
     `ALTER TABLE users ADD COLUMN base_reporting_location TEXT`,
     // Add district_type column to expenses if not present
     `ALTER TABLE expenses ADD COLUMN district_type TEXT`,
+    `ALTER TABLE expenses ADD COLUMN total_legs INTEGER DEFAULT 0`,
     // Add state tracking columns to expense_itineraries if not present
     `ALTER TABLE expense_itineraries ADD COLUMN from_state TEXT`,
     `ALTER TABLE expense_itineraries ADD COLUMN to_state TEXT`,
