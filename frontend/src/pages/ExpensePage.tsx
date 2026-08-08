@@ -7617,7 +7617,7 @@ export default function ExpensePage() {
                   type="button"
                   onClick={() => {
                     setOpenCallsModalData(null);
-                    toast.info("Started new call entry. Please enter Complaint ID.");
+                    toast("Started new call entry. Please enter Complaint ID.");
                   }}
                   className="px-3.5 py-1.5 text-[10px] font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all"
                 >
