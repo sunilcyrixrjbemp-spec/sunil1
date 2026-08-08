@@ -1525,7 +1525,12 @@ export default function ApprovalPage() {
         actionLoading={actionLoading}
         handleApprove={() => handleProcessAction("approve")}
         handleReject={() => handleProcessAction("reject")}
-        handleReturn={() => handleProcessAction("reject")}
+        handleReturn={() => {
+          if (selectedApproval) {
+            setReturnExpenseId(selectedApproval.expense_id || selectedApproval.id);
+            setShowReturnModal(true);
+          }
+        }}
         handleDeleteClaim={() => {}}
         editedLegs={editedLegs}
         onLegAmountChange={handleLegAmountChange}

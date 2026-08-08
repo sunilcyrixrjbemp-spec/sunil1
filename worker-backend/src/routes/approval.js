@@ -925,11 +925,8 @@ export async function handleReject(request, env, params, query, user) {
  * Coordinator returns an expense to draft so the engineer can edit/resubmit
  */
 export async function handleReturnToDraft(request, env, params, query, user) {
-  // Only Coordinator role can return to draft (or Admin)
-  const userRole = (user.role || "").trim();
-  if (userRole !== "Coordinator" && userRole !== "Admin") {
-    return jsonResponse({ error: "Only Coordinators can return expenses to draft." }, 403);
-  }
+  // Allow any approver with a pending task on the claim (or Admin/Coordinator) to return to draft
+  const userRole = (user.role || "").trim().toLowerCase();
 
   const expenseId = parseInt(params.expense_id, 10);
   let body;
@@ -946,10 +943,16 @@ export async function handleReturnToDraft(request, env, params, query, user) {
 
   const timestamp = parseClientTimestamp(client_timestamp);
 
-  // Verify coordinator has a pending approval on this expense
-  const activeApproval = await env.DB.prepare(`
+  // Verify approver has a pending approval on this expense
+  let activeApproval = await env.DB.prepare(`
     SELECT * FROM approvals WHERE expense_id = ? AND approver_id = ? AND status = 'pending'
   `).bind(expenseId, user.id).first();
+
+  if (!activeApproval && userRole === "admin") {
+    activeApproval = await env.DB.prepare(`
+      SELECT * FROM approvals WHERE expense_id = ? AND status = 'pending' ORDER BY level_number ASC LIMIT 1
+    `).bind(expenseId).first();
+  }
 
   if (!activeApproval) {
     return jsonResponse({ error: "No pending approval task found for you on this claim" }, 400);
