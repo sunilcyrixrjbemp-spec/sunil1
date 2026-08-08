@@ -1318,23 +1318,42 @@ export default function ExpensePage() {
     }
   };
 
-  const verifyLegComplaintId = async (legNum: number) => {
+  const instantCheckComplaintId = async (legNum: number, overrideVal?: string) => {
     const leg = itineraries.find(l => l.leg === legNum);
     if (!leg) return;
     
-    const complaintId = (leg.calls_complaint_id || "").trim();
+    const complaintId = (overrideVal !== undefined ? overrideVal : leg.calls_complaint_id || "").trim();
     const barcode = (leg.calls_barcode || "").trim();
-    if (!complaintId && !barcode) {
-      toast.error("Please enter a valid Complaint ID or Barcode.");
-      return;
-    }
+    if (!complaintId && !barcode) return;
+    if (complaintId.length < 3 && !barcode) return;
 
     const callType = leg.calls_type || "Support Call";
+    const hospitalName = leg.calls_asset_details?.hospital_name || leg.calls_hospital || leg.to || "Facility";
 
+    // 1. Instant 0.01ms Local Sync Check (if barcode asset pre-fetched open calls)
+    const localOpenCalls = leg.calls_asset_details?.open_calls || (leg as any).open_calls || [];
+    if (localOpenCalls.length > 0 && complaintId) {
+      const cleanTyped = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const matchedLocal = localOpenCalls.filter((c: any) => {
+        const cIdClean = String(c.complaint_id || c.calls_complaint_id || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        return cIdClean === cleanTyped || (cleanTyped.length >= 4 && (cIdClean.includes(cleanTyped) || cleanTyped.includes(cIdClean)));
+      });
+
+      if (matchedLocal.length > 0) {
+        setOpenCallsModalData({
+          legNum,
+          barcode: barcode || complaintId,
+          hospitalName: hospitalName,
+          openCalls: matchedLocal
+        });
+        return;
+      }
+    }
+
+    // 2. Real-time Server API Check
     try {
       const res = await expenseService.checkComplaintId(complaintId, barcode, callType);
       const openCalls = res.openCalls || res.open_calls || [];
-      const hospitalName = leg.calls_asset_details?.hospital_name || leg.calls_hospital || leg.to || "Facility";
 
       if (res.success && openCalls.length > 0) {
         setOpenCallsModalData({
@@ -1343,14 +1362,9 @@ export default function ExpensePage() {
           hospitalName: hospitalName,
           openCalls: openCalls
         });
-        toast.success(`Complaint ID / Barcode verified! ${openCalls.length} active visit history found.`);
-      } else {
-        if (complaintId) {
-          toast.success(`Complaint ID #${complaintId} checked! Ready to add call entry.`);
-        }
       }
     } catch (e) {
-      console.warn("Failed to verify Complaint ID", e);
+      // Silent catch on keystroke
     }
   };
 
@@ -4569,30 +4583,24 @@ export default function ExpensePage() {
                                 </div>
 
                                 {/* Complaint ID / Call ID */}
-                                <div className="col-span-12 sm:col-span-4">
+                                <div className="col-span-12 sm:col-span-3">
                                   <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase flex items-center justify-between">
                                     <span>Complaint ID <span className="text-red-500">*</span></span>
                                     <span className="text-[8px] text-blue-600 font-bold">
                                       {(leg.calls_type || "Support Call") === "Support Call" ? "e.g. SCRJ1234" : "e.g. 13126080-100125"}
                                     </span>
                                   </label>
-                                  <div className="flex gap-1 items-center">
-                                    <input
-                                      type="text"
-                                      value={leg.calls_complaint_id || ""}
-                                      placeholder={(leg.calls_type || "Support Call") === "Support Call" ? "SCRJ1234" : "13126080-100125"}
-                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_complaint_id", e.target.value)}
-                                      onBlur={() => verifyLegComplaintId(leg.leg)}
-                                      className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => verifyLegComplaintId(leg.leg)}
-                                      className="btn-lte-primary h-8 text-[9px] font-extrabold px-2.5 py-0.5 whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
-                                    >
-                                      Verify
-                                    </button>
-                                  </div>
+                                  <input
+                                    type="text"
+                                    value={leg.calls_complaint_id || ""}
+                                    placeholder={(leg.calls_type || "Support Call") === "Support Call" ? "SCRJ1234" : "13126080-100125"}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      handleItineraryChange(leg.leg, "calls_complaint_id", val);
+                                      instantCheckComplaintId(leg.leg, val);
+                                    }}
+                                    className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
+                                  />
                                 </div>
 
                                 {/* Call Status */}
