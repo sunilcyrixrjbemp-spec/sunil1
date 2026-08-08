@@ -1330,18 +1330,24 @@ export default function ExpensePage() {
     }
   };
 
-  const instantCheckComplaintId = async (legNum: number, overrideVal?: string) => {
+  const instantCheckComplaintId = async (
+    legNum: number,
+    overrideVal?: string,
+    overrideBarcode?: string,
+    overrideType?: string
+  ) => {
     const leg = itineraries.find(l => l.leg === legNum);
     if (!leg) return;
     
     const complaintId = (overrideVal !== undefined ? overrideVal : leg.calls_complaint_id || "").trim();
-    const barcode = (leg.calls_barcode || "").trim();
+    const barcode = (overrideBarcode !== undefined ? overrideBarcode : leg.calls_barcode || "").trim();
+    const callType = (overrideType !== undefined ? overrideType : leg.calls_type || "Support Call").trim();
+
     if (!complaintId && !barcode) {
       setComplaintCheckStatusMap(prev => ({ ...prev, [legNum]: { status: "idle", message: "", count: 0 } }));
       return;
     }
 
-    const callType = leg.calls_type || "Support Call";
     const hospitalName = leg.calls_asset_details?.hospital_name || leg.calls_hospital || leg.to || "Facility";
 
     setComplaintCheckStatusMap(prev => ({
@@ -4591,7 +4597,7 @@ export default function ExpensePage() {
                                     onChange={(e) => {
                                       const newType = e.target.value;
                                       handleItineraryChange(leg.leg, "calls_type", newType);
-                                      setTimeout(() => instantCheckComplaintId(leg.leg), 50);
+                                      instantCheckComplaintId(leg.leg, leg.calls_complaint_id, leg.calls_barcode, newType);
                                     }}
                                     className="input-lte text-[10px] font-bold h-8 py-1 px-1.5 bg-white border-blue-300 w-full"
                                   >
@@ -4615,8 +4621,9 @@ export default function ExpensePage() {
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       handleItineraryChange(leg.leg, "calls_complaint_id", val);
-                                      instantCheckComplaintId(leg.leg, val);
+                                      instantCheckComplaintId(leg.leg, val, leg.calls_barcode, leg.calls_type);
                                     }}
+                                    onBlur={() => instantCheckComplaintId(leg.leg, leg.calls_complaint_id, leg.calls_barcode, leg.calls_type)}
                                     className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
                                   />
                                 </div>
