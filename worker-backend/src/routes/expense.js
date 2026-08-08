@@ -5600,23 +5600,43 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
     let whereClause = "WHERE LOWER(TRIM(status)) NOT IN ('cancelled', 'rejected')";
     const sqlParams = [];
 
-    if (cleanComplaintId && barcode8) {
-      whereClause += " AND (itinerary LIKE ? OR itinerary LIKE ?)";
-      sqlParams.push(`%${cleanComplaintId}%`, `%${barcode8}%`);
-    } else if (cleanComplaintId) {
-      whereClause += " AND itinerary LIKE ?";
-      sqlParams.push(`%${cleanComplaintId}%`);
-    } else if (barcode8) {
-      whereClause += " AND itinerary LIKE ?";
-      sqlParams.push(`%${barcode8}%`);
+    const likeConditions = [];
+    if (complaintId) {
+      likeConditions.push("itinerary LIKE ?");
+      sqlParams.push(`%${complaintId}%`);
+      if (cleanComplaintId && cleanComplaintId !== complaintId.toLowerCase()) {
+        likeConditions.push("itinerary LIKE ?");
+        sqlParams.push(`%${cleanComplaintId}%`);
+      }
+    }
+    if (barcode) {
+      likeConditions.push("itinerary LIKE ?");
+      sqlParams.push(`%${barcode}%`);
+      if (barcode8 && barcode8 !== barcode.toLowerCase()) {
+        likeConditions.push("itinerary LIKE ?");
+        sqlParams.push(`%${barcode8}%`);
+      }
     }
 
-    const expensesRes = await runRead(env, `
+    if (likeConditions.length > 0) {
+      whereClause += ` AND (${likeConditions.join(" OR ")})`;
+    }
+
+    let expensesRes = await runRead(env, `
       SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
       FROM expenses
       ${whereClause}
       ORDER BY id DESC LIMIT 500
     `, sqlParams, request);
+
+    if ((!expensesRes?.results || expensesRes.results.length === 0) && (complaintId || barcode)) {
+      expensesRes = await runRead(env, `
+        SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
+        FROM expenses
+        WHERE LOWER(TRIM(status)) NOT IN ('cancelled', 'rejected')
+        ORDER BY id DESC LIMIT 300
+      `, [], request);
+    }
 
     const expensesList = (expensesRes && expensesRes.results) || [];
     const complaintMap = {};
