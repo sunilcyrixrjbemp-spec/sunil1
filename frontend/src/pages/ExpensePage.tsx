@@ -1351,12 +1351,12 @@ export default function ExpensePage() {
       const res = await expenseService.checkComplaintId(complaintId);
       let openCalls = res.openCalls || res.open_calls || [];
 
-      // Fallback: If backend query returned no results, check claims loaded in memory (myClaims)
-      if (openCalls.length === 0 && myClaims && myClaims.length > 0) {
+      // Fallback: If backend query returned no results, check claims loaded in memory (claims)
+      if (openCalls.length === 0 && claims && claims.length > 0) {
         const cleanTyped = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
         const localMatches: any[] = [];
 
-        myClaims.forEach((claim: any) => {
+        claims.forEach((claim: any) => {
           let itiArr: any[] = [];
           try { itiArr = typeof claim.itinerary === 'string' ? JSON.parse(claim.itinerary) : (claim.itinerary || []); } catch(e){}
           itiArr.forEach((l: any) => {
