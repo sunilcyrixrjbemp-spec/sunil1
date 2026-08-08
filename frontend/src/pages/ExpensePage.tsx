@@ -1349,9 +1349,54 @@ export default function ExpensePage() {
 
     try {
       const res = await expenseService.checkComplaintId(complaintId);
-      const openCalls = res.openCalls || res.open_calls || [];
+      let openCalls = res.openCalls || res.open_calls || [];
 
-      if (res.success && openCalls.length > 0) {
+      // Fallback: If backend query returned no results, check claims loaded in memory (myClaims)
+      if (openCalls.length === 0 && myClaims && myClaims.length > 0) {
+        const cleanTyped = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const localMatches: any[] = [];
+
+        myClaims.forEach((claim: any) => {
+          let itiArr: any[] = [];
+          try { itiArr = typeof claim.itinerary === 'string' ? JSON.parse(claim.itinerary) : (claim.itinerary || []); } catch(e){}
+          itiArr.forEach((l: any) => {
+            const list = Array.isArray(l.calls_list) ? l.calls_list : (Array.isArray(l.calls) ? l.calls : []);
+            if (l.calls_complaint_id) {
+              list.push({
+                calls_complaint_id: l.calls_complaint_id,
+                calls_barcode: l.calls_barcode,
+                calls_type: l.calls_type,
+                calls_status: l.calls_status,
+                calls_action_taken: l.calls_action_taken
+              });
+            }
+            list.forEach((c: any) => {
+              const cId = String(c.calls_complaint_id || c.complaint_id || c.id || l.calls_complaint_id || "").trim();
+              const cleanCId = cId.toLowerCase().replace(/[^a-z0-9]/g, "");
+              if (cleanCId && (cleanCId === cleanTyped || cleanCId.includes(cleanTyped) || cleanTyped.includes(cleanCId))) {
+                localMatches.push({
+                  complaint_id: cId,
+                  barcode: c.barcode || c.calls_barcode || l.calls_barcode || "",
+                  call_type: c.calls_type || c.type || l.calls_type || "Support Call",
+                  status: c.calls_status || c.status || l.calls_status || "Attend",
+                  action_taken: c.calls_action_taken || c.action_taken || l.calls_action_taken || "",
+                  spare_replaced: c.calls_spare_replaced || c.spare_replaced || "No",
+                  spare_name: c.calls_spare_name || c.spare_name || "",
+                  photo_url: c.calls_photo_url || c.photo_url || "",
+                  attended_by: claim.user_name || "Engineer",
+                  attended_date: claim.expense_date || claim.created_at || ""
+                });
+              }
+            });
+          });
+        });
+
+        if (localMatches.length > 0) {
+          openCalls = localMatches;
+        }
+      }
+
+      if (openCalls.length > 0) {
         setComplaintCheckStatusMap(prev => ({
           ...prev,
           [legNum]: { status: "found", message: `${openCalls.length} Open Complaint(s) Found in Database!`, count: openCalls.length }

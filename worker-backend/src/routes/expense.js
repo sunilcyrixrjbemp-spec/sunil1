@@ -5599,32 +5599,14 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
 
     const cleanComplaintId = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-    // 1. Direct Search in expenses table by Complaint ID
-    const sqlParams = [`%${complaintId}%`];
-    let sqlCondition = "itinerary LIKE ?";
-    if (cleanComplaintId && cleanComplaintId !== complaintId.toLowerCase()) {
-      sqlCondition += " OR itinerary LIKE ?";
-      sqlParams.push(`%${cleanComplaintId}%`);
-    }
-
-    let expensesRes = await runRead(env, `
+    // Query 500 recent expenses directly from database without restrictive SQL WHERE filters
+    const expensesRes = await runRead(env, `
       SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
       FROM expenses
-      WHERE (${sqlCondition})
-      ORDER BY id DESC LIMIT 200
-    `, sqlParams, request);
+      ORDER BY id DESC LIMIT 500
+    `, [], request);
 
-    let expensesList = (expensesRes && expensesRes.results) || [];
-
-    // Fallback: If direct LIKE search returned no rows, search ALL recent expenses (unfiltered)
-    if (expensesList.length === 0) {
-      const fallbackRes = await runRead(env, `
-        SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
-        FROM expenses
-        ORDER BY id DESC LIMIT 500
-      `, [], request);
-      expensesList = (fallbackRes && fallbackRes.results) || [];
-    }
+    const expensesList = (expensesRes && expensesRes.results) || [];
 
     const complaintMap = {};
 
