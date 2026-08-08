@@ -814,7 +814,7 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     settingsRows
   ] = await Promise.all([
     facilitiesPromise,
-    env.DB.prepare(`SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ? AND LOWER(TRIM(status)) NOT IN ('cancelled')`
+    env.DB.prepare(`SELECT itinerary FROM expenses WHERE user_id = ? AND month = ? AND year = ? AND LOWER(TRIM(status)) NOT IN ('cancelled', 'rejected', 'returned_to_draft')`
     ).bind(targetUser.id, monthName, yearVal).all(),
     env.DB.prepare(`
       SELECT 
@@ -1383,6 +1383,63 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
     const asset = queryResult && queryResult.results && queryResult.results[0] ? queryResult.results[0] : null;
 
     if (asset) {
+      let open_calls = [];
+      try {
+        const callsQuery = await runRead(env, `
+          SELECT 
+            c.id, c.itinerary_id, c.barcode, c.call_type, c.call_status, c.equipment_name, c.hospital_name, c.photo_url,
+            e.expense_code, e.user_id, e.user_name, e.created_at, e.expense_date, e.itinerary, e.status as claim_status
+          FROM expense_breakdown_calls c
+          JOIN expenses e ON (c.itinerary_id = e.expense_code OR c.itinerary_id = CAST(e.id AS TEXT))
+          WHERE (LOWER(SUBSTR(c.barcode, -8)) = LOWER(?) OR LOWER(c.barcode) = LOWER(?))
+            AND LOWER(TRIM(e.status)) NOT IN ('cancelled', 'rejected')
+          ORDER BY c.id DESC LIMIT 30
+        `, [barcode8, barcode], request);
+
+        const results = (callsQuery && callsQuery.results) || [];
+        const complaintMap = {};
+
+        for (const row of results) {
+          let itiArr = [];
+          try { itiArr = JSON.parse(row.itinerary || '[]'); } catch(e){}
+          
+          for (const leg of itiArr) {
+            const list = (leg.activity_details && leg.activity_details.calls_list) || [];
+            for (const item of list) {
+              if (item && item.barcode && String(item.barcode).slice(-8).toLowerCase() === barcode8.toLowerCase()) {
+                const cId = item.calls_complaint_id || item.complaint_id || item.id || `CALL-${row.id}`;
+                if (!complaintMap[cId]) {
+                  complaintMap[cId] = {
+                    complaint_id: cId,
+                    barcode: item.barcode,
+                    call_type: item.calls_type || item.type || row.call_type || "Support Call",
+                    status: item.calls_status || item.status || row.call_status || "Attend",
+                    action_taken: item.calls_action_taken || item.action_taken || "",
+                    spare_replaced: item.calls_spare_replaced || item.spare_replaced || "No",
+                    spare_name: item.calls_spare_name || item.spare_name || "",
+                    photo_url: item.calls_photo_url || item.photo_url || row.photo_url || "",
+                    attended_by: row.user_name || "Engineer",
+                    attended_user_id: row.user_id,
+                    attended_date: row.expense_date || row.created_at || "",
+                    history: []
+                  };
+                }
+                complaintMap[cId].history.push({
+                  user_name: row.user_name || "Engineer",
+                  status: item.calls_status || item.status || "Attend",
+                  action_taken: item.calls_action_taken || item.action_taken || "",
+                  date: row.expense_date || row.created_at || "",
+                  photo_url: item.calls_photo_url || item.photo_url || row.photo_url || ""
+                });
+              }
+            }
+          }
+        }
+        open_calls = Object.values(complaintMap);
+      } catch(err) {
+        console.warn("Could not query call history for barcode:", err.message);
+      }
+
       return jsonResponse({
         success: true,
         valid: true,
@@ -1390,13 +1447,15 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
         hospital_name: asset.hospital_name,
         district_name: asset.district_name,
         serial_no: asset.serial_no,
+        open_calls: open_calls,
         data: {
           district_name: asset.district_name,
           hospital_name: asset.hospital_name,
           equipment_name: asset.equipment_name,
           model_name: asset.model_name || "",
           qr_code: asset.qr_code,
-          inventory_status: asset.inventory_status || "Active"
+          inventory_status: asset.inventory_status || "Active",
+          open_calls: open_calls
         }
       });
     }
@@ -1434,6 +1493,63 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
       return jsonResponse({ success: false, valid: false, message: "Asset QR/Serial number not found in master database." });
     }
 
+    let open_calls = [];
+    try {
+      const callsQuery = await runRead(env, `
+        SELECT 
+          c.id, c.itinerary_id, c.barcode, c.call_type, c.call_status, c.equipment_name, c.hospital_name, c.photo_url,
+          e.expense_code, e.user_id, e.user_name, e.created_at, e.expense_date, e.itinerary, e.status as claim_status
+        FROM expense_breakdown_calls c
+        JOIN expenses e ON (c.itinerary_id = e.expense_code OR c.itinerary_id = CAST(e.id AS TEXT))
+        WHERE (LOWER(SUBSTR(c.barcode, -8)) = LOWER(?) OR LOWER(c.barcode) = LOWER(?))
+          AND LOWER(TRIM(e.status)) NOT IN ('cancelled', 'rejected')
+        ORDER BY c.id DESC LIMIT 30
+      `, [barcode8, barcode], request);
+
+      const results = (callsQuery && callsQuery.results) || [];
+      const complaintMap = {};
+
+      for (const row of results) {
+        let itiArr = [];
+        try { itiArr = JSON.parse(row.itinerary || '[]'); } catch(e){}
+        
+        for (const leg of itiArr) {
+          const list = (leg.activity_details && leg.activity_details.calls_list) || [];
+          for (const item of list) {
+            if (item && item.barcode && String(item.barcode).slice(-8).toLowerCase() === barcode8.toLowerCase()) {
+              const cId = item.calls_complaint_id || item.complaint_id || item.id || `CALL-${row.id}`;
+              if (!complaintMap[cId]) {
+                complaintMap[cId] = {
+                  complaint_id: cId,
+                  barcode: item.barcode,
+                  call_type: item.calls_type || item.type || row.call_type || "Support Call",
+                  status: item.calls_status || item.status || row.call_status || "Attend",
+                  action_taken: item.calls_action_taken || item.action_taken || "",
+                  spare_replaced: item.calls_spare_replaced || item.spare_replaced || "No",
+                  spare_name: item.calls_spare_name || item.spare_name || "",
+                  photo_url: item.calls_photo_url || item.photo_url || row.photo_url || "",
+                  attended_by: row.user_name || "Engineer",
+                  attended_user_id: row.user_id,
+                  attended_date: row.expense_date || row.created_at || "",
+                  history: []
+                };
+              }
+              complaintMap[cId].history.push({
+                user_name: row.user_name || "Engineer",
+                status: item.calls_status || item.status || "Attend",
+                action_taken: item.calls_action_taken || item.action_taken || "",
+                date: row.expense_date || row.created_at || "",
+                photo_url: item.calls_photo_url || item.photo_url || row.photo_url || ""
+              });
+            }
+          }
+        }
+      }
+      open_calls = Object.values(complaintMap);
+    } catch(err) {
+      console.warn("Could not query call history for barcode:", err.message);
+    }
+
     return jsonResponse({
       success: true,
       valid: true,
@@ -1441,13 +1557,15 @@ export async function handleVerifyBarcode(request, env, params, query, user) {
       hospital_name: asset.hospital_name,
       district_name: asset.district_name,
       serial_no: asset.serial_no,
+      open_calls: open_calls,
       data: {
         district_name: asset.district_name,
         hospital_name: asset.hospital_name,
         equipment_name: asset.equipment_name,
         model_name: asset.model_name || "",
         qr_code: asset.qr_code,
-        inventory_status: asset.inventory_status || "Active"
+        inventory_status: asset.inventory_status || "Active",
+        open_calls: open_calls
       }
     });
   }

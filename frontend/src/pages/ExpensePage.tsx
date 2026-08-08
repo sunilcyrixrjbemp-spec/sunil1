@@ -765,6 +765,32 @@ export default function ExpensePage() {
     message: string;
   }>({ show: false, title: "", message: "" });
 
+  // Active / Open Complaints Selection Modal state
+  const [openCallsModalData, setOpenCallsModalData] = useState<{
+    legNum: number;
+    barcode: string;
+    hospitalName: string;
+    openCalls: Array<{
+      complaint_id: string;
+      barcode: string;
+      call_type: string;
+      status: string;
+      action_taken: string;
+      spare_replaced?: string;
+      spare_name?: string;
+      photo_url?: string;
+      attended_by: string;
+      attended_date: string;
+      history?: Array<{
+        user_name: string;
+        status: string;
+        action_taken: string;
+        date: string;
+        photo_url?: string;
+      }>;
+    }>;
+  } | null>(null);
+
   // Edit Mode & Calendar Constraints states
   const [editExpenseId, setEditExpenseId] = useState<string | null>(null);
   const [_existingAttachments, setExistingAttachments] = useState<string[]>([]);
@@ -802,7 +828,7 @@ export default function ExpensePage() {
   }, []);
 
   useEffect(() => {
-    const hasAnyModalOpen = showDetailsModal || showConfirmModal || !!submitStatus || showApprovalModal || validationModal.show || !!activeCameraTarget || !!activeActivityCameraTarget || !!lightboxImage;
+    const hasAnyModalOpen = showDetailsModal || showConfirmModal || !!submitStatus || showApprovalModal || validationModal.show || !!activeCameraTarget || !!activeActivityCameraTarget || !!lightboxImage || !!openCallsModalData;
     if (hasAnyModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
@@ -815,7 +841,7 @@ export default function ExpensePage() {
       document.body.classList.remove('ant-scrolling-effect');
       document.documentElement.classList.remove('ant-scrolling-effect');
     }
-  }, [showDetailsModal, showConfirmModal, submitStatus, showApprovalModal, validationModal.show, activeCameraTarget, activeActivityCameraTarget, lightboxImage]);
+  }, [showDetailsModal, showConfirmModal, submitStatus, showApprovalModal, validationModal.show, activeCameraTarget, activeActivityCameraTarget, lightboxImage, openCallsModalData]);
   const [claimsSortOrder, setClaimsSortOrder] = useState<"date_desc" | "date_asc" | "amount_desc" | "amount_asc">("date_desc");
 
   const hasExistingFile = (legNum: number, billType: string) => {
@@ -1265,7 +1291,18 @@ export default function ExpensePage() {
         }
 
         // Successfully matched!
-        toast.success("Barcode verified successfully! You can now click '+' to add it.");
+        const openCalls = (res as any).open_calls || res.data?.open_calls || [];
+        if (activityType === "Calls" && openCalls.length > 0) {
+          setOpenCallsModalData({
+            legNum,
+            barcode: barcode,
+            hospitalName: hospitalName,
+            openCalls: openCalls
+          });
+          toast.success("Barcode verified! Active/Previous complaint history found for this barcode.");
+        } else {
+          toast.success("Barcode verified successfully! You can now click '+' to add it.");
+        }
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
           if (activityType === "Calls") {
@@ -7446,6 +7483,147 @@ export default function ExpensePage() {
               >
                 Capture Photo
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active Calls & Open Complaints Selection Modal */}
+      {openCallsModalData && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full border border-blue-200 overflow-hidden my-auto max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white px-5 py-3.5 flex items-center justify-between shadow-md">
+              <div className="flex items-center gap-2.5">
+                <span className="text-xl">📋</span>
+                <div>
+                  <h3 className="font-extrabold text-sm tracking-wide uppercase text-white">Active Calls & Complaint History</h3>
+                  <p className="text-[10px] text-blue-100 font-semibold">
+                    Barcode #{openCallsModalData.barcode} • {openCallsModalData.hospitalName}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setOpenCallsModalData(null)}
+                className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Sub-header instruction */}
+            <div className="bg-amber-50 border-b border-amber-200 px-5 py-2 flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-amber-800 flex items-center gap-1.5">
+                <span className="text-amber-600">⚡</span> Select an existing open complaint to re-attend / close, or create a new call entry:
+              </span>
+              <span className="text-[9px] font-bold bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full">
+                {openCallsModalData.openCalls.length} Found
+              </span>
+            </div>
+
+            {/* List of Open Calls */}
+            <div className="p-4 space-y-3 overflow-y-auto flex-1 bg-slate-50/50 max-h-[60vh]">
+              {openCallsModalData.openCalls.map((item, idx) => (
+                <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3.5 shadow-sm hover:border-blue-300 transition-all flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-blue-100 text-blue-800 font-mono font-extrabold text-[11px] px-2.5 py-0.5 rounded border border-blue-200">
+                        {item.complaint_id}
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-700">
+                        Type: {item.call_type}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full border ${
+                        item.status === 'Close' || item.status === 'Closed'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-amber-100 text-amber-900 border-amber-300'
+                      }`}>
+                        ● Status: {item.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-100">
+                    <div>
+                      <span className="font-bold text-slate-500 uppercase block text-[8px]">Last Attended By:</span>
+                      <span className="font-extrabold text-slate-800">{item.attended_by}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-500 uppercase block text-[8px]">Last Visit Date:</span>
+                      <span className="font-bold text-slate-700">{item.attended_date || '—'}</span>
+                    </div>
+                    {item.action_taken && (
+                      <div className="col-span-1 sm:col-span-2">
+                        <span className="font-bold text-slate-500 uppercase block text-[8px]">Last Action / Remark:</span>
+                        <p className="font-semibold text-slate-800 text-[10px] italic bg-white p-1.5 rounded border border-slate-200 mt-0.5">
+                          "{item.action_taken}"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Photo Preview Link */}
+                  {item.photo_url && (
+                    <div className="flex items-center justify-between bg-blue-50/50 p-2 rounded border border-blue-100 text-[10px]">
+                      <span className="font-bold text-blue-900 flex items-center gap-1">
+                        📷 Service Report Photo Available
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setLightboxImage(formatImageUrl(item.photo_url!))}
+                        className="text-[9px] font-extrabold bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded transition-all shadow-xs"
+                      >
+                        View Service Report
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Action Button */}
+                  <div className="pt-1 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleItineraryChange(openCallsModalData.legNum, "calls_complaint_id", item.complaint_id);
+                        handleItineraryChange(openCallsModalData.legNum, "calls_type", item.call_type || "Support Call");
+                        handleItineraryChange(openCallsModalData.legNum, "calls_status", item.status || "Attend");
+                        setOpenCallsModalData(null);
+                        toast.success(`Selected Complaint ID ${item.complaint_id}. You can now update status, remark & service report photo.`);
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-extrabold px-4 py-1.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5"
+                    >
+                      ✓ Select & Continue Complaint #{item.complaint_id} ➔
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="bg-slate-100 px-5 py-3 border-t border-slate-200 flex items-center justify-between flex-wrap gap-2">
+              <span className="text-[9px] text-slate-500 font-semibold">
+                Note: Multiple engineers can log actions against the same Complaint ID over time.
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenCallsModalData(null)}
+                  className="px-3 py-1.5 text-[10px] font-bold text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-200 border border-slate-300 rounded-lg transition-all"
+                >
+                  Close Modal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenCallsModalData(null);
+                    toast.info("Started new call entry. Please enter Complaint ID.");
+                  }}
+                  className="px-3.5 py-1.5 text-[10px] font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-all"
+                >
+                  + Create New Complaint ID
+                </button>
+              </div>
             </div>
           </div>
         </div>
