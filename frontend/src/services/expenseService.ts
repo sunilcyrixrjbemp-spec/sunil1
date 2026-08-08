@@ -84,6 +84,15 @@ export const expenseService = {
     return response.data;
   },
 
+  checkComplaintId: async (complaintId: string, barcode?: string, type?: string): Promise<any> => {
+    const qp = new URLSearchParams();
+    if (complaintId) qp.set("complaint_id", complaintId);
+    if (barcode) qp.set("barcode", barcode);
+    if (type) qp.set("type", type);
+    const response = await api.get(`/expense/calls/open-calls?${qp.toString()}`);
+    return response.data;
+  },
+
   getAssetValueMaster: async (): Promise<any[]> => {
     const response = await api.get("/expense/asset-value-master");
     return response.data;

@@ -1291,18 +1291,7 @@ export default function ExpensePage() {
         }
 
         // Successfully matched!
-        const openCalls = (res as any).open_calls || res.data?.open_calls || [];
-        if (activityType === "Calls" && openCalls.length > 0) {
-          setOpenCallsModalData({
-            legNum,
-            barcode: barcode,
-            hospitalName: hospitalName,
-            openCalls: openCalls
-          });
-          toast.success("Barcode verified! Active/Previous complaint history found for this barcode.");
-        } else {
-          toast.success("Barcode verified successfully! You can now click '+' to add it.");
-        }
+        toast.success("Barcode verified successfully! You can now enter Complaint ID and click 'Verify'.");
         setItineraries(prev => prev.map(l => {
           if (l.leg !== legNum) return l;
           if (activityType === "Calls") {
@@ -1325,8 +1314,51 @@ export default function ExpensePage() {
         toast.error(res.message || "Barcode not found in assets inventory.");
       }
     } catch (e) {
-      console.error("Barcode verification error", e);
-      toast.error("Error during barcode verification.");
+      toast.error("Failed to verify barcode.");
+    }
+  };
+
+  const verifyLegComplaintId = async (legNum: number) => {
+    const leg = itineraries.find(l => l.leg === legNum);
+    if (!leg) return;
+    
+    const complaintId = (leg.calls_complaint_id || "").trim();
+    if (!complaintId) {
+      toast.error("Please enter a valid Complaint ID.");
+      return;
+    }
+
+    const callType = leg.calls_type || "Support Call";
+    if (callType === "Support Call") {
+      if (complaintId.length < 3) {
+        toast.error("Support Call Complaint ID format e.g. SCRJ1234");
+        return;
+      }
+    } else if (callType === "Online Call") {
+      if (complaintId.length < 5) {
+        toast.error("Online Call Complaint ID format e.g. 13126080-100125");
+        return;
+      }
+    }
+
+    try {
+      const res = await expenseService.checkComplaintId(complaintId, leg.calls_barcode, callType);
+      const openCalls = res.openCalls || res.open_calls || [];
+      const hospitalName = leg.calls_asset_details?.hospital_name || leg.calls_hospital || leg.to || "Facility";
+
+      if (res.success && openCalls.length > 0) {
+        setOpenCallsModalData({
+          legNum,
+          barcode: leg.calls_barcode || complaintId,
+          hospitalName: hospitalName,
+          openCalls: openCalls
+        });
+        toast.success(`Complaint ID #${complaintId} verified! Active/Previous visit history found.`);
+      } else {
+        toast.success(`Complaint ID #${complaintId} verified! Ready to add call entry.`);
+      }
+    } catch (e) {
+      toast.error("Failed to verify Complaint ID.");
     }
   };
 
@@ -4545,17 +4577,29 @@ export default function ExpensePage() {
                                 </div>
 
                                 {/* Complaint ID / Call ID */}
-                                <div className="col-span-12 sm:col-span-3">
-                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase">
-                                    Complaint ID <span className="text-red-500">*</span>
+                                <div className="col-span-12 sm:col-span-4">
+                                  <label className="label-lte font-extrabold text-[8px] text-gray-500 uppercase flex items-center justify-between">
+                                    <span>Complaint ID <span className="text-red-500">*</span></span>
+                                    <span className="text-[8px] text-blue-600 font-bold">
+                                      {(leg.calls_type || "Support Call") === "Support Call" ? "e.g. SCRJ1234" : "e.g. 13126080-100125"}
+                                    </span>
                                   </label>
-                                  <input
-                                    type="text"
-                                    value={leg.calls_complaint_id || ""}
-                                    placeholder={(leg.calls_type || "Support Call") === "Support Call" ? "SCRJ1234" : "13126080-100125"}
-                                    onChange={(e) => handleItineraryChange(leg.leg, "calls_complaint_id", e.target.value)}
-                                    className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
-                                  />
+                                  <div className="flex gap-1 items-center">
+                                    <input
+                                      type="text"
+                                      value={leg.calls_complaint_id || ""}
+                                      placeholder={(leg.calls_type || "Support Call") === "Support Call" ? "SCRJ1234" : "13126080-100125"}
+                                      onChange={(e) => handleItineraryChange(leg.leg, "calls_complaint_id", e.target.value)}
+                                      className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => verifyLegComplaintId(leg.leg)}
+                                      className="btn-lte-primary h-8 text-[9px] font-extrabold px-2.5 py-0.5 whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs"
+                                    >
+                                      Verify
+                                    </button>
+                                  </div>
                                 </div>
 
                                 {/* Call Status */}
