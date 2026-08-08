@@ -3206,14 +3206,14 @@ export default function ExpensePage() {
   };
 
   const handleDeleteClaim = async (claimId: number) => {
-    if (!window.confirm("Are you sure you want to delete this expense claim?")) return;
+    if (!window.confirm("Are you sure you want to cancel this expense claim? Cancelled claims will be preserved in your history, and you can submit a new claim for this date if needed.")) return;
     try {
-      // Find the claim's month before deleting to refresh the correct month's limits!
+      // Find the claim's month before cancelling to refresh the correct month's limits!
       const targetClaim = claims.find((c: any) => c.id === claimId);
       const targetMonth = targetClaim?.itinerary ? targetClaim.itinerary.slice(0, 7) : getISTMonth();
       
       await expenseService.deleteExpense(claimId);
-      toast.success("Claim deleted successfully.");
+      toast.success("Claim cancelled successfully. You may submit a fresh claim for this date.");
       
       // Clear limits cache to force refetch
       const cacheKey = `cache_month_limits_${currentUserId}_${targetMonth}`;
@@ -3225,7 +3225,7 @@ export default function ExpensePage() {
       // Refresh claims list
       await fetchClaims();
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Failed to delete claim.");
+      toast.error(err.response?.data?.detail || "Failed to cancel claim.");
     }
   };
 

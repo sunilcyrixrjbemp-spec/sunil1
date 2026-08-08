@@ -123,7 +123,8 @@ export async function runMigrations(db) {
     `ALTER TABLE expense_itineraries ADD COLUMN from_state TEXT`,
     `ALTER TABLE expense_itineraries ADD COLUMN to_state TEXT`,
     `ALTER TABLE expense_itineraries ADD COLUMN state TEXT`,
-    `ALTER TABLE expense_itineraries ADD COLUMN dest_state TEXT`
+    `ALTER TABLE expense_itineraries ADD COLUMN dest_state TEXT`,
+    `ALTER TABLE expense_edit_logs ADD COLUMN exp_id TEXT`
   ];
 
   for (const sql of migrations) {

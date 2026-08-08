@@ -137,12 +137,12 @@ async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUs
             }
 
             batchWrites.push({
-              sql: `INSERT INTO expense_edit_logs (expense_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              sql: `INSERT INTO expense_edit_logs (expense_id, exp_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               params: [
-                expense.id, legNum, field, String(oldVal), String(newVal),
+                expense.id, expense.expense_code, legNum, field, String(oldVal), String(newVal),
                 fieldRemark || comments || "Adjusted during approval",
-                currentUser.name, currentUser.role, currentUser.id
+                currentUser.name, currentUser.role || "Manager", currentUser.id
               ]
             });
           }

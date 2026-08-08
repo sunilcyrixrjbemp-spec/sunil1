@@ -2252,28 +2252,23 @@ export async function handleDeleteExpense(request, env, params, query, user) {
     return jsonResponse({ error: "Access denied" }, 403);
   }
 
-  const itis = await env.DB.prepare("SELECT itinerary_id FROM expense_itineraries WHERE exp_id = ?").bind(expense.expense_code).all();
-  const itineraryIds = (itis.results || []).map(r => r.itinerary_id);
+  const nowISO = new Date().toISOString();
+  const oldStatus = expense.status || "submitted";
 
-  const statements = [];
-  for (const id of itineraryIds) {
-    statements.push({ sql: "DELETE FROM expense_breakdown_calls WHERE itinerary_id = ?", params: [id] });
-    statements.push({ sql: "DELETE FROM expense_pms_calls WHERE itinerary_id = ?", params: [id] });
-    statements.push({ sql: "DELETE FROM expense_asset_taggings WHERE itinerary_id = ?", params: [id] });
-    statements.push({ sql: "DELETE FROM expense_asset_mobilises WHERE itinerary_id = ?", params: [id] });
-    statements.push({ sql: "DELETE FROM expense_calibrations WHERE itinerary_id = ?", params: [id] });
-    statements.push({ sql: "DELETE FROM expense_other_activities WHERE itinerary_id = ?", params: [id] });
+  // Soft-cancel: Update status to 'cancelled' to preserve full audit history and data integrity
+  await env.DB.prepare("UPDATE expenses SET status = 'cancelled', updated_at = ? WHERE id = ?").bind(nowISO, expenseId).run();
+
+  // Audit log entry for cancellation
+  try {
+    await env.DB.prepare(`
+      INSERT INTO expense_edit_logs (expense_id, exp_id, leg_number, field_name, old_value, new_value, comment, editor_name, editor_role, editor_id, created_at)
+      VALUES (?, ?, 0, 'status', ?, 'cancelled', 'Expense claim cancelled by user', ?, ?, ?, ?)
+    `).bind(expenseId, expense.expense_code || "", oldStatus, user.name || "User", user.role || "User", user.id, nowISO).run();
+  } catch (e) {
+    console.error("Failed to write cancel log to expense_edit_logs:", e);
   }
 
-  statements.push({ sql: "DELETE FROM approvals WHERE expense_id = ?", params: [expenseId] });
-  statements.push({ sql: "DELETE FROM expense_edit_logs WHERE expense_id = ?", params: [expenseId] });
-  statements.push({ sql: "DELETE FROM expense_attachments WHERE exp_id = ?", params: [expense.expense_code] });
-  statements.push({ sql: "DELETE FROM expense_itineraries WHERE exp_id = ?", params: [expense.expense_code] });
-  statements.push({ sql: "DELETE FROM expenses WHERE id = ?", params: [expenseId] });
-
-  await runBatchWrite(env, statements);
-
-  return jsonResponse({ status: "success", message: "Expense claim deleted successfully." });
+  return jsonResponse({ status: "success", message: "Expense claim cancelled successfully. You may submit a new claim for this date if needed." });
 }
 
 /**
@@ -2513,8 +2508,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     console.error("Failed to verify submission policies:", err.message);
   }
 
-  // Duplicate Date Check (prevent submitting twice for the same date unless rejected / returned)
-  let dupQuery = "SELECT id FROM expenses WHERE (user_id = ? OR user_id = ? OR user_id = ?) AND itinerary = ? AND status NOT IN ('rejected', 'returned_to_draft', 'returned')";
+  // Duplicate Date Check (prevent submitting twice for the same date unless rejected / returned / cancelled)
+  let dupQuery = "SELECT id FROM expenses WHERE (user_id = ? OR user_id = ? OR user_id = ?) AND itinerary = ? AND status NOT IN ('rejected', 'returned_to_draft', 'returned', 'cancelled')";
   let dupParams = [user.id, user.user_id || user.id, user.e_code || user.id, date];
   if (editExpenseId) {
     dupQuery += " AND id != ?";
