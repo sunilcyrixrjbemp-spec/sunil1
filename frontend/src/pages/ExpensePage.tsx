@@ -6033,7 +6033,7 @@ export default function ExpensePage() {
             const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
             const totalItems = itemsList.length;
 
-            if (totalItems <= 10 && myClaimsPageSize === 10) return null;
+            if (totalItems === 0) return null;
 
             return (
               <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 mb-2 md:mb-0">
