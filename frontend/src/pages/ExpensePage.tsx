@@ -35,7 +35,7 @@ import {
   DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Pagination 
 } from "antd";
 import { 
-  EditOutlined, DeleteOutlined, FileTextOutlined 
+  EditOutlined, DeleteOutlined, CloseCircleOutlined, FileTextOutlined 
 } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 
@@ -5704,12 +5704,11 @@ export default function ExpensePage() {
                                     <Button
                                       size="small"
                                       danger
-                                      icon={<DeleteOutlined />}
+                                      icon={<CloseCircleOutlined />}
                                       onClick={() => handleDeleteClaim(exp.id)}
-                                      className="font-bold text-[10px]"
-                                    >
-                                      Delete
-                                    </Button>
+                                      className="font-bold text-[10px]">
+                                       Cancel
+                                     </Button>
                                   </Space>
                                 )}
                               </td>
@@ -5760,12 +5759,11 @@ export default function ExpensePage() {
                                   <Button
                                     size="small"
                                     danger
-                                    icon={<DeleteOutlined />}
+                                    icon={<CloseCircleOutlined />}
                                     onClick={() => handleDeleteClaim(exp.id)}
-                                    className="font-bold text-[10px]"
-                                  >
-                                    Delete
-                                  </Button>
+                                    className="font-bold text-[10px]">
+                                       Cancel
+                                     </Button>
                                 </>
                               )}
                             </div>
@@ -6395,7 +6393,7 @@ export default function ExpensePage() {
                   </Button>
                   <Button
                     danger
-                    icon={<DeleteOutlined />}
+                    icon={<CloseCircleOutlined />}
                     onClick={() => {
                       handleDeleteClaim(selectedClaim.id);
                       setShowDetailsModal(false);
@@ -6403,7 +6401,7 @@ export default function ExpensePage() {
                     }}
                     className="font-bold text-xs"
                   >
-                    Delete Claim
+                    Cancel Claim
                   </Button>
                 </>
               )}
