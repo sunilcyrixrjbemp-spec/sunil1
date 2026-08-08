@@ -5593,21 +5593,23 @@ function extractCallsFromLeg(leg) {
 export async function handleGetOpenCalls(request, env, params, query, user) {
   try {
     const complaintId = (query.get("complaint_id") || "").trim();
-    if (!complaintId) {
+    const barcode = (query.get("barcode") || "").trim();
+
+    if (!complaintId && !barcode) {
       return jsonResponse({ success: true, exists: false, openCalls: [], open_calls: [] });
     }
 
     const cleanComplaintId = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const barcode8 = barcode.length >= 8 ? barcode.slice(-8).toLowerCase() : barcode.toLowerCase();
 
-    // Query 500 recent expenses directly from database without restrictive SQL WHERE filters
+    // Query 1000 recent expenses directly from database to ensure complete barcode and complaint scanning
     const expensesRes = await runRead(env, `
       SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
       FROM expenses
-      ORDER BY id DESC LIMIT 500
+      ORDER BY id DESC LIMIT 1000
     `, [], request);
 
     const expensesList = (expensesRes && expensesRes.results) || [];
-
     const complaintMap = {};
 
     for (const row of expensesList) {
@@ -5621,29 +5623,41 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
           
           const itemCId = String(item.calls_complaint_id || item.complaint_id || item.id || leg.calls_complaint_id || leg.complaint_id || "").trim();
           const cleanItemCId = itemCId.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const itemBarcode = String(item.barcode || item.calls_barcode || leg.calls_barcode || "").trim();
+          const itemBarcode8 = itemBarcode.slice(-8).toLowerCase();
 
           let match = false;
+
+          // 1. Complaint ID match
           if (cleanComplaintId && cleanItemCId) {
             if (cleanItemCId === cleanComplaintId || cleanItemCId.includes(cleanComplaintId) || cleanComplaintId.includes(cleanItemCId)) {
               match = true;
             }
           }
 
-          if (!match && cleanComplaintId) {
+          // 2. Barcode match
+          if (!match && barcode8 && itemBarcode8) {
+            if (itemBarcode8 === barcode8) {
+              match = true;
+            }
+          }
+
+          // 3. Fallback text search inside leg JSON
+          if (!match && (cleanComplaintId || barcode8)) {
             const itemStr = JSON.stringify(item).toLowerCase().replace(/[^a-z0-9]/g, "");
             const legStr = JSON.stringify(leg).toLowerCase().replace(/[^a-z0-9]/g, "");
-            if (itemStr.includes(cleanComplaintId) || legStr.includes(cleanComplaintId)) {
+            if ((cleanComplaintId && (itemStr.includes(cleanComplaintId) || legStr.includes(cleanComplaintId))) ||
+                (barcode8 && (itemStr.includes(barcode8) || legStr.includes(barcode8)))) {
               match = true;
             }
           }
 
           if (match) {
-            const keyId = itemCId || complaintId || `CALL-${row.id}`;
-            const itemBarcode = String(item.barcode || item.calls_barcode || leg.calls_barcode || "").trim();
+            const keyId = itemCId || complaintId || `BARCODE-${itemBarcode || barcode}`;
             if (!complaintMap[keyId]) {
               complaintMap[keyId] = {
                 complaint_id: keyId,
-                barcode: itemBarcode,
+                barcode: itemBarcode || barcode,
                 call_type: item.calls_type || item.type || leg.calls_type || "Support Call",
                 status: item.calls_status || item.status || leg.calls_status || "Attend",
                 action_taken: item.calls_action_taken || item.action_taken || leg.calls_action_taken || "",
@@ -5668,47 +5682,53 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
       }
     }
 
-    // Also search expense_breakdown_calls table directly by complaint_id
+    // Also search expense_breakdown_calls table directly by complaint_id and barcode
     try {
-      const sqlBreakParams = [`%${complaintId}%`];
-      let sqlBreakCondition = "(c.calls_complaint_id LIKE ? OR c.complaint_id LIKE ?)";
-      sqlBreakParams.push(`%${complaintId}%`);
-      if (cleanComplaintId && cleanComplaintId !== complaintId.toLowerCase()) {
-        sqlBreakCondition += " OR c.calls_complaint_id LIKE ? OR c.complaint_id LIKE ?";
-        sqlBreakParams.push(`%${cleanComplaintId}%`, `%${cleanComplaintId}%`);
-      }
-
       const callsTableRes = await runRead(env, `
         SELECT c.*, e.user_name, e.created_at, e.expense_date
         FROM expense_breakdown_calls c
         LEFT JOIN expenses e ON (c.itinerary_id = e.expense_code OR c.itinerary_id = CAST(e.id AS TEXT))
-        WHERE ${sqlBreakCondition}
-        ORDER BY c.id DESC LIMIT 100
-      `, sqlBreakParams, request);
+        ORDER BY c.id DESC LIMIT 500
+      `, [], request);
 
       for (const cRow of (callsTableRes?.results || [])) {
         const cId = String(cRow.calls_complaint_id || cRow.complaint_id || cRow.id || "").trim();
-        const keyId = cId || complaintId;
-        if (!complaintMap[keyId]) {
-          complaintMap[keyId] = {
-            complaint_id: keyId,
-            barcode: cRow.barcode || "",
-            call_type: cRow.call_type || "Support Call",
-            status: cRow.call_status || "Attend",
-            action_taken: cRow.action_taken || "",
-            spare_replaced: cRow.spare_replaced || "No",
-            spare_name: cRow.spare_name || "",
-            photo_url: cRow.photo_url || "",
-            attended_by: cRow.user_name || "Engineer",
-            attended_date: cRow.expense_date || cRow.created_at || "",
-            history: [{
-              user_name: cRow.user_name || "Engineer",
+        const cleanCId = cId.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const cBarcode8 = String(cRow.barcode || "").slice(-8).toLowerCase();
+
+        let match = false;
+        if (cleanComplaintId && cleanCId) {
+          if (cleanCId === cleanComplaintId || cleanCId.includes(cleanComplaintId) || cleanComplaintId.includes(cleanCId)) {
+            match = true;
+          }
+        }
+        if (!match && barcode8 && cBarcode8 && cBarcode8 === barcode8) {
+          match = true;
+        }
+
+        if (match) {
+          const keyId = cId || complaintId || `BARCODE-${cRow.barcode}`;
+          if (!complaintMap[keyId]) {
+            complaintMap[keyId] = {
+              complaint_id: keyId,
+              barcode: cRow.barcode || barcode,
+              call_type: cRow.call_type || "Support Call",
               status: cRow.call_status || "Attend",
               action_taken: cRow.action_taken || "",
-              date: cRow.expense_date || cRow.created_at || "",
-              photo_url: cRow.photo_url || ""
-            }]
-          };
+              spare_replaced: cRow.spare_replaced || "No",
+              spare_name: cRow.spare_name || "",
+              photo_url: cRow.photo_url || "",
+              attended_by: cRow.user_name || "Engineer",
+              attended_date: cRow.expense_date || cRow.created_at || "",
+              history: [{
+                user_name: cRow.user_name || "Engineer",
+                status: cRow.call_status || "Attend",
+                action_taken: cRow.action_taken || "",
+                date: cRow.expense_date || cRow.created_at || "",
+                photo_url: cRow.photo_url || ""
+              }]
+            };
+          }
         }
       }
     } catch (e2) {

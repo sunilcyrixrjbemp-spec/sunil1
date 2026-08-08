@@ -1340,15 +1340,16 @@ export default function ExpensePage() {
       return;
     }
 
+    const barcode = (leg.calls_barcode || "").trim();
     const hospitalName = leg.calls_asset_details?.hospital_name || leg.calls_hospital || leg.to || "Facility";
 
     setComplaintCheckStatusMap(prev => ({
       ...prev,
-      [legNum]: { status: "checking", message: "Checking database for complaint ID...", count: 0 }
+      [legNum]: { status: "checking", message: "Scanning database for barcode & complaint history...", count: 0 }
     }));
 
     try {
-      const res = await expenseService.checkComplaintId(complaintId);
+      const res = await expenseService.checkComplaintId(complaintId, barcode);
       let openCalls = res.openCalls || res.open_calls || [];
 
       // Fallback: If backend query returned no results, check claims loaded in memory (claims)
