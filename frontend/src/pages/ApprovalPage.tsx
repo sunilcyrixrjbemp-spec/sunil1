@@ -78,6 +78,7 @@ export default function ApprovalPage() {
     return cached ? JSON.parse(cached) : [];
   });
   const [approvalPageSize, setApprovalPageSize] = useState(25);
+  const [currentApprovalPage, setCurrentApprovalPage] = useState(1);
   const [filterEngineer, setFilterEngineer] = useState("");
 
   const filteredApprovals = pendingApprovals.filter((a: any) => {
@@ -1421,36 +1422,27 @@ export default function ApprovalPage() {
               />
             </div>
 
-            {/* Mobile Responsive Card List View */}
-            <div className={`block md:hidden space-y-3 ${selectedIds.length > 0 ? 'pb-24' : 'pb-6'}`}>
-              {claimRequests.map((req) => {
+            {/* Mobile Cards View with Full Pagination */}
+            <div className="md:hidden space-y-3">
+              {claimRequests
+                .slice((currentApprovalPage - 1) * approvalPageSize, currentApprovalPage * approvalPageSize)
+                .map((req) => {
                 const isChecked = selectedIds.includes(req.expense_id);
-                const isAutoApproved = req.is_auto_approved || req.auto_approved || req.status === "auto_approved";
+                const roleLower = (currentUser?.role || "").toLowerCase();
+                const isCoordinator = roleLower.includes("coordinator");
+                const isAutoApproved = isCoordinator && (req.status === "Auto Approved" || (req.claims && req.claims.some((c: any) => c.status === "Auto Approved")));
+
                 return (
                   <div
-                    key={req.expense_id || req.id}
+                    key={req.expense_id}
                     onClick={() => handleOpenDetails(req)}
-                    className={`p-3 border rounded-none shadow-2xs transition-colors cursor-pointer ${
-                      isChecked ? "border-[#4A6A8A] bg-slate-50" : "border-slate-300 bg-white"
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer bg-white shadow-xs hover:border-[#4A6A8A]/50 ${
+                      isChecked ? "border-[#4A6A8A] bg-blue-50/20" : "border-slate-200"
                     }`}
                   >
                     {/* Top row: Avatar + Name + Status Tag */}
                     <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        {isBulkAuthorized && (
-                          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                            <Checkbox
-                              checked={isChecked}
-                              onChange={() => {
-                                setSelectedIds(prev =>
-                                  prev.includes(req.expense_id)
-                                    ? prev.filter(id => id !== req.expense_id)
-                                    : [...prev, req.expense_id]
-                                );
-                              }}
-                            />
-                          </div>
-                        )}
                         <Avatar
                           size={28}
                           className="bg-[#4A6A8A] font-bold text-xs rounded-none shrink-0"
@@ -1463,40 +1455,47 @@ export default function ApprovalPage() {
                         </div>
                       </div>
                       {isAutoApproved ? (
-                        <span className="font-bold border border-emerald-300 bg-emerald-100 text-emerald-800 text-[9px] uppercase px-1.5 py-0.5 rounded-none shrink-0">⚡ Auto</span>
+                        <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                          ⚡ Auto Approved
+                        </span>
                       ) : (
-                        <span className="font-bold border border-amber-300 bg-amber-100 text-amber-900 text-[9px] uppercase px-1.5 py-0.5 rounded-none shrink-0">Pending</span>
+                        <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                          ● Pending Review
+                        </span>
                       )}
                     </div>
 
-                    {/* Detail row: Claim ID + Category + Amount + Review button */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <div>
-                          <div className="text-[9px] text-slate-500 font-extrabold uppercase">Claim ID</div>
-                          <div className="text-xs font-extrabold font-mono text-[#4A6A8A]">
-                            {req.expense_code}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-[9px] text-slate-500 font-extrabold uppercase">Date</div>
-                          <div className="text-xs font-semibold text-slate-800">{req.date}</div>
-                        </div>
-                        <div>
-                          <div className="text-[9px] text-slate-500 font-extrabold uppercase">Category</div>
-                          <span className="text-[9.5px] font-bold uppercase bg-slate-100 text-slate-700 px-1.5 py-0.5 border border-slate-200">{req.category}</span>
-                        </div>
-                        <div>
-                          <div className="text-[9px] text-slate-500 font-extrabold uppercase">Amount</div>
-                          <div className="text-xs font-black font-mono text-slate-900">₹{(Number(req.amount) || 0).toLocaleString()}</div>
-                        </div>
+                    {/* Middle grid: Claim Details */}
+                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                      <div>
+                        <div className="text-[9px] text-slate-400 font-extrabold uppercase">Claim ID</div>
+                        <div className="font-mono font-extrabold text-xs text-[#4A6A8A]">{req.expense_code}</div>
                       </div>
+                      <div>
+                        <div className="text-[9px] text-slate-400 font-extrabold uppercase">Category</div>
+                        <div className="font-bold text-[10px] uppercase text-slate-700">{req.category}</div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] text-slate-400 font-extrabold uppercase">Date / Month</div>
+                        <div className="font-semibold text-slate-700 text-xs">{req.date}</div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] text-slate-400 font-extrabold uppercase">Total Amount</div>
+                        <div className="font-extrabold text-sm text-emerald-600">₹{req.totalAmount}</div>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                       <button
                         type="button"
-                        onClick={(e) => { e.stopPropagation(); handleOpenDetails(req); }}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-none text-xs font-bold bg-[#4A6A8A] hover:bg-[#3b5570] text-white transition-colors cursor-pointer shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDetails(req);
+                        }}
+                        className="px-3 py-1 bg-[#4A6A8A] text-white font-extrabold text-[10px] rounded-lg shadow-xs hover:bg-[#3B5570] transition-colors"
                       >
-                        <Eye size={12} /> Review
+                        Review & Approve ➔
                       </button>
                     </div>
 
@@ -1510,6 +1509,72 @@ export default function ApprovalPage() {
                 );
               })}
             </div>
+
+            {/* Mobile Pagination Control Footer */}
+            {claimRequests.length > 0 && (
+              <div className="md:hidden mt-4 pt-3 border-t border-slate-200 flex flex-col gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-extrabold text-slate-700">
+                    Showing {Math.min((currentApprovalPage - 1) * approvalPageSize + 1, claimRequests.length)} - {Math.min(currentApprovalPage * approvalPageSize, claimRequests.length)} of {claimRequests.length} Entries
+                  </span>
+                  
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-bold text-slate-500">Show:</span>
+                    <select
+                      value={approvalPageSize}
+                      onChange={(e) => {
+                        setApprovalPageSize(Number(e.target.value));
+                        setCurrentApprovalPage(1);
+                      }}
+                      className="text-xs font-extrabold bg-slate-50 border border-slate-300 rounded px-1.5 py-1 text-slate-800 shadow-xs focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value={10}>10 / page</option>
+                      <option value={25}>25 / page</option>
+                      <option value={50}>50 / page</option>
+                      <option value={100}>100 / page</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Prev / Next & Page Number Buttons */}
+                <div className="flex items-center justify-between gap-1 pt-1">
+                  <button
+                    type="button"
+                    disabled={currentApprovalPage === 1}
+                    onClick={() => setCurrentApprovalPage(prev => Math.max(1, prev - 1))}
+                    className="px-3 py-1.5 bg-white disabled:opacity-40 border border-slate-300 text-slate-700 font-extrabold text-xs rounded-lg shadow-xs hover:bg-slate-100 transition-all flex items-center gap-1"
+                  >
+                    ◀ Prev
+                  </button>
+
+                  <div className="flex items-center gap-1 overflow-x-auto max-w-[180px] py-0.5">
+                    {Array.from({ length: Math.ceil(claimRequests.length / approvalPageSize) }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentApprovalPage(pageNum)}
+                        className={`min-w-[28px] h-7 text-xs font-extrabold rounded-md transition-all ${
+                          currentApprovalPage === pageNum
+                            ? "bg-[#4A6A8A] text-white shadow-xs"
+                            : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={currentApprovalPage >= Math.ceil(claimRequests.length / approvalPageSize)}
+                    onClick={() => setCurrentApprovalPage(prev => Math.min(Math.ceil(claimRequests.length / approvalPageSize), prev + 1))}
+                    className="px-3.5 py-1.5 bg-white disabled:opacity-40 border border-slate-300 text-slate-700 font-extrabold text-xs rounded-lg shadow-xs hover:bg-slate-100 transition-all flex items-center gap-1"
+                  >
+                    Next ▶
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

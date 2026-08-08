@@ -5546,72 +5546,120 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
   try {
     const barcode = (query.get("barcode") || "").trim();
     const complaintId = (query.get("complaint_id") || "").trim();
-    const barcode8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
+    const barcode8 = barcode.length >= 8 ? barcode.slice(-8).toLowerCase() : barcode.toLowerCase();
+    const cleanComplaintId = complaintId.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-    let sql = `
-      SELECT 
-        c.id, c.itinerary_id, c.barcode, c.call_type, c.call_status, c.equipment_name, c.hospital_name, c.photo_url,
-        e.expense_code, e.user_id, e.user_name, e.created_at, e.expense_date, e.itinerary, e.status as claim_status
-      FROM expense_breakdown_calls c
-      JOIN expenses e ON (c.itinerary_id = e.expense_code OR c.itinerary_id = CAST(e.id AS TEXT) OR c.exp_id = e.expense_code)
-      WHERE LOWER(TRIM(e.status)) NOT IN ('cancelled', 'rejected')
-    `;
-    const paramsList = [];
+    // Query expenses directly for maximum reliability across JSON itineraries
+    const expensesRes = await runRead(env, `
+      SELECT id, expense_code, user_id, user_name, created_at, expense_date, itinerary, status
+      FROM expenses
+      WHERE LOWER(TRIM(status)) NOT IN ('cancelled', 'rejected')
+      ORDER BY id DESC LIMIT 150
+    `, [], request);
 
-    if (complaintId) {
-      sql += ` AND (LOWER(c.calls_complaint_id) = LOWER(?) OR LOWER(c.call_status) LIKE '%attend%' OR LOWER(c.call_status) LIKE '%open%')`;
-      paramsList.push(complaintId);
-    } else if (barcode) {
-      sql += ` AND (LOWER(SUBSTR(c.barcode, -8)) = LOWER(?) OR LOWER(c.barcode) = LOWER(?))`;
-      paramsList.push(barcode8, barcode);
-    }
-
-    sql += ` ORDER BY c.id DESC LIMIT 40`;
-
-    const res = await env.DB.prepare(sql).bind(...paramsList).all();
-    const results = (res && res.results) || [];
+    const expensesList = (expensesRes && expensesRes.results) || [];
     const complaintMap = {};
 
-    for (const row of results) {
+    for (const row of expensesList) {
       let itiArr = [];
       try { itiArr = JSON.parse(row.itinerary || '[]'); } catch(e){}
       
       for (const leg of itiArr) {
         const list = (leg.activity_details && leg.activity_details.calls_list) || [];
         for (const item of list) {
-          const itemCId = item.calls_complaint_id || item.complaint_id || item.id || `CALL-${row.id}`;
-          const itemBarcode = item.barcode || row.barcode || "";
+          if (!item) continue;
+          const itemCId = String(item.calls_complaint_id || item.complaint_id || item.id || "").trim();
+          const cleanItemCId = itemCId.toLowerCase().replace(/[^a-z0-9]/g, "");
+          const itemBarcode = String(item.barcode || leg.calls_barcode || "").trim();
+          const itemBarcode8 = itemBarcode.slice(-8).toLowerCase();
           
-          const matchComplaint = complaintId ? (itemCId.toLowerCase().trim() === complaintId.toLowerCase().trim()) : true;
-          const matchBarcode = barcode ? (itemBarcode.slice(-8).toLowerCase() === barcode8.toLowerCase()) : true;
+          let match = false;
+          if (cleanComplaintId && cleanItemCId && (cleanItemCId === cleanComplaintId || cleanItemCId.includes(cleanComplaintId) || cleanComplaintId.includes(cleanItemCId))) {
+            match = true;
+          }
+          if (barcode8 && itemBarcode8 && itemBarcode8 === barcode8) {
+            match = true;
+          }
 
-          if (matchComplaint && matchBarcode) {
-            if (!complaintMap[itemCId]) {
-              complaintMap[itemCId] = {
-                complaint_id: itemCId,
+          if (match) {
+            const keyId = itemCId || `CALL-${row.id}`;
+            if (!complaintMap[keyId]) {
+              complaintMap[keyId] = {
+                complaint_id: keyId,
                 barcode: itemBarcode,
-                call_type: item.calls_type || item.type || row.call_type || "Support Call",
-                status: item.calls_status || item.status || row.call_status || "Attend",
+                call_type: item.calls_type || item.type || "Support Call",
+                status: item.calls_status || item.status || "Attend",
                 action_taken: item.calls_action_taken || item.action_taken || "",
                 spare_replaced: item.calls_spare_replaced || item.spare_replaced || "No",
                 spare_name: item.calls_spare_name || item.spare_name || "",
-                photo_url: item.calls_photo_url || item.photo_url || row.photo_url || "",
+                photo_url: item.calls_photo_url || item.photo_url || "",
                 attended_by: row.user_name || "Engineer",
                 attended_user_id: row.user_id,
                 attended_date: row.expense_date || row.created_at || "",
                 history: []
               };
             }
-            complaintMap[itemCId].history.push({
+            complaintMap[keyId].history.push({
               user_name: row.user_name || "Engineer",
               status: item.calls_status || item.status || "Attend",
               action_taken: item.calls_action_taken || item.action_taken || "",
               date: row.expense_date || row.created_at || "",
-              photo_url: item.calls_photo_url || item.photo_url || row.photo_url || ""
+              photo_url: item.calls_photo_url || item.photo_url || ""
             });
           }
         }
       }
+    }
+
+    // Also check expense_breakdown_calls table as fallback
+    try {
+      const callsTableRes = await runRead(env, `
+        SELECT c.*, e.user_name, e.created_at, e.expense_date
+        FROM expense_breakdown_calls c
+        LEFT JOIN expenses e ON (c.itinerary_id = e.expense_code OR c.itinerary_id = CAST(e.id AS TEXT))
+        ORDER BY c.id DESC LIMIT 50
+      `, [], request);
+
+      for (const cRow of (callsTableRes?.results || [])) {
+        const cId = String(cRow.calls_complaint_id || cRow.complaint_id || cRow.id || "").trim();
+        const cleanCId = cId.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const cBarcode8 = String(cRow.barcode || "").slice(-8).toLowerCase();
+
+        let match = false;
+        if (cleanComplaintId && cleanCId && (cleanCId === cleanComplaintId || cleanCId.includes(cleanComplaintId) || cleanComplaintId.includes(cleanCId))) {
+          match = true;
+        }
+        if (barcode8 && cBarcode8 && cBarcode8 === barcode8) {
+          match = true;
+        }
+
+        if (match) {
+          const keyId = cId || `BREAK-CALL-${cRow.id}`;
+          if (!complaintMap[keyId]) {
+            complaintMap[keyId] = {
+              complaint_id: keyId,
+              barcode: cRow.barcode || "",
+              call_type: cRow.call_type || "Support Call",
+              status: cRow.call_status || "Attend",
+              action_taken: cRow.action_taken || "",
+              spare_replaced: cRow.spare_replaced || "No",
+              spare_name: cRow.spare_name || "",
+              photo_url: cRow.photo_url || "",
+              attended_by: cRow.user_name || "Engineer",
+              attended_date: cRow.expense_date || cRow.created_at || "",
+              history: [{
+                user_name: cRow.user_name || "Engineer",
+                status: cRow.call_status || "Attend",
+                action_taken: cRow.action_taken || "",
+                date: cRow.expense_date || cRow.created_at || "",
+                photo_url: cRow.photo_url || ""
+              }]
+            };
+          }
+        }
+      }
+    } catch (e2) {
+      console.warn("Fallback expense_breakdown_calls check error:", e2.message);
     }
 
     const openCalls = Object.values(complaintMap);

@@ -1323,42 +1323,34 @@ export default function ExpensePage() {
     if (!leg) return;
     
     const complaintId = (leg.calls_complaint_id || "").trim();
-    if (!complaintId) {
-      toast.error("Please enter a valid Complaint ID.");
+    const barcode = (leg.calls_barcode || "").trim();
+    if (!complaintId && !barcode) {
+      toast.error("Please enter a valid Complaint ID or Barcode.");
       return;
     }
 
     const callType = leg.calls_type || "Support Call";
-    if (callType === "Support Call") {
-      if (complaintId.length < 3) {
-        toast.error("Support Call Complaint ID format e.g. SCRJ1234");
-        return;
-      }
-    } else if (callType === "Online Call") {
-      if (complaintId.length < 5) {
-        toast.error("Online Call Complaint ID format e.g. 13126080-100125");
-        return;
-      }
-    }
 
     try {
-      const res = await expenseService.checkComplaintId(complaintId, leg.calls_barcode, callType);
+      const res = await expenseService.checkComplaintId(complaintId, barcode, callType);
       const openCalls = res.openCalls || res.open_calls || [];
       const hospitalName = leg.calls_asset_details?.hospital_name || leg.calls_hospital || leg.to || "Facility";
 
       if (res.success && openCalls.length > 0) {
         setOpenCallsModalData({
           legNum,
-          barcode: leg.calls_barcode || complaintId,
+          barcode: barcode || complaintId,
           hospitalName: hospitalName,
           openCalls: openCalls
         });
-        toast.success(`Complaint ID #${complaintId} verified! Active/Previous visit history found.`);
+        toast.success(`Complaint ID / Barcode verified! ${openCalls.length} active visit history found.`);
       } else {
-        toast.success(`Complaint ID #${complaintId} verified! Ready to add call entry.`);
+        if (complaintId) {
+          toast.success(`Complaint ID #${complaintId} checked! Ready to add call entry.`);
+        }
       }
     } catch (e) {
-      toast.error("Failed to verify Complaint ID.");
+      console.warn("Failed to verify Complaint ID", e);
     }
   };
 
@@ -4590,6 +4582,7 @@ export default function ExpensePage() {
                                       value={leg.calls_complaint_id || ""}
                                       placeholder={(leg.calls_type || "Support Call") === "Support Call" ? "SCRJ1234" : "13126080-100125"}
                                       onChange={(e) => handleItineraryChange(leg.leg, "calls_complaint_id", e.target.value)}
+                                      onBlur={() => verifyLegComplaintId(leg.leg)}
                                       className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
                                     />
                                     <button

@@ -400,7 +400,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Content Area - Bottom padding for mobile bottom bar */}
-        <main className="flex-1 p-2 md:p-4 w-full max-w-full mx-auto pb-16 lg:pb-4">
+        <main className="flex-1 p-2 md:p-4 w-full max-w-full mx-auto pb-28 lg:pb-4">
           {!hasAccess ? (
             <div className="p-8 text-center bg-white border border-border rounded-xl shadow-xs my-8">
               <Lock className="w-12 h-12 text-red-500 mx-auto mb-3" />
