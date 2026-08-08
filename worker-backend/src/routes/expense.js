@@ -2508,8 +2508,8 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     console.error("Failed to verify submission policies:", err.message);
   }
 
-  // Duplicate Date Check (prevent submitting twice for the same date unless rejected / returned / cancelled)
-  let dupQuery = "SELECT id FROM expenses WHERE (user_id = ? OR user_id = ? OR user_id = ?) AND itinerary = ? AND status NOT IN ('rejected', 'returned_to_draft', 'returned', 'cancelled')";
+  // Duplicate Date Check (strictly block re-submitting for rejected dates; allow returned & cancelled)
+  let dupQuery = "SELECT id, status FROM expenses WHERE (user_id = ? OR user_id = ? OR user_id = ?) AND itinerary = ? AND status NOT IN ('returned_to_draft', 'returned', 'cancelled')";
   let dupParams = [user.id, user.user_id || user.id, user.e_code || user.id, date];
   if (editExpenseId) {
     dupQuery += " AND id != ?";
@@ -2518,6 +2518,10 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   const dupResult = await runRead(env, dupQuery, dupParams, request);
   const existingDup = dupResult && dupResult.results && dupResult.results[0] ? dupResult.results[0] : null;
   if (existingDup) {
+    const isRejectedDup = String(existingDup.status || "").toLowerCase() === "rejected";
+    if (isRejectedDup) {
+      return jsonResponse({ error: `An expense claim for ${date} was rejected. Re-submitting claims for rejected dates is strictly prohibited by company policy.` }, 400);
+    }
     return jsonResponse({ error: `An expense claim for ${date} has already been submitted.` }, 400);
   }
 
