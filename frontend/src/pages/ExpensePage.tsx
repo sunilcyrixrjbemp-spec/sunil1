@@ -4619,43 +4619,6 @@ export default function ExpensePage() {
                                     }}
                                     className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
                                   />
-
-                                  {/* Live Complaint DB Check Status Badge */}
-                                  {(() => {
-                                    const checkStatus = complaintCheckStatusMap[leg.leg];
-                                    if (!checkStatus || checkStatus.status === "idle") return null;
-                                    if (checkStatus.status === "checking") {
-                                      return (
-                                        <div className="mt-1 text-[9px] font-bold text-amber-600 animate-pulse flex items-center gap-1">
-                                          <span>⏳ Checking database for open calls...</span>
-                                        </div>
-                                      );
-                                    }
-                                    if (checkStatus.status === "found") {
-                                      return (
-                                        <div className="mt-1 flex items-center justify-between bg-amber-50 p-1.5 rounded border border-amber-200 text-[10px]">
-                                          <span className="font-extrabold text-amber-900 flex items-center gap-1">
-                                            ⚡ {checkStatus.count} Active Call(s) in DB!
-                                          </span>
-                                          <button
-                                            type="button"
-                                            onClick={() => instantCheckComplaintId(leg.leg)}
-                                            className="text-[9px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white px-2 py-0.5 rounded shadow-xs"
-                                          >
-                                            View Popup
-                                          </button>
-                                        </div>
-                                      );
-                                    }
-                                    if (checkStatus.status === "fresh") {
-                                      return (
-                                        <div className="mt-1 flex items-center gap-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
-                                          <span>🟢 Fresh Entry: No open complaint found in database</span>
-                                        </div>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
                                 </div>
 
                                 {/* Call Status */}
@@ -4671,6 +4634,40 @@ export default function ExpensePage() {
                                     <option value="Attend & Close">Both</option>
                                   </select>
                                 </div>
+
+                                {/* Live Complaint DB Check Status Banner Row */}
+                                {(() => {
+                                  const checkStatus = complaintCheckStatusMap[leg.leg];
+                                  if (!checkStatus || checkStatus.status === "idle") return null;
+                                  return (
+                                    <div className="col-span-12 -mt-1 mb-1">
+                                      {checkStatus.status === "checking" && (
+                                        <div className="text-[9px] font-bold text-amber-600 animate-pulse flex items-center gap-1 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                                          <span>⏳ Checking database for open calls...</span>
+                                        </div>
+                                      )}
+                                      {checkStatus.status === "found" && (
+                                        <div className="flex items-center justify-between bg-amber-50 p-1.5 rounded border border-amber-200 text-[10px]">
+                                          <span className="font-extrabold text-amber-900 flex items-center gap-1">
+                                            ⚡ {checkStatus.count} Active Call(s) Found in Database!
+                                          </span>
+                                          <button
+                                            type="button"
+                                            onClick={() => instantCheckComplaintId(leg.leg)}
+                                            className="text-[9px] font-extrabold bg-amber-600 hover:bg-amber-700 text-white px-2 py-0.5 rounded shadow-xs"
+                                          >
+                                            View Popup Modal ➔
+                                          </button>
+                                        </div>
+                                      )}
+                                      {checkStatus.status === "fresh" && (
+                                        <div className="flex items-center gap-1 text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                                          <span>🟢 Fresh Entry: No open complaint found in database</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
 
                                 {/* Hospital / Facility Name (Read-Only / Auto-filled from Verified Barcode) */}
                                 <div className="col-span-12 sm:col-span-6">
