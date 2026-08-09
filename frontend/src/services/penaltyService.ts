@@ -4,8 +4,10 @@ export interface PenaltyRecord {
   id?: number | string;
   complaint_id: string;
   district_name: string;
+  zone_name?: string;
   hospital_type?: string;
   hospital_name: string;
+  di_name?: string;
   bar_code: string;
   equipment_name: string;
   equipment_model?: string;

@@ -383,10 +383,10 @@ export default function PenaltyModulePage() {
       ];
 
       rows = records.map((r, idx) => [
-        idx + 1, r.district_name || "Ajmer", r.hospital_type || "CHC", r.hospital_name || "CHC Hospital", r.bar_code,
-        r.equipment_name || "Medical Device", r.equipment_model || "", r.complaint_id, r.complaint_raise_date,
+        idx + 1, r.district_name || "", r.hospital_type || "", r.hospital_name || "", r.bar_code,
+        r.equipment_name || "", r.equipment_model || "", r.complaint_id, r.complaint_raise_date,
         r.complaint_close_date, r.status || "Final Closed", (r.total_downtime || 0) * 24,
-        r.asset_value || 10000, r.chargeable_days || 0, r.final_close_date || r.complaint_close_date,
+        r.asset_value || 0, r.chargeable_days || 0, r.final_close_date || r.complaint_close_date,
         r.attend_date, 0, r.total_penalty || 0, r.total_penalty || 0, "No",
         "Cyrix Healthcare", r.attended_engineer_name || "", r.close_engineer_id || ""
       ]);
@@ -426,18 +426,18 @@ export default function PenaltyModulePage() {
       rows = records.map((r, idx) => {
         const rowArr = Array(53).fill("");
         rowArr[0] = idx + 1;
-        rowArr[1] = r.district_name || "Ajmer";
-        rowArr[2] = r.hospital_type || "CHC";
-        rowArr[3] = r.hospital_name || "CHC Hospital";
+        rowArr[1] = r.district_name || "";
+        rowArr[2] = r.hospital_type || "";
+        rowArr[3] = r.hospital_name || "";
         rowArr[4] = r.bar_code;
-        rowArr[5] = r.equipment_name || "Medical Device";
+        rowArr[5] = r.equipment_name || "";
         rowArr[6] = r.equipment_model || "";
         rowArr[7] = r.complaint_id;
         rowArr[8] = r.complaint_raise_date;
         rowArr[9] = r.complaint_close_date;
         rowArr[10] = r.status || "Final Closed";
         rowArr[11] = (r.total_downtime || 0) * 24;
-        rowArr[12] = r.asset_value || 10000;
+        rowArr[12] = r.asset_value || 0;
         rowArr[13] = r.chargeable_days || 0;
         rowArr[14] = r.final_close_date || r.complaint_close_date;
         rowArr[15] = r.attend_date;
@@ -449,12 +449,12 @@ export default function PenaltyModulePage() {
         rowArr[21] = r.attended_engineer_name || "";
         rowArr[22] = r.close_engineer_id || "";
         rowArr[23] = "Closed";
-        rowArr[24] = r.hospital_type || "CHC";
+        rowArr[24] = r.hospital_type || "";
         rowArr[25] = r.equipment_type || "Non-Critical";
-        rowArr[26] = r.asset_value || 10000;
-        rowArr[36] = r.penalty_slab_amount || 500;
+        rowArr[26] = r.asset_value || 0;
+        rowArr[36] = r.penalty_slab_amount || 0;
         rowArr[39] = r.total_penalty || 0;
-        rowArr[43] = r.standby_status || "Not Provided";
+        rowArr[43] = r.standby_status || "";
         return rowArr;
       });
     }
@@ -509,7 +509,7 @@ export default function PenaltyModulePage() {
   const districtChartData = useMemo(() => {
     const map: Record<string, number> = {};
     filteredRecords.forEach(r => {
-      const d = r.district_name || "Ajmer";
+      const d = r.district_name || "Unassigned District";
       map[d] = (map[d] || 0) + (r.total_penalty || 0);
     });
     return Object.keys(map).map(k => ({ name: k, amount: map[k] }));
@@ -518,7 +518,7 @@ export default function PenaltyModulePage() {
   const zoneChartData = useMemo(() => {
     const map: Record<string, number> = {};
     filteredRecords.forEach(r => {
-      const z = r.district_name ? `${r.district_name} Zone` : "Ajmer Zone";
+      const z = r.zone_name || (r.district_name ? `${r.district_name} Zone` : "Unassigned Zone");
       map[z] = (map[z] || 0) + (r.total_penalty || 0);
     });
     return Object.keys(map).map(k => ({ name: k, value: map[k] }));
@@ -527,7 +527,7 @@ export default function PenaltyModulePage() {
   const equipmentChartData = useMemo(() => {
     const map: Record<string, number> = {};
     filteredRecords.forEach(r => {
-      const eq = r.equipment_name || "Medical Device";
+      const eq = r.equipment_name || "Unspecified Equipment";
       map[eq] = (map[eq] || 0) + (r.total_penalty || 0);
     });
     return Object.keys(map).slice(0, 10).map(k => ({ name: k, amount: map[k] }));
@@ -536,7 +536,7 @@ export default function PenaltyModulePage() {
   const hospitalChartData = useMemo(() => {
     const map: Record<string, number> = {};
     filteredRecords.forEach(r => {
-      const h = r.hospital_name || "CHC Hospital";
+      const h = r.hospital_name || "Unspecified Hospital";
       map[h] = (map[h] || 0) + (r.total_penalty || 0);
     });
     return Object.keys(map).slice(0, 10).map(k => ({ name: k, amount: map[k] }));
@@ -545,7 +545,7 @@ export default function PenaltyModulePage() {
   const diChartData = useMemo(() => {
     const map: Record<string, number> = {};
     filteredRecords.forEach(r => {
-      const di = r.attended_engineer_name || "Assigned DI";
+      const di = r.attended_engineer_name || r.di_name || "Unassigned DI";
       map[di] = (map[di] || 0) + (r.total_penalty || 0);
     });
     return Object.keys(map).map(k => ({ name: k, amount: map[k] }));
@@ -937,19 +937,19 @@ export default function PenaltyModulePage() {
                   filteredRecords.map((r, idx) => (
                     <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
                       <td className="py-3 px-3.5 font-mono font-bold text-blue-600">{r.complaint_id}</td>
-                      <td className="py-3 px-3.5 font-bold">{r.district_name || "Ajmer"}</td>
+                      <td className="py-3 px-3.5 font-bold">{r.district_name || "-"}</td>
                       <td className="py-3 px-3.5">
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700">
                           {r.hospital_type || "CHC"}
                         </span>
                       </td>
-                      <td className="py-3 px-3.5 font-medium text-slate-900">{r.hospital_name || "CHC Hospital"}</td>
+                      <td className="py-3 px-3.5 font-medium text-slate-900">{r.hospital_name || "-"}</td>
                       <td className="py-3 px-3.5">
                         <span className="font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 text-[10px] font-bold">
                           {r.bar_code}
                         </span>
                       </td>
-                      <td className="py-3 px-3.5 font-bold text-slate-900">{r.equipment_name || "Medical Device"}</td>
+                      <td className="py-3 px-3.5 font-bold text-slate-900">{r.equipment_name || "-"}</td>
                       <td className="py-3 px-3.5 text-[10px] text-slate-500 font-mono">{r.complaint_raise_date}</td>
                       <td className="py-3 px-3.5 text-[10px] text-slate-500 font-mono">{r.attend_date}</td>
                       <td className="py-3 px-3.5 text-[10px] text-slate-500 font-mono">{r.complaint_close_date}</td>

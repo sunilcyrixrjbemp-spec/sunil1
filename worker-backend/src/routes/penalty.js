@@ -380,31 +380,41 @@ export async function handleSavePenalty(request, env, params, query, user) {
       }
     }
 
-    // ── STEP 2: BULK FETCH ALL CANDIDATE ASSET INVENTORY RECORDS & TOKEN MATCHING ──
-    const allBarcodeTokens = new Set();
-    entries.forEach(e => {
-      const raw = (e.barcode || e.barCode || "").trim();
-      extractBarcodeTokens(raw).forEach(t => allBarcodeTokens.add(t));
-    });
+    // ── STEP 2: BULK FETCH ALL ASSET INVENTORY RECORDS FROM DATABASE (100% DB MATCHING) ──
+    const allAssetsRes = await runRead(env, `
+      SELECT qr_code, equipment_name, equipment_model, hospital_name, district_name as district, parsed_asset_value as asset_value, equipment_serial_number
+      FROM assets_inventory
+    `, [], request).catch(() => ({ results: [] }));
 
     const assetMap = new Map();
-    const tokenArr = Array.from(allBarcodeTokens);
-
-    if (tokenArr.length > 0) {
-      for (let i = 0; i < tokenArr.length; i += 500) {
-        const chunk = tokenArr.slice(i, i + 500);
-        const placeholders = chunk.map(() => "?").join(",");
-        const assetRes = await runRead(env, `
-          SELECT qr_code as barcode, equipment_name, equipment_model, hospital_name, district_name as district, parsed_asset_value as asset_value
-          FROM assets_inventory
-          WHERE qr_code IN (${placeholders})
-        `, chunk, request).catch(() => ({ results: [] }));
-
-        (assetRes?.results || []).forEach(a => {
-          if (a.barcode) assetMap.set(a.barcode, a);
-        });
+    (allAssetsRes?.results || []).forEach(a => {
+      if (a.qr_code) {
+        const code = a.qr_code.trim();
+        assetMap.set(code, a);
+        if (code.length >= 8) assetMap.set(code.slice(-8), a);
       }
-    }
+      if (a.equipment_serial_number) {
+        const sn = a.equipment_serial_number.trim();
+        assetMap.set(sn, a);
+        if (sn.length >= 8) assetMap.set(sn.slice(-8), a);
+      }
+    });
+
+    // Fallback: field_assets_inventory
+    const fieldAssetsRes = await runRead(env, `
+      SELECT barcode, equipment_name, equipment_model, hospital_name, district
+      FROM field_assets_inventory
+    `, [], request).catch(() => ({ results: [] }));
+
+    (fieldAssetsRes?.results || []).forEach(fa => {
+      if (fa.barcode) {
+        const code = fa.barcode.trim();
+        if (!assetMap.has(code)) {
+          assetMap.set(code, fa);
+          if (code.length >= 8) assetMap.set(code.slice(-8), fa);
+        }
+      }
+    });
 
     // ── STEP 3: BULK FETCH DI_NAME_LIST (HOSPITAL -> DI, COORDINATOR, ZONE, DISTRICT) ──
     const diListRes = await runRead(env, `
@@ -462,7 +472,7 @@ export async function handleSavePenalty(request, env, params, query, user) {
         continue;
       }
 
-      // Match Asset using Barcode Tokens
+      // Match Asset using Barcode Tokens against Database Asset Inventory
       const tokens = extractBarcodeTokens(rawBarcode);
       let matchedAsset = null;
 
@@ -471,17 +481,23 @@ export async function handleSavePenalty(request, env, params, query, user) {
           matchedAsset = assetMap.get(t);
           break;
         }
+        const t8 = t.length >= 8 ? t.slice(-8) : t;
+        if (assetMap.has(t8)) {
+          matchedAsset = assetMap.get(t8);
+          break;
+        }
       }
 
-      const equipmentName = matchedAsset?.equipment_name || entry.equipment_name || "Medical Device";
-      let hospitalName = matchedAsset?.hospital_name || entry.hospital_name || "Hospital";
-      let district = matchedAsset?.district || entry.district || "Rajasthan";
-      let zoneName = "Rajasthan Zone";
-      let diName = entry.attended_engineer_name || "Assigned DI";
-      let coordinatorName = "Coordinator";
+      // 100% STRICT DATABASE MATCHED VALUES - NO DUMMY OR HARDCODED STRINGS
+      const equipmentName = matchedAsset?.equipment_name || entry.equipment_name || "";
+      let hospitalName = matchedAsset?.hospital_name || entry.hospital_name || "";
+      let district = matchedAsset?.district || matchedAsset?.district_name || entry.district || "";
+      let zoneName = "";
+      let diName = entry.attended_engineer_name || "";
+      let coordinatorName = "";
 
       // Match DI Name List by Hospital Name
-      if (hospitalName && hospitalName !== "Hospital") {
+      if (hospitalName) {
         const diInfo = diMap.get(hospitalName.toLowerCase().trim());
         if (diInfo) {
           diName = diInfo.di_name || diName;
