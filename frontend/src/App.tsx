@@ -19,7 +19,6 @@ import MISReportPage from "./pages/MISReportPage";
 import KPIDashboardPage from "./pages/KPIDashboardPage";
 import UploadDataPage from "./pages/UploadDataPage";
 import AssetUploadPage from "./pages/AssetUploadPage";
-import PenaltyReportPage from "./pages/PenaltyReportPage";
 import PenaltyModulePage from "./pages/PenaltyModulePage";
 import AnalysisPage from "./pages/AnalysisPage";
 import MonthSummaryPage from "./pages/MonthSummaryPage";
@@ -301,7 +300,7 @@ function App() {
                 <Route path="/kpi-dashboard" element={<KPIDashboardPage />} />
                 <Route path="/upload-data" element={<UploadDataPage />} />
                 <Route path="/asset-upload" element={<AssetUploadPage />} />
-                <Route path="/penalty-report" element={<PenaltyReportPage />} />
+                <Route path="/penalty-report" element={<PenaltyModulePage />} />
                 <Route path="/penalty-module" element={<PenaltyModulePage />} />
                 <Route path="/analysis" element={<AnalysisPage />} />
                 <Route path="/new-dashboard" element={<NewDashboardPage />} />

@@ -191,7 +191,7 @@ export function calculateCAPenalty(params) {
   };
 }
 
-// 1. Verify Barcode in Asset Inventory
+// 1. Verify Barcode in Asset Inventory (assets_inventory + field_assets_inventory)
 export async function handleVerifyBarcode(request, env) {
   try {
     const body = await request.json();
@@ -202,22 +202,59 @@ export async function handleVerifyBarcode(request, env) {
 
     const barcode8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
 
-    const res = await runRead(env, `
-      SELECT id, barcode, equipment_name, equipment_model, hospital_name, district, serial_number, status
-      FROM field_assets_inventory
-      WHERE barcode = ? OR barcode LIKE ?
+    // Search assets_inventory table
+    let assetRes = await runRead(env, `
+      SELECT id, qr_code as barcode, equipment_name, equipment_model, hospital_name, district_name as district, parsed_asset_value as asset_value, inventory_status as status
+      FROM assets_inventory
+      WHERE qr_code = ? OR qr_code LIKE ?
       LIMIT 1
-    `, [barcode, `%${barcode8}`], request);
+    `, [barcode, `%${barcode8}`], request).catch(() => ({ results: [] }));
 
-    const asset = (res?.results || [])[0];
+    let asset = (assetRes?.results || [])[0];
+
+    // Fallback: field_assets_inventory table
+    if (!asset) {
+      const fallbackRes = await runRead(env, `
+        SELECT id, barcode, equipment_name, equipment_model, hospital_name, district, status
+        FROM field_assets_inventory
+        WHERE barcode = ? OR barcode LIKE ?
+        LIMIT 1
+      `, [barcode, `%${barcode8}`], request).catch(() => ({ results: [] }));
+
+      asset = (fallbackRes?.results || [])[0];
+    }
 
     if (!asset) {
       return jsonResponse({
         success: false,
         valid: false,
         exists: false,
-        error: `❌ Error: Barcode #${barcode} not found in Asset Inventory! Entry Rejected.`
+        error: `❌ Error: Barcode #${barcode} not found in database Asset Inventory! Entry Rejected.`
       });
+    }
+
+    // Check main_hospitals to see if hospital is a Medical College
+    if (asset.hospital_name) {
+      const mainHospRes = await runRead(env, `
+        SELECT hospital_name FROM main_hospitals WHERE hospital_name = ? LIMIT 1
+      `, [asset.hospital_name], request).catch(() => ({ results: [] }));
+
+      if (mainHospRes?.results?.length > 0) {
+        asset.hospital_type = "Medical College";
+      }
+    }
+
+    // Check di_name_list for DI / Coordinator mapping
+    if (asset.hospital_name) {
+      const diRes = await runRead(env, `
+        SELECT di_name, coordinator_name, zone_name, district_name FROM di_name_list WHERE hospital_name = ? LIMIT 1
+      `, [asset.hospital_name], request).catch(() => ({ results: [] }));
+
+      if (diRes?.results?.length > 0) {
+        asset.di_name = diRes.results[0].di_name;
+        asset.coordinator_name = diRes.results[0].coordinator_name;
+        asset.zone_name = diRes.results[0].zone_name;
+      }
     }
 
     return jsonResponse({
@@ -241,6 +278,21 @@ export async function handleSavePenalty(request, env, params, query, user) {
     const results = [];
     const errors = [];
 
+    // Ensure penalty_daily_snapshots table exists
+    await runWrite(env, `
+      CREATE TABLE IF NOT EXISTS penalty_daily_snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        complaint_id TEXT,
+        barcode TEXT,
+        snapshot_date TEXT,
+        day_number INTEGER,
+        daily_penalty REAL,
+        status TEXT,
+        exemption_reason TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `, [], request).catch(() => {});
+
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       const complaintId = (entry.complaint_id || entry.complaintId || "").trim();
@@ -257,14 +309,24 @@ export async function handleSavePenalty(request, env, params, query, user) {
 
       // Verify Barcode Exists in Inventory
       const barcode8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
-      const assetRes = await runRead(env, `
-        SELECT barcode, equipment_name, equipment_model, hospital_name, district
-        FROM field_assets_inventory
-        WHERE barcode = ? OR barcode LIKE ?
+      let assetRes = await runRead(env, `
+        SELECT qr_code as barcode, equipment_name, equipment_model, hospital_name, district_name as district, parsed_asset_value as asset_value
+        FROM assets_inventory
+        WHERE qr_code = ? OR qr_code LIKE ?
         LIMIT 1
-      `, [barcode, `%${barcode8}`], request);
+      `, [barcode, `%${barcode8}`], request).catch(() => ({ results: [] }));
 
-      const asset = (assetRes?.results || [])[0];
+      let asset = (assetRes?.results || [])[0];
+
+      if (!asset) {
+        const fallbackRes = await runRead(env, `
+          SELECT barcode, equipment_name, equipment_model, hospital_name, district
+          FROM field_assets_inventory
+          WHERE barcode = ? OR barcode LIKE ?
+          LIMIT 1
+        `, [barcode, `%${barcode8}`], request).catch(() => ({ results: [] }));
+        asset = (fallbackRes?.results || [])[0];
+      }
 
       if (!asset) {
         errors.push({ row: i + 1, error: `❌ Error: Barcode #${barcode} not found in Asset Inventory! Entry Rejected.` });
@@ -274,7 +336,28 @@ export async function handleSavePenalty(request, env, params, query, user) {
       const equipmentName = asset.equipment_name || entry.equipment_name || entry.equipmentName || "Medical Device";
       const hospitalName = asset.hospital_name || entry.hospital_name || entry.hospitalName || "Hospital";
       const district = asset.district || entry.district || entry.districtName || "Rajasthan";
-      const hospitalType = entry.hospital_type || entry.hospitalType || "CHC";
+      
+      // Auto-detect Medical College hospital type from main_hospitals table if not provided
+      let hospitalType = entry.hospital_type || entry.hospitalType || "CHC";
+      if (!entry.hospital_type && hospitalName) {
+        const mainHospRes = await runRead(env, `
+          SELECT hospital_name FROM main_hospitals WHERE hospital_name = ? LIMIT 1
+        `, [hospitalName], request).catch(() => ({ results: [] }));
+        if (mainHospRes?.results?.length > 0) {
+          hospitalType = "Medical College";
+        }
+      }
+
+      // Auto-lookup asset value from asset_value_master if 0 or unprovided
+      let assetValue = parseFloat(entry.asset_value || entry.assetValue || asset.asset_value || 0);
+      if (assetValue <= 0 && equipmentName) {
+        const valMasterRes = await runRead(env, `
+          SELECT estimated_cost, asset_value FROM asset_value_master WHERE equipment_name LIKE ? LIMIT 1
+        `, [`%${equipmentName}%`], request).catch(() => ({ results: [] }));
+        if (valMasterRes?.results?.length > 0) {
+          assetValue = parseFloat(valMasterRes.results[0].estimated_cost || valMasterRes.results[0].asset_value || 0);
+        }
+      }
 
       // Perform CA Penalty Calculations
       const calc = calculateCAPenalty({
@@ -284,7 +367,7 @@ export async function handleSavePenalty(request, env, params, query, user) {
         final_close_date: entry.final_close_date || entry.finalCloseDate,
         condemnation_date: entry.condemnation_date || entry.condemnationDate,
         daily_penalty_rate: entry.daily_penalty_rate || 500,
-        asset_value: entry.asset_value || entry.assetValue || 0,
+        asset_value: assetValue,
         hospital_type: hospitalType,
         equipment_type: entry.equipment_type || entry.equipmentType || "Non-Critical",
         is_critical: entry.is_critical || entry.isCritical,
@@ -342,7 +425,7 @@ export async function handleSavePenalty(request, env, params, query, user) {
         calc.totalDowntimeDays,
         calc.finalAuditedPenalty,
         calc.penaltySlab,
-        entry.asset_value || entry.assetValue || 0,
+        assetValue,
         entry.equipment_type || entry.equipmentType || "Non-Critical",
         calc.penaltySlab,
         calc.netChargeableDowntimeDays,
@@ -351,7 +434,7 @@ export async function handleSavePenalty(request, env, params, query, user) {
         entry.status || "Assessed"
       ], request);
 
-      // Save Per-Day Breakdown Entries into daily_penalty_records table
+      // Save Per-Day Breakdown Entries into daily_penalty_records & penalty_daily_snapshots tables
       const totalDays = Math.max(1, calc.totalDowntimeDays);
       const isStandby = Boolean(entry.is_standby_provided || entry.standby);
       const isPartMiss = Boolean(entry.is_part_missing || entry.part_missing);
@@ -369,6 +452,7 @@ export async function handleSavePenalty(request, env, params, query, user) {
         }
 
         const dailyAmt = isExempted ? 0 : (calc.finalAuditedPenalty / (calc.netChargeableDowntimeDays || 1));
+        const callStatusStr = isPartMiss ? "Part Missing" : (isStandby ? "Standby Provided" : "Active Downtime");
 
         await runWrite(env, `
           INSERT INTO daily_penalty_records (
@@ -380,7 +464,7 @@ export async function handleSavePenalty(request, env, params, query, user) {
           complaintId,
           barcode,
           d,
-          isPartMiss ? "Part Missing" : (isStandby ? "Standby Provided" : "Active Downtime"),
+          callStatusStr,
           isPartMiss ? 1 : 0,
           isStandby ? 1 : 0,
           isExempted ? 1 : 0,
@@ -388,6 +472,21 @@ export async function handleSavePenalty(request, env, params, query, user) {
           dailyAmt,
           user?.user_name || "Engineer"
         ], request);
+
+        // Also save per-day snapshot in penalty_daily_snapshots
+        await runWrite(env, `
+          INSERT INTO penalty_daily_snapshots (
+            complaint_id, barcode, snapshot_date, day_number, daily_penalty, status, exemption_reason, created_at
+          ) VALUES (?, ?, date('now', '+' || (? - 1) || ' days'), ?, ?, ?, ?, datetime('now'))
+        `, [
+          complaintId,
+          barcode,
+          d - 1,
+          d,
+          dailyAmt,
+          callStatusStr,
+          exemptionReason
+        ], request).catch(() => {});
       }
 
       results.push({
