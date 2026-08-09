@@ -43,7 +43,7 @@ export default function PenaltyModulePage() {
 
   // Multi-Filter State
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("Aug 2026");
+  const [selectedMonth, setSelectedMonth] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedZone, setSelectedZone] = useState("all");
