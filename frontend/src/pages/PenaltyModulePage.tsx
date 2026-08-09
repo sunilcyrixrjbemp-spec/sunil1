@@ -11,7 +11,10 @@ import {
   FileSpreadsheet,
   RefreshCw,
   X,
-  FileText
+  FileText,
+  Building2,
+  CheckCircle2,
+  TrendingDown
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { penaltyService, PenaltyRecord, DailyPenaltyRecord } from "../services/penaltyService";
@@ -25,7 +28,8 @@ export default function PenaltyModulePage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDistrict] = useState("all");
+  const [selectedDistrict, setSelectedDistrict] = useState("all");
+  const [selectedHospitalType, setSelectedHospitalType] = useState("all");
 
   // Modals
   const [showManualModal, setShowManualModal] = useState(false);
@@ -102,7 +106,7 @@ export default function PenaltyModulePage() {
       } else {
         setBarcodeVerified(false);
         setBarcodeAssetInfo(null);
-        toast.error(res.error || `❌ Error: Barcode #${code} not found in database Asset Inventory! Entry Rejected.`);
+        toast.error(res.error || `❌ Error: Barcode #${code} not found in database Asset Inventory!`);
       }
     } catch (e) {
       setBarcodeVerified(false);
@@ -375,128 +379,202 @@ export default function PenaltyModulePage() {
         r.bar_code.toLowerCase().includes(q) ||
         r.hospital_name.toLowerCase().includes(q) ||
         r.equipment_name.toLowerCase().includes(q);
-      return matchesQuery;
-    });
-  }, [records, searchQuery]);
 
+      const matchesHosp = selectedHospitalType === "all" || (r.hospital_type || "").toLowerCase().includes(selectedHospitalType.toLowerCase());
+
+      return matchesQuery && matchesHosp;
+    });
+  }, [records, searchQuery, selectedHospitalType]);
+
+  // Derived KPI Analytics
   const totalAssessed = useMemo(() => {
     return filteredRecords.reduce((sum, r) => sum + (r.total_penalty || 0), 0);
   }, [filteredRecords]);
 
+  const medicalCollegeCount = useMemo(() => {
+    return filteredRecords.filter(r => (r.hospital_type || "").toLowerCase().includes("medical")).length;
+  }, [filteredRecords]);
+
+  const standbyExemptedCount = useMemo(() => {
+    return filteredRecords.filter(r => (r.standby_status || "").toLowerCase().includes("provided") || (r.exemption_reason || "").toLowerCase().includes("standby")).length;
+  }, [filteredRecords]);
+
+  const partMissingCount = useMemo(() => {
+    return filteredRecords.filter(r => (r.exemption_reason || "").toLowerCase().includes("part")).length;
+  }, [filteredRecords]);
+
   return (
-    <div className="space-y-6 animate-fadeIn text-gray-800 font-sans p-4 sm:p-6 bg-slate-50 min-h-screen">
+    <div className="space-y-6 animate-fadeIn text-slate-800 font-sans p-4 sm:p-6 bg-slate-50/80 min-h-screen">
       
-      {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 uppercase tracking-wide flex items-center gap-2.5">
-            <ShieldAlert className="w-7 h-7 text-rose-600" />
-            Penalty Audit & SLA Management Module
-          </h1>
-          <p className="text-slate-500 text-xs mt-1 font-medium flex items-center gap-2">
-            <span>Strict Asset Barcode Check</span> • 
-            <span>Medical College (12h) vs DH/CHC (24h) SLAs</span> • 
-            <span>Standby 90-Day Grace</span> • 
-            <span>10% Asset Cap</span>
-          </p>
+      {/* Premium Header Bar */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+        
+        <div className="space-y-1 z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 shadow-xs">
+              <ShieldAlert className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
+                  Penalty Audit & SLA Engine
+                </h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200">
+                  BEMMP Rajasthan Contract
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Strict Barcode Verification</span>
+                <span>•</span>
+                <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-blue-500" /> Medical College (12h) vs DH/CHC (24h) SLAs</span>
+                <span>•</span>
+                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-amber-500" /> Standby 90-Day Grace & Part Miss ₹0</span>
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Header Action Toolbar */}
+        <div className="flex flex-wrap items-center gap-2.5 z-10">
           <button
             onClick={handleDownloadCSVTemplate}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs shadow-xs transition-all border border-slate-200"
-            title="Download Sample CSV Template for Complaint Import"
+            className="flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-extrabold text-xs transition-all border border-slate-200 shadow-2xs"
+            title="Download Standard 9-Column CSV Template"
           >
             <FileText className="w-4 h-4 text-blue-600" /> CSV Template
           </button>
 
           <button
             onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-extrabold text-xs transition-all shadow-xs"
           >
             <Upload className="w-4 h-4" /> Import CSV File
           </button>
 
           <button
             onClick={() => setShowManualModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-extrabold text-xs transition-all shadow-xs"
           >
             <Plus className="w-4 h-4" /> Add Complaint Entry
           </button>
 
+          <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
+
           <button
             onClick={() => handleExportExcel("23_columns")}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-extrabold text-xs transition-all shadow-xs"
           >
             <Download className="w-4 h-4" /> Export 23-Col Core
           </button>
 
           <button
             onClick={() => handleExportExcel("53_columns")}
-            className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-extrabold text-xs transition-all shadow-xs"
           >
             <FileSpreadsheet className="w-4 h-4" /> Export 53-Col Full
           </button>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 border-l-4 border-l-rose-600 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Net Audited Penalty</span>
-            <span className="text-2xl font-black text-rose-600 mt-1 block">₹{totalAssessed.toLocaleString()}</span>
+      {/* 4 PROPER HIGH-IMPACT DATA CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        {/* Card 1: Net Audited Penalty */}
+        <div className="bg-gradient-to-br from-white to-rose-50/30 rounded-3xl p-5 border border-rose-100 shadow-xs relative overflow-hidden group hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-rose-600/80">Net Audited Penalty</span>
+            <div className="p-2.5 bg-rose-100 text-rose-600 rounded-2xl group-hover:scale-110 transition-transform">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 border-l-4 border-l-blue-600 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Complaints Audited</span>
-            <span className="text-2xl font-black text-slate-800 mt-1 block">{filteredRecords.length} Records</span>
-          </div>
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-            <FileSpreadsheet className="w-6 h-6" />
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-200 border-l-4 border-l-emerald-600 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Barcode Verification</span>
-            <span className="text-2xl font-black text-emerald-600 mt-1 block">100% Validated</span>
-          </div>
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-            <CheckCircle className="w-6 h-6" />
+          <div className="mt-3">
+            <span className="text-3xl font-black text-slate-900 tracking-tight block">
+              ₹{totalAssessed.toLocaleString()}
+            </span>
+            <div className="flex items-center gap-1.5 mt-2 text-[11px] font-bold text-rose-700">
+              <TrendingDown className="w-3.5 h-3.5" />
+              <span>Calculated under CA SLA Slabs & Caps</span>
+            </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 border-l-4 border-l-amber-600 rounded-2xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Exemptions Applied</span>
-            <span className="text-2xl font-black text-amber-600 mt-1 block">Standby 90-Day / Part Miss</span>
+        {/* Card 2: Complaints Audited */}
+        <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-3xl p-5 border border-blue-100 shadow-xs relative overflow-hidden group hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-blue-600/80">Complaints Audited</span>
+            <div className="p-2.5 bg-blue-100 text-blue-600 rounded-2xl group-hover:scale-110 transition-transform">
+              <FileSpreadsheet className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-            <Clock className="w-6 h-6" />
+          <div className="mt-3">
+            <span className="text-3xl font-black text-slate-900 tracking-tight block">
+              {filteredRecords.length} <span className="text-sm font-bold text-slate-500">Records</span>
+            </span>
+            <div className="flex items-center gap-2 mt-2 text-[11px] font-bold text-slate-600">
+              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-extrabold">{medicalCollegeCount} Medical Coll.</span>
+              <span>• {filteredRecords.length - medicalCollegeCount} DH/CHC</span>
+            </div>
           </div>
         </div>
+
+        {/* Card 3: Barcode Verification Status */}
+        <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-3xl p-5 border border-emerald-100 shadow-xs relative overflow-hidden group hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-600/80">Barcode Validation</span>
+            <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-2xl group-hover:scale-110 transition-transform">
+              <CheckCircle className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <span className="text-3xl font-black text-emerald-600 tracking-tight">100%</span>
+              <span className="px-2.5 py-1 rounded-xl text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-200">
+                Verified
+              </span>
+            </div>
+            <p className="text-[11px] font-bold text-slate-500 mt-2">
+              All entries validated against Master Inventory
+            </p>
+          </div>
+        </div>
+
+        {/* Card 4: SLA Exemptions Breakdown */}
+        <div className="bg-gradient-to-br from-white to-amber-50/30 rounded-3xl p-5 border border-amber-100 shadow-xs relative overflow-hidden group hover:shadow-md transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-black uppercase tracking-wider text-amber-600/80">Exemptions Applied</span>
+            <div className="p-2.5 bg-amber-100 text-amber-600 rounded-2xl group-hover:scale-110 transition-transform">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-900 tracking-tight block">
+              {standbyExemptedCount + partMissingCount} <span className="text-sm font-bold text-slate-500">Exempt Calls</span>
+            </span>
+            <div className="flex items-center gap-2 mt-2 text-[11px] font-bold text-amber-800">
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">{standbyExemptedCount} Standby 90D</span>
+              <span>•</span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">{partMissingCount} Part Miss</span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Filter and Tab Navigation Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl w-full md:w-auto">
+      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2 bg-slate-100/80 p-1.5 rounded-2xl w-full md:w-auto">
           <button
             onClick={() => setActiveTab("monthly")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${
               activeTab === "monthly" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Monthly Summary (23 Core Columns)
+            Monthly Penalty Summary (23 Core Columns)
           </button>
           <button
             onClick={() => setActiveTab("daily")}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`px-5 py-2.5 rounded-xl text-xs font-black transition-all ${
               activeTab === "daily" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
             }`}
           >
@@ -504,76 +582,112 @@ export default function PenaltyModulePage() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <select
+            value={selectedDistrict}
+            onChange={(e) => setSelectedDistrict(e.target.value)}
+            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
+          >
+            <option value="all">All Districts</option>
+            <option value="Ajmer">Ajmer</option>
+            <option value="Jaipur">Jaipur</option>
+            <option value="Jodhpur">Jodhpur</option>
+            <option value="Udaipur font-bold">Udaipur</option>
+            <option value="Kota">Kota</option>
+            <option value="Bikaner">Bikaner</option>
+          </select>
+
+          <select
+            value={selectedHospitalType}
+            onChange={(e) => setSelectedHospitalType(e.target.value)}
+            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none"
+          >
+            <option value="all">All Hospital Types</option>
+            <option value="Medical College">Medical Colleges (12h SLA)</option>
+            <option value="DH">District Hospitals (24h SLA)</option>
+            <option value="CHC">CHC / PHC (24h SLA)</option>
+          </select>
+
+          <div className="relative flex-1 md:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="Search Complaint, Barcode, Hospital..."
+              placeholder="Search Complaint ID, Barcode, Hospital..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500"
+              className="w-full pl-10 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500"
             />
           </div>
 
           <button
             onClick={fetchPenaltyList}
-            className="p-2 text-slate-500 hover:text-blue-600 bg-slate-50 border border-slate-200 rounded-xl"
+            className="p-2.5 text-slate-500 hover:text-blue-600 bg-slate-50 border border-slate-200 rounded-xl transition-all"
             title="Refresh Data"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-600" : ""}`} />
           </button>
         </div>
       </div>
 
       {/* Main Table View */}
       {activeTab === "monthly" ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-800 text-slate-200 text-[10px] uppercase font-black tracking-wider">
-                  <th className="py-3 px-3">Complaint ID</th>
-                  <th className="py-3 px-3">District</th>
-                  <th className="py-3 px-3">Hospital Type</th>
-                  <th className="py-3 px-3">Hospital Name</th>
-                  <th className="py-3 px-3">Bar Code</th>
-                  <th className="py-3 px-3">Equipment Name</th>
-                  <th className="py-3 px-3">Raise Date (IST)</th>
-                  <th className="py-3 px-3">Attend Date</th>
-                  <th className="py-3 px-3">Close Date</th>
-                  <th className="py-3 px-3">Chargeable Days</th>
-                  <th className="py-3 px-3">Penalty Slab</th>
-                  <th className="py-3 px-3">Total Penalty</th>
-                  <th className="py-3 px-3">Exemption</th>
+                <tr className="bg-slate-900 text-slate-200 text-[11px] uppercase font-black tracking-wider">
+                  <th className="py-3.5 px-4">Complaint ID</th>
+                  <th className="py-3.5 px-4">District</th>
+                  <th className="py-3.5 px-4">Hospital Type</th>
+                  <th className="py-3.5 px-4">Hospital Name</th>
+                  <th className="py-3.5 px-4">Bar Code</th>
+                  <th className="py-3.5 px-4">Equipment Name</th>
+                  <th className="py-3.5 px-4">Raise Date (IST)</th>
+                  <th className="py-3.5 px-4">Attend Date</th>
+                  <th className="py-3.5 px-4">Close Date</th>
+                  <th className="py-3.5 px-4">Chargeable Days</th>
+                  <th className="py-3.5 px-4">Penalty Slab</th>
+                  <th className="py-3.5 px-4">Total Penalty</th>
+                  <th className="py-3.5 px-4">Exemption</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="py-8 text-center text-slate-400 font-bold">
+                    <td colSpan={13} className="py-12 text-center text-slate-400 font-bold">
+                      <ShieldAlert className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                       No penalty records found. Click "+ Add Complaint Entry" or "Import CSV File" to populate data.
                     </td>
                   </tr>
                 ) : (
                   filteredRecords.map((r, idx) => (
                     <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
-                      <td className="py-3 px-3 font-mono font-bold text-blue-600">{r.complaint_id}</td>
-                      <td className="py-3 px-3">{r.district_name}</td>
-                      <td className="py-3 px-3 font-bold text-slate-600">{r.hospital_type || "CHC"}</td>
-                      <td className="py-3 px-3 font-medium">{r.hospital_name}</td>
-                      <td className="py-3 px-3 font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200 w-fit">
-                        {r.bar_code}
+                      <td className="py-3.5 px-4 font-mono font-bold text-blue-600">{r.complaint_id}</td>
+                      <td className="py-3.5 px-4 font-bold">{r.district_name}</td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase ${
+                          (r.hospital_type || "").toLowerCase().includes("medical")
+                            ? "bg-purple-100 text-purple-800 border border-purple-200"
+                            : "bg-slate-100 text-slate-700 border border-slate-200"
+                        }`}>
+                          {r.hospital_type || "CHC"}
+                        </span>
                       </td>
-                      <td className="py-3 px-3 font-bold text-slate-800">{r.equipment_name}</td>
-                      <td className="py-3 px-3 text-[11px] text-slate-500 font-mono">{r.complaint_raise_date}</td>
-                      <td className="py-3 px-3 text-[11px] text-slate-500 font-mono">{r.attend_date}</td>
-                      <td className="py-3 px-3 text-[11px] text-slate-500 font-mono">{r.complaint_close_date}</td>
-                      <td className="py-3 px-3 font-bold text-amber-600">{r.chargeable_days || 0} Days</td>
-                      <td className="py-3 px-3 font-bold text-slate-700">₹{r.penalty_slab_amount || 500}</td>
-                      <td className="py-3 px-3 font-extrabold text-rose-600">₹{(r.total_penalty || 0).toLocaleString()}</td>
-                      <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                      <td className="py-3.5 px-4 font-medium text-slate-900">{r.hospital_name}</td>
+                      <td className="py-3.5 px-4">
+                        <span className="font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 text-[11px] font-bold">
+                          {r.bar_code}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-slate-900">{r.equipment_name}</td>
+                      <td className="py-3.5 px-4 text-[11px] text-slate-500 font-mono">{r.complaint_raise_date}</td>
+                      <td className="py-3.5 px-4 text-[11px] text-slate-500 font-mono">{r.attend_date}</td>
+                      <td className="py-3.5 px-4 text-[11px] text-slate-500 font-mono">{r.complaint_close_date}</td>
+                      <td className="py-3.5 px-4 font-black text-amber-600">{r.chargeable_days || 0} Days</td>
+                      <td className="py-3.5 px-4 font-bold text-slate-800">₹{r.penalty_slab_amount || 500}</td>
+                      <td className="py-3.5 px-4 font-black text-rose-600 text-sm">₹{(r.total_penalty || 0).toLocaleString()}</td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-200">
                           {r.exemption_reason || "None"}
                         </span>
                       </td>
@@ -586,15 +700,15 @@ export default function PenaltyModulePage() {
         </div>
       ) : (
         /* Per-Day Penalty Breakdown View */
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 space-y-4">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-extrabold text-slate-500 uppercase">Select Complaint ID:</span>
+            <span className="text-xs font-black text-slate-600 uppercase">Select Complaint ID:</span>
             <select
               value={selectedComplaintId}
               onChange={(e) => {
                 setSelectedComplaintId(e.target.value);
               }}
-              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
             >
               <option value="">-- All Complaints --</option>
               {records.map(r => (
@@ -605,48 +719,48 @@ export default function PenaltyModulePage() {
             </select>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-800 text-slate-200 text-[10px] uppercase font-black tracking-wider">
-                  <th className="py-3 px-3">Day #</th>
-                  <th className="py-3 px-3">Complaint ID</th>
-                  <th className="py-3 px-3">Barcode</th>
-                  <th className="py-3 px-3">Call Status</th>
-                  <th className="py-3 px-3">Exemption Reason</th>
-                  <th className="py-3 px-3">Daily Charge Amount</th>
+                <tr className="bg-slate-900 text-slate-200 text-[11px] uppercase font-black tracking-wider">
+                  <th className="py-3.5 px-4">Day #</th>
+                  <th className="py-3.5 px-4">Complaint ID</th>
+                  <th className="py-3.5 px-4">Barcode</th>
+                  <th className="py-3.5 px-4">Call Status</th>
+                  <th className="py-3.5 px-4">Exemption Reason</th>
+                  <th className="py-3.5 px-4">Daily Charge Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                 {dailyRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400 font-bold">
+                    <td colSpan={6} className="py-12 text-center text-slate-400 font-bold">
                       Select a specific complaint above to view its per-day penalty breakdown.
                     </td>
                   </tr>
                 ) : (
                   dailyRecords.map((d, idx) => (
                     <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
-                      <td className="py-2.5 px-3 font-extrabold text-slate-800">Day {d.day_number}</td>
-                      <td className="py-2.5 px-3 font-mono font-bold text-blue-600">{d.complaint_id}</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-600">{d.barcode}</td>
-                      <td className="py-2.5 px-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                      <td className="py-3 px-4 font-black text-slate-900">Day {d.day_number}</td>
+                      <td className="py-3 px-4 font-mono font-bold text-blue-600">{d.complaint_id}</td>
+                      <td className="py-3 px-4 font-mono text-slate-600">{d.barcode}</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
                           {d.call_status}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3">
+                      <td className="py-3 px-4">
                         {d.is_exempted ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
                             ✓ {d.exemption_reason}
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-700 border border-rose-200">
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
                             Chargeable Day
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 font-extrabold text-slate-800">
+                      <td className="py-3 px-4 font-black text-slate-900">
                         ₹{d.daily_penalty_amount.toLocaleString()}
                       </td>
                     </tr>
@@ -661,36 +775,36 @@ export default function PenaltyModulePage() {
       {/* CSV Import Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full border border-slate-200 overflow-hidden">
-            <div className="bg-slate-800 p-4 text-white flex items-center justify-between">
-              <h3 className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-2">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 p-5 text-white flex items-center justify-between">
+              <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
                 <Upload className="w-5 h-5 text-indigo-400" />
                 Import Complaints CSV File
               </h3>
-              <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
-              <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:bg-slate-50 transition-colors">
+            <div className="p-6 space-y-4">
+              <div className="border-2 border-dashed border-slate-300 rounded-3xl p-6 text-center hover:bg-slate-50 transition-colors">
                 <Upload className="w-10 h-10 text-indigo-500 mx-auto mb-2" />
-                <p className="text-xs font-extrabold text-slate-700 mb-1">
-                  Upload filled CSV file matching format
+                <p className="text-xs font-black text-slate-800 mb-1">
+                  Upload filled CSV file matching standard format
                 </p>
-                <p className="text-[11px] text-slate-400 mb-3">
-                  (Complaint ID, Barcode, Hospital Type, Raise Date, Attend Date, Close Date, Asset Value, etc.)
+                <p className="text-[11px] text-slate-400 mb-4">
+                  (Complaint ID, Barcode, Hospital Type, Raise Date, Attend Date, Close Date, Final Close Date, Standby, Part Miss)
                 </p>
                 <input
                   type="file"
                   accept=".csv"
                   onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  className="block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-2xl file:border-0 file:text-xs file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
               </div>
 
               {uploadReport && (
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs font-semibold">
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 text-xs font-semibold">
                   <div className="flex items-center justify-between font-bold text-slate-800">
                     <span>Processed: {uploadReport.processed} Records</span>
                     <span className={uploadReport.errorsCount > 0 ? "text-rose-600" : "text-emerald-600"}>
@@ -699,7 +813,7 @@ export default function PenaltyModulePage() {
                   </div>
 
                   {uploadReport.errors && uploadReport.errors.length > 0 && (
-                    <div className="max-h-32 overflow-y-auto space-y-1 text-[11px] font-mono text-rose-700 bg-rose-50 p-2 rounded border border-rose-200">
+                    <div className="max-h-32 overflow-y-auto space-y-1 text-[11px] font-mono text-rose-700 bg-rose-50 p-2 rounded-xl border border-rose-200">
                       {uploadReport.errors.map((errItem: any, idx: number) => (
                         <div key={idx}>Row #{errItem.row}: {errItem.error}</div>
                       ))}
@@ -712,7 +826,7 @@ export default function PenaltyModulePage() {
                 <button
                   type="button"
                   onClick={handleDownloadCSVTemplate}
-                  className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+                  className="flex items-center gap-1.5 text-xs font-black text-blue-600 hover:underline"
                 >
                   <FileText className="w-4 h-4" /> Download Sample CSV Template
                 </button>
@@ -721,7 +835,7 @@ export default function PenaltyModulePage() {
                   <button
                     type="button"
                     onClick={() => setShowUploadModal(false)}
-                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl"
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl"
                   >
                     Close
                   </button>
@@ -729,7 +843,7 @@ export default function PenaltyModulePage() {
                     type="button"
                     onClick={handleCSVImportUpload}
                     disabled={uploading || !uploadFile}
-                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold text-xs rounded-xl shadow-sm"
+                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-extrabold text-xs rounded-2xl shadow-xs"
                   >
                     {uploading ? "Importing..." : "Process & Import CSV"}
                   </button>
@@ -743,21 +857,21 @@ export default function PenaltyModulePage() {
       {/* Manual Entry Modal */}
       {showManualModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full border border-slate-200 overflow-hidden">
-            <div className="bg-slate-800 p-4 text-white flex items-center justify-between">
-              <h3 className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-2">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden">
+            <div className="bg-slate-900 p-5 text-white flex items-center justify-between">
+              <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-rose-400" />
                 Add Complaint & Calculate SLA Penalty
               </h3>
-              <button onClick={() => setShowManualModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowManualModal(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleManualSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+            <form onSubmit={handleManualSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
                     Barcode (QR) <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
@@ -770,30 +884,30 @@ export default function PenaltyModulePage() {
                         setFormData({ ...formData, barcode: val });
                         handleVerifyBarcodeLive(val);
                       }}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
                     />
                     {verifyingBarcode && (
-                      <span className="absolute right-3 top-2.5 text-[10px] font-bold text-blue-600 animate-pulse">
+                      <span className="absolute right-3.5 top-2.5 text-[10px] font-bold text-blue-600 animate-pulse">
                         Verifying...
                       </span>
                     )}
                   </div>
 
                   {barcodeVerified === true && (
-                    <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-[10px] font-bold text-emerald-700">
+                    <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-[10px] font-bold text-emerald-800">
                       ✓ Verified: {barcodeAssetInfo?.equipment_name} ({barcodeAssetInfo?.hospital_name})
                     </div>
                   )}
 
                   {barcodeVerified === false && (
-                    <div className="mt-1.5 p-2 bg-rose-50 border border-rose-200 rounded-lg text-[10px] font-bold text-rose-700">
+                    <div className="mt-2 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-[10px] font-bold text-rose-800">
                       ❌ Error: Barcode #{formData.barcode} not found in database Asset Inventory! Entry Rejected.
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
                     Complaint ID <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -801,18 +915,18 @@ export default function PenaltyModulePage() {
                     placeholder="e.g. 13126072-800091"
                     value={formData.complaint_id}
                     onChange={(e) => setFormData({ ...formData, complaint_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
                     Hospital Type (SLA Period)
                   </label>
                   <select
                     value={formData.hospital_type}
                     onChange={(e) => setFormData({ ...formData, hospital_type: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
                   >
                     <option value="Medical College">Medical College & Associated Hospital (12h Period, SLA 1h/6h)</option>
                     <option value="DH">DH / SDH / SH (24h Period, SLA 24h/48h)</option>
@@ -821,7 +935,7 @@ export default function PenaltyModulePage() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
                     Equipment Asset Value (₹)
                   </label>
                   <input
@@ -829,12 +943,12 @@ export default function PenaltyModulePage() {
                     placeholder="500000"
                     value={formData.asset_value}
                     onChange={(e) => setFormData({ ...formData, asset_value: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1 flex items-center justify-between">
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 flex items-center justify-between">
                     <span>Raise Date (IST)</span>
                     <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
                   </label>
@@ -843,12 +957,12 @@ export default function PenaltyModulePage() {
                     placeholder="21-Jan-2025 16:30:47"
                     value={formData.complaint_raise_date}
                     onChange={(e) => setFormData({ ...formData, complaint_raise_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 font-mono"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-800 font-mono focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1 flex items-center justify-between">
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 flex items-center justify-between">
                     <span>Attend Date (IST)</span>
                     <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
                   </label>
@@ -857,12 +971,12 @@ export default function PenaltyModulePage() {
                     placeholder="23-Jan-2025 18:30:47"
                     value={formData.attend_date}
                     onChange={(e) => setFormData({ ...formData, attend_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 font-mono"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-800 font-mono focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1 flex items-center justify-between">
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 flex items-center justify-between">
                     <span>Close Date (IST)</span>
                     <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
                   </label>
@@ -871,12 +985,12 @@ export default function PenaltyModulePage() {
                     placeholder="15-May-2025 16:30:47"
                     value={formData.close_date}
                     onChange={(e) => setFormData({ ...formData, close_date: e.target.value, final_close_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 font-mono"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-800 font-mono focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
                     Condemnation Date (Optional - Penalty Stops)
                   </label>
                   <input
@@ -884,38 +998,38 @@ export default function PenaltyModulePage() {
                     placeholder="10-May-2025 12:00:00"
                     value={formData.condemnation_date}
                     onChange={(e) => setFormData({ ...formData, condemnation_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 font-mono"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-800 font-mono focus:outline-none"
                   />
                 </div>
               </div>
 
               {/* Exemption & Critical Checkboxes */}
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 block">
                   Contract SLA Exemption Rules & Criticality
                 </span>
                 
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-700">
                   <input
                     type="checkbox"
                     checked={formData.is_part_missing}
                     onChange={(e) => setFormData({ ...formData, is_part_missing: e.target.checked })}
-                    className="rounded text-blue-600"
+                    className="rounded text-blue-600 w-4 h-4"
                   />
                   <span>Part Missing / Spare Pending (₹0 Penalty for part missing days)</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-700">
                   <input
                     type="checkbox"
                     checked={formData.is_standby_provided}
                     onChange={(e) => setFormData({ ...formData, is_standby_provided: e.target.checked })}
-                    className="rounded text-blue-600"
+                    className="rounded text-blue-600 w-4 h-4"
                   />
                   <span>Standby Machine Provided (First 90 Days EXEMPTED - ₹0 Penalty)</span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-slate-700">
                   <input
                     type="checkbox"
                     checked={formData.is_critical}
@@ -923,24 +1037,24 @@ export default function PenaltyModulePage() {
                       const checked = e.target.checked;
                       setFormData({ ...formData, is_critical: checked, equipment_type: checked ? "Critical" : "Non-Critical" });
                     }}
-                    className="rounded text-rose-600"
+                    className="rounded text-rose-600 w-4 h-4"
                   />
-                  <span className="text-rose-700">Critical Equipment (110% Surcharge applies if SLA missed)</span>
+                  <span className="text-rose-700 font-extrabold">Critical Equipment (110% Surcharge applies if SLA missed)</span>
                 </label>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowManualModal(false)}
-                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl"
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading || barcodeVerified === false}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-bold text-xs rounded-xl shadow-sm"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-extrabold text-xs rounded-2xl shadow-xs"
                 >
                   {loading ? "Calculating..." : "Calculate & Save Audit Record"}
                 </button>
