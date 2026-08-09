@@ -9,18 +9,15 @@ import {
   AlertTriangle,
   Clock,
   FileSpreadsheet,
-  RefreshCw,
   X,
   FileText,
   Building2,
-  CheckCircle2,
   TrendingDown,
   BarChart3,
   PieChart,
   Repeat,
   Layers,
   Filter,
-  Calendar,
   UserCheck
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -477,7 +474,7 @@ export default function PenaltyModulePage() {
       map[dayStr].amount += r.total_penalty || 0;
       map[dayStr].count += 1;
     });
-    return Object.keys(map).map(k => ({ label: k, value: map[k].amount, count: map[k].count }));
+    return Object.keys(map).map(k => ({ x: k, y: map[k].amount, count: map[k].count }));
   }, [filteredRecords]);
 
   // Repeated Calls Frequency Data
@@ -932,6 +929,14 @@ export default function PenaltyModulePage() {
                 <UserCheck className="w-4 h-4 text-indigo-600" /> DI-Wise (Engineer) Penalty Summary
               </h3>
               <SaaSBarChart data={diChartData} height={260} />
+            </div>
+
+            {/* 5. Hospital-Wise Top Penalties */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-cyan-600" /> Top 10 Hospital-Wise Penalty
+              </h3>
+              <SaaSHorizontalBarChart data={hospitalChartData} height={260} />
             </div>
           </div>
 
