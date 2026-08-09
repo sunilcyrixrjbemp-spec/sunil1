@@ -1,6 +1,14 @@
 import { runRead, runWrite } from "../utils/db.js";
 import { jsonResponse } from "../utils/http.js";
 
+// Helper: Extract clean barcode tokens (e.g. "(800489061567) 40323789" => ["800489061567", "40323789"])
+export function extractBarcodeTokens(raw) {
+  if (!raw || typeof raw !== "string") return [];
+  const cleaned = raw.replace(/[()]/g, " ").trim();
+  const tokens = cleaned.split(/\s+/).filter(Boolean);
+  return tokens.length > 0 ? tokens : [raw.trim()];
+}
+
 // Helper: Parse timestamp format "21-Jan-2025 16:30:47" or standard ISO dates into Date
 export function parsePenaltyDate(dateStr) {
   if (!dateStr || typeof dateStr !== "string") return null;
@@ -196,37 +204,39 @@ export function calculateCAPenalty(params) {
   };
 }
 
-// 1. Verify Barcode in Asset Inventory (assets_inventory + field_assets_inventory)
+// 1. Verify Barcode in Asset Inventory (assets_inventory + field_assets_inventory + di_name_list)
 export async function handleVerifyBarcode(request, env) {
   try {
     const body = await request.json();
-    const barcode = (body.barcode || "").trim();
-    if (!barcode) {
+    const rawBarcode = (body.barcode || "").trim();
+    if (!rawBarcode) {
       return jsonResponse({ success: false, message: "Barcode is required" }, 400);
     }
 
-    const barcode8 = barcode.length >= 8 ? barcode.slice(-8) : barcode;
+    const tokens = extractBarcodeTokens(rawBarcode);
+    let asset = null;
 
-    // Search assets_inventory table
-    let assetRes = await runRead(env, `
-      SELECT id, qr_code as barcode, equipment_name, equipment_model, hospital_name, district_name as district, parsed_asset_value as asset_value, inventory_status as status
-      FROM assets_inventory
-      WHERE qr_code = ? OR qr_code LIKE ?
-      LIMIT 1
-    `, [barcode, `%${barcode8}`], request).catch(() => ({ results: [] }));
+    for (const token of tokens) {
+      const token8 = token.length >= 8 ? token.slice(-8) : token;
+      let assetRes = await runRead(env, `
+        SELECT id, qr_code as barcode, equipment_name, equipment_model, hospital_name, district_name as district, parsed_asset_value as asset_value, inventory_status as status
+        FROM assets_inventory
+        WHERE qr_code = ? OR qr_code LIKE ? OR equipment_serial_number LIKE ?
+        LIMIT 1
+      `, [token, `%${token8}`, `%${token8}`], request).catch(() => ({ results: [] }));
 
-    let asset = (assetRes?.results || [])[0];
+      asset = (assetRes?.results || [])[0];
+      if (asset) break;
 
-    // Fallback: field_assets_inventory table
-    if (!asset) {
-      const fallbackRes = await runRead(env, `
+      let fallbackRes = await runRead(env, `
         SELECT id, barcode, equipment_name, equipment_model, hospital_name, district, status
         FROM field_assets_inventory
         WHERE barcode = ? OR barcode LIKE ?
         LIMIT 1
-      `, [barcode, `%${barcode8}`], request).catch(() => ({ results: [] }));
+      `, [token, `%${token8}`], request).catch(() => ({ results: [] }));
 
       asset = (fallbackRes?.results || [])[0];
+      if (asset) break;
     }
 
     if (!asset) {
@@ -234,31 +244,35 @@ export async function handleVerifyBarcode(request, env) {
         success: false,
         valid: false,
         exists: false,
-        error: `❌ Error: Barcode #${barcode} not found in database Asset Inventory! Entry Rejected.`
+        error: `❌ Error: Barcode #${rawBarcode} not found in database Asset Inventory! Entry Rejected.`
       });
+    }
+
+    // Lookup di_name_list by hospital_name to fetch DI, Coordinator, Zone, District
+    if (asset.hospital_name) {
+      const diRes = await runRead(env, `
+        SELECT di_name, coordinator_name, zone_name, district_name FROM di_name_list WHERE hospital_name LIKE ? LIMIT 1
+      `, [`%${asset.hospital_name.trim()}%`], request).catch(() => ({ results: [] }));
+
+      if (diRes?.results?.length > 0) {
+        const diInfo = diRes.results[0];
+        asset.di_name = diInfo.di_name;
+        asset.coordinator_name = diInfo.coordinator_name;
+        asset.zone_name = diInfo.zone_name;
+        if (diInfo.district_name) {
+          asset.district = diInfo.district_name;
+        }
+      }
     }
 
     // Check main_hospitals to see if hospital is a Medical College
     if (asset.hospital_name) {
       const mainHospRes = await runRead(env, `
-        SELECT hospital_name FROM main_hospitals WHERE hospital_name = ? LIMIT 1
-      `, [asset.hospital_name], request).catch(() => ({ results: [] }));
+        SELECT hospital_name FROM main_hospitals WHERE hospital_name LIKE ? LIMIT 1
+      `, [`%${asset.hospital_name.trim()}%`], request).catch(() => ({ results: [] }));
 
       if (mainHospRes?.results?.length > 0) {
         asset.hospital_type = "Medical College";
-      }
-    }
-
-    // Check di_name_list for DI / Coordinator mapping
-    if (asset.hospital_name) {
-      const diRes = await runRead(env, `
-        SELECT di_name, coordinator_name, zone_name, district_name FROM di_name_list WHERE hospital_name = ? LIMIT 1
-      `, [asset.hospital_name], request).catch(() => ({ results: [] }));
-
-      if (diRes?.results?.length > 0) {
-        asset.di_name = diRes.results[0].di_name;
-        asset.coordinator_name = diRes.results[0].coordinator_name;
-        asset.zone_name = diRes.results[0].zone_name;
       }
     }
 
@@ -267,7 +281,7 @@ export async function handleVerifyBarcode(request, env) {
       valid: true,
       exists: true,
       asset: asset,
-      message: `✓ Barcode #${barcode} verified successfully.`
+      message: `✓ Barcode #${rawBarcode} verified successfully.`
     });
   } catch (err) {
     return jsonResponse({ success: false, valid: false, error: err.message }, 500);
@@ -284,14 +298,17 @@ export async function handleSavePenalty(request, env, params, query, user) {
       return jsonResponse({ success: true, processed: 0, saved: 0, skippedFinalClosed: 0, errorsCount: 0 });
     }
 
-    // Ensure database tables exist
+    // Ensure database tables exist with di_name and zone_name columns
     await runWrite(env, `
       CREATE TABLE IF NOT EXISTS rj_penalties (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         complaint_id TEXT UNIQUE,
         district_name TEXT,
+        zone_name TEXT,
         hospital_type TEXT,
         hospital_name TEXT,
+        di_name TEXT,
+        coordinator_name TEXT,
         bar_code TEXT,
         equipment_name TEXT,
         equipment_model TEXT,
@@ -351,7 +368,6 @@ export async function handleSavePenalty(request, env, params, query, user) {
     const finalClosedSet = new Set();
 
     if (complaintIds.length > 0) {
-      // Chunk in blocks of 500 for IN clause
       for (let i = 0; i < complaintIds.length; i += 500) {
         const chunk = complaintIds.slice(i, i + 500);
         const placeholders = chunk.map(() => "?").join(",");
@@ -364,13 +380,19 @@ export async function handleSavePenalty(request, env, params, query, user) {
       }
     }
 
-    // ── STEP 2: BULK FETCH ASSET INVENTORY ──
-    const barcodes = entries.map(e => (e.barcode || e.barCode || "").trim()).filter(Boolean);
-    const assetMap = new Map();
+    // ── STEP 2: BULK FETCH ALL CANDIDATE ASSET INVENTORY RECORDS & TOKEN MATCHING ──
+    const allBarcodeTokens = new Set();
+    entries.forEach(e => {
+      const raw = (e.barcode || e.barCode || "").trim();
+      extractBarcodeTokens(raw).forEach(t => allBarcodeTokens.add(t));
+    });
 
-    if (barcodes.length > 0) {
-      for (let i = 0; i < barcodes.length; i += 500) {
-        const chunk = barcodes.slice(i, i + 500);
+    const assetMap = new Map();
+    const tokenArr = Array.from(allBarcodeTokens);
+
+    if (tokenArr.length > 0) {
+      for (let i = 0; i < tokenArr.length; i += 500) {
+        const chunk = tokenArr.slice(i, i + 500);
         const placeholders = chunk.map(() => "?").join(",");
         const assetRes = await runRead(env, `
           SELECT qr_code as barcode, equipment_name, equipment_model, hospital_name, district_name as district, parsed_asset_value as asset_value
@@ -384,25 +406,35 @@ export async function handleSavePenalty(request, env, params, query, user) {
       }
     }
 
-    // ── STEP 3: BULK FETCH MASTER TABLES (main_hospitals & critical_equipment & asset_value_master) ──
+    // ── STEP 3: BULK FETCH DI_NAME_LIST (HOSPITAL -> DI, COORDINATOR, ZONE, DISTRICT) ──
+    const diListRes = await runRead(env, `
+      SELECT hospital_name, di_name, coordinator_name, zone_name, district_name FROM di_name_list
+    `, [], request).catch(() => ({ results: [] }));
+
+    const diMap = new Map();
+    (diListRes?.results || []).forEach(r => {
+      if (r.hospital_name) diMap.set(r.hospital_name.toLowerCase().trim(), r);
+    });
+
+    // ── STEP 4: BULK FETCH MASTER TABLES (main_hospitals & critical_equipment & asset_value_master) ──
     const mainHospRes = await runRead(env, `SELECT DISTINCT hospital_name FROM main_hospitals`, [], request).catch(() => ({ results: [] }));
-    const mainHospSet = new Set((mainHospRes?.results || []).map(r => r.hospital_name));
+    const mainHospSet = new Set((mainHospRes?.results || []).map(r => r.hospital_name.toLowerCase().trim()));
 
     const critRes = await runRead(env, `SELECT DISTINCT equipment_name, barcode, bar_code FROM critical_equipment`, [], request).catch(() => ({ results: [] }));
     const critEqSet = new Set();
     (critRes?.results || []).forEach(r => {
-      if (r.equipment_name) critEqSet.add(r.equipment_name.toLowerCase());
-      if (r.barcode) critEqSet.add(r.barcode);
-      if (r.bar_code) critEqSet.add(r.bar_code);
+      if (r.equipment_name) critEqSet.add(r.equipment_name.toLowerCase().trim());
+      if (r.barcode) critEqSet.add(r.barcode.trim());
+      if (r.bar_code) critEqSet.add(r.bar_code.trim());
     });
 
     const valMasterRes = await runRead(env, `SELECT equipment_name, estimated_cost, asset_value FROM asset_value_master`, [], request).catch(() => ({ results: [] }));
     const valMasterMap = new Map();
     (valMasterRes?.results || []).forEach(r => {
-      if (r.equipment_name) valMasterMap.set(r.equipment_name.toLowerCase(), parseFloat(r.estimated_cost || r.asset_value || 0));
+      if (r.equipment_name) valMasterMap.set(r.equipment_name.toLowerCase().trim(), parseFloat(r.estimated_cost || r.asset_value || 0));
     });
 
-    // ── STEP 4: IN-MEMORY COMPUTATION & D1 BATCH PREPARATION ──
+    // ── STEP 5: IN-MEMORY COMPUTATION & D1 BATCH PREPARATION ──
     const results = [];
     const errors = [];
     let skippedFinalClosed = 0;
@@ -413,13 +445,13 @@ export async function handleSavePenalty(request, env, params, query, user) {
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
       const complaintId = (entry.complaint_id || entry.complaintId || "").trim();
-      const barcode = (entry.barcode || entry.barCode || "").trim();
+      const rawBarcode = (entry.barcode || entry.barCode || "").trim();
 
       if (!complaintId) {
         errors.push({ row: i + 1, error: "Complaint ID is required." });
         continue;
       }
-      if (!barcode) {
+      if (!rawBarcode) {
         errors.push({ row: i + 1, error: "Barcode is required." });
         continue;
       }
@@ -430,29 +462,47 @@ export async function handleSavePenalty(request, env, params, query, user) {
         continue;
       }
 
-      // Match Asset
-      const asset = assetMap.get(barcode) || {
-        equipment_name: entry.equipment_name || "Medical Device",
-        equipment_model: entry.equipment_model || "",
-        hospital_name: entry.hospital_name || "Hospital",
-        district: entry.district || "Rajasthan",
-        asset_value: 0
-      };
+      // Match Asset using Barcode Tokens
+      const tokens = extractBarcodeTokens(rawBarcode);
+      let matchedAsset = null;
 
-      const equipmentName = asset.equipment_name || entry.equipment_name || "Medical Device";
-      const hospitalName = asset.hospital_name || entry.hospital_name || "Hospital";
-      const district = asset.district || entry.district || "Rajasthan";
+      for (const t of tokens) {
+        if (assetMap.has(t)) {
+          matchedAsset = assetMap.get(t);
+          break;
+        }
+      }
+
+      const equipmentName = matchedAsset?.equipment_name || entry.equipment_name || "Medical Device";
+      let hospitalName = matchedAsset?.hospital_name || entry.hospital_name || "Hospital";
+      let district = matchedAsset?.district || entry.district || "Rajasthan";
+      let zoneName = "Rajasthan Zone";
+      let diName = entry.attended_engineer_name || "Assigned DI";
+      let coordinatorName = "Coordinator";
+
+      // Match DI Name List by Hospital Name
+      if (hospitalName && hospitalName !== "Hospital") {
+        const diInfo = diMap.get(hospitalName.toLowerCase().trim());
+        if (diInfo) {
+          diName = diInfo.di_name || diName;
+          coordinatorName = diInfo.coordinator_name || coordinatorName;
+          zoneName = diInfo.zone_name || zoneName;
+          if (diInfo.district_name) {
+            district = diInfo.district_name;
+          }
+        }
+      }
 
       // Auto-detect Medical College
       let hospitalType = entry.hospital_type || entry.hospitalType || "CHC";
-      if (!entry.hospital_type && hospitalName && mainHospSet.has(hospitalName)) {
+      if (!entry.hospital_type && hospitalName && mainHospSet.has(hospitalName.toLowerCase().trim())) {
         hospitalType = "Medical College";
       }
 
       // Auto-detect Asset Value
-      let assetValue = parseFloat(entry.asset_value || entry.assetValue || asset.asset_value || 0);
+      let assetValue = parseFloat(entry.asset_value || entry.assetValue || matchedAsset?.asset_value || 0);
       if (assetValue <= 0 && equipmentName) {
-        const eqLower = equipmentName.toLowerCase();
+        const eqLower = equipmentName.toLowerCase().trim();
         for (const [key, val] of valMasterMap.entries()) {
           if (eqLower.includes(key)) {
             assetValue = val;
@@ -466,8 +516,8 @@ export async function handleSavePenalty(request, env, params, query, user) {
       if (entry.is_critical !== undefined) {
         isCriticalEquipment = Boolean(entry.is_critical || entry.isCritical);
       } else {
-        const eqLower = equipmentName.toLowerCase();
-        if (critEqSet.has(eqLower) || critEqSet.has(barcode)) {
+        const eqLower = equipmentName.toLowerCase().trim();
+        if (critEqSet.has(eqLower) || critEqSet.has(rawBarcode)) {
           isCriticalEquipment = true;
         }
       }
@@ -495,16 +545,20 @@ export async function handleSavePenalty(request, env, params, query, user) {
       penaltyStatements.push(
         db.prepare(`
           INSERT INTO rj_penalties (
-            complaint_id, district_name, hospital_type, hospital_name, bar_code, equipment_name,
-            equipment_model, complaint_raise_date, attend_date, complaint_close_date,
-            final_close_date, attended_engineer_name, close_engineer_id, total_downtime,
-            total_penalty, per_day_penalty, asset_value, equipment_type, penalty_slab_amount,
-            chargeable_days, standby_status, exemption_reason, status, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            complaint_id, district_name, zone_name, hospital_type, hospital_name, di_name,
+            coordinator_name, bar_code, equipment_name, equipment_model, complaint_raise_date,
+            attend_date, complaint_close_date, final_close_date, attended_engineer_name,
+            close_engineer_id, total_downtime, total_penalty, per_day_penalty, asset_value,
+            equipment_type, penalty_slab_amount, chargeable_days, standby_status,
+            exemption_reason, status, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
           ON CONFLICT(complaint_id) DO UPDATE SET
             district_name=excluded.district_name,
+            zone_name=excluded.zone_name,
             hospital_type=excluded.hospital_type,
             hospital_name=excluded.hospital_name,
+            di_name=excluded.di_name,
+            coordinator_name=excluded.coordinator_name,
             bar_code=excluded.bar_code,
             equipment_name=excluded.equipment_name,
             equipment_model=excluded.equipment_model,
@@ -527,16 +581,19 @@ export async function handleSavePenalty(request, env, params, query, user) {
         `).bind(
           complaintId,
           district,
+          zoneName,
           hospitalType,
           hospitalName,
-          barcode,
+          diName,
+          coordinatorName,
+          rawBarcode,
           equipmentName,
-          asset.equipment_model || entry.equipment_model || "",
+          matchedAsset?.equipment_model || entry.equipment_model || "",
           entry.complaint_raise_date || entry.complaintRaiseDate || "",
           entry.attend_date || entry.attendDate || "",
           entry.close_date || entry.complaintCloseDate || "",
           entry.final_close_date || entry.finalCloseDate || "",
-          entry.attended_engineer_name || entry.attendedEngineerName || user?.user_name || "Engineer",
+          diName,
           entry.close_engineer_id || entry.closeEngineerId || user?.user_id || "ENG101",
           calc.totalDowntimeDays,
           calc.finalAuditedPenalty,
@@ -553,7 +610,9 @@ export async function handleSavePenalty(request, env, params, query, user) {
 
       results.push({
         complaint_id: complaintId,
-        barcode: barcode,
+        barcode: rawBarcode,
+        district: district,
+        hospital: hospitalName,
         total_downtime_days: calc.totalDowntimeDays,
         net_chargeable_days: calc.netChargeableDowntimeDays,
         total_penalty: calc.finalAuditedPenalty
@@ -562,7 +621,6 @@ export async function handleSavePenalty(request, env, params, query, user) {
 
     // Execute Batch D1 Write for max performance
     if (penaltyStatements.length > 0) {
-      // Chunk statements in groups of 100 to prevent D1 statement limit
       for (let s = 0; s < penaltyStatements.length; s += 100) {
         const stmtBatch = penaltyStatements.slice(s, s + 100);
         await db.batch(stmtBatch).catch(err => {
@@ -600,8 +658,11 @@ export async function handleGetPenaltyList(request, env, params, query, user) {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         complaint_id TEXT UNIQUE,
         district_name TEXT,
+        zone_name TEXT,
         hospital_type TEXT,
         hospital_name TEXT,
+        di_name TEXT,
+        coordinator_name TEXT,
         bar_code TEXT,
         equipment_name TEXT,
         equipment_model TEXT,
@@ -673,7 +734,7 @@ export async function handleGetPenaltyList(request, env, params, query, user) {
     let records = [];
     try {
       const res = await runRead(env, `
-        SELECT id, complaint_id, district_name, hospital_type, hospital_name, bar_code, equipment_name,
+        SELECT id, complaint_id, district_name, zone_name, hospital_type, hospital_name, di_name, coordinator_name, bar_code, equipment_name,
                equipment_model, complaint_raise_date, attend_date, complaint_close_date,
                final_close_date, attended_engineer_name, close_engineer_id, total_downtime,
                total_penalty, per_day_penalty, asset_value, equipment_type, penalty_slab_amount,
