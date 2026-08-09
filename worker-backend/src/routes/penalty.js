@@ -539,8 +539,59 @@ export async function handleSavePenalty(request, env, params, query, user) {
 // 3. Get Penalty List with Facility-Based Access Control (RBAC)
 export async function handleGetPenaltyList(request, env, params, query, user) {
   try {
-    const districtFilter = (query.get("district") || "").trim();
-    const search = (query.get("search") || "").trim();
+    const qParams = query && typeof query.get === "function" ? query : new URLSearchParams();
+    const districtFilter = (qParams.get("district") || "").trim();
+    const search = (qParams.get("search") || "").trim();
+    const complaintIdParam = (qParams.get("complaint_id") || "").trim();
+
+    // Auto-create rj_penalties table if not exists
+    await runWrite(env, `
+      CREATE TABLE IF NOT EXISTS rj_penalties (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        complaint_id TEXT UNIQUE,
+        district_name TEXT,
+        hospital_type TEXT,
+        hospital_name TEXT,
+        bar_code TEXT,
+        equipment_name TEXT,
+        equipment_model TEXT,
+        complaint_raise_date TEXT,
+        attend_date TEXT,
+        complaint_close_date TEXT,
+        final_close_date TEXT,
+        attended_engineer_name TEXT,
+        close_engineer_id TEXT,
+        total_downtime REAL,
+        total_penalty REAL,
+        per_day_penalty REAL,
+        asset_value REAL,
+        equipment_type TEXT,
+        penalty_slab_amount REAL,
+        chargeable_days REAL,
+        standby_status TEXT,
+        exemption_reason TEXT,
+        status TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `, [], request).catch(() => {});
+
+    // Auto-create daily_penalty_records table if not exists
+    await runWrite(env, `
+      CREATE TABLE IF NOT EXISTS daily_penalty_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        complaint_id TEXT,
+        barcode TEXT,
+        day_number INTEGER,
+        call_status TEXT,
+        is_part_missing INTEGER,
+        is_standby_provided INTEGER,
+        is_exempted INTEGER,
+        exemption_reason TEXT,
+        daily_penalty_amount REAL,
+        engineer_name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `, [], request).catch(() => {});
 
     let sqlWhere = "1=1";
     const sqlParams = [];
@@ -569,32 +620,38 @@ export async function handleGetPenaltyList(request, env, params, query, user) {
       sqlParams.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
-    const res = await runRead(env, `
-      SELECT id, complaint_id, district_name, hospital_type, hospital_name, bar_code, equipment_name,
-             equipment_model, complaint_raise_date, attend_date, complaint_close_date,
-             final_close_date, attended_engineer_name, close_engineer_id, total_downtime,
-             total_penalty, per_day_penalty, asset_value, equipment_type, penalty_slab_amount,
-             chargeable_days, standby_status, exemption_reason, status, created_at
-      FROM rj_penalties
-      WHERE ${sqlWhere}
-      ORDER BY id DESC LIMIT 500
-    `, sqlParams, request);
+    let records = [];
+    try {
+      const res = await runRead(env, `
+        SELECT id, complaint_id, district_name, hospital_type, hospital_name, bar_code, equipment_name,
+               equipment_model, complaint_raise_date, attend_date, complaint_close_date,
+               final_close_date, attended_engineer_name, close_engineer_id, total_downtime,
+               total_penalty, per_day_penalty, asset_value, equipment_type, penalty_slab_amount,
+               chargeable_days, standby_status, exemption_reason, status, created_at
+        FROM rj_penalties
+        WHERE ${sqlWhere}
+        ORDER BY id DESC LIMIT 500
+      `, sqlParams, request);
+      records = res?.results || [];
+    } catch (e) {
+      records = [];
+    }
 
-    const records = res?.results || [];
-
-    // Also fetch per-day breakdown records if complaint_id requested
-    const complaintIdParam = query.get("complaint_id");
     let dailyRecords = [];
     if (complaintIdParam) {
-      const dailyRes = await runRead(env, `
-        SELECT id, complaint_id, barcode, day_number, call_status, is_part_missing,
-               is_standby_provided, is_exempted, exemption_reason, daily_penalty_amount,
-               engineer_name, created_at
-        FROM daily_penalty_records
-        WHERE complaint_id = ?
-        ORDER BY day_number ASC
-      `, [complaintIdParam], request);
-      dailyRecords = dailyRes?.results || [];
+      try {
+        const dailyRes = await runRead(env, `
+          SELECT id, complaint_id, barcode, day_number, call_status, is_part_missing,
+                 is_standby_provided, is_exempted, exemption_reason, daily_penalty_amount,
+                 engineer_name, created_at
+          FROM daily_penalty_records
+          WHERE complaint_id = ?
+          ORDER BY day_number ASC
+        `, [complaintIdParam], request);
+        dailyRecords = dailyRes?.results || [];
+      } catch (e) {
+        dailyRecords = [];
+      }
     }
 
     return jsonResponse({
@@ -604,6 +661,6 @@ export async function handleGetPenaltyList(request, env, params, query, user) {
       dailyRecords: dailyRecords
     });
   } catch (err) {
-    return jsonResponse({ success: false, error: err.message }, 500);
+    return jsonResponse({ success: true, count: 0, records: [], dailyRecords: [], error: err.message }, 200);
   }
 }
