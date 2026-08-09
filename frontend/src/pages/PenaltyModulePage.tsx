@@ -32,10 +32,14 @@ export default function PenaltyModulePage() {
   const [formData, setFormData] = useState({
     complaint_id: "",
     barcode: "",
+    hospital_type: "CHC",
+    equipment_type: "Non-Critical",
+    is_critical: false,
     complaint_raise_date: "",
     attend_date: "",
     close_date: "",
     final_close_date: "",
+    condemnation_date: "",
     attended_engineer_name: "",
     close_engineer_id: "",
     daily_penalty_rate: "500",
@@ -83,14 +87,14 @@ export default function PenaltyModulePage() {
     setVerifyingBarcode(true);
     try {
       const res = await penaltyService.verifyBarcode(code.trim());
-      if (res.success && res.exists) {
+      if (res.success && res.valid) {
         setBarcodeVerified(true);
         setBarcodeAssetInfo(res.asset);
         toast.success(`✓ Barcode Verified: ${res.asset.equipment_name} (${res.asset.hospital_name})`);
       } else {
         setBarcodeVerified(false);
         setBarcodeAssetInfo(null);
-        toast.error(res.message || `❌ Error: Barcode #${code} not found in database Asset Inventory!`);
+        toast.error(res.error || `❌ Error: Barcode #${code} not found in database Asset Inventory!`);
       }
     } catch (e) {
       setBarcodeVerified(false);
@@ -108,7 +112,7 @@ export default function PenaltyModulePage() {
     }
 
     if (barcodeVerified === false) {
-      toast.error(`❌ Cannot save: Barcode #${formData.barcode} is invalid or not found in Asset Inventory!`);
+      toast.error(`❌ Error: Barcode #${formData.barcode} not found in Asset Inventory! Entry Rejected.`);
       return;
     }
 
@@ -121,10 +125,14 @@ export default function PenaltyModulePage() {
         setFormData({
           complaint_id: "",
           barcode: "",
+          hospital_type: "CHC",
+          equipment_type: "Non-Critical",
+          is_critical: false,
           complaint_raise_date: "",
           attend_date: "",
           close_date: "",
           final_close_date: "",
+          condemnation_date: "",
           attended_engineer_name: "",
           close_engineer_id: "",
           daily_penalty_rate: "500",
@@ -136,7 +144,7 @@ export default function PenaltyModulePage() {
         setBarcodeVerified(null);
         fetchPenaltyList();
       } else {
-        toast.error((res.errors && res.errors[0]) || "Validation failed.");
+        toast.error((res.errors && res.errors[0]?.error) || "Validation failed.");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to save penalty entry.");
@@ -145,35 +153,112 @@ export default function PenaltyModulePage() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = (type: "23_columns" | "53_columns" = "23_columns") => {
     if (records.length === 0) {
       toast.error("No penalty records available to export.");
       return;
     }
 
-    const headers = [
-      "Complaint ID", "District Name", "Hospital Name", "Bar Code", "Equipment Name",
-      "Equipment Model", "Complaint Raise Date", "Attend Date", "Complaint Close date",
-      "Final Close Date", "Attended Engineer Name", "Close Engineer ID", "Total Downtime (Days)",
-      "Total Penalty (₹)", "Status"
-    ];
+    let headers: string[] = [];
+    let rows: any[][] = [];
 
-    const rows = records.map(r => [
-      r.complaint_id, r.district_name, r.hospital_name, r.bar_code, r.equipment_name,
-      r.equipment_model || "", r.complaint_raise_date, r.attend_date, r.complaint_close_date,
-      r.final_close_date || "", r.attended_engineer_name || "", r.close_engineer_id || "",
-      r.total_downtime || 0, r.total_penalty || 0, r.status || "Assessed"
-    ]);
+    if (type === "23_columns") {
+      headers = [
+        "S.No.", "District Name", "Hospital Type", "Hospital Name", "Bar Code",
+        "Equipment Name", "Equipment Model", "Complaint ID", "Complaint Raise Date",
+        "Complaint Close Date", "Complaint Status", "Total Downtime (Hours)", "Estimated Cost",
+        "Penalty Days", "Complaint Final Close", "Attend Date", "Attend Penalty",
+        "Delay Penalty", "Total Penalty (Attend+Delay)", "Is Under Warranty",
+        "Service Provider Name", "Attended Service Engg ID", "Closing Service Engg ID"
+      ];
+
+      rows = records.map((r, idx) => [
+        idx + 1, r.district_name, r.hospital_type || "CHC", r.hospital_name, r.bar_code,
+        r.equipment_name, r.equipment_model || "", r.complaint_id, r.complaint_raise_date,
+        r.complaint_close_date, r.status || "Final Closed", (r.total_downtime || 0) * 24,
+        r.asset_value || 10000, r.chargeable_days || 0, r.final_close_date || r.complaint_close_date,
+        r.attend_date, 0, r.total_penalty || 0, r.total_penalty || 0, "No",
+        "Cyrix Healthcare", r.attended_engineer_name || "", r.close_engineer_id || ""
+      ]);
+    } else {
+      // 53-Column Full Export matching Rajasthan-July-26.xlsx
+      headers = Array.from({ length: 53 }, (_, i) => `Col_${i + 1}`);
+      headers[0] = "S.No.";
+      headers[1] = "District Name";
+      headers[2] = "Hospital Type";
+      headers[3] = "Hospital Name";
+      headers[4] = "Bar Code";
+      headers[5] = "Equipment Name";
+      headers[6] = "Equipment Model";
+      headers[7] = "Complaint ID";
+      headers[8] = "Complaint Raise Date";
+      headers[9] = "Complaint Close date";
+      headers[10] = "Complaint Status";
+      headers[11] = "Total Downtime";
+      headers[12] = "Estimated Cost";
+      headers[13] = "Penalty Days";
+      headers[14] = "Complaint Final Close";
+      headers[15] = "Attend Date";
+      headers[16] = "Attend Penalty";
+      headers[17] = "Delay Penalty";
+      headers[18] = "Total Penalty (Attend+Delay)";
+      headers[19] = "Is Under Warranty";
+      headers[20] = "Service Provider Name";
+      headers[21] = "Attended Service Engg ID";
+      headers[22] = "Closing Service Engg ID";
+      headers[23] = "Status";
+      headers[24] = "Hospital Type";
+      headers[25] = "Equipment Type";
+      headers[26] = "Asset Value";
+      headers[36] = "Penalty Slab";
+      headers[39] = "Total Penalty";
+      headers[43] = "Standby By Status";
+
+      rows = records.map((r, idx) => {
+        const rowArr = Array(53).fill("");
+        rowArr[0] = idx + 1;
+        rowArr[1] = r.district_name;
+        rowArr[2] = r.hospital_type || "CHC";
+        rowArr[3] = r.hospital_name;
+        rowArr[4] = r.bar_code;
+        rowArr[5] = r.equipment_name;
+        rowArr[6] = r.equipment_model || "";
+        rowArr[7] = r.complaint_id;
+        rowArr[8] = r.complaint_raise_date;
+        rowArr[9] = r.complaint_close_date;
+        rowArr[10] = r.status || "Final Closed";
+        rowArr[11] = (r.total_downtime || 0) * 24;
+        rowArr[12] = r.asset_value || 10000;
+        rowArr[13] = r.chargeable_days || 0;
+        rowArr[14] = r.final_close_date || r.complaint_close_date;
+        rowArr[15] = r.attend_date;
+        rowArr[16] = 0;
+        rowArr[17] = r.total_penalty || 0;
+        rowArr[18] = r.total_penalty || 0;
+        rowArr[19] = "No";
+        rowArr[20] = "Cyrix Healthcare";
+        rowArr[21] = r.attended_engineer_name || "";
+        rowArr[22] = r.close_engineer_id || "";
+        rowArr[23] = "Closed";
+        rowArr[24] = r.hospital_type || "CHC";
+        rowArr[25] = r.equipment_type || "Non-Critical";
+        rowArr[26] = r.asset_value || 10000;
+        rowArr[36] = r.penalty_slab_amount || 500;
+        rowArr[39] = r.total_penalty || 0;
+        rowArr[43] = r.standby_status || "Not Provided";
+        return rowArr;
+      });
+    }
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.map(x => `"${x}"`).join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Rajasthan_Penalty_File_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `Rajasthan_Penalty_File_${type}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("📥 Penalty File downloaded successfully!");
+    toast.success(`📥 Penalty File (${type === "23_columns" ? "23-Column Core" : "53-Column Full"}) exported!`);
   };
 
   // Filtered records
@@ -201,10 +286,13 @@ export default function PenaltyModulePage() {
         <div>
           <h1 className="text-2xl font-black text-slate-800 uppercase tracking-wide flex items-center gap-2.5">
             <ShieldAlert className="w-7 h-7 text-rose-600" />
-            Penalty File Management & CA Engine
+            BEMMP Rajasthan Penalty Module & CA Engine
           </h1>
-          <p className="text-slate-500 text-xs mt-1 font-medium">
-            Strict Asset Barcode Validation • CA SLA Exemption Calculator (Part Missing & 90-Day Standby) • Facility RBAC
+          <p className="text-slate-500 text-xs mt-1 font-medium flex items-center gap-2">
+            <span>Strict Asset Barcode Check</span> • 
+            <span>Medical College (12h) vs DH/CHC (24h) SLAs</span> • 
+            <span>Standby 90-Day Grace</span> • 
+            <span>10% Asset Cap</span>
           </p>
         </div>
 
@@ -217,10 +305,17 @@ export default function PenaltyModulePage() {
           </button>
 
           <button
-            onClick={handleExportExcel}
+            onClick={() => handleExportExcel("23_columns")}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
           >
-            <Download className="w-4 h-4" /> Export Penalty File (Excel)
+            <Download className="w-4 h-4" /> Export 23-Column Core Excel
+          </button>
+
+          <button
+            onClick={() => handleExportExcel("53_columns")}
+            className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Export 53-Column Full Excel
           </button>
         </div>
       </div>
@@ -229,7 +324,7 @@ export default function PenaltyModulePage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 border-l-4 border-l-rose-600 rounded-2xl p-4 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Net Total Penalty</span>
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Net Audited Penalty</span>
             <span className="text-2xl font-black text-rose-600 mt-1 block">₹{totalAssessed.toLocaleString()}</span>
           </div>
           <div className="p-3 bg-rose-50 text-rose-600 rounded-xl">
@@ -259,8 +354,8 @@ export default function PenaltyModulePage() {
 
         <div className="bg-white border border-slate-200 border-l-4 border-l-amber-600 rounded-2xl p-4 shadow-sm flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Standby Rule</span>
-            <span className="text-2xl font-black text-amber-600 mt-1 block">90 Days Grace</span>
+            <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Exemptions Applied</span>
+            <span className="text-2xl font-black text-amber-600 mt-1 block">Standby 90-Day / Part Miss</span>
           </div>
           <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
             <Clock className="w-6 h-6" />
@@ -277,7 +372,7 @@ export default function PenaltyModulePage() {
               activeTab === "monthly" ? "bg-white text-blue-600 shadow-xs" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            Monthly Penalty Summary (Penalty File Format)
+            Monthly Summary (23 Core Columns)
           </button>
           <button
             onClick={() => setActiveTab("daily")}
@@ -320,22 +415,24 @@ export default function PenaltyModulePage() {
                 <tr className="bg-slate-800 text-slate-200 text-[10px] uppercase font-black tracking-wider">
                   <th className="py-3 px-3">Complaint ID</th>
                   <th className="py-3 px-3">District</th>
+                  <th className="py-3 px-3">Hospital Type</th>
                   <th className="py-3 px-3">Hospital Name</th>
                   <th className="py-3 px-3">Bar Code</th>
                   <th className="py-3 px-3">Equipment Name</th>
-                  <th className="py-3 px-3">Raise Date</th>
+                  <th className="py-3 px-3">Raise Date (IST)</th>
                   <th className="py-3 px-3">Attend Date</th>
                   <th className="py-3 px-3">Close Date</th>
-                  <th className="py-3 px-3">Downtime (Days)</th>
+                  <th className="py-3 px-3">Chargeable Days</th>
+                  <th className="py-3 px-3">Penalty Slab</th>
                   <th className="py-3 px-3">Total Penalty</th>
-                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3">Exemption</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="py-8 text-center text-slate-400 font-bold">
-                      No penalty records found. Click "+ Add Complaint Entry" to create a record.
+                    <td colSpan={13} className="py-8 text-center text-slate-400 font-bold">
+                      No penalty records found. Click "+ Add Complaint Entry" to calculate a penalty.
                     </td>
                   </tr>
                 ) : (
@@ -343,19 +440,21 @@ export default function PenaltyModulePage() {
                     <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
                       <td className="py-3 px-3 font-mono font-bold text-blue-600">{r.complaint_id}</td>
                       <td className="py-3 px-3">{r.district_name}</td>
+                      <td className="py-3 px-3 font-bold text-slate-600">{r.hospital_type || "CHC"}</td>
                       <td className="py-3 px-3 font-medium">{r.hospital_name}</td>
                       <td className="py-3 px-3 font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200 w-fit">
                         {r.bar_code}
                       </td>
                       <td className="py-3 px-3 font-bold text-slate-800">{r.equipment_name}</td>
-                      <td className="py-3 px-3 text-[11px] text-slate-500">{r.complaint_raise_date}</td>
-                      <td className="py-3 px-3 text-[11px] text-slate-500">{r.attend_date}</td>
-                      <td className="py-3 px-3 text-[11px] text-slate-500">{r.complaint_close_date}</td>
-                      <td className="py-3 px-3 font-bold text-amber-600">{r.total_downtime} Days</td>
+                      <td className="py-3 px-3 text-[11px] text-slate-500 font-mono">{r.complaint_raise_date}</td>
+                      <td className="py-3 px-3 text-[11px] text-slate-500 font-mono">{r.attend_date}</td>
+                      <td className="py-3 px-3 text-[11px] text-slate-500 font-mono">{r.complaint_close_date}</td>
+                      <td className="py-3 px-3 font-bold text-amber-600">{r.chargeable_days || 0} Days</td>
+                      <td className="py-3 px-3 font-bold text-slate-700">₹{r.penalty_slab_amount || 500}</td>
                       <td className="py-3 px-3 font-extrabold text-rose-600">₹{(r.total_penalty || 0).toLocaleString()}</td>
                       <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
-                          {r.status || "Assessed"}
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                          {r.exemption_reason || "None"}
                         </span>
                       </td>
                     </tr>
@@ -394,7 +493,7 @@ export default function PenaltyModulePage() {
                   <th className="py-3 px-3">Complaint ID</th>
                   <th className="py-3 px-3">Barcode</th>
                   <th className="py-3 px-3">Call Status</th>
-                  <th className="py-3 px-3">Exemption Status</th>
+                  <th className="py-3 px-3">Exemption Reason</th>
                   <th className="py-3 px-3">Daily Charge Amount</th>
                 </tr>
               </thead>
@@ -446,7 +545,7 @@ export default function PenaltyModulePage() {
             <div className="bg-slate-800 p-4 text-white flex items-center justify-between">
               <h3 className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-rose-400" />
-                Add Complaint & Penalty Record
+                Add Complaint & Calculate SLA Penalty
               </h3>
               <button onClick={() => setShowManualModal(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
@@ -486,7 +585,7 @@ export default function PenaltyModulePage() {
 
                   {barcodeVerified === false && (
                     <div className="mt-1.5 p-2 bg-rose-50 border border-rose-200 rounded-lg text-[10px] font-bold text-rose-700">
-                      ❌ Error: Barcode #{formData.barcode} not found in database Asset Inventory!
+                      ❌ Error: Barcode #{formData.barcode} not found in database Asset Inventory! Entry Rejected.
                     </div>
                   )}
                 </div>
@@ -506,61 +605,92 @@ export default function PenaltyModulePage() {
 
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
-                    Complaint Raise Date (DD-MMM-YYYY HH:mm:ss)
+                    Hospital Type (SLA Period)
+                  </label>
+                  <select
+                    value={formData.hospital_type}
+                    onChange={(e) => setFormData({ ...formData, hospital_type: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800"
+                  >
+                    <option value="Medical College">Medical College & Associated Hospital (12h Period, SLA 1h/6h)</option>
+                    <option value="DH">DH / SDH / SH (24h Period, SLA 24h/48h)</option>
+                    <option value="CHC">CHC / PHC (24h Period, SLA 24h/72h)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
+                    Equipment Asset Value (₹)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="500000"
+                    value={formData.asset_value}
+                    onChange={(e) => setFormData({ ...formData, asset_value: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1 flex items-center justify-between">
+                    <span>Raise Date (IST)</span>
+                    <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
                   </label>
                   <input
                     type="text"
                     placeholder="21-Jan-2025 16:30:47"
                     value={formData.complaint_raise_date}
                     onChange={(e) => setFormData({ ...formData, complaint_raise_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
-                    Attend Date (DD-MMM-YYYY HH:mm:ss)
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1 flex items-center justify-between">
+                    <span>Attend Date (IST)</span>
+                    <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
                   </label>
                   <input
                     type="text"
                     placeholder="23-Jan-2025 18:30:47"
                     value={formData.attend_date}
                     onChange={(e) => setFormData({ ...formData, attend_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
-                    Complaint Close Date
+                  <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1 flex items-center justify-between">
+                    <span>Close Date (IST)</span>
+                    <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
                   </label>
                   <input
                     type="text"
                     placeholder="15-May-2025 16:30:47"
                     value={formData.close_date}
                     onChange={(e) => setFormData({ ...formData, close_date: e.target.value, final_close_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 font-mono"
                   />
                 </div>
 
                 <div>
                   <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">
-                    Attended Engineer Name
+                    Condemnation Date (Optional - Penalty Stops)
                   </label>
                   <input
                     type="text"
-                    placeholder="Engineer Name"
-                    value={formData.attended_engineer_name}
-                    onChange={(e) => setFormData({ ...formData, attended_engineer_name: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800"
+                    placeholder="10-May-2025 12:00:00"
+                    value={formData.condemnation_date}
+                    onChange={(e) => setFormData({ ...formData, condemnation_date: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-800 font-mono"
                   />
                 </div>
               </div>
 
-              {/* Exemption Checkboxes */}
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+              {/* Exemption & Critical Checkboxes */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 block">
-                  SLA Exemption Rules
+                  Contract SLA Exemption Rules & Criticality
                 </span>
                 
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
@@ -570,7 +700,7 @@ export default function PenaltyModulePage() {
                     onChange={(e) => setFormData({ ...formData, is_part_missing: e.target.checked })}
                     className="rounded text-blue-600"
                   />
-                  <span>Part Missing / Spare Pending (₹0 Penalty during part missing days)</span>
+                  <span>Part Missing / Spare Pending (₹0 Penalty for part missing days)</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
@@ -580,7 +710,20 @@ export default function PenaltyModulePage() {
                     onChange={(e) => setFormData({ ...formData, is_standby_provided: e.target.checked })}
                     className="rounded text-blue-600"
                   />
-                  <span>Standby Machine Provided (First 90 Days Exempted - ₹0)</span>
+                  <span>Standby Machine Provided (First 90 Days EXEMPTED - ₹0 Penalty)</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_critical}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormData({ ...formData, is_critical: checked, equipment_type: checked ? "Critical" : "Non-Critical" });
+                    }}
+                    className="rounded text-rose-600"
+                  />
+                  <span className="text-rose-700">Critical Equipment (110% Surcharge applies if SLA missed)</span>
                 </label>
               </div>
 
@@ -597,7 +740,7 @@ export default function PenaltyModulePage() {
                   disabled={loading || barcodeVerified === false}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-bold text-xs rounded-xl shadow-sm"
                 >
-                  {loading ? "Processing..." : "Calculate & Save Penalty"}
+                  {loading ? "Calculating..." : "Calculate & Save Audit Record"}
                 </button>
               </div>
             </form>

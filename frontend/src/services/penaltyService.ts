@@ -4,6 +4,7 @@ export interface PenaltyRecord {
   id?: number | string;
   complaint_id: string;
   district_name: string;
+  hospital_type?: string;
   hospital_name: string;
   bar_code: string;
   equipment_name: string;
@@ -16,6 +17,13 @@ export interface PenaltyRecord {
   close_engineer_id?: string;
   total_downtime?: number;
   total_penalty?: number;
+  per_day_penalty?: number;
+  asset_value?: number;
+  equipment_type?: string;
+  penalty_slab_amount?: number;
+  chargeable_days?: number;
+  standby_status?: string;
+  exemption_reason?: string;
   status?: string;
   created_at?: string;
 }

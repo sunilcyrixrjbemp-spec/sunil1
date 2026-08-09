@@ -1,6 +1,6 @@
 import { jsonResponse, runRead, runWrite } from "../utils/db.js";
 
-// Helper: Parse timestamp format "21-Jan-2025 16:30:47" or standard ISO dates
+// Helper: Parse timestamp format "21-Jan-2025 16:30:47" or standard ISO dates into Date
 export function parsePenaltyDate(dateStr) {
   if (!dateStr || typeof dateStr !== "string") return null;
   const str = dateStr.trim();
@@ -32,30 +32,97 @@ export function parsePenaltyDate(dateStr) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// CA SLA & Penalty Calculation Engine
+// Helper: Format Date object into "DD-MMM-YYYY HH:mm:ss"
+export function formatPenaltyDate(date) {
+  if (!date || isNaN(date.getTime())) return "";
+  const day = String(date.getDate()).padStart(2, '0');
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  const hrs = String(date.getHours()).padStart(2, '0');
+  const mins = String(date.getMinutes()).padStart(2, '0');
+  const secs = String(date.getSeconds()).padStart(2, '0');
+
+  return `${day}-${month}-${year} ${hrs}:${mins}:${secs}`;
+}
+
+// Determine Penalty Slab based on Equipment Asset Value
+export function getPenaltySlabAmount(assetValue) {
+  const val = parseFloat(assetValue) || 0;
+  if (val <= 10000) return 500;
+  if (val <= 100000) return 1000;
+  if (val <= 10000000) return 2000;
+  return 3000;
+}
+
+// CA SLA & Penalty Calculation Engine (BEMMP Rajasthan Contract Specs)
 export function calculateCAPenalty(params) {
   const raiseDate = parsePenaltyDate(params.complaint_raise_date);
   const attendDate = parsePenaltyDate(params.attend_date);
   const closeDate = parsePenaltyDate(params.final_close_date || params.close_date);
+  const condemnationDate = parsePenaltyDate(params.condemnation_date);
 
-  const dailyPenaltyRate = parseFloat(params.daily_penalty_rate) || 500;
   const assetValue = parseFloat(params.asset_value) || 0;
+  const hospitalType = (params.hospital_type || "CHC").trim();
+  const equipmentType = (params.equipment_type || "Non-Critical").trim();
+  const isCritical = Boolean(params.is_critical || equipmentType.toLowerCase() === "critical");
 
+  // 1. SLA Thresholds & Calculation Periods by Institution Type
+  let attendSlaHours = 24;
+  let resolveSlaHours = 48;
+  let periodHours = 24; // 24-hour period for DH / CHC / PHC
+
+  const hTypeLower = hospitalType.toLowerCase();
+  if (hTypeLower.includes("medical college") || hTypeLower.includes("mc")) {
+    attendSlaHours = 1;
+    resolveSlaHours = 6;
+    periodHours = 12; // 12-hour calculation period for Medical Colleges
+  } else if (hTypeLower.includes("chc") || hTypeLower.includes("phc")) {
+    attendSlaHours = 24;
+    resolveSlaHours = 72;
+    periodHours = 24;
+  } else {
+    // DH / SDH / SH
+    attendSlaHours = 24;
+    resolveSlaHours = 48;
+    periodHours = 24;
+  }
+
+  // Quick Response override for Critical equipment
+  if (isCritical) {
+    resolveSlaHours = Math.min(resolveSlaHours, 24);
+  }
+
+  // 2. Attendance SLA Audit
   let attendDelayHours = 0;
   let attendPenaltyAmount = 0;
+  let attendSlaMissed = false;
+
   if (raiseDate && attendDate) {
     const diffMs = attendDate.getTime() - raiseDate.getTime();
     attendDelayHours = Math.max(0, diffMs / (1000 * 3600));
-    const chargeableAttendHrs = Math.max(0, attendDelayHours - 24); // 24h SLA
-    attendPenaltyAmount = chargeableAttendHrs * 50; // ₹50/hr
+    if (attendDelayHours > attendSlaHours) {
+      attendSlaMissed = true;
+      const missedDays = Math.ceil((attendDelayHours - attendSlaHours) / 24);
+      attendPenaltyAmount = missedDays * 500; // ₹500/day missed attend penalty
+    }
   }
 
-  let totalDowntimeDays = 0;
-  if (raiseDate && closeDate) {
-    const diffMs = closeDate.getTime() - raiseDate.getTime();
-    totalDowntimeDays = Math.max(0, diffMs / (1000 * 86400));
+  // 3. Downtime Period & Condemnation Stoppage
+  let effectiveCloseDate = closeDate;
+  if (condemnationDate && (!effectiveCloseDate || condemnationDate < effectiveCloseDate)) {
+    effectiveCloseDate = condemnationDate;
   }
 
+  let totalDowntimeHours = 0;
+  if (raiseDate && effectiveCloseDate) {
+    const diffMs = effectiveCloseDate.getTime() - raiseDate.getTime();
+    totalDowntimeHours = Math.max(0, diffMs / (1000 * 3600));
+  }
+
+  const totalDowntimeDays = Math.ceil(totalDowntimeHours / 24);
+
+  // 4. Exemptions
   const isPartMissing = Boolean(params.is_part_missing || params.part_missing);
   const partMissingDays = isPartMissing ? (parseFloat(params.part_missing_days) || 0) : 0;
 
@@ -68,24 +135,57 @@ export function calculateCAPenalty(params) {
 
   const totalExemptDays = partMissingDays + standbyExemptDays;
   const netChargeableDowntimeDays = Math.max(0, totalDowntimeDays - totalExemptDays);
-  const downtimePenaltyAmount = netChargeableDowntimeDays * dailyPenaltyRate;
+
+  // 5. Penalty Slab & Calculation Periods
+  const penaltySlab = getPenaltySlabAmount(assetValue);
+  const periodsPerDay = 24 / periodHours;
+  const totalPeriods = netChargeableDowntimeDays * periodsPerDay;
+  
+  let baseDowntimePenalty = totalPeriods * penaltySlab;
+
+  // 6. Critical Equipment 110% Surcharge (1.10 multiplier if SLA missed)
+  let criticalSurchargeApplied = false;
+  let downtimePenaltyAmount = baseDowntimePenalty;
+
+  if (isCritical && totalDowntimeHours > resolveSlaHours) {
+    criticalSurchargeApplied = true;
+    downtimePenaltyAmount = baseDowntimePenalty * 1.10;
+  }
 
   const grossPenalty = attendPenaltyAmount + downtimePenaltyAmount;
 
-  // Asset Value Cap Rule (10% max cap)
-  let maxPenaltyCap = assetValue > 0 ? assetValue * 0.10 : Infinity;
-  const finalAuditedPenalty = Math.min(grossPenalty, maxPenaltyCap);
+  // 7. Asset Value Cap Rule (10% max cap)
+  const maxPenaltyCap = assetValue > 0 ? assetValue * 0.10 : Infinity;
+  let penaltyCapApplied = false;
+  let finalAuditedPenalty = grossPenalty;
+
+  if (assetValue > 0 && grossPenalty > maxPenaltyCap) {
+    penaltyCapApplied = true;
+    finalAuditedPenalty = maxPenaltyCap;
+  }
 
   return {
+    hospitalType,
+    periodHours,
+    attendSlaHours,
+    resolveSlaHours,
     attendDelayHours: parseFloat(attendDelayHours.toFixed(2)),
+    attendSlaMissed,
     attendPenaltyAmount: parseFloat(attendPenaltyAmount.toFixed(2)),
-    totalDowntimeDays: parseFloat(totalDowntimeDays.toFixed(2)),
+    totalDowntimeHours: parseFloat(totalDowntimeHours.toFixed(2)),
+    totalDowntimeDays: totalDowntimeDays,
     partMissingDays: parseFloat(partMissingDays.toFixed(2)),
     standbyExemptDays: parseFloat(standbyExemptDays.toFixed(2)),
+    totalExemptDays: parseFloat(totalExemptDays.toFixed(2)),
     netChargeableDowntimeDays: parseFloat(netChargeableDowntimeDays.toFixed(2)),
+    penaltySlab,
+    isCritical,
+    criticalSurchargeApplied,
+    baseDowntimePenalty: parseFloat(baseDowntimePenalty.toFixed(2)),
     downtimePenaltyAmount: parseFloat(downtimePenaltyAmount.toFixed(2)),
     grossPenalty: parseFloat(grossPenalty.toFixed(2)),
     maxPenaltyCap: maxPenaltyCap === Infinity ? 0 : parseFloat(maxPenaltyCap.toFixed(2)),
+    penaltyCapApplied,
     finalAuditedPenalty: parseFloat(finalAuditedPenalty.toFixed(2))
   };
 }
@@ -113,23 +213,25 @@ export async function handleVerifyBarcode(request, env) {
     if (!asset) {
       return jsonResponse({
         success: false,
+        valid: false,
         exists: false,
-        message: `❌ Error: Barcode #${barcode} not found in database Asset Inventory!`
+        error: `❌ Error: Barcode #${barcode} not found in Asset Inventory! Entry Rejected.`
       });
     }
 
     return jsonResponse({
       success: true,
+      valid: true,
       exists: true,
       asset: asset,
       message: `✓ Barcode #${barcode} verified successfully.`
     });
   } catch (err) {
-    return jsonResponse({ success: false, error: err.message }, 500);
+    return jsonResponse({ success: false, valid: false, error: err.message }, 500);
   }
 }
 
-// 2. Process & Save Penalty Entry (Single or Bulk)
+// 2. Save Penalty Entry (Single or Bulk Upload)
 export async function handleSavePenalty(request, env, params, query, user) {
   try {
     const body = await request.json();
@@ -144,11 +246,11 @@ export async function handleSavePenalty(request, env, params, query, user) {
       const barcode = (entry.barcode || entry.barCode || "").trim();
 
       if (!complaintId) {
-        errors.push(`Row #${i + 1}: Complaint ID is required.`);
+        errors.push({ row: i + 1, error: "Complaint ID is required." });
         continue;
       }
       if (!barcode) {
-        errors.push(`Row #${i + 1}: Barcode is required.`);
+        errors.push({ row: i + 1, error: "Barcode is required." });
         continue;
       }
 
@@ -164,13 +266,14 @@ export async function handleSavePenalty(request, env, params, query, user) {
       const asset = (assetRes?.results || [])[0];
 
       if (!asset) {
-        errors.push(`Row #${i + 1} (Complaint #${complaintId}): Barcode #${barcode} not found in Asset Inventory!`);
+        errors.push({ row: i + 1, error: `❌ Error: Barcode #${barcode} not found in Asset Inventory! Entry Rejected.` });
         continue;
       }
 
       const equipmentName = asset.equipment_name || entry.equipment_name || entry.equipmentName || "Medical Device";
       const hospitalName = asset.hospital_name || entry.hospital_name || entry.hospitalName || "Hospital";
       const district = asset.district || entry.district || entry.districtName || "Rajasthan";
+      const hospitalType = entry.hospital_type || entry.hospitalType || "CHC";
 
       // Perform CA Penalty Calculations
       const calc = calculateCAPenalty({
@@ -178,8 +281,12 @@ export async function handleSavePenalty(request, env, params, query, user) {
         attend_date: entry.attend_date || entry.attendDate,
         close_date: entry.close_date || entry.complaintCloseDate,
         final_close_date: entry.final_close_date || entry.finalCloseDate,
+        condemnation_date: entry.condemnation_date || entry.condemnationDate,
         daily_penalty_rate: entry.daily_penalty_rate || 500,
         asset_value: entry.asset_value || entry.assetValue || 0,
+        hospital_type: hospitalType,
+        equipment_type: entry.equipment_type || entry.equipmentType || "Non-Critical",
+        is_critical: entry.is_critical || entry.isCritical,
         is_part_missing: entry.is_part_missing || entry.part_missing,
         part_missing_days: entry.part_missing_days || 0,
         is_standby_provided: entry.is_standby_provided || entry.standby
@@ -188,13 +295,15 @@ export async function handleSavePenalty(request, env, params, query, user) {
       // Save into rj_penalties table
       await runWrite(env, `
         INSERT INTO rj_penalties (
-          complaint_id, district_name, hospital_name, bar_code, equipment_name,
+          complaint_id, district_name, hospital_type, hospital_name, bar_code, equipment_name,
           equipment_model, complaint_raise_date, attend_date, complaint_close_date,
           final_close_date, attended_engineer_name, close_engineer_id, total_downtime,
-          total_penalty, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+          total_penalty, per_day_penalty, asset_value, equipment_type, penalty_slab_amount,
+          chargeable_days, standby_status, exemption_reason, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
         ON CONFLICT(complaint_id) DO UPDATE SET
           district_name=excluded.district_name,
+          hospital_type=excluded.hospital_type,
           hospital_name=excluded.hospital_name,
           bar_code=excluded.bar_code,
           equipment_name=excluded.equipment_name,
@@ -207,10 +316,18 @@ export async function handleSavePenalty(request, env, params, query, user) {
           close_engineer_id=excluded.close_engineer_id,
           total_downtime=excluded.total_downtime,
           total_penalty=excluded.total_penalty,
+          per_day_penalty=excluded.per_day_penalty,
+          asset_value=excluded.asset_value,
+          equipment_type=excluded.equipment_type,
+          penalty_slab_amount=excluded.penalty_slab_amount,
+          chargeable_days=excluded.chargeable_days,
+          standby_status=excluded.standby_status,
+          exemption_reason=excluded.exemption_reason,
           status=excluded.status
       `, [
         complaintId,
         district,
+        hospitalType,
         hospitalName,
         barcode,
         equipmentName,
@@ -223,11 +340,18 @@ export async function handleSavePenalty(request, env, params, query, user) {
         entry.close_engineer_id || entry.closeEngineerId || user?.user_id || "ENG101",
         calc.totalDowntimeDays,
         calc.finalAuditedPenalty,
+        calc.penaltySlab,
+        entry.asset_value || entry.assetValue || 0,
+        entry.equipment_type || entry.equipmentType || "Non-Critical",
+        calc.penaltySlab,
+        calc.netChargeableDowntimeDays,
+        entry.is_standby_provided ? "Provided" : "Not Provided",
+        calc.standbyExemptDays > 0 ? "Standby 90-Day" : (calc.partMissingDays > 0 ? "Part Missing" : "None"),
         entry.status || "Assessed"
       ], request);
 
       // Save Per-Day Breakdown Entries into daily_penalty_records table
-      const totalDays = Math.ceil(calc.totalDowntimeDays) || 1;
+      const totalDays = Math.max(1, calc.totalDowntimeDays);
       const isStandby = Boolean(entry.is_standby_provided || entry.standby);
       const isPartMiss = Boolean(entry.is_part_missing || entry.part_missing);
 
@@ -237,10 +361,10 @@ export async function handleSavePenalty(request, env, params, query, user) {
 
         if (isPartMiss) {
           isExempted = true;
-          exemptionReason = "Part Missing Exemption";
+          exemptionReason = "Part Missing";
         } else if (isStandby && d <= 90) {
           isExempted = true;
-          exemptionReason = `Standby Provided Exemption (Day ${d} of 90)`;
+          exemptionReason = `Standby 90-Day (Day ${d} of 90)`;
         }
 
         const dailyAmt = isExempted ? 0 : (calc.finalAuditedPenalty / (calc.netChargeableDowntimeDays || 1));
@@ -255,7 +379,7 @@ export async function handleSavePenalty(request, env, params, query, user) {
           complaintId,
           barcode,
           d,
-          isPartMiss ? "Part Missing" : (isStandby ? "Standby Provided" : "Open"),
+          isPartMiss ? "Part Missing" : (isStandby ? "Standby Provided" : "Active Downtime"),
           isPartMiss ? 1 : 0,
           isStandby ? 1 : 0,
           isExempted ? 1 : 0,
@@ -270,7 +394,8 @@ export async function handleSavePenalty(request, env, params, query, user) {
         barcode: barcode,
         total_downtime_days: calc.totalDowntimeDays,
         net_chargeable_days: calc.netChargeableDowntimeDays,
-        total_penalty: calc.finalAuditedPenalty
+        total_penalty: calc.finalAuditedPenalty,
+        penalty_cap_applied: calc.penaltyCapApplied
       });
     }
 
@@ -323,10 +448,11 @@ export async function handleGetPenaltyList(request, env, params, query, user) {
     }
 
     const res = await runRead(env, `
-      SELECT id, complaint_id, district_name, hospital_name, bar_code, equipment_name,
+      SELECT id, complaint_id, district_name, hospital_type, hospital_name, bar_code, equipment_name,
              equipment_model, complaint_raise_date, attend_date, complaint_close_date,
              final_close_date, attended_engineer_name, close_engineer_id, total_downtime,
-             total_penalty, status, created_at
+             total_penalty, per_day_penalty, asset_value, equipment_type, penalty_slab_amount,
+             chargeable_days, standby_status, exemption_reason, status, created_at
       FROM rj_penalties
       WHERE ${sqlWhere}
       ORDER BY id DESC LIMIT 500
