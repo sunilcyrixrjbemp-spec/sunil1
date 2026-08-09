@@ -3,13 +3,15 @@ import {
   ShieldAlert,
   Plus,
   Download,
+  Upload,
   Search,
   CheckCircle,
   AlertTriangle,
   Clock,
   FileSpreadsheet,
   RefreshCw,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { penaltyService, PenaltyRecord, DailyPenaltyRecord } from "../services/penaltyService";
@@ -27,6 +29,12 @@ export default function PenaltyModulePage() {
 
   // Modals
   const [showManualModal, setShowManualModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // Bulk Upload State
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadReport, setUploadReport] = useState<any>(null);
 
   // Manual Form State
   const [formData, setFormData] = useState({
@@ -94,7 +102,7 @@ export default function PenaltyModulePage() {
       } else {
         setBarcodeVerified(false);
         setBarcodeAssetInfo(null);
-        toast.error(res.error || `❌ Error: Barcode #${code} not found in database Asset Inventory!`);
+        toast.error(res.error || `❌ Error: Barcode #${code} not found in database Asset Inventory! Entry Rejected.`);
       }
     } catch (e) {
       setBarcodeVerified(false);
@@ -151,6 +159,105 @@ export default function PenaltyModulePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownloadCSVTemplate = () => {
+    const templateHeaders = [
+      "Complaint ID", "Barcode", "Hospital Type", "Complaint Raise Date",
+      "Attend Date", "Close Date", "Asset Value", "Equipment Type",
+      "Is Standby Provided", "Is Part Missing", "Part Missing Days"
+    ];
+
+    const sampleRow1 = [
+      "13126072-800091", "75043156", "CHC", "21-Jan-2025 16:30:47",
+      "23-Jan-2025 18:30:47", "15-May-2025 16:30:47", "500000", "Non-Critical",
+      "Yes", "No", "0"
+    ];
+
+    const sampleRow2 = [
+      "SCRJ1234", "800489061567", "Medical College", "20-Jun-2025 10:07:15",
+      "20-Jun-2025 10:30:00", "20-Jun-2025 16:22:49", "10000", "Critical",
+      "No", "Yes", "2"
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8," + [
+      templateHeaders.join(","),
+      sampleRow1.map(x => `"${x}"`).join(","),
+      sampleRow2.map(x => `"${x}"`).join(",")
+    ].join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Complaint_Import_CSV_Template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("📥 CSV Import Template downloaded successfully!");
+  };
+
+  const handleCSVImportUpload = async () => {
+    if (!uploadFile) {
+      toast.error("Please select a CSV file to upload.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadReport(null);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) {
+          toast.error("CSV file contains no data rows.");
+          setUploading(false);
+          return;
+        }
+
+        const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, "").trim().toLowerCase());
+        const entries: any[] = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(",").map(c => c.replace(/^"|"$/g, "").trim());
+          if (cols.length < 2) continue;
+
+          const rowObj: any = {};
+          headers.forEach((h, idx) => {
+            rowObj[h] = cols[idx] || "";
+          });
+
+          entries.push({
+            complaint_id: rowObj["complaint id"] || rowObj["complaint_id"] || cols[0],
+            barcode: rowObj["barcode"] || rowObj["bar code"] || cols[1],
+            hospital_type: rowObj["hospital type"] || rowObj["hospital_type"] || cols[2] || "CHC",
+            complaint_raise_date: rowObj["complaint raise date"] || rowObj["raise_date"] || cols[3],
+            attend_date: rowObj["attend date"] || rowObj["attend_date"] || cols[4],
+            close_date: rowObj["close date"] || rowObj["close_date"] || cols[5],
+            asset_value: parseFloat(rowObj["asset value"] || rowObj["asset_value"] || cols[6]) || 0,
+            equipment_type: rowObj["equipment type"] || rowObj["equipment_type"] || cols[7] || "Non-Critical",
+            is_standby_provided: (rowObj["is standby provided"] || rowObj["standby"] || cols[8] || "").toLowerCase() === "yes",
+            is_part_missing: (rowObj["is part missing"] || rowObj["part_missing"] || cols[9] || "").toLowerCase() === "yes",
+            part_missing_days: parseFloat(rowObj["part missing days"] || cols[10]) || 0
+          });
+        }
+
+        const res = await penaltyService.savePenaltyEntries(entries);
+        setUploadReport(res);
+        if (res.success) {
+          toast.success(res.message || `✓ ${res.processed} Complaints imported successfully!`);
+          fetchPenaltyList();
+        } else {
+          toast.error(`⚠️ Uploaded ${res.processed} complaints with ${res.errorsCount} error(s).`);
+        }
+      } catch (err: any) {
+        toast.error("Failed to parse CSV file: " + err.message);
+      } finally {
+        setUploading(false);
+      }
+    };
+    reader.readAsText(uploadFile);
   };
 
   const handleExportExcel = (type: "23_columns" | "53_columns" = "23_columns") => {
@@ -286,7 +393,7 @@ export default function PenaltyModulePage() {
         <div>
           <h1 className="text-2xl font-black text-slate-800 uppercase tracking-wide flex items-center gap-2.5">
             <ShieldAlert className="w-7 h-7 text-rose-600" />
-            BEMMP Rajasthan Penalty Module & CA Engine
+            Penalty Audit & SLA Management Module
           </h1>
           <p className="text-slate-500 text-xs mt-1 font-medium flex items-center gap-2">
             <span>Strict Asset Barcode Check</span> • 
@@ -298,6 +405,21 @@ export default function PenaltyModulePage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <button
+            onClick={handleDownloadCSVTemplate}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs shadow-xs transition-all border border-slate-200"
+            title="Download Sample CSV Template for Complaint Import"
+          >
+            <FileText className="w-4 h-4 text-blue-600" /> CSV Template
+          </button>
+
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
+          >
+            <Upload className="w-4 h-4" /> Import CSV File
+          </button>
+
+          <button
             onClick={() => setShowManualModal(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
           >
@@ -308,14 +430,14 @@ export default function PenaltyModulePage() {
             onClick={() => handleExportExcel("23_columns")}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
           >
-            <Download className="w-4 h-4" /> Export 23-Column Core Excel
+            <Download className="w-4 h-4" /> Export 23-Col Core
           </button>
 
           <button
             onClick={() => handleExportExcel("53_columns")}
             className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all"
           >
-            <FileSpreadsheet className="w-4 h-4" /> Export 53-Column Full Excel
+            <FileSpreadsheet className="w-4 h-4" /> Export 53-Col Full
           </button>
         </div>
       </div>
@@ -432,7 +554,7 @@ export default function PenaltyModulePage() {
                 {filteredRecords.length === 0 ? (
                   <tr>
                     <td colSpan={13} className="py-8 text-center text-slate-400 font-bold">
-                      No penalty records found. Click "+ Add Complaint Entry" to calculate a penalty.
+                      No penalty records found. Click "+ Add Complaint Entry" or "Import CSV File" to populate data.
                     </td>
                   </tr>
                 ) : (
@@ -534,6 +656,88 @@ export default function PenaltyModulePage() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Import Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full border border-slate-200 overflow-hidden">
+            <div className="bg-slate-800 p-4 text-white flex items-center justify-between">
+              <h3 className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-2">
+                <Upload className="w-5 h-5 text-indigo-400" />
+                Import Complaints CSV File
+              </h3>
+              <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:bg-slate-50 transition-colors">
+                <Upload className="w-10 h-10 text-indigo-500 mx-auto mb-2" />
+                <p className="text-xs font-extrabold text-slate-700 mb-1">
+                  Upload filled CSV file matching format
+                </p>
+                <p className="text-[11px] text-slate-400 mb-3">
+                  (Complaint ID, Barcode, Hospital Type, Raise Date, Attend Date, Close Date, Asset Value, etc.)
+                </p>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                  className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+              </div>
+
+              {uploadReport && (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs font-semibold">
+                  <div className="flex items-center justify-between font-bold text-slate-800">
+                    <span>Processed: {uploadReport.processed} Records</span>
+                    <span className={uploadReport.errorsCount > 0 ? "text-rose-600" : "text-emerald-600"}>
+                      Errors: {uploadReport.errorsCount}
+                    </span>
+                  </div>
+
+                  {uploadReport.errors && uploadReport.errors.length > 0 && (
+                    <div className="max-h-32 overflow-y-auto space-y-1 text-[11px] font-mono text-rose-700 bg-rose-50 p-2 rounded border border-rose-200">
+                      {uploadReport.errors.map((errItem: any, idx: number) => (
+                        <div key={idx}>Row #{errItem.row}: {errItem.error}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadCSVTemplate}
+                  className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+                >
+                  <FileText className="w-4 h-4" /> Download Sample CSV Template
+                </button>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowUploadModal(false)}
+                    className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCSVImportUpload}
+                    disabled={uploading || !uploadFile}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 text-white font-bold text-xs rounded-xl shadow-sm"
+                  >
+                    {uploading ? "Importing..." : "Process & Import CSV"}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
