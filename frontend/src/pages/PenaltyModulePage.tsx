@@ -1,20 +1,15 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
   ShieldAlert,
-  Upload,
   Plus,
   Download,
   Search,
-  Filter,
   CheckCircle,
   AlertTriangle,
   Clock,
-  Building2,
   FileSpreadsheet,
   RefreshCw,
-  X,
-  Check,
-  Calendar
+  X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { penaltyService, PenaltyRecord, DailyPenaltyRecord } from "../services/penaltyService";
@@ -28,10 +23,9 @@ export default function PenaltyModulePage() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDistrict, setSelectedDistrict] = useState("all");
+  const [selectedDistrict] = useState("all");
 
   // Modals
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
 
   // Manual Form State
