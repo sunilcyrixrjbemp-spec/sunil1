@@ -364,6 +364,23 @@ export async function handleSavePenalty(request, env, params, query, user) {
         }
       }
 
+      // Auto-lookup Criticality from critical_equipment database table
+      let isCriticalEquipment = false;
+      if (entry.is_critical !== undefined) {
+        isCriticalEquipment = Boolean(entry.is_critical || entry.isCritical);
+      } else if (equipmentName || barcode) {
+        const critRes = await runRead(env, `
+          SELECT id FROM critical_equipment
+          WHERE equipment_name LIKE ? OR barcode = ? OR bar_code = ? OR qr_code = ?
+          LIMIT 1
+        `, [`%${equipmentName}%`, barcode, barcode, barcode], request).catch(() => ({ results: [] }));
+        if (critRes?.results?.length > 0) {
+          isCriticalEquipment = true;
+        }
+      }
+
+      const equipmentTypeStr = isCriticalEquipment ? "Critical" : "Non-Critical";
+
       // Perform CA Penalty Calculations
       const calc = calculateCAPenalty({
         complaint_raise_date: entry.complaint_raise_date || entry.complaintRaiseDate,
@@ -374,8 +391,8 @@ export async function handleSavePenalty(request, env, params, query, user) {
         daily_penalty_rate: entry.daily_penalty_rate || 500,
         asset_value: assetValue,
         hospital_type: hospitalType,
-        equipment_type: entry.equipment_type || entry.equipmentType || "Non-Critical",
-        is_critical: entry.is_critical || entry.isCritical,
+        equipment_type: equipmentTypeStr,
+        is_critical: isCriticalEquipment,
         is_part_missing: entry.is_part_missing || entry.part_missing,
         part_missing_days: entry.part_missing_days || 0,
         is_standby_provided: entry.is_standby_provided || entry.standby

@@ -164,19 +164,19 @@ export default function PenaltyModulePage() {
   const handleDownloadCSVTemplate = () => {
     const templateHeaders = [
       "Complaint ID", "Barcode", "Hospital Type", "Complaint Raise Date",
-      "Attend Date", "Close Date", "Asset Value", "Equipment Type",
+      "Attend Date", "Close Date", "Asset Value",
       "Is Standby Provided", "Is Part Missing"
     ];
 
     const sampleRow1 = [
       "13126072-800091", "75043156", "CHC", "21-Jan-2025 16:30:47",
-      "23-Jan-2025 18:30:47", "15-May-2025 16:30:47", "500000", "Non-Critical",
+      "23-Jan-2025 18:30:47", "15-May-2025 16:30:47", "500000",
       "Yes", "No"
     ];
 
     const sampleRow2 = [
       "SCRJ1234", "800489061567", "Medical College", "20-Jun-2025 10:07:15",
-      "20-Jun-2025 10:30:00", "20-Jun-2025 16:22:49", "10000", "Critical",
+      "20-Jun-2025 10:30:00", "20-Jun-2025 16:22:49", "10000",
       "No", "Yes"
     ];
 
@@ -236,9 +236,8 @@ export default function PenaltyModulePage() {
             attend_date: rowObj["attend date"] || rowObj["attend_date"] || cols[4],
             close_date: rowObj["close date"] || rowObj["close_date"] || cols[5],
             asset_value: parseFloat(rowObj["asset value"] || rowObj["asset_value"] || cols[6]) || 0,
-            equipment_type: rowObj["equipment type"] || rowObj["equipment_type"] || cols[7] || "Non-Critical",
-            is_standby_provided: (rowObj["is standby provided"] || rowObj["standby"] || cols[8] || "").toLowerCase() === "yes",
-            is_part_missing: (rowObj["is part missing"] || rowObj["part_missing"] || cols[9] || "").toLowerCase() === "yes"
+            is_standby_provided: (rowObj["is standby provided"] || rowObj["standby"] || cols[7] || "").toLowerCase() === "yes",
+            is_part_missing: (rowObj["is part missing"] || rowObj["part_missing"] || cols[8] || "").toLowerCase() === "yes"
           });
         }
 
