@@ -45,6 +45,7 @@ export const MENU_ITEMS: MenuItem[] = [
   { id: "report",             name: "Month Summary",        path: "/month-report",       icon: Calendar,      roles: ["Admin","Manager","Division Manager","Accountant","HR","MIS","VP","Project Head","Travel Desk"],                            gradientFrom: "from-teal-500",    gradientTo: "to-emerald-600", shadowColor: "rgba(20,184,166,0.35)" },
   { id: "consolidated_report",name: "Consolidated Reports", path: "/consolidated-report",icon: ClipboardList, roles: ["Admin","Manager","Division Manager","Coordinator","Accountant","HR","MIS","VP","Project Head","Travel Desk"],              gradientFrom: "from-sky-500",     gradientTo: "to-blue-600",   shadowColor: "rgba(14,165,233,0.35)" },
   { id: "penalty_report",     name: "Penalty Audit",        path: "/penalty-report",     icon: ShieldAlert,   roles: ["Admin","Manager","Division Manager","Accountant","MIS","VP","Travel Desk"],                                               gradientFrom: "from-red-500",     gradientTo: "to-rose-700",   shadowColor: "rgba(239,68,68,0.35)" },
+  { id: "penalty_module",     name: "Penalty Module",       path: "/penalty-module",     icon: ShieldAlert,   roles: ["Admin","Manager","Division Manager","Accountant","MIS","VP","Travel Desk"],                                               gradientFrom: "from-rose-600",    gradientTo: "to-red-800",    shadowColor: "rgba(225,29,72,0.35)" },
   { id: "attendance",         name: "Attendance Roster",    path: "/attendance",         icon: Calendar,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-indigo-500",  gradientTo: "to-cyan-600",   shadowColor: "rgba(99,102,241,0.35)" },
   { id: "admin",              name: "Admin Console",        path: "/admin",              icon: Settings,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-slate-600",   gradientTo: "to-slate-800",  shadowColor: "rgba(100,116,139,0.35)" },
   { id: "admin_enterprise",   name: "Enterprise Panel",     path: "/admin/enterprise",   icon: Zap,           roles: ["Admin"],                                                                                                                  gradientFrom: "from-violet-600",  gradientTo: "to-purple-800", shadowColor: "rgba(139,92,246,0.35)" },
@@ -57,7 +58,7 @@ export const MENU_ITEMS: MenuItem[] = [
 const NAV_GROUPS = [
   { label: "Workspace",          ids: ["home", "new_dashboard"] },
   { label: "Claims & Approvals", ids: ["expense", "approval"] },
-  { label: "Reports & Analytics",ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report"] },
+  { label: "Reports & Analytics",ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report", "penalty_module"] },
   { label: "Management & Config",ids: ["admin", "admin_enterprise", "admin_analytics", "asset_upload"] },
   { label: "Account",            ids: ["profile", "help"] },
 ];

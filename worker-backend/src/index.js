@@ -95,6 +95,9 @@ import {
   handleSaveFieldAsset, handleGetFieldAssetByBarcode, handleGetOpenCalls
 } from "./routes/expense.js";
 
+// Penalty handlers
+import { handleVerifyBarcode as handleVerifyPenaltyBarcode, handleSavePenalty, handleGetPenaltyList } from "./routes/penalty.js";
+
 // Attendance handlers
 import {
   handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies
@@ -251,6 +254,11 @@ router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true, [
 router.get("/api/admin/facilities", handleGetFacilities, true, ["Admin"]);
 router.post("/api/admin/facilities", handleSaveFacility, true, ["Admin"]);
 router.delete("/api/admin/facilities/:id", handleDeleteFacility, true, ["Admin"]);
+
+// Penalty Module Routes
+router.post("/api/penalty/verify-barcode", handleVerifyPenaltyBarcode, true);
+router.post("/api/penalty/save", handleSavePenalty, true);
+router.get("/api/penalty/list", handleGetPenaltyList, true);
 
 // Admin migrations
 router.post("/api/admin/run-migrations", async (req, env, params, query, user) => {
