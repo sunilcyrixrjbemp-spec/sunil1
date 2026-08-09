@@ -123,9 +123,21 @@ export function calculateCAPenalty(params) {
 
   const totalDowntimeDays = Math.ceil(totalDowntimeHours / 24);
 
-  // 4. Exemptions
+  // 4. Exemptions (Part Missing calculated starting from Attend Date)
   const isPartMissing = Boolean(params.is_part_missing || params.part_missing);
-  const partMissingDays = isPartMissing ? (parseFloat(params.part_missing_days) || 0) : 0;
+  let partMissingDays = 0;
+
+  if (isPartMissing) {
+    const partStartDate = parsePenaltyDate(params.part_missing_start_date) || attendDate || raiseDate;
+    const partEndDate = parsePenaltyDate(params.part_missing_end_date || params.part_received_date);
+
+    if (partStartDate && partEndDate) {
+      const diffMs = partEndDate.getTime() - partStartDate.getTime();
+      partMissingDays = Math.max(0, Math.ceil(diffMs / (1000 * 86400)));
+    } else {
+      partMissingDays = parseFloat(params.part_missing_days) || 0;
+    }
+  }
 
   const isStandbyProvided = Boolean(params.is_standby_provided || params.standby);
   let standbyExemptDays = 0;
