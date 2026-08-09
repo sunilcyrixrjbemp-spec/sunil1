@@ -660,7 +660,7 @@ export async function handleSavePenalty(request, env, params, query, user) {
   }
 }
 
-// 3. Get Penalty List with Facility-Based Access Control (RBAC)
+// 3. Get Penalty List with Facility-Based Access Control (RBAC) & Auto-Repair Existing DB Records
 export async function handleGetPenaltyList(request, env, params, query, user) {
   try {
     const qParams = query && typeof query.get === "function" ? query : new URLSearchParams();
@@ -719,6 +719,103 @@ export async function handleGetPenaltyList(request, env, params, query, user) {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `, [], request).catch(() => {});
+
+    // ── AUTOMATIC SELF-HEALING RE-MAP FOR EXISTING RECORDS IN DATABASE ──
+    try {
+      const unmappedRes = await runRead(env, `
+        SELECT id, bar_code, hospital_name, district_name, equipment_name, attended_engineer_name, di_name, zone_name
+        FROM rj_penalties
+        WHERE hospital_name = 'Hospital' OR hospital_name IS NULL OR hospital_name = ''
+           OR district_name = 'Rajasthan' OR district_name IS NULL OR district_name = ''
+           OR equipment_name = 'Medical Device' OR equipment_name IS NULL OR equipment_name = ''
+        LIMIT 200
+      `, [], request).catch(() => ({ results: [] }));
+
+      const unmapped = unmappedRes?.results || [];
+      if (unmapped.length > 0) {
+        const allAssetsRes = await runRead(env, `
+          SELECT qr_code, equipment_name, equipment_model, hospital_name, district_name as district, parsed_asset_value as asset_value, equipment_serial_number
+          FROM assets_inventory
+        `, [], request).catch(() => ({ results: [] }));
+
+        const assetMap = new Map();
+        (allAssetsRes?.results || []).forEach(a => {
+          if (a.qr_code) {
+            const code = a.qr_code.trim();
+            assetMap.set(code, a);
+            if (code.length >= 8) assetMap.set(code.slice(-8), a);
+          }
+          if (a.equipment_serial_number) {
+            const sn = a.equipment_serial_number.trim();
+            assetMap.set(sn, a);
+            if (sn.length >= 8) assetMap.set(sn.slice(-8), a);
+          }
+        });
+
+        const diListRes = await runRead(env, `
+          SELECT hospital_name, di_name, coordinator_name, zone_name, district_name FROM di_name_list
+        `, [], request).catch(() => ({ results: [] }));
+
+        const diMap = new Map();
+        (diListRes?.results || []).forEach(r => {
+          if (r.hospital_name) diMap.set(r.hospital_name.toLowerCase().trim(), r);
+        });
+
+        const db = env._originalDB || env.DB;
+        const updateStmts = [];
+
+        for (const rec of unmapped) {
+          const tokens = extractBarcodeTokens(rec.bar_code);
+          let matchedAsset = null;
+          for (const t of tokens) {
+            if (assetMap.has(t)) {
+              matchedAsset = assetMap.get(t);
+              break;
+            }
+            const t8 = t.length >= 8 ? t.slice(-8) : t;
+            if (assetMap.has(t8)) {
+              matchedAsset = assetMap.get(t8);
+              break;
+            }
+          }
+
+          if (matchedAsset) {
+            const newEq = matchedAsset.equipment_name || rec.equipment_name || "";
+            const newHosp = matchedAsset.hospital_name || rec.hospital_name || "";
+            let newDist = matchedAsset.district || matchedAsset.district_name || rec.district_name || "";
+            let newDi = rec.di_name || rec.attended_engineer_name || "";
+            let newZone = rec.zone_name || "";
+            let newCoord = "";
+
+            if (newHosp) {
+              const diInfo = diMap.get(newHosp.toLowerCase().trim());
+              if (diInfo) {
+                newDi = diInfo.di_name || newDi;
+                newZone = diInfo.zone_name || newZone;
+                newCoord = diInfo.coordinator_name || newCoord;
+                if (diInfo.district_name) newDist = diInfo.district_name;
+              }
+            }
+
+            updateStmts.push(
+              db.prepare(`
+                UPDATE rj_penalties
+                SET equipment_name = ?, hospital_name = ?, district_name = ?, di_name = ?, attended_engineer_name = ?, zone_name = ?, coordinator_name = ?
+                WHERE id = ?
+              `).bind(newEq, newHosp, newDist, newDi, newDi, newZone, newCoord, rec.id)
+            );
+          }
+        }
+
+        if (updateStmts.length > 0) {
+          for (let u = 0; u < updateStmts.length; u += 100) {
+            await db.batch(updateStmts.slice(u, u + 100)).catch(e => console.error("Auto-repair error:", e.message));
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Auto-repair migration check failed:", err.message);
+    }
 
     let sqlWhere = "1=1";
     const sqlParams = [];
