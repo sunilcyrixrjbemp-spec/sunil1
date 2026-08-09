@@ -416,7 +416,6 @@ export default function PenaltyModulePage() {
 
   // KPI Computations
   const totalAssessed = useMemo(() => filteredRecords.reduce((sum, r) => sum + (r.total_penalty || 0), 0), [filteredRecords]);
-  const medicalCollegeCount = useMemo(() => filteredRecords.filter(r => (r.hospital_type || "").toLowerCase().includes("medical")).length, [filteredRecords]);
   const standbyExemptedCount = useMemo(() => filteredRecords.filter(r => (r.standby_status || "").toLowerCase().includes("provided")).length, [filteredRecords]);
   const partMissingCount = useMemo(() => filteredRecords.filter(r => (r.exemption_reason || "").toLowerCase().includes("part")).length, [filteredRecords]);
 
