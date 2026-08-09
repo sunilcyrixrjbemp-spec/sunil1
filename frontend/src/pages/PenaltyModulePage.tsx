@@ -4,26 +4,25 @@ import {
   Plus,
   Download,
   Upload,
-  Search,
-  CheckCircle,
-  AlertTriangle,
   Clock,
   FileSpreadsheet,
   X,
   FileText,
-  Building2,
   TrendingDown,
   BarChart3,
   PieChart,
   Repeat,
   Layers,
-  Filter,
   UserCheck,
   Zap,
-  CheckCircle2,
   Lock,
   Loader2,
-  LayoutDashboard
+  Calendar,
+  DollarSign,
+  AlertCircle,
+  CheckCircle2 as ApprovedIcon,
+  XCircle,
+  Building2
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { penaltyService, PenaltyRecord, DailyPenaltyRecord } from "../services/penaltyService";
@@ -35,7 +34,8 @@ import {
 } from "../components/common/SaaSCharts";
 
 export default function PenaltyModulePage() {
-  const [activeTab, setActiveTab] = useState<"dashboard" | "monthly" | "daily" | "repeated">("dashboard");
+  const [activeTab, setActiveTab] = useState<"monthly" | "dashboard" | "daily" | "repeated">("monthly");
+  const [subTab, setSubTab] = useState<"all" | "medical" | "dh" | "chc">("all");
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<PenaltyRecord[]>([]);
   const [selectedComplaintId, setSelectedComplaintId] = useState<string>("");
@@ -43,12 +43,15 @@ export default function PenaltyModulePage() {
 
   // Multi-Filter State
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("all");
+  const [selectedMonth, setSelectedMonth] = useState("Aug 2026");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [selectedZone, setSelectedZone] = useState("all");
   const [selectedDistrict, setSelectedDistrict] = useState("all");
   const [selectedDI, setSelectedDI] = useState("all");
   const [selectedHospital, setSelectedHospital] = useState("all");
   const [selectedEquipment, setSelectedEquipment] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
 
   // Modals
   const [showManualModal, setShowManualModal] = useState(false);
@@ -231,7 +234,6 @@ export default function PenaltyModulePage() {
     toast.success("📥 CSV Import Template downloaded successfully!");
   };
 
-  // HIGH-SPEED BULK CSV IMPORT ENGINE (100,000 complaints in ~10 seconds with live progress)
   const handleCSVImportUpload = async () => {
     if (!uploadFile) {
       toast.error("Please select a CSV file to upload.");
@@ -470,12 +472,12 @@ export default function PenaltyModulePage() {
     toast.success(`📥 Penalty File (${type === "23_columns" ? "23-Column Core" : "53-Column Full"}) exported!`);
   };
 
-  // Distinct Filter Options
+  // Filter Options
   const filterOptions = useMemo(() => {
     const districts = Array.from(new Set(records.map(r => r.district_name).filter(Boolean))).sort();
     const hospitals = Array.from(new Set(records.map(r => r.hospital_name).filter(Boolean))).sort();
     const equipmentList = Array.from(new Set(records.map(r => r.equipment_name).filter(Boolean))).sort();
-    const dis = Array.from(new Set(records.map(r => r.attended_engineer_name).filter(Boolean))).sort();
+    const dis = Array.from(new Set(records.map(r => r.attended_engineer_name || r.di_name).filter(Boolean))).sort();
     return { districts, hospitals, equipmentList, dis };
   }, [records]);
 
@@ -490,20 +492,29 @@ export default function PenaltyModulePage() {
         (r.equipment_name || "").toLowerCase().includes(q);
 
       const matchesMonth = selectedMonth === "all" || (r.complaint_raise_date || "").toLowerCase().includes(selectedMonth.toLowerCase());
-      const matchesZone = selectedZone === "all" || (r.district_name || "").toLowerCase().includes(selectedZone.toLowerCase());
+      const matchesZone = selectedZone === "all" || (r.zone_name || r.district_name || "").toLowerCase().includes(selectedZone.toLowerCase());
       const matchesDistrict = selectedDistrict === "all" || r.district_name === selectedDistrict;
-      const matchesDI = selectedDI === "all" || r.attended_engineer_name === selectedDI;
+      const matchesDI = selectedDI === "all" || (r.attended_engineer_name === selectedDI || r.di_name === selectedDI);
       const matchesHospital = selectedHospital === "all" || r.hospital_name === selectedHospital;
       const matchesEquipment = selectedEquipment === "all" || r.equipment_name === selectedEquipment;
+      const matchesStatus = selectedStatus === "all" || (r.status || "").toLowerCase().includes(selectedStatus.toLowerCase());
 
-      return matchesQuery && matchesMonth && matchesZone && matchesDistrict && matchesDI && matchesHospital && matchesEquipment;
+      const matchesSubTab = subTab === "all" ||
+        (subTab === "medical" && (r.hospital_type || "").toLowerCase().includes("medical")) ||
+        (subTab === "dh" && (r.hospital_type || "").toLowerCase().includes("dh")) ||
+        (subTab === "chc" && ((r.hospital_type || "").toLowerCase().includes("chc") || (r.hospital_type || "").toLowerCase().includes("phc")));
+
+      return matchesQuery && matchesMonth && matchesZone && matchesDistrict && matchesDI && matchesHospital && matchesEquipment && matchesStatus && matchesSubTab;
     });
-  }, [records, searchQuery, selectedMonth, selectedZone, selectedDistrict, selectedDI, selectedHospital, selectedEquipment]);
+  }, [records, searchQuery, selectedMonth, selectedZone, selectedDistrict, selectedDI, selectedHospital, selectedEquipment, selectedStatus, subTab]);
 
   // KPI Computations
-  const totalAssessed = useMemo(() => filteredRecords.reduce((sum, r) => sum + (r.total_penalty || 0), 0), [filteredRecords]);
+  const totalAuditedPenalty = useMemo(() => filteredRecords.reduce((sum, r) => sum + (r.total_penalty || 0), 0), [filteredRecords]);
+  const totalDowntimeDays = useMemo(() => filteredRecords.reduce((sum, r) => sum + (r.total_downtime || 0), 0), [filteredRecords]);
   const standbyExemptedCount = useMemo(() => filteredRecords.filter(r => (r.standby_status || "").toLowerCase().includes("provided")).length, [filteredRecords]);
   const partMissingCount = useMemo(() => filteredRecords.filter(r => (r.exemption_reason || "").toLowerCase().includes("part")).length, [filteredRecords]);
+  const criticalCount = useMemo(() => filteredRecords.filter(r => (r.equipment_type || "").toLowerCase().includes("critical")).length, [filteredRecords]);
+  const criticalPenalty = useMemo(() => filteredRecords.filter(r => (r.equipment_type || "").toLowerCase().includes("critical")).reduce((sum, r) => sum + (r.total_penalty || 0), 0), [filteredRecords]);
 
   // Analytics Chart Data Computations
   const districtChartData = useMemo(() => {
@@ -570,9 +581,9 @@ export default function PenaltyModulePage() {
       if (!map[bc]) {
         map[bc] = {
           barcode: bc,
-          equipment: r.equipment_name || "Medical Device",
-          hospital: r.hospital_name || "CHC Hospital",
-          district: r.district_name || "Ajmer",
+          equipment: r.equipment_name || "-",
+          hospital: r.hospital_name || "-",
+          district: r.district_name || "-",
           count: 0,
           totalPenalty: 0,
           complaints: []
@@ -587,539 +598,702 @@ export default function PenaltyModulePage() {
   }, [filteredRecords]);
 
   return (
-    <div className="space-y-4 animate-fadeIn text-slate-800 font-sans p-3 sm:p-5 bg-slate-50/90 min-h-screen">
+    <div className="space-y-4 animate-fadeIn text-slate-800 font-sans p-3 sm:p-4 bg-slate-100 min-h-screen">
       
-      {/* Executive Penalty Dashboard Header Bar */}
-      <div className="bg-white px-5 py-3.5 rounded-3xl border border-slate-200/80 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl text-white shadow-xs">
-            <ShieldAlert className="w-5 h-5" />
+      {/* 1. TOP GREETING BANNER (Matching Overview / Expense Page Aesthetic) */}
+      <div className="bg-[#486581] text-white px-4 py-2.5 rounded-none shadow-xs flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full bg-slate-300 text-slate-800 font-extrabold flex items-center justify-center text-xs">
+            S
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-black text-slate-900 tracking-tight">
-                Penalty Audit & Executive Dashboard
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200">
-                BEMMP Rajasthan Contract
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 font-medium">
-              Medical College (12h) • DH/CHC (24h) • Standby 90D Grace • Part Miss ₹0 • Final Closed Protected
-            </p>
-          </div>
+          <span className="text-xs font-extrabold tracking-wide">
+            Good Evening, System Administrator 👋 <span className="opacity-75 font-normal">(Admin)</span>
+          </span>
         </div>
 
-        {/* Compact Right Action Toolbar */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleDownloadCSVTemplate}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-[11px] border border-slate-200/80 transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-none font-bold text-[11px] border border-white/20 transition-all"
           >
-            <FileText className="w-3.5 h-3.5 text-blue-600" /> CSV Template
+            <FileText className="w-3.5 h-3.5" /> CSV Template
           </button>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-2xl font-black text-[11px] shadow-xs transition-all"
+            className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-none font-bold text-[11px] shadow-2xs transition-all"
           >
             <Upload className="w-3.5 h-3.5" /> High-Speed Import
           </button>
           <button
             onClick={() => setShowManualModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-[11px] shadow-xs transition-all"
+            className="flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-bold text-[11px] shadow-2xs transition-all"
           >
             <Plus className="w-3.5 h-3.5" /> Add Entry
           </button>
           <button
             onClick={() => handleExportExcel("23_columns")}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-[11px] shadow-xs transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-none font-bold text-[11px] transition-all"
           >
             <Download className="w-3.5 h-3.5" /> 23-Col Export
           </button>
           <button
             onClick={() => handleExportExcel("53_columns")}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-2xl font-bold text-[11px] shadow-xs transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-none font-bold text-[11px] transition-all"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" /> 53-Col Export
           </button>
         </div>
       </div>
 
-      {/* COMPACT 4 EXECUTIVE KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between group hover:shadow-xs transition-all">
-          <div>
-            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Net Audited Penalty</span>
-            <span className="text-xl font-black text-rose-600 mt-0.5 block">₹{totalAssessed.toLocaleString()}</span>
-          </div>
-          <div className="p-2.5 bg-rose-50 text-rose-600 rounded-2xl group-hover:scale-105 transition-transform">
-            <AlertTriangle className="w-4 h-4" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between group hover:shadow-xs transition-all">
-          <div>
-            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Audited Complaints</span>
-            <span className="text-xl font-black text-slate-900 mt-0.5 block">{filteredRecords.length} Calls</span>
-          </div>
-          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-2xl group-hover:scale-105 transition-transform">
-            <FileSpreadsheet className="w-4 h-4" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between group hover:shadow-xs transition-all">
-          <div>
-            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Barcode Verified</span>
-            <span className="text-xl font-black text-emerald-600 mt-0.5 block">100% Valid</span>
-          </div>
-          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl group-hover:scale-105 transition-transform">
-            <CheckCircle className="w-4 h-4" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between group hover:shadow-xs transition-all">
-          <div>
-            <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">SLA Exemptions</span>
-            <span className="text-xl font-black text-amber-600 mt-0.5 block">{standbyExemptedCount + partMissingCount} Exempt</span>
-          </div>
-          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-2xl group-hover:scale-105 transition-transform">
-            <Clock className="w-4 h-4" />
+      {/* 2. SUMMARY STRIP HEADER (Matching Overview / Expense Page Header) */}
+      <div className="bg-[#345168] text-white px-4 py-2 rounded-none flex items-center justify-between">
+        <span className="text-xs font-black uppercase tracking-wider">
+          CONTRACT PENALTY AUDIT SUMMARY
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">MONTH:</span>
+          <div className="bg-white text-slate-800 px-2.5 py-0.5 rounded-none text-xs font-bold flex items-center gap-1">
+            <span>August, 2026</span>
+            <Calendar className="w-3.5 h-3.5 text-slate-500" />
           </div>
         </div>
       </div>
 
-      {/* COMPREHENSIVE MULTI-FILTER BAR */}
-      <div className="bg-white p-3.5 rounded-3xl border border-slate-200/80 shadow-2xs space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[10px] font-black uppercase text-slate-500 flex items-center gap-1 tracking-wider">
-            <Filter className="w-3.5 h-3.5 text-blue-600" /> Multi-Dimension Filters
+      {/* 3. 6 SIDE-BY-SIDE COMPACT DATA CARDS (Exact Replica of Overview Expense Cards) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        {/* Card 1: Total Audited Penalty */}
+        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">TOTAL AUDITED PENALTY</span>
+            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-slate-100 text-slate-600 border border-slate-200">
+              {filteredRecords.length} Calls
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="p-1.5 bg-blue-600 text-white rounded-none shrink-0">
+              <DollarSign className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-slate-900 font-mono tracking-tight truncate">
+              ₹{totalAuditedPenalty.toLocaleString("en-IN")}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 2: Total Downtime */}
+        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">TOTAL DOWNTIME</span>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="p-1.5 bg-amber-500 text-white rounded-none shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-slate-900 font-mono tracking-tight truncate">
+              {totalDowntimeDays} DAYS
+            </span>
+          </div>
+        </div>
+
+        {/* Card 3: Standby Exempted */}
+        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">STANDBY EXEMPTED</span>
+            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-purple-100 text-purple-700 border border-purple-200">
+              {standbyExemptedCount} Calls
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="p-1.5 bg-purple-600 text-white rounded-none shrink-0">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-purple-700 font-mono tracking-tight truncate">
+              ₹0 PENALTY
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Part Missing Free */}
+        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">PART MISSING FREE</span>
+            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-emerald-100 text-emerald-700 border border-emerald-200">
+              {partMissingCount} Claims
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="p-1.5 bg-emerald-600 text-white rounded-none shrink-0">
+              <ApprovedIcon className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-emerald-600 font-mono tracking-tight truncate">
+              ₹0 PENALTY
+            </span>
+          </div>
+        </div>
+
+        {/* Card 5: Critical Surcharges */}
+        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">CRITICAL SURCHARGED</span>
+            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-amber-100 text-amber-800 border border-amber-200">
+              {criticalCount} Calls
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="p-1.5 bg-amber-600 text-white rounded-none shrink-0">
+              <AlertCircle className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-amber-700 font-mono tracking-tight truncate">
+              ₹{criticalPenalty.toLocaleString("en-IN")}
+            </span>
+          </div>
+        </div>
+
+        {/* Card 6: Net Audited SLA Cap */}
+        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">NET PAYABLE PENALTY</span>
+            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-rose-100 text-rose-700 border border-rose-200">
+              Capped
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="p-1.5 bg-rose-600 text-white rounded-none shrink-0">
+              <XCircle className="w-4 h-4" />
+            </div>
+            <span className="text-base font-black text-rose-600 font-mono tracking-tight truncate">
+              ₹{totalAuditedPenalty.toLocaleString("en-IN")}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. SUB-TAB PILL BUTTONS (Matching Overview Claims Switcher) */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setSubTab("all")}
+          className={`px-4 py-1.5 text-xs font-black transition-all ${
+            subTab === "all" ? "bg-[#345168] text-white shadow-2xs" : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
+          }`}
+        >
+          All Complaints ({records.length})
+        </button>
+
+        <button
+          onClick={() => setSubTab("medical")}
+          className={`px-4 py-1.5 text-xs font-bold transition-all ${
+            subTab === "medical" ? "bg-[#345168] text-white shadow-2xs" : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
+          }`}
+        >
+          Medical Colleges (12h SLA)
+        </button>
+
+        <button
+          onClick={() => setSubTab("dh")}
+          className={`px-4 py-1.5 text-xs font-bold transition-all ${
+            subTab === "dh" ? "bg-[#345168] text-white shadow-2xs" : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
+          }`}
+        >
+          DH / SDH (24h SLA)
+        </button>
+
+        <button
+          onClick={() => setSubTab("chc")}
+          className={`px-4 py-1.5 text-xs font-bold transition-all ${
+            subTab === "chc" ? "bg-[#345168] text-white shadow-2xs" : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
+          }`}
+        >
+          CHC / PHC (24h SLA)
+        </button>
+      </div>
+
+      {/* 5. DARK SLATE BLUE FILTER BAR (Exact Replica of Overview Filter Container) */}
+      <div className="bg-[#345168] p-3 rounded-none text-white space-y-2 shadow-2xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2">
+          {/* Month */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">MONTH</label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            >
+              <option value="Aug 2026">Aug 2026</option>
+              <option value="Jul 2026">Jul 2026</option>
+              <option value="Jun 2026">Jun 2026</option>
+              <option value="all">All Months</option>
+            </select>
+          </div>
+
+          {/* From Date */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">FROM DATE</label>
+            <input
+              type="text"
+              placeholder="dd-mm-yyyy"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            />
+          </div>
+
+          {/* To Date */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">TO DATE</label>
+            <input
+              type="text"
+              placeholder="dd-mm-yyyy"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            />
+          </div>
+
+          {/* Search Complaint ID */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">SEARCH COMPLAINT ID</label>
+            <input
+              type="text"
+              placeholder="Search RJ-08 / Claim..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            />
+          </div>
+
+          {/* Zone */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">ZONE</label>
+            <select
+              value={selectedZone}
+              onChange={(e) => setSelectedZone(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            >
+              <option value="all">All Zones</option>
+              <option value="Ajmer">Ajmer Zone</option>
+              <option value="Jaipur">Jaipur Zone</option>
+              <option value="Jodhpur">Jodhpur Zone</option>
+              <option value="Udaipur">Udaipur Zone</option>
+              <option value="Kota">Kota Zone</option>
+              <option value="Bikaner">Bikaner Zone</option>
+            </select>
+          </div>
+
+          {/* District */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">DISTRICT</label>
+            <select
+              value={selectedDistrict}
+              onChange={(e) => setSelectedDistrict(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            >
+              <option value="all">All Districts</option>
+              {filterOptions.districts.map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Engineer / DI */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">ENGINEER / DI</label>
+            <select
+              value={selectedDI}
+              onChange={(e) => setSelectedDI(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            >
+              <option value="all">All Engineers</option>
+              {filterOptions.dis.map(di => (
+                <option key={di} value={di}>{di}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">STATUS</label>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            >
+              <option value="all">All Statuses</option>
+              <option value="Assessed">Assessed</option>
+              <option value="Final Closed">Final Closed</option>
+            </select>
+          </div>
+
+          {/* Hospital */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">HOSPITAL</label>
+            <select
+              value={selectedHospital}
+              onChange={(e) => setSelectedHospital(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            >
+              <option value="all">All Hospitals</option>
+              {filterOptions.hospitals.map(h => (
+                <option key={h} value={h}>{h}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Equipment */}
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">EQUIPMENT</label>
+            <select
+              value={selectedEquipment}
+              onChange={(e) => setSelectedEquipment(e.target.value)}
+              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
+            >
+              <option value="all">All Equipment</option>
+              {filterOptions.equipmentList.map(eq => (
+                <option key={eq} value={eq}>{eq}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 6. MAIN CONTENT TABLE & CHARTS SWITCHER */}
+      <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
+        {/* Table View Tab Header */}
+        <div className="bg-slate-200 px-4 py-2 border-b border-slate-300 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveTab("monthly")}
+              className={`px-3 py-1 text-xs font-black uppercase tracking-wider transition-all ${
+                activeTab === "monthly" ? "bg-[#345168] text-white" : "bg-white text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              Monthly Penalty Audit Table
+            </button>
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className={`px-3 py-1 text-xs font-black uppercase tracking-wider transition-all ${
+                activeTab === "dashboard" ? "bg-[#345168] text-white" : "bg-white text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              Analytics & Charts
+            </button>
+            <button
+              onClick={() => setActiveTab("daily")}
+              className={`px-3 py-1 text-xs font-black uppercase tracking-wider transition-all ${
+                activeTab === "daily" ? "bg-[#345168] text-white" : "bg-white text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              Per-Day Breakdown
+            </button>
+            <button
+              onClick={() => setActiveTab("repeated")}
+              className={`px-3 py-1 text-xs font-black uppercase tracking-wider transition-all ${
+                activeTab === "repeated" ? "bg-[#345168] text-white" : "bg-white text-slate-700 hover:bg-slate-100"
+              }`}
+            >
+              Repeated Calls Audit
+            </button>
+          </div>
+
+          <span className="text-[11px] font-bold text-slate-600">
+            Showing <span className="font-extrabold text-slate-900">{filteredRecords.length}</span> Records
           </span>
-          <button
-            onClick={() => {
-              setSelectedMonth("all");
-              setSelectedZone("all");
-              setSelectedDistrict("all");
-              setSelectedDI("all");
-              setSelectedHospital("all");
-              setSelectedEquipment("all");
-              setSearchQuery("");
-            }}
-            className="text-[10px] font-extrabold text-blue-600 hover:underline"
-          >
-            Reset All Filters
-          </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-          {/* Month Filter */}
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700"
-          >
-            <option value="all">Month: All</option>
-            <option value="Jan">Jan</option>
-            <option value="Feb">Feb</option>
-            <option value="Mar">Mar</option>
-            <option value="Apr">Apr</option>
-            <option value="May">May</option>
-            <option value="Jun">Jun</option>
-            <option value="Jul">Jul</option>
-            <option value="Aug">Aug</option>
-            <option value="Sep">Sep</option>
-            <option value="Oct">Oct</option>
-            <option value="Nov">Nov</option>
-            <option value="Dec">Dec</option>
-          </select>
-
-          {/* Zone Filter */}
-          <select
-            value={selectedZone}
-            onChange={(e) => setSelectedZone(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700"
-          >
-            <option value="all">Zone: All</option>
-            <option value="Ajmer">Ajmer Zone</option>
-            <option value="Jaipur">Jaipur Zone</option>
-            <option value="Jodhpur">Jodhpur Zone</option>
-            <option value="Udaipur">Udaipur Zone</option>
-            <option value="Kota">Kota Zone</option>
-            <option value="Bikaner">Bikaner Zone</option>
-          </select>
-
-          {/* District Filter */}
-          <select
-            value={selectedDistrict}
-            onChange={(e) => setSelectedDistrict(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700"
-          >
-            <option value="all">District: All</option>
-            {filterOptions.districts.map(d => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-
-          {/* DI Filter */}
-          <select
-            value={selectedDI}
-            onChange={(e) => setSelectedDI(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700"
-          >
-            <option value="all">DI: All</option>
-            {filterOptions.dis.map(di => (
-              <option key={di} value={di}>{di}</option>
-            ))}
-          </select>
-
-          {/* Hospital Filter */}
-          <select
-            value={selectedHospital}
-            onChange={(e) => setSelectedHospital(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 truncate"
-          >
-            <option value="all">Hospital: All</option>
-            {filterOptions.hospitals.map(h => (
-              <option key={h} value={h}>{h}</option>
-            ))}
-          </select>
-
-          {/* Equipment Filter */}
-          <select
-            value={selectedEquipment}
-            onChange={(e) => setSelectedEquipment(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 truncate"
-          >
-            <option value="all">Equipment: All</option>
-            {filterOptions.equipmentList.map(eq => (
-              <option key={eq} value={eq}>{eq}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* EXECUTIVE NAVIGATION VIEW TABS */}
-      <div className="bg-white p-2 rounded-3xl border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-2xl">
-          <button
-            onClick={() => setActiveTab("dashboard")}
-            className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all ${
-              activeTab === "dashboard" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5 text-blue-600" /> Executive Dashboard
-          </button>
-
-          <button
-            onClick={() => setActiveTab("monthly")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "monthly" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Monthly Penalty Summary (23 Core)
-          </button>
-
-          <button
-            onClick={() => setActiveTab("daily")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              activeTab === "daily" ? "bg-white text-blue-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Per-Day Penalty Breakdown
-          </button>
-
-          <button
-            onClick={() => setActiveTab("repeated")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-              activeTab === "repeated" ? "bg-white text-rose-600 shadow-2xs" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Repeat className="w-3.5 h-3.5 text-rose-600" /> Repeated Calls Audit
-          </button>
-        </div>
-
-        <div className="relative flex-1 max-w-xs">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            placeholder="Search Complaint ID, Barcode..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:outline-none"
-          />
-        </div>
-      </div>
-
-      {/* TAB 1: FULL EXECUTIVE PENALTY DASHBOARD */}
-      {activeTab === "dashboard" && (
-        <div className="space-y-4 animate-fadeIn">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* 1. District-Wise Penalty Bar Chart */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <BarChart3 className="w-4 h-4 text-blue-600" /> District-Wise Penalty Heatmap
-              </h3>
-              <SaaSBarChart data={districtChartData} height={250} />
-            </div>
-
-            {/* 2. Zone-Wise Penalty Donut Chart */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <PieChart className="w-4 h-4 text-emerald-600" /> Zone-Wise Penalty Distribution
-              </h3>
-              <SaaSDonutChart data={zoneChartData} height={250} />
-            </div>
-
-            {/* 3. Equipment-Wise Top Penalties */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-purple-600" /> Top 10 Equipment-Wise Penalty
-              </h3>
-              <SaaSHorizontalBarChart data={equipmentChartData} height={260} />
-            </div>
-
-            {/* 4. DI (District Incharge) Wise Penalty */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <UserCheck className="w-4 h-4 text-indigo-600" /> DI-Wise (Engineer) Penalty Summary
-              </h3>
-              <SaaSBarChart data={diChartData} height={260} />
-            </div>
-
-            {/* 5. Hospital-Wise Top Penalties */}
-            <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-cyan-600" /> Top 10 Hospital-Wise Penalty
-              </h3>
-              <SaaSHorizontalBarChart data={hospitalChartData} height={260} />
-            </div>
-          </div>
-
-          {/* 6. Day-Wise Penalty Trend Chart */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-              <TrendingDown className="w-4 h-4 text-rose-600" /> Day-Wise Penalty Trajectory
-            </h3>
-            <SaaS3DHybridTrendChart data={dayTrendData} height={280} />
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: MONTHLY SUMMARY TABLE */}
-      {activeTab === "monthly" && (
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        {/* TAB 1: MONTHLY AUDIT TABLE (Exact Replica of Overview Expense Table) */}
+        {activeTab === "monthly" && (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-900 text-slate-200 text-[10px] uppercase font-black tracking-wider">
-                  <th className="py-3.5 px-3.5">Complaint ID</th>
-                  <th className="py-3.5 px-3.5">District</th>
-                  <th className="py-3.5 px-3.5">Hospital Type</th>
-                  <th className="py-3.5 px-3.5">Hospital Name</th>
-                  <th className="py-3.5 px-3.5">Bar Code</th>
-                  <th className="py-3.5 px-3.5">Equipment Name</th>
-                  <th className="py-3.5 px-3.5">Raise Date (IST)</th>
-                  <th className="py-3.5 px-3.5">Attend Date</th>
-                  <th className="py-3.5 px-3.5">Close Date</th>
-                  <th className="py-3.5 px-3.5">Chargeable Days</th>
-                  <th className="py-3.5 px-3.5">Penalty Slab</th>
-                  <th className="py-3.5 px-3.5">Total Penalty</th>
-                  <th className="py-3.5 px-3.5">Exemption</th>
+                <tr className="bg-[#345168] text-white text-[10.5px] uppercase font-extrabold tracking-wider">
+                  <th className="py-2.5 px-3">ENGINEER / DI</th>
+                  <th className="py-2.5 px-3">COMPLAINT ID</th>
+                  <th className="py-2.5 px-3">RAISE DATE</th>
+                  <th className="py-2.5 px-3">HOSPITAL & DISTRICT</th>
+                  <th className="py-2.5 px-3">BARCODE & EQUIPMENT</th>
+                  <th className="py-2.5 px-3">DOWNTIME</th>
+                  <th className="py-2.5 px-3 text-right">SLAB AMOUNT</th>
+                  <th className="py-2.5 px-3">EXEMPTION</th>
+                  <th className="py-2.5 px-3 text-right">TOTAL PENALTY</th>
+                  <th className="py-2.5 px-3 text-center">STATUS</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+              <tbody className="divide-y divide-slate-200 text-xs font-semibold text-slate-800">
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={13} className="py-12 text-center text-slate-400 font-bold">
+                    <td colSpan={10} className="py-12 text-center text-slate-400 font-bold">
                       No penalty records found matching selected filters.
                     </td>
                   </tr>
                 ) : (
                   filteredRecords.map((r, idx) => (
-                    <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
-                      <td className="py-3 px-3.5 font-mono font-bold text-blue-600">{r.complaint_id}</td>
-                      <td className="py-3 px-3.5 font-bold">{r.district_name || "-"}</td>
-                      <td className="py-3 px-3.5">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-700">
-                          {r.hospital_type || "CHC"}
+                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                      {/* Engineer / DI */}
+                      <td className="py-2.5 px-3">
+                        <span className="font-extrabold text-slate-900 block">{r.attended_engineer_name || r.di_name || "Unassigned DI"}</span>
+                        <span className="text-[10px] text-slate-400 block font-normal">{r.coordinator_name || "Cyrix Engineer"}</span>
+                      </td>
+
+                      {/* Complaint ID */}
+                      <td className="py-2.5 px-3">
+                        <span className="font-mono font-bold text-blue-600 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                          {r.complaint_id}
                         </span>
                       </td>
-                      <td className="py-3 px-3.5 font-medium text-slate-900">{r.hospital_name || "-"}</td>
-                      <td className="py-3 px-3.5">
-                        <span className="font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 text-[10px] font-bold">
+
+                      {/* Raise Date */}
+                      <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
+                        {r.complaint_raise_date}
+                      </td>
+
+                      {/* Hospital & District */}
+                      <td className="py-2.5 px-3">
+                        <span className="font-bold text-slate-900 block truncate max-w-[200px]">{r.hospital_name || "-"}</span>
+                        <span className="text-[10px] font-bold text-slate-500 block uppercase">
+                          {r.district_name || "-"} ({r.hospital_type || "CHC"})
+                        </span>
+                      </td>
+
+                      {/* Barcode & Equipment */}
+                      <td className="py-2.5 px-3">
+                        <span className="font-bold text-slate-900 block">{r.equipment_name || "-"}</span>
+                        <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-none border border-slate-200 inline-block">
                           {r.bar_code}
                         </span>
                       </td>
-                      <td className="py-3 px-3.5 font-bold text-slate-900">{r.equipment_name || "-"}</td>
-                      <td className="py-3 px-3.5 text-[10px] text-slate-500 font-mono">{r.complaint_raise_date}</td>
-                      <td className="py-3 px-3.5 text-[10px] text-slate-500 font-mono">{r.attend_date}</td>
-                      <td className="py-3 px-3.5 text-[10px] text-slate-500 font-mono">{r.complaint_close_date}</td>
-                      <td className="py-3 px-3.5 font-extrabold text-amber-600">{r.chargeable_days || 0} Days</td>
-                      <td className="py-3 px-3.5 font-bold text-slate-800">₹{r.penalty_slab_amount || 500}</td>
-                      <td className="py-3 px-3.5 font-black text-rose-600">₹{(r.total_penalty || 0).toLocaleString()}</td>
-                      <td className="py-3 px-3.5">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">
+
+                      {/* Downtime */}
+                      <td className="py-2.5 px-3 font-mono text-slate-700 font-bold">
+                        {r.chargeable_days || 0} Days
+                      </td>
+
+                      {/* Slab Amount */}
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800 text-right">
+                        ₹{r.penalty_slab_amount || 0}
+                      </td>
+
+                      {/* Exemption */}
+                      <td className="py-2.5 px-3">
+                        <span className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded-none bg-amber-100 text-amber-800 border border-amber-200">
                           {r.exemption_reason || "None"}
                         </span>
                       </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
-      {/* TAB 3: PER-DAY BREAKDOWN */}
-      {activeTab === "daily" && (
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xs p-5 space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-600 uppercase">Select Complaint ID:</span>
-            <select
-              value={selectedComplaintId}
-              onChange={(e) => setSelectedComplaintId(e.target.value)}
-              className="px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800"
-            >
-              <option value="">-- All Complaints --</option>
-              {records.map(r => (
-                <option key={r.complaint_id} value={r.complaint_id}>
-                  {r.complaint_id} - Barcode #{r.bar_code} ({r.hospital_name || "Hospital"})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="overflow-x-auto rounded-2xl border border-slate-200">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-900 text-slate-200 text-[10px] uppercase font-black tracking-wider">
-                  <th className="py-3 px-3.5">Day #</th>
-                  <th className="py-3 px-3.5">Complaint ID</th>
-                  <th className="py-3 px-3.5">Barcode</th>
-                  <th className="py-3 px-3.5">Call Status</th>
-                  <th className="py-3 px-3.5">Exemption Reason</th>
-                  <th className="py-3 px-3.5">Daily Charge Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                {dailyRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-10 text-center text-slate-400 font-bold">
-                      Select a specific complaint above to view its per-day penalty breakdown.
-                    </td>
-                  </tr>
-                ) : (
-                  dailyRecords.map((d, idx) => (
-                    <tr key={idx} className="hover:bg-blue-50/50 transition-colors">
-                      <td className="py-2.5 px-3.5 font-bold text-slate-900">Day {d.day_number}</td>
-                      <td className="py-2.5 px-3.5 font-mono font-bold text-blue-600">{d.complaint_id}</td>
-                      <td className="py-2.5 px-3.5 font-mono text-slate-600">{d.barcode}</td>
-                      <td className="py-2.5 px-3.5">{d.call_status}</td>
-                      <td className="py-2.5 px-3.5">
-                        {d.is_exempted ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                            ✓ {d.exemption_reason}
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
-                            Chargeable Day
-                          </span>
-                        )}
+                      {/* Total Penalty */}
+                      <td className="py-2.5 px-3 font-mono font-black text-rose-600 text-base text-right">
+                        ₹{(r.total_penalty || 0).toLocaleString("en-IN")}
                       </td>
-                      <td className="py-2.5 px-3.5 font-black text-slate-900">₹{d.daily_penalty_amount.toLocaleString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
-      {/* TAB 4: REPEATED CALLS AUDIT */}
-      {activeTab === "repeated" && (
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
-              <Repeat className="w-4 h-4 text-rose-600" />
-              Repeated Barcode Call Log Frequency (Asset Degradation Audit)
-            </h3>
-            <span className="text-[10px] font-bold text-slate-500">
-              Showing Barcodes logged multiple times
-            </span>
-          </div>
-
-          <div className="overflow-x-auto rounded-2xl border border-slate-200">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-900 text-slate-200 text-[10px] uppercase font-black tracking-wider">
-                  <th className="py-3 px-3.5">Barcode</th>
-                  <th className="py-3 px-3.5">Equipment Name</th>
-                  <th className="py-3 px-3.5">Hospital Name</th>
-                  <th className="py-3 px-3.5">District</th>
-                  <th className="py-3 px-3.5">Total Calls Logged</th>
-                  <th className="py-3 px-3.5">Associated Complaint IDs</th>
-                  <th className="py-3 px-3.5">Total Penalty</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
-                {repeatedBarcodeData.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-10 text-center text-slate-400 font-bold">
-                      No repeat calls found in the current selection.
-                    </td>
-                  </tr>
-                ) : (
-                  repeatedBarcodeData.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-rose-50/40 transition-colors">
-                      <td className="py-3 px-3.5 font-mono font-bold text-slate-900 bg-slate-50 rounded-xl border border-slate-200">
-                        {item.barcode}
-                      </td>
-                      <td className="py-3 px-3.5 font-bold text-slate-900">{item.equipment}</td>
-                      <td className="py-3 px-3.5 font-medium text-slate-800">{item.hospital}</td>
-                      <td className="py-3 px-3.5">{item.district}</td>
-                      <td className="py-3 px-3.5">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
-                          item.count > 1 ? "bg-rose-100 text-rose-800 border border-rose-200" : "bg-slate-100 text-slate-700"
-                        }`}>
-                          {item.count} Calls Logged
+                      {/* Status */}
+                      <td className="py-2.5 px-3 text-center">
+                        <span className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded-none bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          {r.status || "Final Closed"}
                         </span>
                       </td>
-                      <td className="py-3 px-3.5 font-mono text-[10px] text-blue-600 truncate max-w-xs">
-                        {item.complaints.join(", ")}
-                      </td>
-                      <td className="py-3 px-3.5 font-black text-rose-600">
-                        ₹{item.totalPenalty.toLocaleString()}
-                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* TAB 2: ANALYTICS & CHARTS */}
+        {activeTab === "dashboard" && (
+          <div className="p-4 space-y-4 bg-slate-50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-4 border border-slate-300">
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-blue-600" /> District-Wise Penalty Assessed
+                </h3>
+                <SaaSBarChart data={districtChartData} height={250} />
+              </div>
+
+              <div className="bg-white p-4 border border-slate-300">
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <PieChart className="w-4 h-4 text-emerald-600" /> Zone-Wise Penalty Distribution
+                </h3>
+                <SaaSDonutChart data={zoneChartData} height={250} />
+              </div>
+
+              <div className="bg-white p-4 border border-slate-300">
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-purple-600" /> Top 10 Equipment-Wise Penalty
+                </h3>
+                <SaaSHorizontalBarChart data={equipmentChartData} height={260} />
+              </div>
+
+              <div className="bg-white p-4 border border-slate-300">
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <UserCheck className="w-4 h-4 text-indigo-600" /> DI-Wise (Engineer) Penalty Summary
+                </h3>
+                <SaaSBarChart data={diChartData} height={260} />
+              </div>
+
+              <div className="bg-white p-4 border border-slate-300">
+                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                  <Building2 className="w-4 h-4 text-cyan-600" /> Top 10 Hospital-Wise Penalty
+                </h3>
+                <SaaSHorizontalBarChart data={hospitalChartData} height={260} />
+              </div>
+            </div>
+
+            <div className="bg-white p-4 border border-slate-300">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                <TrendingDown className="w-4 h-4 text-rose-600" /> Day-Wise Penalty Trajectory
+              </h3>
+              <SaaS3DHybridTrendChart data={dayTrendData} height={280} />
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: PER-DAY BREAKDOWN */}
+        {activeTab === "daily" && (
+          <div className="p-4 space-y-3 bg-slate-50">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-600 uppercase">Select Complaint ID:</span>
+              <select
+                value={selectedComplaintId}
+                onChange={(e) => setSelectedComplaintId(e.target.value)}
+                className="px-3 py-1 bg-white border border-slate-300 text-xs font-bold text-slate-800"
+              >
+                <option value="">-- All Complaints --</option>
+                {records.map(r => (
+                  <option key={r.complaint_id} value={r.complaint_id}>
+                    {r.complaint_id} - Barcode #{r.bar_code} ({r.hospital_name || "Hospital"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="overflow-x-auto border border-slate-300 bg-white">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#345168] text-white text-[10.5px] uppercase font-extrabold tracking-wider">
+                    <th className="py-2.5 px-3">Day #</th>
+                    <th className="py-2.5 px-3">Complaint ID</th>
+                    <th className="py-2.5 px-3">Barcode</th>
+                    <th className="py-2.5 px-3">Call Status</th>
+                    <th className="py-2.5 px-3">Exemption Reason</th>
+                    <th className="py-2.5 px-3 text-right">Daily Charge Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-xs font-semibold text-slate-800">
+                  {dailyRecords.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-10 text-center text-slate-400 font-bold">
+                        Select a specific complaint above to view its per-day penalty breakdown.
+                      </td>
+                    </tr>
+                  ) : (
+                    dailyRecords.map((d, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="py-2.5 px-3 font-bold text-slate-900">Day {d.day_number}</td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-blue-600">{d.complaint_id}</td>
+                        <td className="py-2.5 px-3 font-mono text-slate-600">{d.barcode}</td>
+                        <td className="py-2.5 px-3">{d.call_status}</td>
+                        <td className="py-2.5 px-3">
+                          {d.is_exempted ? (
+                            <span className="px-2 py-0.5 text-[9.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ✓ {d.exemption_reason}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 text-[9.5px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                              Chargeable Day
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 font-black text-slate-900 text-right">₹{d.daily_penalty_amount.toLocaleString("en-IN")}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: REPEATED CALLS AUDIT */}
+        {activeTab === "repeated" && (
+          <div className="p-4 space-y-3 bg-slate-50">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-rose-600" />
+                Repeated Barcode Call Log Frequency (Asset Degradation Audit)
+              </h3>
+            </div>
+
+            <div className="overflow-x-auto border border-slate-300 bg-white">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-[#345168] text-white text-[10.5px] uppercase font-extrabold tracking-wider">
+                    <th className="py-2.5 px-3">Barcode</th>
+                    <th className="py-2.5 px-3">Equipment Name</th>
+                    <th className="py-2.5 px-3">Hospital Name</th>
+                    <th className="py-2.5 px-3">District</th>
+                    <th className="py-2.5 px-3">Total Calls Logged</th>
+                    <th className="py-2.5 px-3">Associated Complaint IDs</th>
+                    <th className="py-2.5 px-3 text-right">Total Penalty</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 text-xs font-semibold text-slate-800">
+                  {repeatedBarcodeData.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-slate-400 font-bold">
+                        No repeat calls found in the current selection.
+                      </td>
+                    </tr>
+                  ) : (
+                    repeatedBarcodeData.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
+                          {item.barcode}
+                        </td>
+                        <td className="py-2.5 px-3 font-bold text-slate-900">{item.equipment}</td>
+                        <td className="py-2.5 px-3 font-medium text-slate-800">{item.hospital}</td>
+                        <td className="py-2.5 px-3">{item.district}</td>
+                        <td className="py-2.5 px-3">
+                          <span className={`px-2 py-0.5 text-[9.5px] font-black ${
+                            item.count > 1 ? "bg-rose-100 text-rose-800 border border-rose-200" : "bg-slate-100 text-slate-700"
+                          }`}>
+                            {item.count} Calls Logged
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-[10px] text-blue-600 truncate max-w-xs">
+                          {item.complaints.join(", ")}
+                        </td>
+                        <td className="py-2.5 px-3 font-black text-rose-600 text-right">
+                          ₹{item.totalPenalty.toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* HIGH-SPEED CSV IMPORT MODAL */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full border border-slate-200/80 overflow-hidden">
-            <div className="bg-slate-900 p-5 text-white flex items-center justify-between">
+          <div className="bg-white rounded-none shadow-2xl max-w-xl w-full border border-slate-300 overflow-hidden">
+            <div className="bg-[#345168] p-4 text-white flex items-center justify-between">
               <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
                 <Zap className="w-5 h-5 text-amber-400" />
                 Ultra-Fast Complaint CSV Import Engine
               </h3>
               {!uploading && (
-                <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setShowUploadModal(false)} className="text-slate-300 hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               )}
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-5 space-y-4">
               {!uploading && !uploadReport && (
-                <div className="border-2 border-dashed border-slate-300 rounded-3xl p-6 text-center hover:bg-slate-50 transition-colors">
-                  <Upload className="w-10 h-10 text-indigo-500 mx-auto mb-2" />
+                <div className="border-2 border-dashed border-slate-300 rounded-none p-6 text-center hover:bg-slate-50 transition-colors">
+                  <Upload className="w-10 h-10 text-blue-600 mx-auto mb-2" />
                   <p className="text-xs font-black text-slate-800 mb-1">
                     Upload filled CSV file matching standard format
                   </p>
@@ -1130,49 +1304,49 @@ export default function PenaltyModulePage() {
                     type="file"
                     accept=".csv"
                     onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                    className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-2xl file:border-0 file:text-xs file:font-black file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                   />
                 </div>
               )}
 
               {/* LIVE ANIMATED UPLOAD PROGRESS BAR */}
               {uploading && (
-                <div className="p-5 bg-slate-50 border border-slate-200/80 rounded-3xl space-y-4">
+                <div className="p-4 bg-slate-50 border border-slate-300 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
                       <span className="text-xs font-black text-slate-900 uppercase">
                         Importing Batch {uploadProgress.currentChunk} of {uploadProgress.totalChunks}...
                       </span>
                     </div>
-                    <span className="text-sm font-mono font-black text-indigo-600">
+                    <span className="text-sm font-mono font-black text-blue-600">
                       {uploadProgress.percentage}%
                     </span>
                   </div>
 
-                  <div className="w-full bg-slate-200 h-3 rounded-full overflow-hidden p-0.5">
+                  <div className="w-full bg-slate-200 h-3 rounded-none overflow-hidden p-0.5">
                     <div
-                      className="bg-gradient-to-r from-indigo-500 via-blue-500 to-emerald-500 h-full rounded-full transition-all duration-200"
+                      className="bg-blue-600 h-full rounded-none transition-all duration-200"
                       style={{ width: `${uploadProgress.percentage}%` }}
                     />
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-                    <div className="bg-white p-2.5 rounded-2xl border border-slate-200">
+                    <div className="bg-white p-2 border border-slate-300">
                       <span className="text-[9px] font-black uppercase text-slate-400 block">Processed</span>
                       <span className="text-sm font-mono font-black text-slate-800">
                         {uploadProgress.processedRows.toLocaleString()} / {uploadProgress.totalRows.toLocaleString()}
                       </span>
                     </div>
 
-                    <div className="bg-white p-2.5 rounded-2xl border border-slate-200">
+                    <div className="bg-white p-2 border border-slate-300">
                       <span className="text-[9px] font-black uppercase text-slate-400 block">Final Closed Skipped</span>
                       <span className="text-sm font-mono font-black text-amber-600 flex items-center justify-center gap-1">
                         <Lock className="w-3 h-3" /> {uploadProgress.skippedClosedRows.toLocaleString()}
                       </span>
                     </div>
 
-                    <div className="bg-white p-2.5 rounded-2xl border border-slate-200">
+                    <div className="bg-white p-2 border border-slate-300">
                       <span className="text-[9px] font-black uppercase text-slate-400 block">Speed & Time</span>
                       <span className="text-sm font-mono font-black text-emerald-600">
                         {uploadProgress.elapsedSeconds}s
@@ -1184,30 +1358,30 @@ export default function PenaltyModulePage() {
 
               {/* UPLOAD REPORT SUMMARY */}
               {uploadReport && !uploading && (
-                <div className="p-5 bg-emerald-50/50 border border-emerald-200 rounded-3xl space-y-3">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 space-y-3">
                   <div className="flex items-center justify-between text-xs font-black text-emerald-900">
                     <span className="flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <ApprovedIcon className="w-4 h-4 text-emerald-600" />
                       Upload Complete in {uploadReport.elapsedSeconds} seconds!
                     </span>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                    <div className="bg-white p-2.5 rounded-2xl border border-emerald-200">
+                    <div className="bg-white p-2 border border-emerald-200">
                       <span className="text-[9px] font-black uppercase text-slate-400 block">Total Saved</span>
                       <span className="text-sm font-mono font-black text-emerald-700">
                         {uploadReport.savedRows.toLocaleString()}
                       </span>
                     </div>
 
-                    <div className="bg-white p-2.5 rounded-2xl border border-emerald-200">
+                    <div className="bg-white p-2 border border-emerald-200">
                       <span className="text-[9px] font-black uppercase text-slate-400 block">Final Closed Skipped</span>
                       <span className="text-sm font-mono font-black text-amber-600">
                         {uploadReport.skippedClosedRows.toLocaleString()}
                       </span>
                     </div>
 
-                    <div className="bg-white p-2.5 rounded-2xl border border-emerald-200">
+                    <div className="bg-white p-2 border border-emerald-200">
                       <span className="text-[9px] font-black uppercase text-slate-400 block">Errors</span>
                       <span className={uploadReport.errorsCount > 0 ? "text-sm font-mono font-black text-rose-600" : "text-sm font-mono font-black text-slate-700"}>
                         {uploadReport.errorsCount}
@@ -1235,7 +1409,7 @@ export default function PenaltyModulePage() {
                       setUploadReport(null);
                     }}
                     disabled={uploading}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-none"
                   >
                     Close
                   </button>
@@ -1244,7 +1418,7 @@ export default function PenaltyModulePage() {
                       type="button"
                       onClick={handleCSVImportUpload}
                       disabled={uploading || !uploadFile}
-                      className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 text-white font-black text-xs rounded-2xl shadow-xs"
+                      className="px-5 py-2 bg-[#345168] hover:bg-[#283e50] disabled:opacity-50 text-white font-black text-xs rounded-none shadow-2xs"
                     >
                       {uploading ? "Processing..." : "Process & Import CSV"}
                     </button>
@@ -1259,18 +1433,18 @@ export default function PenaltyModulePage() {
       {/* Manual Entry Modal */}
       {showManualModal && (
         <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-slate-200/80 overflow-hidden">
-            <div className="bg-slate-900 p-5 text-white flex items-center justify-between">
+          <div className="bg-white rounded-none shadow-2xl max-w-2xl w-full border border-slate-300 overflow-hidden">
+            <div className="bg-[#345168] p-4 text-white flex items-center justify-between">
               <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-rose-400" />
                 Add Complaint & Calculate SLA Penalty
               </h3>
-              <button onClick={() => setShowManualModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setShowManualModal(false)} className="text-slate-300 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleManualSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <form onSubmit={handleManualSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
@@ -1286,23 +1460,23 @@ export default function PenaltyModulePage() {
                         setFormData({ ...formData, barcode: val });
                         handleVerifyBarcodeLive(val);
                       }}
-                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
                     />
                     {verifyingBarcode && (
-                      <span className="absolute right-3 top-2.5 text-[10px] font-bold text-blue-600 animate-pulse">
+                      <span className="absolute right-3 top-2 text-[10px] font-bold text-blue-600 animate-pulse">
                         Verifying...
                       </span>
                     )}
                   </div>
 
                   {barcodeVerified === true && (
-                    <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-2xl text-[10px] font-bold text-emerald-800">
+                    <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-800">
                       ✓ Verified: {barcodeAssetInfo?.equipment_name} ({barcodeAssetInfo?.hospital_name})
                     </div>
                   )}
 
                   {barcodeVerified === false && (
-                    <div className="mt-1.5 p-2 bg-rose-50 border border-rose-200 rounded-2xl text-[10px] font-bold text-rose-800">
+                    <div className="mt-1.5 p-2 bg-rose-50 border border-rose-200 text-[10px] font-bold text-rose-800">
                       ❌ Error: Barcode #{formData.barcode} not found in database Asset Inventory! Entry Rejected.
                     </div>
                   )}
@@ -1317,7 +1491,7 @@ export default function PenaltyModulePage() {
                     placeholder="e.g. 13126072-800091"
                     value={formData.complaint_id}
                     onChange={(e) => setFormData({ ...formData, complaint_id: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 
@@ -1328,7 +1502,7 @@ export default function PenaltyModulePage() {
                   <select
                     value={formData.hospital_type}
                     onChange={(e) => setFormData({ ...formData, hospital_type: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-bold text-slate-800 focus:outline-none"
                   >
                     <option value="Medical College">Medical College & Associated Hospital (12h Period, SLA 1h/6h)</option>
                     <option value="DH">DH / SDH / SH (24h Period, SLA 24h/48h)</option>
@@ -1345,7 +1519,7 @@ export default function PenaltyModulePage() {
                     placeholder="500000"
                     value={formData.asset_value}
                     onChange={(e) => setFormData({ ...formData, asset_value: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-bold text-slate-800 focus:outline-none"
                   />
                 </div>
 
@@ -1359,7 +1533,7 @@ export default function PenaltyModulePage() {
                     placeholder="21-Jan-2025 16:30:47"
                     value={formData.complaint_raise_date}
                     onChange={(e) => setFormData({ ...formData, complaint_raise_date: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-800 font-mono focus:outline-none"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-medium text-slate-800 font-mono focus:outline-none"
                   />
                 </div>
 
@@ -1373,7 +1547,7 @@ export default function PenaltyModulePage() {
                     placeholder="23-Jan-2025 18:30:47"
                     value={formData.attend_date}
                     onChange={(e) => setFormData({ ...formData, attend_date: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-800 font-mono focus:outline-none"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-medium text-slate-800 font-mono focus:outline-none"
                   />
                 </div>
 
@@ -1387,7 +1561,7 @@ export default function PenaltyModulePage() {
                     placeholder="15-May-2025 16:30:47"
                     value={formData.close_date}
                     onChange={(e) => setFormData({ ...formData, close_date: e.target.value, final_close_date: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-800 font-mono focus:outline-none"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-medium text-slate-800 font-mono focus:outline-none"
                   />
                 </div>
 
@@ -1400,13 +1574,13 @@ export default function PenaltyModulePage() {
                     placeholder="10-May-2025 12:00:00"
                     value={formData.condemnation_date}
                     onChange={(e) => setFormData({ ...formData, condemnation_date: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium text-slate-800 font-mono focus:outline-none"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-medium text-slate-800 font-mono focus:outline-none"
                   />
                 </div>
               </div>
 
               {/* Exemption & Critical Checkboxes */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+              <div className="bg-slate-50 p-3.5 border border-slate-200 space-y-2.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 block">
                   Contract SLA Exemption Rules & Criticality
                 </span>
@@ -1416,7 +1590,7 @@ export default function PenaltyModulePage() {
                     type="checkbox"
                     checked={formData.is_part_missing}
                     onChange={(e) => setFormData({ ...formData, is_part_missing: e.target.checked })}
-                    className="rounded text-blue-600"
+                    className="rounded-none text-blue-600"
                   />
                   <span>Part Missing / Spare Pending (₹0 Penalty for part missing days)</span>
                 </label>
@@ -1426,7 +1600,7 @@ export default function PenaltyModulePage() {
                     type="checkbox"
                     checked={formData.is_standby_provided}
                     onChange={(e) => setFormData({ ...formData, is_standby_provided: e.target.checked })}
-                    className="rounded text-blue-600"
+                    className="rounded-none text-blue-600"
                   />
                   <span>Standby Machine Provided (First 90 Days EXEMPTED - ₹0 Penalty)</span>
                 </label>
@@ -1439,7 +1613,7 @@ export default function PenaltyModulePage() {
                       const checked = e.target.checked;
                       setFormData({ ...formData, is_critical: checked, equipment_type: checked ? "Critical" : "Non-Critical" });
                     }}
-                    className="rounded text-rose-600"
+                    className="rounded-none text-rose-600"
                   />
                   <span className="text-rose-700 font-extrabold">Critical Equipment (110% Surcharge applies if SLA missed)</span>
                 </label>
@@ -1449,14 +1623,14 @@ export default function PenaltyModulePage() {
                 <button
                   type="button"
                   onClick={() => setShowManualModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-2xl"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-none"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading || barcodeVerified === false}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white font-extrabold text-xs rounded-2xl shadow-xs"
+                  className="px-5 py-2 bg-[#345168] hover:bg-[#283e50] disabled:bg-slate-400 text-white font-extrabold text-xs rounded-none shadow-2xs"
                 >
                   {loading ? "Calculating..." : "Calculate & Save Audit Record"}
                 </button>
