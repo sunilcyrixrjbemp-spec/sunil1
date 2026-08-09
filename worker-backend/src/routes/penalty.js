@@ -123,26 +123,19 @@ export function calculateCAPenalty(params) {
 
   const totalDowntimeDays = Math.ceil(totalDowntimeHours / 24);
 
-  // 4. Exemptions (Part Missing calculated starting from Attend Date)
+  // 4. Exemptions Calculation (Part Missing = 0% Penalty Ever; Standby = First 90 Days 0% Penalty)
   const isPartMissing = Boolean(params.is_part_missing || params.part_missing);
   let partMissingDays = 0;
 
   if (isPartMissing) {
-    const partStartDate = parsePenaltyDate(params.part_missing_start_date) || attendDate || raiseDate;
-    const partEndDate = parsePenaltyDate(params.part_missing_end_date || params.part_received_date);
-
-    if (partStartDate && partEndDate) {
-      const diffMs = partEndDate.getTime() - partStartDate.getTime();
-      partMissingDays = Math.max(0, Math.ceil(diffMs / (1000 * 86400)));
-    } else {
-      partMissingDays = parseFloat(params.part_missing_days) || 0;
-    }
+    // Part Missing: KABHI PENALTY NAHI LAGTI (100% Exempted for entire downtime duration from Attend Date)
+    partMissingDays = totalDowntimeDays;
   }
 
   const isStandbyProvided = Boolean(params.is_standby_provided || params.standby);
   let standbyExemptDays = 0;
-  if (isStandbyProvided) {
-    // First 90 Days Exempt
+  if (isStandbyProvided && !isPartMissing) {
+    // Standby Provided: First 90 Days are FREE (₹0 Penalty). Days 91+ are penalized normally.
     standbyExemptDays = Math.min(totalDowntimeDays, 90);
   }
 
