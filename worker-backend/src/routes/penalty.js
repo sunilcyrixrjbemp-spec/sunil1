@@ -1,4 +1,5 @@
-import { jsonResponse, runRead, runWrite } from "../utils/db.js";
+import { runRead, runWrite } from "../utils/db.js";
+import { jsonResponse } from "../utils/http.js";
 
 // Helper: Parse timestamp format "21-Jan-2025 16:30:47" or standard ISO dates into Date
 export function parsePenaltyDate(dateStr) {
