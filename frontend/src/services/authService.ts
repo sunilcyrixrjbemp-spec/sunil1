@@ -22,7 +22,7 @@ export const authService = {
     const { access_token, refresh_token, user, bootstrap_data } = response.data;
     await tokenPersistence.save(access_token, refresh_token, user);
     
-    // Save bootstrap data to cache immediately if present!
+    // Save bootstrap data to cache immediately if present, otherwise fetch in background (Swiggy/Zomato pattern!)
     if (bootstrap_data) {
       try {
         const user_id = user?.user_id || user?.userId || "";
@@ -37,6 +37,23 @@ export const authService = {
       } catch (cacheError) {
         console.warn("Failed to write bootstrap cache to localStorage:", cacheError);
       }
+    } else {
+      // Non-blocking background sync
+      authService.bootstrap().then(data => {
+        if (data) {
+          try {
+            const user_id = user?.user_id || user?.userId || "";
+            const monthStr = getISTMonth();
+            if (data.dropdowns) localStorage.setItem("cache_dropdowns", JSON.stringify(data.dropdowns));
+            if (data.expense_init) localStorage.setItem(`cache_month_limits_${user_id}_${monthStr}`, JSON.stringify(data.expense_init));
+            if (data.my_expenses) localStorage.setItem(`cache_my_expenses_${user_id}`, JSON.stringify(data.my_expenses));
+            if (data.allowance_stats) localStorage.setItem(`cache_allowance_stats_${user_id}`, JSON.stringify(data.allowance_stats));
+            if (data.team_expenses) localStorage.setItem(`cache_team_expenses_${user_id}`, JSON.stringify(data.team_expenses));
+            if (data.pending_approvals_count !== undefined) localStorage.setItem(`cache_approvals_count_${user_id}`, data.pending_approvals_count.toString());
+            if (data.pending_approvals) localStorage.setItem("cache_pending_approvals", JSON.stringify(data.pending_approvals));
+          } catch (_) {}
+        }
+      }).catch(err => console.warn("Background bootstrap fetch warning:", err));
     }
 
     // Sync FCM Push Token to backend

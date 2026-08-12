@@ -327,9 +327,8 @@ export async function handleLogin(request, env) {
   profile.profile_pic_url = user.profile_pic_url;
 
   await resolveUserHierarchyNames(env, profile);
-  const bootstrapData = await getBootstrapDataHelper(env, profile, { isFastLogin: true });
 
-  return jsonResponse({ access_token: accessToken, refresh_token: refreshToken, token_type: "bearer", user: profile, bootstrap_data: bootstrapData });
+  return jsonResponse({ access_token: accessToken, refresh_token: refreshToken, token_type: "bearer", user: profile });
 }
 
 // ─── POST /api/auth/refresh ───────────────────────────────────────────────────
