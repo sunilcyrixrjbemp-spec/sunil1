@@ -54,6 +54,75 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+// ─── Financial Audit Trail Logger (Non-Blocking background execution) ───────
+export async function logFinancialAudit(env, {
+  expense_id,
+  expense_code,
+  user_id,
+  actor_id,
+  actor_name,
+  actor_role = "user",
+  action_type,
+  field_name = null,
+  old_value = null,
+  new_value = null,
+  change_reason = null,
+  snapshot_json = null
+}) {
+  const promise = (async () => {
+    try {
+      await env.DB.prepare(`
+        INSERT INTO expense_audit_logs 
+        (expense_id, expense_code, user_id, actor_id, actor_name, actor_role, action_type, field_name, old_value, new_value, change_reason, snapshot_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        expense_id || 0,
+        expense_code || "",
+        user_id || "",
+        actor_id || "",
+        actor_name || "",
+        actor_role || "user",
+        action_type || "SUBMITTED",
+        field_name,
+        old_value !== null && old_value !== undefined ? String(old_value) : null,
+        new_value !== null && new_value !== undefined ? String(new_value) : null,
+        change_reason || null,
+        typeof snapshot_json === "object" && snapshot_json !== null ? JSON.stringify(snapshot_json) : (snapshot_json || null)
+      ).run();
+    } catch (e) {
+      console.error("[logFinancialAudit] Error writing audit log:", e.message);
+    }
+  })();
+
+  if (env.ctx && typeof env.ctx.waitUntil === "function") {
+    env.ctx.waitUntil(promise);
+  } else {
+    await promise.catch(() => {});
+  }
+}
+
+// ─── GET /api/expense/:id/audit-trail ─────────────────────────────────────────
+export async function handleGetExpenseAuditTrail(request, env, params, query, user) {
+  const { id } = params || {};
+  if (!id) return jsonResponse({ error: "Expense ID or Code is required" }, 400);
+
+  try {
+    const logs = await env.DB.prepare(`
+      SELECT * FROM expense_audit_logs
+      WHERE expense_id = ? OR expense_code = ? OR CAST(expense_id AS TEXT) = ?
+      ORDER BY id ASC
+    `).bind(id, id, String(id)).all();
+
+    return jsonResponse({
+      success: true,
+      expense_id: id,
+      audit_logs: logs?.results || []
+    });
+  } catch (err) {
+    return jsonResponse({ error: `Failed to fetch audit trail: ${err.message}` }, 500);
+  }
+}
+
 export function getActualZone(zone, district) {
   const knownZones = ["Ajmer", "Bikaner", "Jaipur", "Jodhpur", "Udaipur"];
   const zoneMapping = {
@@ -3483,6 +3552,61 @@ export async function handleSubmitExpense(request, env, params, query, user) {
           `Daily Allowance not applicable at base location under ${policyRuleName}`,
           `${expenseCode}-${item.leg}`, item.leg, timestamp
         ]).catch(err => console.error("Error saving DA deduction audit:", err.message));
+      }
+    }
+  }
+
+  // Log submission financial audit trail
+  logFinancialAudit(env, {
+    expense_id: newExpId,
+    expense_code: expenseCode,
+    user_id: user.user_id,
+    actor_id: user.user_id,
+    actor_name: user.name,
+    actor_role: user.role || "employee",
+    action_type: existingExpense ? "EDITED" : "SUBMITTED",
+    change_reason: existingExpense ? "Expense updated by employee" : "Initial expense submission",
+    snapshot_json: {
+      amount,
+      total_da: totalDa,
+      total_hotel: totalHotel,
+      total_other: totalOther,
+      total_local_purchase: totalLocalPurchase,
+      status
+    }
+  });
+
+  if (policyApplied && deductionItems.length > 0) {
+    for (const d of deductionItems) {
+      if (d.taDeducted > 0) {
+        logFinancialAudit(env, {
+          expense_id: newExpId,
+          expense_code: expenseCode,
+          user_id: user.user_id,
+          actor_id: "SYSTEM_POLICY",
+          actor_name: "Policy Engine",
+          actor_role: "system",
+          action_type: "POLICY_DEDUCTION",
+          field_name: "ta_amount",
+          old_value: String(d.taDeducted),
+          new_value: "0.00",
+          change_reason: `Commute TA deducted under ${policyRuleName || 'Base Location Policy'}`
+        });
+      }
+      if (d.daDeducted > 0) {
+        logFinancialAudit(env, {
+          expense_id: newExpId,
+          expense_code: expenseCode,
+          user_id: user.user_id,
+          actor_id: "SYSTEM_POLICY",
+          actor_name: "Policy Engine",
+          actor_role: "system",
+          action_type: "POLICY_DEDUCTION",
+          field_name: "da_amount",
+          old_value: String(d.daDeducted),
+          new_value: "0.00",
+          change_reason: `DA not applicable under ${policyRuleName || 'Base Location Policy'}`
+        });
       }
     }
   }

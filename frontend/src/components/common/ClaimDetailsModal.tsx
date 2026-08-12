@@ -1573,6 +1573,25 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       </Modal>
     );
   }
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!claimDetails) {
+      setAuditLogs([]);
+      return;
+    }
+    const expId = claimDetails.expense_code || claimDetails.id || claimDetails.expense_id || claimDetails.exp_id;
+    if (expId) {
+      api.get(`/expense/${encodeURIComponent(expId)}/audit-trail`)
+        .then(res => {
+          if (res.data && Array.isArray(res.data.audit_logs)) {
+            setAuditLogs(res.data.audit_logs);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [claimDetails]);
+
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [showReturnBox, setShowReturnBox] = useState(false);
   const [barcodeMap, setBarcodeMap] = useState<Record<string, { equipment: string; hospital: string }>>({});

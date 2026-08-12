@@ -5,6 +5,7 @@ import { computeDistrictType, computeDistrictInfo } from "../utils/districtHelpe
 // Enterprise: shared utilities (replaces local duplicates)
 import { jsonResponse } from "../utils/http.js";
 import { parseClientTimestamp } from "../utils/timestamp.js";
+import { logFinancialAudit } from "./expense.js";
 
 function computeCombinedPurpose(legs, fallbackPurpose) {
   if (!legs || legs.length === 0) return fallbackPurpose || "Field visit";
@@ -143,6 +144,15 @@ async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUs
                 expense.id, expense.expense_code, legNum, field, String(oldVal), String(newVal),
                 fieldRemark || comments || "Adjusted during approval",
                 currentUser.name, currentUser.role || "Manager", currentUser.id
+              ]
+            });
+            batchWrites.push({
+              sql: `INSERT INTO expense_audit_logs (expense_id, expense_code, user_id, actor_id, actor_name, actor_role, action_type, field_name, old_value, new_value, change_reason)
+                VALUES (?, ?, ?, ?, ?, ?, 'MANAGER_EDIT', ?, ?, ?, ?)`,
+              params: [
+                expense.id, expense.expense_code || String(expense.id), expense.user_id || "", currentUser.user_id || String(currentUser.id),
+                currentUser.name || "Manager", currentUser.role || "Manager", field, String(oldVal), String(newVal),
+                fieldRemark || comments || "Manager adjusted amount"
               ]
             });
           }
@@ -703,6 +713,18 @@ export async function handleApprove(request, env, params, query, user) {
 
   // Execute atomically in a single batch write transaction to prevent status mismatch on failure
   await runBatchWrite(env, statements);
+
+  logFinancialAudit(env, {
+    expense_id: expense.id,
+    expense_code: expense.expense_code || String(expense.id),
+    user_id: expense.user_id || "",
+    actor_id: user.user_id || String(user.id),
+    actor_name: user.name || "Manager",
+    actor_role: user.role || "manager",
+    action_type: finalStatus === "approved" ? "APPROVED" : "FORWARDED",
+    change_reason: comments ? `Approved by ${user.name}: ${comments}` : `Approved by ${user.name}`,
+    snapshot_json: { amount: expense.amount, status: finalStatus }
+  });
 
   // Notifications
   const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();

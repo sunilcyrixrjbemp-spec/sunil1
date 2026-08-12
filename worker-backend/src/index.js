@@ -92,7 +92,8 @@ import {
   handleServeExpenseAttachment, handleGetTeamUsers, handleGetKpiAppraisal,
   handleSaveKpiAppraisal, handleGetPolicyRules, handleRetroactiveBasePolicyCheck,
   handleBulkRetroactivePolicyCheck, handleReverseExpense, handleEvaluatePolicy,
-  handleSaveFieldAsset, handleGetFieldAssetByBarcode, handleGetOpenCalls
+  handleSaveFieldAsset, handleGetFieldAssetByBarcode, handleGetOpenCalls,
+  handleGetExpenseAuditTrail
 } from "./routes/expense.js";
 
 // Penalty handlers
@@ -440,6 +441,7 @@ router.post("/api/expense/retroactive-policy-check-bulk", handleBulkRetroactiveP
 router.get("/api/expense", handleListExpenses, true);
 router.post("/api/expense", handleSubmitExpense, true);
 router.get("/api/expense/:id", handleGetExpenseDetails, true);
+router.get("/api/expense/:id/audit-trail", handleGetExpenseAuditTrail, true);
 router.delete("/api/expense/:id", handleDeleteExpense, true);
 router.post("/api/expense/:id/reverse", handleReverseExpense, true);
 
