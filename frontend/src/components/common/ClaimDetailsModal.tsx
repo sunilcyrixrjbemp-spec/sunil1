@@ -2570,6 +2570,47 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
         )}
 
+        {/* ─── FINANCIAL AUDIT LEDGER & CHANGE HISTORY ───────────────────── */}
+        {auditLogs && auditLogs.length > 0 && (
+          <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-2.5 space-y-2">
+            <SectionHeader icon={RotateCcw} label="Financial Audit Ledger & Change History" count={`${auditLogs.length} Records`} />
+            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              {auditLogs.map((log: any, idx: number) => {
+                const isDeduction = log.action_type === "POLICY_DEDUCTION";
+                const isEdit = log.action_type === "MANAGER_EDIT";
+                const isApproval = log.action_type === "APPROVED";
+                const badgeColor = isDeduction ? "bg-amber-100 text-amber-900 border-amber-300" : (isEdit ? "bg-indigo-100 text-indigo-900 border-indigo-300" : (isApproval ? "bg-emerald-100 text-emerald-900 border-emerald-300" : "bg-slate-100 text-slate-800 border-slate-300"));
+                return (
+                  <div key={idx} className="p-2 rounded border border-slate-200 bg-slate-50/50 flex flex-col gap-1 text-[10px]">
+                    <div className="flex items-center justify-between font-bold text-slate-800 flex-wrap gap-1">
+                      <span className={`px-1.5 py-0.2 rounded border text-[9px] font-extrabold uppercase ${badgeColor}`}>
+                        {log.action_type}
+                      </span>
+                      <span className="text-slate-500 font-mono text-[9.5px]">{log.created_at ? new Date(log.created_at).toLocaleString("en-IN") : ""}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-700 flex-wrap gap-1">
+                      <span><b>Actor:</b> {log.actor_name} ({log.actor_role})</span>
+                      {log.field_name && <span><b>Field:</b> {log.field_name}</span>}
+                    </div>
+                    {(log.old_value !== null || log.new_value !== null) && (
+                      <div className="flex items-center gap-2 font-mono text-[9.5px] text-slate-900 bg-white p-1 rounded border border-slate-200">
+                        <span className="line-through text-rose-600 font-bold">Old: ₹{log.old_value || "0"}</span>
+                        <span>➔</span>
+                        <span className="text-emerald-700 font-bold">New: ₹{log.new_value || "0"}</span>
+                      </div>
+                    )}
+                    {log.change_reason && (
+                      <div className="text-[9.5px] text-slate-600 italic">
+                        "{log.change_reason}"
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
     </Modal>
   );
