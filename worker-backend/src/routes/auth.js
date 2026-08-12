@@ -57,7 +57,7 @@ async function resolveUserHierarchyNames(env, user) {
 
 // ─── Bootstrap helper ─────────────────────────────────────────────────────────
 
-export async function getBootstrapDataHelper(env, user) {
+export async function getBootstrapDataHelper(env, user, options = {}) {
   const allowedWindows = user.allowed_windows
     ? user.allowed_windows.split(",").map(w => w.trim().toLowerCase())
     : [];
@@ -195,13 +195,14 @@ export async function getBootstrapDataHelper(env, user) {
       const teamIds = [...new Set([...directIds, ...hierReqIds])].filter(id => id !== user.id);
       if (teamIds.length > 0) {
         const ph = teamIds.map(() => "?").join(",");
+        const teamLimit = options.teamLimit || (options.isFastLogin ? 100 : 5000);
         const teamRes = await env.DB.prepare(
           `SELECT e.*, u.name as submitter_name, u.user_id as submitter_code,
                   u.designation as submitter_designation, u.zone, u.district
            FROM expenses e
            INNER JOIN users u ON e.user_id = u.id
            WHERE e.user_id IN (${ph}) AND e.year = ? AND e.month = ?
-           ORDER BY e.id DESC LIMIT 5000`
+           ORDER BY e.id DESC LIMIT ${teamLimit}`
         ).bind(...teamIds, currentYear, currentMonthName).all();
         teamExpenses = (teamRes?.results || []).map(e => ({
           ...mapExpense(e),
@@ -286,7 +287,7 @@ export async function handleLogin(request, env) {
 
   // 3. Verify password (checks both hashed_password and legacy password column)
   const userHash = user.hashed_password || user.password || "";
-  const passwordCorrect = (await verifyPassword(password, userHash)) || (await verifyPassword(cleanPassword, userHash));
+  const passwordCorrect = (await verifyPassword(password, userHash)) || (cleanPassword !== password ? await verifyPassword(cleanPassword, userHash) : false);
 
   if (!passwordCorrect) {
     const failedAttempts = (user.failed_attempt || 0) + 1;
@@ -326,7 +327,7 @@ export async function handleLogin(request, env) {
   profile.profile_pic_url = user.profile_pic_url;
 
   await resolveUserHierarchyNames(env, profile);
-  const bootstrapData = await getBootstrapDataHelper(env, profile);
+  const bootstrapData = await getBootstrapDataHelper(env, profile, { isFastLogin: true });
 
   return jsonResponse({ access_token: accessToken, refresh_token: refreshToken, token_type: "bearer", user: profile, bootstrap_data: bootstrapData });
 }
