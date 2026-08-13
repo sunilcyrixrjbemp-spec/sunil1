@@ -17,8 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
-  Activity,
-  PlayCircle,
+  Activity
 } from "lucide-react";
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
@@ -53,7 +52,6 @@ export const MENU_ITEMS: MenuItem[] = [
   { id: "admin_analytics",    name: "CF Analytics",         path: "/admin/analytics",    icon: Activity,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-orange-500",  gradientTo: "to-amber-600",  shadowColor: "rgba(249,115,22,0.35)" },
   { id: "asset_upload",       name: "Asset Master",         path: "/asset-upload",       icon: Package,       roles: ["Admin","Coordinator","MIS","Engineer"],                                                                                   gradientFrom: "from-pink-500",    gradientTo: "to-rose-600",   shadowColor: "rgba(236,72,153,0.35)" },
   { id: "profile",            name: "My Profile",           path: "/profile",            icon: User,          roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","Travel Desk","MIS","VP"], gradientFrom: "from-blue-500",    gradientTo: "to-indigo-600", shadowColor: "rgba(96,165,250,0.35)" },
-  { id: "video_tutorial",     name: "Video Guide 🎥",       path: "/video-tutorial",     icon: PlayCircle,    roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","Travel Desk","MIS","VP"], gradientFrom: "from-pink-500",    gradientTo: "to-purple-600", shadowColor: "rgba(236,72,153,0.35)" },
   { id: "help",               name: "Support & Help",       path: "/help-center",        icon: HelpCircle,    roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","Travel Desk","MIS","VP"], gradientFrom: "from-purple-500",  gradientTo: "to-violet-600", shadowColor: "rgba(167,139,250,0.35)" },
 ];
 
@@ -62,7 +60,7 @@ const NAV_GROUPS = [
   { label: "Claims & Approvals", ids: ["expense", "approval"] },
   { label: "Reports & Analytics",ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report", "penalty_module"] },
   { label: "Management & Config",ids: ["admin", "admin_enterprise", "admin_analytics", "asset_upload"] },
-  { label: "Account",            ids: ["profile", "video_tutorial", "help"] },
+  { label: "Account",            ids: ["profile", "help"] },
 ];
 
 // iOS / Meta AI style gradient icon tile — matches HomePage IconTile component 1:1
