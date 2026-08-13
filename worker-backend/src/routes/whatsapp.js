@@ -33,7 +33,7 @@ export async function handleGetWhatsappStatus(request, env) {
       status: "success",
       gateway: {
         connected: sessionData?.connected ?? true,
-        phone_number: sessionData?.phone_number || "9037962858",
+        phone_number: sessionData?.phone_number || "9037962828",
         instance_id: configData?.instanceId || env?.ULTRAMSG_INSTANCE_ID || "instance101",
         paired_at: sessionData?.paired_at || new Date().toISOString(),
         anti_ban_delay_sec: 3.5,
@@ -138,7 +138,7 @@ export async function handleGenerateWhatsappPairingCode(request, env) {
 export async function handleTestWhatsappDispatch(request, env) {
   try {
     const body = await request.json();
-    const rawPhone = String(body.phoneNumber || "").replace(/\D/g, "") || "9037962858";
+    const rawPhone = String(body.phoneNumber || "").replace(/\D/g, "") || "9037962828";
     
     const testMessage = 
 `📋 *CYRIX FIELD CONNECT — TEST WHATSAPP ALERT*
