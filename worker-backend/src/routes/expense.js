@@ -2682,6 +2682,11 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     description = getFormVal("description") || "";
   }
 
+  // STRICT RULE: Minimum 2 visits/legs required for expense submission
+  if (!Array.isArray(itineraries) || itineraries.length < 2) {
+    return jsonResponse({ error: "Submission policy violation: Minimum 2 visits/legs are required to submit an expense claim." }, 400);
+  }
+
   const rawClientTs = getFormVal("client_timestamp");
   // Prefer the client-provided timestamp so all dates come from frontend action time
   const timestamp = parseClientTimestamp(rawClientTs);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { formatToIST } from "../utils/timezone";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -340,6 +340,8 @@ export default function ExpensePage() {
       window.history.pushState({}, '', window.location.pathname);
     }
   };
+
+  const validatedItinerariesRef = useRef<ItineraryLeg[] | null>(null);
 
   const [itineraries, setItineraries] = useState<ItineraryLeg[]>(() => {
     const monthStr = getISTMonth();
@@ -2831,6 +2833,7 @@ export default function ExpensePage() {
     });
 
     setItineraries(processedItineraries);
+    validatedItinerariesRef.current = processedItineraries;
 
     if (!validateClaim(processedItineraries)) return;
 
@@ -2893,6 +2896,17 @@ export default function ExpensePage() {
       toast.error("Submission is locked due to limit overflow.");
       return;
     }
+
+    const activeItineraries = (validatedItinerariesRef.current && validatedItinerariesRef.current.length >= 2)
+      ? validatedItinerariesRef.current
+      : itineraries;
+
+    if (!activeItineraries || activeItineraries.length < 2) {
+      toast.error("Minimum 2 visits are required to submit an expense claim.");
+      setShowConfirmModal(false);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -2909,12 +2923,12 @@ export default function ExpensePage() {
       };
       formData.append("client_timestamp", getLocalTimestamp());
 
-      const hasOutdoorLeg = itineraries.some(l => (l.travel_type || "").trim().toLowerCase() === "outdoor");
+      const hasOutdoorLeg = activeItineraries.some(l => (l.travel_type || "").trim().toLowerCase() === "outdoor");
       const overallDistrictCategory = hasOutdoorLeg ? "OUT_DISTRICT" : "IN_DISTRICT";
       formData.append("district_type", overallDistrictCategory);
       formData.append("districtCategory", overallDistrictCategory);
-      const isBaseLocOnly = isBaseLocationOnlyTravel();
-      const isDAAllowed = isDailyAllowanceAllowed();
+      const isBaseLocOnly = isBaseLocationOnlyTravel(activeItineraries);
+      const isDAAllowed = isDailyAllowanceAllowed(activeItineraries);
 
       // Compute deductions directly from current itineraries to avoid stale state/closure issue
       const deductionItems: { leg: number; from: string; to: string; taDeducted: number; daDeducted: number }[] = [];
@@ -2931,13 +2945,13 @@ export default function ExpensePage() {
           ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
           : [];
 
-        itineraries.forEach((leg, idx) => {
+        activeItineraries.forEach((leg, idx) => {
           const legNum = idx + 1;
           const origTA = parseFloat(leg.amount || "0");
           const origSub = parseFloat(leg.sub_amount || "0");
           const origDA = legNum === 1 ? parseFloat(leg.da || "0") : 0;
           // Only deduct TA for commute legs (Home ↔ Base Hospital)
-          const isCommute = isCommuteLeg(leg, baseLocs2, idx, itineraries.length);
+          const isCommute = isCommuteLeg(leg, baseLocs2, idx, activeItineraries.length);
           const taDeducted = isCommute ? origTA + origSub : 0;
           const daDeducted = isDAAllowed ? 0 : origDA;
           if (taDeducted > 0 || daDeducted > 0) {
@@ -2955,7 +2969,7 @@ export default function ExpensePage() {
         ? user.base_reporting_location.split(",").map((x: string) => x.trim().toLowerCase()).filter(Boolean)
         : [];
 
-      const itinerariesData = itineraries.map((leg, index) => {
+      const itinerariesData = activeItineraries.map((leg, index) => {
         const legNum = index + 1;
         const rawActs = leg.selected_activities || [];
         const callsList = leg.calls_list || [];
@@ -3005,7 +3019,7 @@ export default function ExpensePage() {
           assets_list: assetsList
         };
 
-        const isLegCommute = !hasOutdoorLeg && isCommuteLeg(leg, baseLocs3, index, itineraries.length);
+        const isLegCommute = !hasOutdoorLeg && isCommuteLeg(leg, baseLocs3, index, activeItineraries.length);
 
         return {
           leg: legNum,
@@ -3045,7 +3059,7 @@ export default function ExpensePage() {
       formData.append("itineraries", JSON.stringify(itinerariesData));
 
       // Append files
-      itineraries.forEach((_, index) => {
+      activeItineraries.forEach((_, index) => {
         const legNum = index + 1;
         const legFiles = files[legNum];
         if (legFiles) {
