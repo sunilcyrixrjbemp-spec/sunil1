@@ -5,6 +5,7 @@ import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 import toast from "react-hot-toast";
 import { prefetchManager } from "../utils/prefetchManager";
+import { safeStorageSetItem } from "../utils/safeStorage";
 import { checkIsHeic, convertHeicToJpegUrl } from "../utils/heic";
 import { getISTMonth } from "../utils/dateUtils";
 import { hasFullAccess } from "../utils/constants";
@@ -299,8 +300,8 @@ export default function HomePage() {
       .then((myData) => {
         if (Array.isArray(myData)) {
           setMyExpenses(myData);
-          localStorage.setItem(`cache_my_expenses_${uId}_${selectMonth}`, JSON.stringify(myData));
-          localStorage.setItem(`cache_my_expenses_${uId}`, JSON.stringify(myData));
+          safeStorageSetItem(`cache_my_expenses_${uId}_${selectMonth}`, JSON.stringify(myData));
+          safeStorageSetItem(`cache_my_expenses_${uId}`, JSON.stringify(myData));
         }
         setLoadingMyExpenses(false);
       })
@@ -324,8 +325,8 @@ export default function HomePage() {
             rateCar: initData.allowance.rate_car || 0
           };
           setAllowanceStats(stats);
-          localStorage.setItem(`cache_allowance_stats_${uId}_${selectMonth}`, JSON.stringify(stats));
-          localStorage.setItem(`cache_allowance_stats_${uId}`, JSON.stringify(stats));
+          safeStorageSetItem(`cache_allowance_stats_${uId}_${selectMonth}`, JSON.stringify(stats));
+          safeStorageSetItem(`cache_allowance_stats_${uId}`, JSON.stringify(stats));
         }
       })
       .catch((err) => console.error("Error fetching allowance stats:", err));
@@ -339,8 +340,8 @@ export default function HomePage() {
             const standardCount = appData.filter((a: any) => a.category !== "Limit Request").length;
             setPendingApprovalsCount(standardCount);
             setPendingLimitRequestsCount(limitCount);
-            localStorage.setItem(`cache_approvals_count_${uId}`, standardCount.toString());
-            localStorage.setItem(`cache_limit_approvals_count_${uId}`, limitCount.toString());
+            safeStorageSetItem(`cache_approvals_count_${uId}`, standardCount.toString());
+            safeStorageSetItem(`cache_limit_approvals_count_${uId}`, limitCount.toString());
           }
         })
         .catch((err) => console.error("Error fetching approvals count:", err));
@@ -350,8 +351,8 @@ export default function HomePage() {
         .then((teamData) => {
           if (Array.isArray(teamData)) {
             setTeamExpenses(teamData);
-            localStorage.setItem(`cache_team_expenses_${uId}_${selectMonth}`, JSON.stringify(teamData));
-            localStorage.setItem(`cache_team_expenses_${uId}`, JSON.stringify(teamData));
+            safeStorageSetItem(`cache_team_expenses_${uId}_${selectMonth}`, JSON.stringify(teamData));
+            safeStorageSetItem(`cache_team_expenses_${uId}`, JSON.stringify(teamData));
           }
           setLoadingTeamExpenses(false);
         })

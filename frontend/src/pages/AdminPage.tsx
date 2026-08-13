@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResponse } from "../services/adminService";
 import { authService } from "../services/authService";
 import { formatToIST } from "../utils/timezone";
+import { safeStorageSetItem } from "../utils/safeStorage";
 
 import { UploadCloud, Pencil, Trash2, Plus, Download, Zap } from "lucide-react";
 import { 
@@ -479,14 +480,14 @@ export default function AdminPage() {
         adminService.getSettings()
       ]);
       setUsers(u);
-      localStorage.setItem("cache_admin_users", JSON.stringify(u));
+      safeStorageSetItem("cache_admin_users", JSON.stringify(u));
 
       if (settingsRes && settingsRes.success) {
         setSettings(settingsRes.settings);
       }
       
       setDropdowns(dd);
-      localStorage.setItem("cache_dropdowns", JSON.stringify(dd));
+      safeStorageSetItem("cache_dropdowns", JSON.stringify(dd));
       if (dd?.zones) {
         const firstZone = Object.keys(dd.zones)[0];
         setZone(prev => prev || firstZone || "");
@@ -503,7 +504,7 @@ export default function AdminPage() {
       }
       
       setHierarchies(hqs);
-      localStorage.setItem("cache_hierarchies", JSON.stringify(hqs));
+      safeStorageSetItem("cache_hierarchies", JSON.stringify(hqs));
     } catch (err: any) {
       if (!cachedUsers) {
         setError(getErrorMessage(err, "Failed to retrieve configuration details from database."));

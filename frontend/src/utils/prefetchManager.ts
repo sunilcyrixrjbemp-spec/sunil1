@@ -1,6 +1,8 @@
 import { expenseService } from "../services/expenseService";
 import { approvalService } from "../services/approvalService";
 
+import { safeStorageSetItem } from "./safeStorage";
+
 interface CacheEntry {
   data: any;
   timestamp: number;
@@ -106,11 +108,11 @@ export const prefetchManager = {
             expenseService.getExpenses(month),
             expenseService.getTeamExpenses(month)
           ]);
-          if (own && uId) localStorage.setItem(cacheKeyMy, JSON.stringify(own));
-          if (team && uId) localStorage.setItem(cacheKeyTeam, JSON.stringify(team));
+          if (own && uId) safeStorageSetItem(cacheKeyMy, JSON.stringify(own));
+          if (team && uId) safeStorageSetItem(cacheKeyTeam, JSON.stringify(team));
         } else {
           const own = await expenseService.getExpenses(month);
-          if (own && uId) localStorage.setItem(cacheKeyMy, JSON.stringify(own));
+          if (own && uId) safeStorageSetItem(cacheKeyMy, JSON.stringify(own));
         }
         console.log(`[PrefetchManager] Successfully preloaded Analysis data into cache for ${month}`);
       } catch (err) {
