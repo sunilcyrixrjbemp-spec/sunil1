@@ -5,7 +5,7 @@ import { computeDistrictType, computeDistrictInfo } from "../utils/districtHelpe
 // Enterprise: shared utilities (replaces local duplicates)
 import { jsonResponse } from "../utils/http.js";
 import { parseClientTimestamp } from "../utils/timestamp.js";
-import { logFinancialAudit } from "./expense.js";
+import { logFinancialAudit, ensureAuditTableExists } from "./expense.js";
 
 function computeCombinedPurpose(legs, fallbackPurpose) {
   if (!legs || legs.length === 0) return fallbackPurpose || "Field visit";
@@ -168,6 +168,7 @@ async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUs
 
   // Execute all edits in a single batch
   if (batchWrites.length > 0) {
+    await ensureAuditTableExists(env.DB);
     await runBatchWrite(env, batchWrites);
   }
 

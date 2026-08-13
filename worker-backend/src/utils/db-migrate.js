@@ -108,6 +108,23 @@ export async function runMigrations(db) {
       facility_type TEXT,
       zone_name TEXT
     )`,
+    // expense_audit_logs table
+    `CREATE TABLE IF NOT EXISTS expense_audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      expense_id INTEGER,
+      expense_code TEXT,
+      user_id TEXT,
+      actor_id TEXT,
+      actor_name TEXT,
+      actor_role TEXT,
+      action_type TEXT,
+      field_name TEXT,
+      old_value TEXT,
+      new_value TEXT,
+      change_reason TEXT,
+      snapshot_json TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )`,
     `ALTER TABLE facility_details ADD COLUMN id INTEGER`,
     `ALTER TABLE facility_details ADD COLUMN facility_incharge TEXT`,
     `ALTER TABLE facility_details ADD COLUMN dm_name TEXT`,

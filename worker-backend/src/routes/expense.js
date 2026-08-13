@@ -54,6 +54,34 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+let auditTableChecked = false;
+export async function ensureAuditTableExists(db) {
+  if (auditTableChecked) return;
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS expense_audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        expense_id INTEGER,
+        expense_code TEXT,
+        user_id TEXT,
+        actor_id TEXT,
+        actor_name TEXT,
+        actor_role TEXT,
+        action_type TEXT,
+        field_name TEXT,
+        old_value TEXT,
+        new_value TEXT,
+        change_reason TEXT,
+        snapshot_json TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      )
+    `).run();
+    auditTableChecked = true;
+  } catch (e) {
+    console.warn("ensureAuditTableExists warning:", e?.message);
+  }
+}
+
 // ─── Financial Audit Trail Logger (Non-Blocking background execution) ───────
 export async function logFinancialAudit(env, {
   expense_id,
@@ -71,6 +99,7 @@ export async function logFinancialAudit(env, {
 }) {
   const promise = (async () => {
     try {
+      await ensureAuditTableExists(env.DB);
       await env.DB.prepare(`
         INSERT INTO expense_audit_logs 
         (expense_id, expense_code, user_id, actor_id, actor_name, actor_role, action_type, field_name, old_value, new_value, change_reason, snapshot_json)
@@ -107,6 +136,7 @@ export async function handleGetExpenseAuditTrail(request, env, params, query, us
   if (!id) return jsonResponse({ error: "Expense ID or Code is required" }, 400);
 
   try {
+    await ensureAuditTableExists(env.DB);
     const logs = await env.DB.prepare(`
       SELECT * FROM expense_audit_logs
       WHERE expense_id = ? OR expense_code = ? OR CAST(expense_id AS TEXT) = ?
