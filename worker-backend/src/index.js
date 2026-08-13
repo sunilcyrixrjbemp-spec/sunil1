@@ -119,6 +119,7 @@ import {
 
 import {
   handleGetWhatsappStatus,
+  handleSaveWhatsappConfig,
   handleGenerateWhatsappPairingCode,
   handleTestWhatsappDispatch
 } from "./routes/whatsapp.js";
@@ -359,6 +360,7 @@ router.get("/api/expense/email-action", async (req, env, params, query, user) =>
 
 // ─── WhatsApp Gateway Routes ───────────────────────────────────────────────
 router.get("/api/whatsapp/status", async (req, env) => handleGetWhatsappStatus(req, env), true);
+router.post("/api/whatsapp/config", async (req, env) => handleSaveWhatsappConfig(req, env), true);
 router.post("/api/whatsapp/pairing-code", async (req, env) => handleGenerateWhatsappPairingCode(req, env), true);
 router.post("/api/whatsapp/test-alert", async (req, env) => handleTestWhatsappDispatch(req, env), true);
 

@@ -215,6 +215,11 @@ export const adminService = {
     return response.data;
   },
 
+  saveWhatsappConfig: async (instanceId: string, token: string): Promise<any> => {
+    const response = await api.post("/whatsapp/config", { instanceId, token });
+    return response.data;
+  },
+
   generateWhatsappPairingCode: async (phoneNumber: string): Promise<any> => {
     const response = await api.post("/whatsapp/pairing-code", { phoneNumber });
     return response.data;

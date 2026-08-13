@@ -215,6 +215,29 @@ export default function AdminPage() {
   const [waPhoneNumber, setWaPhoneNumber] = useState("9829012001");
   const [waPairingCode, setWaPairingCode] = useState("K8X9-4M2P");
   const [waIsGeneratingCode, setWaIsGeneratingCode] = useState(false);
+  const [waInstanceId, setWaInstanceId] = useState("instance101");
+  const [waToken, setWaToken] = useState("token101");
+  const [waConfigSaving, setWaConfigSaving] = useState(false);
+
+  const handleSaveWhatsappConfigSubmit = async () => {
+    if (!waInstanceId.trim() || !waToken.trim()) {
+      toast.error("UltraMsg Instance ID and Token are required!");
+      return;
+    }
+    setWaConfigSaving(true);
+    try {
+      const res = await adminService.saveWhatsappConfig(waInstanceId.trim(), waToken.trim());
+      if (res && res.status === "success") {
+        toast.success("✓ WhatsApp Gateway Instance Credentials Saved Successfully!");
+      } else {
+        throw new Error(res?.message || "Failed to save configuration");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Error saving WhatsApp Gateway config");
+    } finally {
+      setWaConfigSaving(false);
+    }
+  };
 
   const handleGeneratePairingCode = async () => {
     if (!waPhoneNumber || waPhoneNumber.trim().length < 10) {
@@ -3102,9 +3125,51 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Right Box: Automatic Event Triggers Table & Test Dispatcher (5 Cols) */}
+            {/* Right Box: UltraMsg Credentials & Automatic Event Triggers Table (5 Cols) */}
             <div className="lg:col-span-5 bg-white border border-slate-300 rounded-none shadow-2xs p-4 space-y-4">
               <div className="bg-[#4A6A8A] text-white px-3 py-2 flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider font-mono text-white">
+                  ULTRAMSG GATEWAY CREDENTIALS
+                </span>
+                <span className="text-[9.5px] font-mono bg-white/20 px-2 py-0.5 font-bold">
+                  SOLUTION 2 ACTIVE
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs font-mono">
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase text-slate-600 mb-1">UltraMsg Instance ID *</label>
+                  <input
+                    type="text"
+                    value={waInstanceId}
+                    onChange={(e) => setWaInstanceId(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none h-8"
+                    placeholder="instance1001"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[9.5px] font-extrabold uppercase text-slate-600 mb-1">UltraMsg Token *</label>
+                  <input
+                    type="text"
+                    value={waToken}
+                    onChange={(e) => setWaToken(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none h-8"
+                    placeholder="token_xyz123"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSaveWhatsappConfigSubmit}
+                  disabled={waConfigSaving}
+                  className="w-full py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {waConfigSaving ? <LteSpinner /> : <span>💾 Save Gateway Credentials</span>}
+                </button>
+              </div>
+
+              <div className="bg-[#4A6A8A] text-white px-3 py-2 flex items-center justify-between border-t border-slate-200 pt-3">
                 <span className="text-xs font-extrabold uppercase tracking-wider font-mono text-white">
                   AUTOMATIC EVENT DISPATCH SETTINGS
                 </span>
@@ -3138,10 +3203,21 @@ export default function AdminPage() {
 
               <button
                 type="button"
-                onClick={() => toast.success(`🧪 Test WhatsApp Alert Dispatched to +91 ${waPhoneNumber}!`)}
+                onClick={async () => {
+                  try {
+                    const res = await adminService.testWhatsappDispatch(waPhoneNumber);
+                    if (res && res.status === "success") {
+                      toast.success(res.message);
+                    } else {
+                      toast.error(res?.message || "Test dispatch failed");
+                    }
+                  } catch (e: any) {
+                    toast.error(e.message || "Error running test dispatch");
+                  }
+                }}
                 className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-2"
               >
-                <span>Dispatch Test WhatsApp Alert</span>
+                <span>🧪 Dispatch Test WhatsApp Alert</span>
               </button>
             </div>
           </div>
