@@ -190,6 +190,26 @@ async function applyItineraryEditsAndLog(env, expense, itineraryEdits, currentUs
     SET da_amount = ?, hotel_amount = ?, other_expense_amount = ?, local_purchase_amount = ?, amount = ?
     WHERE id = ?
   `, [totalDa, totalHotel, totalOther, totalLp, totalAmount, expense.id]);
+
+  // ── Post-Edit Integrity Assertion Check ──
+  try {
+    const checkExp = await env.DB.prepare("SELECT amount, da_amount, hotel_amount, other_expense_amount, local_purchase_amount FROM expenses WHERE id = ?").bind(expense.id).first();
+    const expAmt = parseFloat(checkExp?.amount || "0");
+    if (Math.round(expAmt * 100) !== Math.round(totalAmount * 100)) {
+      await logExpenseDiagnosticToKV(env, "MANAGER_EDIT_MISMATCH_GLITCH", {
+        expense_id: expense.id,
+        expense_code: expense.expense_code,
+        editor_id: currentUser.user_id || String(currentUser.id),
+        editor_name: currentUser.name,
+        expected_total: totalAmount,
+        saved_db_amount: expAmt,
+        edited_fields: itineraryEdits,
+        message: "STRICT INTEGRITY CHECK FAILED: Total expense amount in DB does not match sum of edited itinerary legs."
+      });
+    }
+  } catch (diagErr) {
+    console.error("Manager edit assertion check error:", diagErr.message);
+  }
 }
 
 export async function getLegacyExpenseHashId(expId) {
