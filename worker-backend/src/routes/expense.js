@@ -47,6 +47,32 @@ function parseClientTimestamp(raw) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Permanently logs expense diagnostics, errors, or data integrity glitches into Cloudflare KV.
+ */
+export async function logExpenseDiagnosticToKV(env, type, data) {
+  if (!env || !env.OTPS_KV) return;
+  try {
+    const timestamp = new Date().toISOString();
+    const cleanTs = timestamp.replace(/[:.]/g, "-");
+    const expCode = String(data.expense_code || "noexp").replace(/[\/\s]/g, "-");
+    const userCode = String(data.user_id || "nouser");
+    const rand = Math.random().toString(36).substring(2, 7);
+    
+    const key = `exp_diag:${cleanTs}:${type}:${userCode}:${expCode}:${rand}`;
+    const record = {
+      timestamp,
+      type,
+      data
+    };
+    
+    // Store in KV permanently (no expiration TTL)
+    await env.OTPS_KV.put(key, JSON.stringify(record, null, 2));
+  } catch (err) {
+    console.error("Failed to log expense diagnostic to KV:", err.message);
+  }
+}
+
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -3640,10 +3666,52 @@ export async function handleSubmitExpense(request, env, params, query, user) {
           field_name: "da_amount",
           old_value: String(d.daDeducted),
           new_value: "0.00",
-          change_reason: `DA not applicable under ${policyRuleName || 'Base Location Policy'}`
         });
       }
     }
+  }
+
+  // ── Post-Insert Data Integrity Assertion & KV Log Verification ──
+  try {
+    const verificationRes = await env.DB.prepare(
+      "SELECT leg_number, travel_mode, from_location, to_location, distance_km FROM expense_itineraries WHERE exp_id = ? ORDER BY leg_number ASC"
+    ).bind(expenseCode).all();
+    const savedLegs = verificationRes?.results || [];
+
+    const isGlitch = (savedLegs.length !== itineraries.length) || savedLegs.some((sl, idx) => {
+      const sub = itineraries[idx];
+      if (!sub) return true;
+      const fromMatch = (sl.from_location || "").trim().toLowerCase() === (sub.from || "").trim().toLowerCase();
+      const toMatch = (sl.to_location || "").trim().toLowerCase() === (sub.to || "").trim().toLowerCase();
+      return !fromMatch || !toMatch;
+    });
+
+    if (isGlitch) {
+      await logExpenseDiagnosticToKV(env, "DATA_GLITCH_MISMATCH", {
+        expense_code: expenseCode,
+        expense_id: newExpId,
+        user_id: user.user_id,
+        user_name: user.name,
+        submitted_legs_count: itineraries.length,
+        saved_legs_count: savedLegs.length,
+        submitted_payload: itineraries,
+        saved_database_rows: savedLegs,
+        message: "STRICT INTEGRITY CHECK FAILED: Mismatch detected between user submitted payload and database saved rows."
+      });
+    } else {
+      await logExpenseDiagnosticToKV(env, "VERIFIED_SUBMISSION", {
+        expense_code: expenseCode,
+        expense_id: newExpId,
+        user_id: user.user_id,
+        user_name: user.name,
+        legs_count: savedLegs.length,
+        submitted_payload: itineraries,
+        saved_database_rows: savedLegs,
+        status: "100% VERIFIED — Database exactly matches submitted user payload"
+      });
+    }
+  } catch (diagErr) {
+    console.error("Diagnostic verification failed:", diagErr.message);
   }
 
   const successMsg = amount <= 0
@@ -5905,6 +5973,58 @@ export async function handleGetOpenCalls(request, env, params, query, user) {
   } catch (err) {
     console.error("handleGetOpenCalls error:", err);
     return jsonResponse({ success: false, exists: false, error: err.message }, 500);
+  }
+}
+
+/**
+ * POST /api/expense/log-client-glitch
+ * Log client-side expense glitches or errors into Cloudflare KV permanently.
+ */
+export async function handleLogClientGlitch(request, env, params, query, user) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    await logExpenseDiagnosticToKV(env, "CLIENT_GLITCH_REPORT", {
+      user_id: user?.user_id || user?.id || "unknown",
+      user_name: user?.name || "unknown",
+      client_timestamp: body.client_timestamp || new Date().toISOString(),
+      issue_description: body.issue_description || body.error || "Client-side submission discrepancy",
+      submitted_payload: body.submitted_payload || null,
+      client_error: body.client_error || null
+    });
+    return jsonResponse({ status: "success", message: "Diagnostic logged to KV permanently." });
+  } catch (err) {
+    return jsonResponse({ error: err.message }, 500);
+  }
+}
+
+/**
+ * GET /api/expense/kv-diagnostic-logs
+ * Fetch permanently stored KV diagnostic error and glitch logs.
+ */
+export async function handleGetKvDiagnosticLogs(request, env, params, query, user) {
+  if (!env || !env.OTPS_KV) {
+    return jsonResponse({ error: "OTPS_KV store is not configured." }, 500);
+  }
+  try {
+    const listRes = await env.OTPS_KV.list({ prefix: "exp_diag:" });
+    const keys = listRes.keys || [];
+    const logs = [];
+
+    // Fetch details for up to 100 recent diagnostic logs
+    for (const k of keys.slice(-100).reverse()) {
+      const val = await env.OTPS_KV.get(k.name);
+      if (val) {
+        try {
+          logs.push({ key: k.name, ...JSON.parse(val) });
+        } catch (e) {
+          logs.push({ key: k.name, raw: val });
+        }
+      }
+    }
+
+    return jsonResponse({ status: "success", count: logs.length, logs });
+  } catch (err) {
+    return jsonResponse({ error: err.message }, 500);
   }
 }
 

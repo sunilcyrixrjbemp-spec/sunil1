@@ -39,6 +39,23 @@ export const expenseService = {
     return response.data;
   },
 
+  logClientGlitch: async (payload: { issue_description: string; submitted_payload?: any; client_error?: string }): Promise<any> => {
+    try {
+      const response = await api.post("/expense/log-client-glitch", {
+        client_timestamp: new Date().toISOString(),
+        ...payload
+      });
+      return response.data;
+    } catch (e) {
+      console.warn("Failed to send client glitch log:", e);
+    }
+  },
+
+  getKvDiagnosticLogs: async (): Promise<any> => {
+    const response = await api.get("/expense/kv-diagnostic-logs");
+    return response.data;
+  },
+
   getTeamExpenses: async (month?: string): Promise<any[]> => {
     const qp = month ? `?month=${encodeURIComponent(month)}` : "";
     const response = await api.get(`/expense/team${qp}`);

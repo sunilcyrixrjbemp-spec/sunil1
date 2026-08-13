@@ -93,7 +93,7 @@ import {
   handleSaveKpiAppraisal, handleGetPolicyRules, handleRetroactiveBasePolicyCheck,
   handleBulkRetroactivePolicyCheck, handleReverseExpense, handleEvaluatePolicy,
   handleSaveFieldAsset, handleGetFieldAssetByBarcode, handleGetOpenCalls,
-  handleGetExpenseAuditTrail
+  handleGetExpenseAuditTrail, handleLogClientGlitch, handleGetKvDiagnosticLogs
 } from "./routes/expense.js";
 
 // Penalty handlers
@@ -444,6 +444,8 @@ router.get("/api/expense/:id", handleGetExpenseDetails, true);
 router.get("/api/expense/:id/audit-trail", handleGetExpenseAuditTrail, true);
 router.delete("/api/expense/:id", handleDeleteExpense, true);
 router.post("/api/expense/:id/reverse", handleReverseExpense, true);
+router.post("/api/expense/log-client-glitch", handleLogClientGlitch, true);
+router.get("/api/expense/kv-diagnostic-logs", handleGetKvDiagnosticLogs, true);
 
 // ─── No DB Proxy Needed — Single D1, direct env.DB ───────────────────────────
 // wrapDB removed in v2.1.0 (single-server architecture)

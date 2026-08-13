@@ -3111,6 +3111,14 @@ export default function ExpensePage() {
       }
     } catch (err: any) {
       const errMsg = err.response?.data?.detail || err.response?.data?.error || err.message || "Failed to submit claim.";
+      
+      // Permanently log submission error & full payload to KV via API
+      expenseService.logClientGlitch({
+        issue_description: "Expense Submission Error: " + errMsg,
+        submitted_payload: activeItineraries,
+        client_error: String(err.stack || err.message || err)
+      });
+
       setSubmitStatus({
         type: "error",
         title: "Submission Failed",
