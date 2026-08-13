@@ -33,6 +33,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
 import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
 import AdminEnterprisePage from "./pages/AdminEnterprisePage";
+import VideoWalkthroughPage from "./pages/VideoWalkthroughPage";
 
 import ProgressLoader from "./components/common/ProgressLoader";
 import InstallAppPrompt from "./components/common/InstallAppPrompt";
@@ -309,6 +310,7 @@ function App() {
                 <Route path="/attendance" element={<AttendancePage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/help-center" element={<HelpPage />} />
+                <Route path="/video-tutorial" element={<VideoWalkthroughPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
