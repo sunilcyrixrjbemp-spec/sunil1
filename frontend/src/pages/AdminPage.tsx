@@ -223,12 +223,31 @@ export default function AdminPage() {
     }
     setWaIsGeneratingCode(true);
     try {
-      const res = await adminService.generateWhatsappPairingCode(waPhoneNumber.trim());
-      if (res && res.pairing_code) {
-        setWaPairingCode(res.pairing_code);
+      let pairingCode = "";
+      try {
+        const localRes = await fetch("http://localhost:3099/pair", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phoneNumber: waPhoneNumber.trim() })
+        });
+        if (localRes.ok) {
+          const data = await localRes.json();
+          pairingCode = data.pairingCode;
+        }
+      } catch (err) {}
+
+      if (!pairingCode) {
+        const res = await adminService.generateWhatsappPairingCode(waPhoneNumber.trim());
+        if (res && res.pairing_code) {
+          pairingCode = res.pairing_code;
+        }
+      }
+
+      if (pairingCode) {
+        setWaPairingCode(pairingCode);
         toast.success(`✓ Official WhatsApp Pairing Code Generated for +91 ${waPhoneNumber.trim()}!`);
       } else {
-        throw new Error(res?.message || "Failed to generate pairing code");
+        throw new Error("Failed to generate pairing code");
       }
     } catch (e: any) {
       toast.error(e.message || "Error connecting to WhatsApp Gateway");
