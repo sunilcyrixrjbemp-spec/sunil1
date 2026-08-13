@@ -3698,17 +3698,6 @@ export async function handleSubmitExpense(request, env, params, query, user) {
         saved_database_rows: savedLegs,
         message: "STRICT INTEGRITY CHECK FAILED: Mismatch detected between user submitted payload and database saved rows."
       });
-    } else {
-      await logExpenseDiagnosticToKV(env, "VERIFIED_SUBMISSION", {
-        expense_code: expenseCode,
-        expense_id: newExpId,
-        user_id: user.user_id,
-        user_name: user.name,
-        legs_count: savedLegs.length,
-        submitted_payload: itineraries,
-        saved_database_rows: savedLegs,
-        status: "100% VERIFIED — Database exactly matches submitted user payload"
-      });
     }
   } catch (diagErr) {
     console.error("Diagnostic verification failed:", diagErr.message);

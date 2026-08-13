@@ -5,7 +5,7 @@ import { computeDistrictType, computeDistrictInfo } from "../utils/districtHelpe
 // Enterprise: shared utilities (replaces local duplicates)
 import { jsonResponse } from "../utils/http.js";
 import { parseClientTimestamp } from "../utils/timestamp.js";
-import { logFinancialAudit, ensureAuditTableExists } from "./expense.js";
+import { logFinancialAudit, ensureAuditTableExists, logExpenseDiagnosticToKV } from "./expense.js";
 
 function computeCombinedPurpose(legs, fallbackPurpose) {
   if (!legs || legs.length === 0) return fallbackPurpose || "Field visit";
@@ -748,6 +748,23 @@ export async function handleApprove(request, env, params, query, user) {
         nextApproverUser.user_id, "📥 Pending Approval Forwarded", `Claim ${expense.expense_code} has been forwarded to you for review.`, "warning", "/approval-center", timestamp
       ]);
     }
+  }
+  // Post-approval assertion check
+  try {
+    const checkExp = await env.DB.prepare("SELECT status FROM expenses WHERE id = ?").bind(expenseId).first();
+    if (!checkExp || checkExp.status !== finalStatus) {
+      await logExpenseDiagnosticToKV(env, "APPROVAL_GLITCH_MISMATCH", {
+        expense_id: expenseId,
+        expense_code: expense.expense_code,
+        approver_id: user.user_id || String(user.id),
+        approver_name: user.name,
+        expected_status: finalStatus,
+        actual_status: checkExp ? checkExp.status : "missing",
+        message: "APPROVAL INTEGRITY CHECK FAILED: Expense status mismatch in DB after approval action."
+      });
+    }
+  } catch (diagErr) {
+    console.error("Approval diagnostic assertion error:", diagErr.message);
   }
 
   return jsonResponse({ status: "success", message: "Expense claim approved successfully.", expense_status: finalStatus === "approved" ? "Approved" : "Pending Next Level" });
