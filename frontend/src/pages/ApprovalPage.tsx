@@ -406,6 +406,27 @@ export default function ApprovalPage() {
     }
   };
 
+  useEffect(() => {
+    if (!pendingApprovals || pendingApprovals.length === 0) return;
+    
+    const rawSearch = window.location.search || (window.location.hash.includes("?") ? window.location.hash.split("?")[1] : "");
+    if (!rawSearch) return;
+
+    const params = new URLSearchParams(rawSearch);
+    const targetExpId = params.get("expense_id") || params.get("exp_id") || params.get("id");
+    const targetClaimCode = params.get("claim_code") || params.get("code");
+
+    if (targetExpId || targetClaimCode) {
+      const match = pendingApprovals.find((a: any) => 
+        (targetExpId && (String(a.expense_id) === String(targetExpId) || String(a.id) === String(targetExpId))) ||
+        (targetClaimCode && String(a.expense_code || "").toLowerCase() === String(targetClaimCode).toLowerCase())
+      );
+      if (match && !showDetailModal) {
+        handleOpenDetails(match);
+      }
+    }
+  }, [pendingApprovals]);
+
   const handleOpenDetails = async (app: any) => {
     setSelectedApproval(app);
     setShowDetailModal(true);
