@@ -127,21 +127,40 @@ export async function getBootstrapDataHelper(env, user, options = {}) {
       callsAssign = 0;
     }
 
+    const amt = parseFloat(e.amount || e.total_amount || 0) || 0;
+    const da = parseFloat(e.da_amount || 0) || 0;
+    const hotel = parseFloat(e.hotel_amount || 0) || 0;
+    const other = parseFloat(e.other_expense_amount || 0) || 0;
+    const localP = parseFloat(e.local_purchase_amount || 0) || 0;
+    const totKm = parseFloat(e.total_km || e.distance_km || e.distance || 0) || 0;
+    const totAuto = parseFloat(e.total_auto || e.auto_amount || 0) || 0;
+
     return {
       ...e,
+      id: e.id,
+      expense_code: e.expense_code,
+      amount: amt,
+      total_amount: amt,
+      da_amount: da,
+      hotel_amount: hotel,
+      other_expense_amount: other,
+      local_purchase_amount: localP,
+      total_km: totKm,
+      total_auto: totAuto,
       description: desc,
       purpose: desc,
-      travel_mode: e.travel_mode, expense_code: e.expense_code,
-      da_amount: e.da_amount, hotel_amount: e.hotel_amount,
-      other_expense_amount: e.other_expense_amount,
+      travel_mode: e.travel_mode,
+      status: e.status,
+      date: e.itinerary || e.date,
+      itinerary: e.itinerary || e.date,
       calls_assigned: callsAssign, calls_completed: callsComp,
-      pms_count: e.pms_count, asset_tagging: e.asset_tagging,
-      local_purchase_amount: e.local_purchase_amount,
-      original_amount: e.original_amount, original_da_amount: e.original_da_amount,
-      original_hotel_amount: e.original_hotel_amount,
-      original_other_expense_amount: e.original_other_expense_amount,
-      original_local_purchase_amount: e.original_local_purchase_amount,
-      calibration_count: e.calibration_count, mobilise_count: e.mobilise_count,
+      pms_count: e.pms_count || 0, asset_tagging: e.asset_tagging || 0,
+      original_amount: parseFloat(e.original_amount || amt) || amt,
+      original_da_amount: parseFloat(e.original_da_amount || da) || da,
+      original_hotel_amount: parseFloat(e.original_hotel_amount || hotel) || hotel,
+      original_other_expense_amount: parseFloat(e.original_other_expense_amount || other) || other,
+      original_local_purchase_amount: parseFloat(e.original_local_purchase_amount || localP) || localP,
+      calibration_count: e.calibration_count || 0, mobilise_count: e.mobilise_count || 0,
       created_at: e.created_at, updated_at: e.updated_at
     };
   };

@@ -1204,7 +1204,7 @@ export default function HomePage() {
     return s.startsWith("submitted") || s === "pending" || s === "draft" || s === "returned_to_draft";
   });
 
-  const getStatsSums = (list: any[]) => list.filter(c => c.category !== "Limit Request").reduce((sum, c) => sum + (c.amount || 0), 0);
+  const getStatsSums = (list: any[]) => list.filter(c => c.category !== "Limit Request").reduce((sum, c) => sum + (parseFloat(c.amount || c.total_amount || c.approved_amount || 0) || 0), 0);
 
   const totalAmount = getStatsSums(statsTotalClaims);
   const approvedAmount = getStatsSums(statsApprovedClaims);
@@ -1213,8 +1213,8 @@ export default function HomePage() {
 
   // KM and Auto totals respect active tab and all filters
   const statsNonLimitList = statsClaimsList.filter(e => e.category !== "Limit Request");
-  const totalFilteredKmStats = statsNonLimitList.reduce((sum, e) => sum + (e.total_km || 0), 0);
-  const totalFilteredAutoStats = statsNonLimitList.reduce((sum, e) => sum + (e.total_auto || 0), 0);
+  const totalFilteredKmStats = statsNonLimitList.reduce((sum, e) => sum + (parseFloat(e.total_km || e.distance_km || e.distance || 0) || 0), 0);
+  const totalFilteredAutoStats = statsNonLimitList.reduce((sum, e) => sum + (parseFloat(e.total_auto || e.auto_amount || e.sub_amount || 0) || 0), 0);
 
   // const handleOpenStatsModal = (type: "Total Claimed" | "Approved" | "Pending" | "Rejected", list: any[]) => {
   //   setStatsModalType(type);
