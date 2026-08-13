@@ -295,16 +295,23 @@ const ModeChip = ({ mode }: { mode: string }) => {
   );
 };
 
-// ─── STATUS BADGE ────────────────────────────────────────────────────────────
+const getAttachmentsArray = (attachments: any): any[] => {
+  if (!attachments) return [];
+  if (Array.isArray(attachments)) return attachments.filter(Boolean);
+  if (typeof attachments === "string") {
+    try {
+      const parsed = JSON.parse(attachments);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+      return [attachments];
+    } catch { return [attachments]; }
+  }
+  return [];
+};
 
-const StatusBadge = ({ status, record, getStatusBadgeClass, getStatusLabel }: any) => (
-  <span className={`inline-flex items-center px-2 py-0.2 rounded-full text-[9.5px] font-bold border ${getStatusBadgeClass(status, record)}`}>
-    {getStatusLabel(status, record)}
-  </span>
-);
-
-// ─── SECTION HEADER ──────────────────────────────────────────────────────────
-*/
+/**
+ * 24-Hour Format Date Time Formatter
+ * Output: DD-MMM-YY HH:mm:ss (e.g., 03-Aug-26 20:16:43)
+ */
 const formatDateTime24 = (dt: any) => {
   if (!dt) return "—";
   try {
