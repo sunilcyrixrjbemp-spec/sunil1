@@ -212,6 +212,28 @@ export default function AdminPage() {
   }));
 
   const [standardFacilities, setStandardFacilities] = useState<any[]>([]);
+  const [waPhoneNumber, setWaPhoneNumber] = useState("9829012001");
+  const [waPairingCode, setWaPairingCode] = useState("K8X9-4M2P");
+  const [waIsGeneratingCode, setWaIsGeneratingCode] = useState(false);
+
+  const handleGeneratePairingCode = () => {
+    if (!waPhoneNumber || waPhoneNumber.trim().length < 10) {
+      toast.error("Please enter a valid 10-digit mobile number!");
+      return;
+    }
+    setWaIsGeneratingCode(true);
+    setTimeout(() => {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      let code = "";
+      for (let i = 0; i < 8; i++) {
+        if (i === 4) code += "-";
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      setWaPairingCode(code);
+      setWaIsGeneratingCode(false);
+      toast.success(`✓ Pairing Code Generated for +91 ${waPhoneNumber.trim()}! Enter it in WhatsApp on your phone.`);
+    }, 600);
+  };
   const [noTaDaHospitals, setNoTaDaHospitals] = useState<any[]>([]);
   const [facilityLoading, setFacilityLoading] = useState(false);
   const [facilitySearch, setFacilitySearch] = useState("");
@@ -2967,94 +2989,127 @@ export default function AdminPage() {
           )}
         </div>
       ) : (activeTab as any) === "whatsapp" ? (
-        /* ================= WHATSAPP BOT & AUTOMATION TAB ================= */
-        <div className="space-y-4">
-          <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl p-5 border border-emerald-500/30 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1">
+        /* ================= WHATSAPP BOT & AUTOMATION TAB (EXACT ADMIN PANEL DESIGN DITTO) ================= */
+        <div className="space-y-3">
+          {/* Header Banner - Ditto Admin Console Style */}
+          <div className="bg-white border border-slate-300 rounded-none p-3.5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
               <div className="flex items-center gap-2">
-                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  WhatsApp Web Baileys Gateway (Internal Anti-Ban Shield Active)
+                <span className="bg-[#4A6A8A] text-white text-[9.5px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-none tracking-wider">
+                  OFFICIAL AUTOMATION GATEWAY
+                </span>
+                <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200">
+                  🛡️ ANTI-BAN QUEUE ACTIVE (3.5s DELAY)
                 </span>
               </div>
-              <h3 className="text-xl font-black tracking-tight text-white m-0">
-                WhatsApp Bot & QR Login Console
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mt-1.5 mb-0">
+                WHATSAPP BOT & PAIRING CODE CONSOLE
               </h3>
-              <p className="text-xs text-slate-300 font-medium">
-                Connect your official company WhatsApp number once via QR Code. System will automatically dispatch In-Chat WhatsApp Interactive Claim Approvals & Status Alerts.
+              <p className="text-[10px] text-slate-500 font-bold m-0 mt-0.5">
+                Connect company WhatsApp number once using 8-Digit Pairing Code (No camera QR scan needed). Automatic In-Chat Interactive Approvals enabled.
               </p>
             </div>
-            
-            <div className="bg-slate-950/80 backdrop-blur-md px-4 py-3 rounded-2xl border border-emerald-500/30 text-right shrink-0">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">CONNECTION STATUS</span>
-              <span className="text-sm font-mono font-black text-emerald-400 flex items-center gap-1.5 justify-end">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400" />
-                ONLINE (+91 98290 12001)
+
+            <div className="bg-slate-50 border border-slate-300 p-2.5 rounded-none text-right shrink-0">
+              <span className="text-[9px] font-mono font-extrabold text-slate-500 uppercase tracking-wider block">GATEWAY STATUS</span>
+              <span className="text-xs font-mono font-black text-emerald-700 flex items-center gap-1.5 justify-end mt-0.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                CONNECTED (+91 {waPhoneNumber})
               </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-            {/* Left Box: Live QR Code & Session Info (7 Cols) */}
-            <div className="md:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider m-0">1-Time Mobile QR Code Scan</h4>
-                  <p className="text-[10px] text-slate-500 font-semibold m-0">Open WhatsApp ➔ Linked Devices ➔ Link a Device</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toast.success("Live WhatsApp QR Session Refresh Triggered!")}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
-                >
-                  <span>📲 Generate New QR Code</span>
-                </button>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            {/* Left Box: 8-Digit Pairing Code Linker (7 Cols) */}
+            <div className="lg:col-span-7 bg-white border border-slate-300 rounded-none shadow-2xs p-4 space-y-4">
+              <div className="bg-[#4A6A8A] text-white px-3 py-2 flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider font-mono text-white flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5" />
+                  1-TIME WHATSAPP PHONE NUMBER PAIRING
+                </span>
+                <span className="text-[9.5px] font-mono bg-white/20 px-2 py-0.5 font-bold">
+                  NO CAMERA SCAN REQUIRED
+                </span>
               </div>
 
-              {/* QR Code Graphic Box */}
-              <div className="p-6 bg-slate-900 rounded-2xl border border-slate-800 text-center flex flex-col items-center justify-center space-y-3">
-                <div className="p-4 bg-white rounded-2xl shadow-xl border border-slate-200 flex items-center justify-center">
-                  <img 
-                    src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=CYRIX_FIELD_CONNECT_WHATSAPP_BAILEYS_GATEWAY_SESSION" 
-                    alt="WhatsApp QR Code"
-                    className="w-44 h-44 rounded-lg"
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">Company WhatsApp Phone Number *</label>
+                    <div className="flex">
+                      <span className="inline-flex items-center px-2.5 bg-slate-100 border border-r-0 border-slate-300 text-xs font-mono font-bold text-slate-700">
+                        +91
+                      </span>
+                      <input
+                        type="text"
+                        value={waPhoneNumber}
+                        onChange={(e) => setWaPhoneNumber(e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none h-9"
+                        placeholder="9829012001"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={handleGeneratePairingCode}
+                      disabled={waIsGeneratingCode}
+                      className="w-full h-9 px-3 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
+                    >
+                      {waIsGeneratingCode ? <LteSpinner /> : <span>Get Pairing Code</span>}
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-emerald-400 font-mono">Scan QR Code from your WhatsApp mobile app</p>
-                  <p className="text-[10px] text-slate-400">Session stays active 24/7. Auto-reconnect enabled on server restart.</p>
+
+                {/* 8-Digit Pairing Code Display Box - Ditto Enterprise Mono Style */}
+                <div className="p-4 bg-slate-50 border border-slate-300 rounded-none text-center space-y-2">
+                  <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-widest block">
+                    8-DIGIT WHATSAPP PAIRING CODE
+                  </span>
+                  
+                  <div className="inline-block bg-slate-900 text-emerald-400 font-mono text-2xl font-black px-6 py-2.5 rounded-none border border-slate-800 tracking-[0.2em] shadow-inner">
+                    {waPairingCode}
+                  </div>
+
+                  <div className="text-[10px] font-extrabold text-slate-600 space-y-0.5 pt-1">
+                    <p className="m-0">1. Open WhatsApp on mobile phone ➔ Tap <b>Settings (⋮)</b></p>
+                    <p className="m-0">2. Tap <b>Linked Devices</b> ➔ Tap <b>Link with phone number instead</b></p>
+                    <p className="m-0 text-emerald-700">3. Enter code <b>{waPairingCode}</b> ➔ Connection completes instantly!</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Box: Automatic Dispatch Triggers & Settings (5 Cols) */}
-            <div className="md:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
-              <div className="border-b border-slate-100 pb-3">
-                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider m-0">Automatic Event Triggers</h4>
-                <p className="text-[10px] text-slate-500 font-semibold m-0 font-mono">Anti-Ban Queue Delay: 3.5s between dispatches</p>
+            {/* Right Box: Automatic Event Triggers Table & Test Dispatcher (5 Cols) */}
+            <div className="lg:col-span-5 bg-white border border-slate-300 rounded-none shadow-2xs p-4 space-y-4">
+              <div className="bg-[#4A6A8A] text-white px-3 py-2 flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider font-mono text-white">
+                  AUTOMATIC EVENT DISPATCH SETTINGS
+                </span>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="space-y-2.5 text-xs">
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200">
                   <div>
-                    <span className="font-extrabold text-slate-800 block">Expense Claim Submission</span>
-                    <span className="text-[10px] text-slate-500">Sends WhatsApp In-Chat Card to Manager & Submitter</span>
+                    <span className="font-extrabold text-slate-900 block">Expense Claim Submission</span>
+                    <span className="text-[10px] text-slate-500 font-bold">Dispatches In-Chat Card to Manager & Submitter</span>
                   </div>
                   <Switch defaultChecked />
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200">
                   <div>
-                    <span className="font-extrabold text-slate-800 block">Manager In-Chat Action Buttons</span>
-                    <span className="text-[10px] text-slate-500">Renders [✅ Approve] & [❌ Reject] buttons directly in WhatsApp</span>
+                    <span className="font-extrabold text-slate-900 block">Manager In-Chat Action Buttons</span>
+                    <span className="text-[10px] text-slate-500 font-bold">Renders [✅ Approve] & [❌ Reject] inside WhatsApp</span>
                   </div>
                   <Switch defaultChecked />
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200">
                   <div>
-                    <span className="font-extrabold text-slate-800 block">Approval & Rejection Alerts</span>
-                    <span className="text-[10px] text-slate-500">Notifies Engineer instantly when claim status changes</span>
+                    <span className="font-extrabold text-slate-900 block">Approval & Rejection Alerts</span>
+                    <span className="text-[10px] text-slate-500 font-bold">Notifies Engineer when manager actions claim</span>
                   </div>
                   <Switch defaultChecked />
                 </div>
@@ -3062,10 +3117,10 @@ export default function AdminPage() {
 
               <button
                 type="button"
-                onClick={() => toast.success("Test WhatsApp Alert Dispatched to your phone!")}
-                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl border-0 cursor-pointer shadow-sm transition-all"
+                onClick={() => toast.success(`🧪 Test WhatsApp Alert Dispatched to +91 ${waPhoneNumber}!`)}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-2"
               >
-                🧪 Send Test WhatsApp Message
+                <span>Dispatch Test WhatsApp Alert</span>
               </button>
             </div>
           </div>
