@@ -304,6 +304,201 @@ const StatusBadge = ({ status, record, getStatusBadgeClass, getStatusLabel }: an
 );
 
 // ─── SECTION HEADER ──────────────────────────────────────────────────────────
+*/
+const formatDateTime24 = (dt: any) => {
+  if (!dt) return "—";
+  try {
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return String(dt);
+    const day = String(d.getDate()).padStart(2, "0");
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const month = months[d.getMonth()];
+    const yy = String(d.getFullYear()).slice(-2);
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    const ss = String(d.getSeconds()).padStart(2, "0");
+    return `${day}-${month}-${yy} ${hh}:${mm}:${ss}`;
+  } catch { return String(dt); }
+};
+
+const formatDateDDMMMYY = (dateStr: string) => {
+  if (!dateStr) return "—";
+  const cleanStr = String(dateStr).trim().split(" ")[0].split("T")[0];
+  const parts = cleanStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const [y, m, d] = parts;
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const mIdx = parseInt(m, 10) - 1;
+  if (mIdx < 0 || mIdx > 11) return dateStr;
+  const yy = y.slice(-2);
+  return `${d}-${months[mIdx]}-${yy}`;
+};
+
+const rupee = (val: any) => {
+  if (val === null || val === undefined || val === "") return "—";
+  const n = parseFloat(val);
+  if (isNaN(n)) return "—";
+  if (n === 0) return "₹0";
+  return `₹${Math.round(n).toLocaleString("en-IN")}`;
+};
+
+interface ParsedActivity {
+  text: string;
+  parsed: any;
+  callsList: any[];
+  pmsList: any[];
+  assetsList: any[];
+  otherDesc: string;
+  selected: string;
+  hospitalName: string;
+  equipmentName: string;
+  equipmentModel: string;
+  department: string;
+  barcode: string;
+  schedule: string;
+  callsType: string;
+  callsStatus: string;
+  attachmentUrl: string;
+  callsBarcode: string;
+  callsVerified: boolean;
+  pmsBarcode: string;
+  pmsVerified: boolean;
+  pmsFrequency: string;
+  assetEquipment: string;
+  assetQuantity: number;
+}
+
+const defaultParsedActivity: ParsedActivity = {
+  text: "",
+  parsed: null,
+  callsList: [],
+  pmsList: [],
+  assetsList: [],
+  otherDesc: "",
+  selected: "",
+  hospitalName: "",
+  equipmentName: "",
+  equipmentModel: "",
+  department: "",
+  barcode: "",
+  schedule: "",
+  callsType: "",
+  callsStatus: "",
+  attachmentUrl: "",
+  callsBarcode: "",
+  callsVerified: false,
+  pmsBarcode: "",
+  pmsVerified: false,
+  pmsFrequency: "",
+  assetEquipment: "",
+  assetQuantity: 0
+};
+
+/**
+ * Deep JSON Parser for Activity Details, Calls, PMS, Hospital, Equipment & Barcode
+ */
+const parseActivityDetails = (raw: any): ParsedActivity => {
+  if (!raw) return defaultParsedActivity;
+  let obj = raw;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      try {
+        obj = JSON.parse(trimmed);
+      } catch {
+        return { ...defaultParsedActivity, text: isValidText(trimmed) ? trimmed : "" };
+      }
+    } else {
+      return { ...defaultParsedActivity, text: isValidText(trimmed) ? trimmed : "" };
+    }
+  }
+
+  if (typeof obj !== "object" || obj === null) return { ...defaultParsedActivity, text: isValidText(obj) ? String(obj) : "" };
+
+  const hospitalName = obj.hospital_name || obj.hospital || obj.facility_name || obj.location_visited || obj.calls_asset_details?.hospital_name || "";
+  const equipmentName = obj.equipment_name || obj.equipment || obj.asset_name || obj.calls_asset_details?.equipment_name || obj.asset_tagging_equipment || "";
+  const equipmentModel = obj.equipment_model || obj.model || obj.model_no || obj.make || obj.brand || "";
+  const department = obj.department || obj.dept || obj.ward || obj.location_in_facility || "";
+  const barcode = obj.barcode || obj.calls_barcode || obj.pms_barcode || obj.asset_barcode || obj.serial_no || obj.serial_number || "";
+  const schedule = obj.schedule || obj.pms_frequency || obj.frequency || "";
+
+  // Call Type
+  const callsTypeRaw = obj.calls_type || obj.call_type || "";
+  let callsType = callsTypeRaw;
+  if (callsTypeRaw.toLowerCase().includes("support") || callsTypeRaw.toLowerCase().includes("online")) callsType = "Online Support";
+  else if (callsTypeRaw.toLowerCase().includes("field")) callsType = "Field Support";
+  else if (callsTypeRaw.toLowerCase().includes("breakdown")) callsType = "Breakdown Call";
+
+  // Call Status
+  const callsStatusRaw = obj.calls_status || obj.call_status || "";
+  let callsStatus = callsStatusRaw;
+  if (callsStatusRaw.toLowerCase() === "attend" || callsStatusRaw.toLowerCase() === "attended") callsStatus = "Attended";
+  else if (callsStatusRaw.toLowerCase() === "close" || callsStatusRaw.toLowerCase() === "closed") callsStatus = "Closed";
+  else if (callsStatusRaw.toLowerCase().includes("both")) callsStatus = "Attended & Closed";
+
+  const attachmentUrl = obj.attachment_url || obj.service_report_url || obj.photo_url || obj.calls_asset_details?.attachment_url || obj.image_url || "";
+
+  const otherDesc = isValidText(obj.activity_other_desc) ? obj.activity_other_desc : (isValidText(obj.other_desc) ? obj.other_desc : (isValidText(obj.remark) ? obj.remark : (isValidText(obj.reason) ? obj.reason : "")));
+  const selected = Array.isArray(obj.selected_activities) ? obj.selected_activities.filter(isValidText).join(", ") : (isValidText(obj.selected_activities) ? obj.selected_activities : "");
+  const mainText = otherDesc || selected || "";
+
+  const callsList = Array.isArray(obj.calls_list) ? obj.calls_list : (Array.isArray(obj.calls) ? obj.calls : []);
+  const pmsList = Array.isArray(obj.pms_list) ? obj.pms_list : (Array.isArray(obj.pms) ? obj.pms : []);
+  const assetsList = Array.isArray(obj.assets_list) ? obj.assets_list : (Array.isArray(obj.assets) ? obj.assets : []);
+
+  return {
+    text: mainText,
+    otherDesc,
+    selected,
+    hospitalName,
+    equipmentName,
+    equipmentModel,
+    department,
+    barcode,
+    schedule,
+    callsType,
+    callsStatus,
+    attachmentUrl,
+    callsBarcode: obj.calls_barcode || barcode || "",
+    callsVerified: obj.calls_verified || false,
+    pmsBarcode: obj.pms_barcode || barcode || "",
+    pmsVerified: obj.pms_verified || false,
+    pmsFrequency: obj.pms_frequency || schedule || "",
+    assetEquipment: obj.asset_tagging_equipment || equipmentName || "",
+    assetQuantity: parseInt(obj.asset_tagging_quantity || obj.quantity || "0", 10) || 0,
+    callsList,
+    pmsList,
+    assetsList,
+    parsed: obj
+  };
+};
+
+// ─── TRAVEL MODE CHIP ────────────────────────────────────────────────────────
+
+const ModeChip = ({ mode }: { mode: string }) => {
+  if (!mode) return null;
+  const lower = mode.toLowerCase();
+  let cls = "bg-slate-100 text-slate-700 border-slate-200";
+  if (lower.includes("bike") || lower.includes("two")) cls = "bg-cyan-50 text-cyan-800 border-cyan-200/90";
+  else if (lower.includes("car") || lower.includes("four")) cls = "bg-indigo-50 text-indigo-800 border-indigo-200/90";
+  else if (lower.includes("auto") || lower.includes("rickshaw")) cls = "bg-amber-50 text-amber-800 border-amber-200/90";
+  else if (lower.includes("bus") || lower.includes("train")) cls = "bg-emerald-50 text-emerald-800 border-emerald-200/90";
+  return (
+    <span className={`inline-block px-1.5 py-0.2 rounded text-[9px] font-bold uppercase tracking-tight border ${cls} shadow-2xs whitespace-nowrap`}>
+      {mode}
+    </span>
+  );
+};
+
+// ─── STATUS BADGE ────────────────────────────────────────────────────────────
+
+const StatusBadge = ({ status, record, getStatusBadgeClass, getStatusLabel }: any) => (
+  <span className={`inline-flex items-center px-2 py-0.2 rounded-full text-[9.5px] font-bold border ${getStatusBadgeClass(status, record)}`}>
+    {getStatusLabel(status, record)}
+  </span>
+);
+
+// ─── SECTION HEADER ──────────────────────────────────────────────────────────
 
 const SectionHeader = ({ icon: Icon, label, accent = "#4A6A8A", count }: { icon: any; label: string; accent?: string; count?: number | string }) => (
   <div className="flex items-center justify-between gap-1.5 mb-2">
@@ -344,29 +539,33 @@ const AttachmentCard = ({ att, index, setLightboxImage }: { att: any; index: num
 
   return (
     <div
-      className="group relative rounded-lg border border-slate-200 bg-white overflow-hidden shadow-2xs hover:border-[#4A6A8A] transition-all cursor-pointer flex items-center gap-2 p-1.5"
+      className="group relative rounded-lg border border-slate-200 bg-white hover:bg-slate-50/80 overflow-hidden shadow-2xs hover:border-[#4A6A8A] transition-all cursor-pointer flex items-center justify-between gap-2 p-2"
       onClick={() => isPdf ? window.open(fullUrl, "_blank") : setLightboxImage(fullUrl)}
     >
-      <div className="w-10 h-10 rounded bg-slate-100 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200 relative">
-        {isPdf ? (
-          <FileText size={16} className="text-red-500" />
-        ) : (
-          <img src={fullUrl} alt={`Bill ${index + 1}`} loading="eager" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-[10px] font-bold text-slate-800 truncate">
-          {billType ? `${billType} Bill` : `Attachment #${index + 1}`}
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="w-8 h-8 rounded-lg bg-slate-100/90 flex items-center justify-center shrink-0 border border-slate-200/80">
+          {isPdf ? (
+            <FileText size={16} className="text-rose-500" />
+          ) : (
+            <FileText size={16} className="text-[#4A6A8A]" />
+          )}
         </div>
-        <div className="text-[8.5px] text-slate-400 truncate">
-          {isPdf ? "PDF Document" : "Image File"}
+        <div className="flex-1 min-w-0 leading-tight">
+          <div className="text-[10.5px] font-bold text-slate-800 truncate">
+            {billType ? `${billType} Bill` : `Attachment #${index + 1}`}
+          </div>
+          <div className="text-[8.5px] text-slate-400 font-semibold truncate">
+            {isPdf ? "PDF Document (Click to view)" : "Image File (Click for popup)"}
+          </div>
         </div>
       </div>
-      <Eye size={12} className="text-slate-300 group-hover:text-[#4A6A8A] shrink-0" />
+      <div className="flex items-center gap-1 bg-slate-100 group-hover:bg-[#4A6A8A] group-hover:text-white px-2 py-1 rounded text-slate-600 transition-all shrink-0">
+        <Eye size={12} className="shrink-0" />
+        <span className="text-[9px] font-bold">View</span>
+      </div>
     </div>
   );
 };
-
 // ─── LEG DETAILS CARD ─────────────────────────────────────────────────────────
 
 const LegDetailCard = ({
