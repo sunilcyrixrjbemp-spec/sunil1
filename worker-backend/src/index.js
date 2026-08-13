@@ -117,6 +117,12 @@ import {
   handleDeleteFile, handleListFiles,
 } from "./routes/upload.js";
 
+import {
+  handleGetWhatsappStatus,
+  handleGenerateWhatsappPairingCode,
+  handleTestWhatsappDispatch
+} from "./routes/whatsapp.js";
+
 // ─── Router — O(1) Method-Grouped Hash Map Router ────────────────────────────
 class Router {
   constructor() {
@@ -350,6 +356,11 @@ router.get("/api/expense/email-action", async (req, env, params, query, user) =>
   if (!handleEmailAction) return errorResponse("Email action not yet available", 503);
   return handleEmailAction(req, env, params, query, user);
 }, false);
+
+// ─── WhatsApp Gateway Routes ───────────────────────────────────────────────
+router.get("/api/whatsapp/status", async (req, env) => handleGetWhatsappStatus(req, env), true);
+router.post("/api/whatsapp/pairing-code", async (req, env) => handleGenerateWhatsappPairingCode(req, env), true);
+router.post("/api/whatsapp/test-alert", async (req, env) => handleTestWhatsappDispatch(req, env), true);
 
 // ─── Test/Dev Endpoints ───────────────────────────────────────────────────────
 router.get("/api/test/time", handleTestTime, false);

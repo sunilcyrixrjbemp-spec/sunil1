@@ -208,5 +208,20 @@ export const adminService = {
   deleteFacility: async (id: number, type?: "standard" | "no_ta_da"): Promise<any> => {
     const response = await api.delete(`/admin/facilities/${id}${type ? `?type=${type}` : ""}`);
     return response.data;
+  },
+
+  getWhatsappStatus: async (): Promise<any> => {
+    const response = await api.get("/whatsapp/status");
+    return response.data;
+  },
+
+  generateWhatsappPairingCode: async (phoneNumber: string): Promise<any> => {
+    const response = await api.post("/whatsapp/pairing-code", { phoneNumber });
+    return response.data;
+  },
+
+  testWhatsappDispatch: async (phoneNumber?: string): Promise<any> => {
+    const response = await api.post("/whatsapp/test-alert", { phoneNumber });
+    return response.data;
   }
 };

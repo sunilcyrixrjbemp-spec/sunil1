@@ -216,23 +216,25 @@ export default function AdminPage() {
   const [waPairingCode, setWaPairingCode] = useState("K8X9-4M2P");
   const [waIsGeneratingCode, setWaIsGeneratingCode] = useState(false);
 
-  const handleGeneratePairingCode = () => {
+  const handleGeneratePairingCode = async () => {
     if (!waPhoneNumber || waPhoneNumber.trim().length < 10) {
       toast.error("Please enter a valid 10-digit mobile number!");
       return;
     }
     setWaIsGeneratingCode(true);
-    setTimeout(() => {
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let code = "";
-      for (let i = 0; i < 8; i++) {
-        if (i === 4) code += "-";
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    try {
+      const res = await adminService.generateWhatsappPairingCode(waPhoneNumber.trim());
+      if (res && res.pairing_code) {
+        setWaPairingCode(res.pairing_code);
+        toast.success(`✓ Official WhatsApp Pairing Code Generated for +91 ${waPhoneNumber.trim()}!`);
+      } else {
+        throw new Error(res?.message || "Failed to generate pairing code");
       }
-      setWaPairingCode(code);
+    } catch (e: any) {
+      toast.error(e.message || "Error connecting to WhatsApp Gateway");
+    } finally {
       setWaIsGeneratingCode(false);
-      toast.success(`✓ Pairing Code Generated for +91 ${waPhoneNumber.trim()}! Enter it in WhatsApp on your phone.`);
-    }, 600);
+    }
   };
   const [noTaDaHospitals, setNoTaDaHospitals] = useState<any[]>([]);
   const [facilityLoading, setFacilityLoading] = useState(false);
