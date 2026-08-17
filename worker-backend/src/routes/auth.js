@@ -297,11 +297,11 @@ export async function handleLogin(request, env) {
   // 2. Status checks
   if (user.user_status === "disabled") {
     await logLogin(env, targetUserId, ipAddress, userAgent, "failed");
-    return jsonResponse({ error: "Your account is disabled. Please contact the administrator." }, 403);
+    return jsonResponse({ error: "Your account is disabled. Please contact the administrator.", account_status: "disabled" }, 403);
   }
   if (user.user_status === "locked") {
     await logLogin(env, targetUserId, ipAddress, userAgent, "locked");
-    return jsonResponse({ error: "Your account is locked. Please use the Unlock Account option." }, 403);
+    return jsonResponse({ error: "Your account is locked. Please use the Unlock Account option.", account_status: "locked" }, 403);
   }
 
   // 3. Verify password (checks both hashed_password and legacy password column)
@@ -311,10 +311,10 @@ export async function handleLogin(request, env) {
   if (!passwordCorrect) {
     const failedAttempts = (user.failed_attempt || 0) + 1;
     if (failedAttempts >= 5) {
-      await env.DB.prepare(`UPDATE users SET failed_attempt = ?, user_status = 'locked' WHERE user_id = ?`)
+      await env.DB.prepare(`UPDATE users SET failed_attempt = ?, user_status = 'locked', active_session_id = NULL WHERE user_id = ?`)
         .bind(failedAttempts, targetUserId).run();
       await logLogin(env, targetUserId, ipAddress, userAgent, "locked");
-      return jsonResponse({ error: "Your account has been locked due to 5 failed login attempts." }, 403);
+      return jsonResponse({ error: "Your account has been locked due to 5 failed login attempts.", account_status: "locked" }, 403);
     }
     await env.DB.prepare(`UPDATE users SET failed_attempt = ? WHERE user_id = ?`)
       .bind(failedAttempts, targetUserId).run();
@@ -365,10 +365,18 @@ export async function handleRefresh(request, env) {
     return jsonResponse({ error: "Invalid or expired refresh token" }, 401);
 
   const user = await env.DB.prepare(
-    `SELECT user_id, active_session_id FROM users WHERE user_id = ? LIMIT 1`
+    `SELECT user_id, user_status, active_session_id FROM users WHERE user_id = ? LIMIT 1`
   ).bind(payload.sub).first();
 
-  if (!user || user.active_session_id !== payload.sid)
+  if (!user)
+    return jsonResponse({ error: "User not found" }, 401);
+
+  if (user.user_status && user.user_status !== "active") {
+    await env.DB.prepare(`UPDATE users SET active_session_id = NULL WHERE user_id = ?`).bind(user.user_id).run().catch(() => {});
+    return jsonResponse({ error: `Account is ${user.user_status}. Session terminated. Please contact administrator.`, account_status: user.user_status }, 401);
+  }
+
+  if (user.active_session_id !== payload.sid)
     return jsonResponse({ error: "Session expired or invalid" }, 401);
 
   const sessionId = crypto.randomUUID();

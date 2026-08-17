@@ -407,7 +407,13 @@ export async function handleSaveUser(request, env, params, query, adminUser) {
       if (coordinator !== undefined) { updates.push("coordinator = ?"); bindings.push(coordinator || null); }
       if (mobile_number !== undefined) { updates.push("mobile_number = ?"); bindings.push(mobile_number || null); }
       if (mail_id !== undefined) { updates.push("mail_id = ?"); bindings.push(mail_id || null); }
-      if (user_status) { updates.push("user_status = ?"); bindings.push(user_status); }
+      if (user_status) {
+        updates.push("user_status = ?");
+        bindings.push(user_status);
+        if (user_status.toLowerCase() !== "active") {
+          updates.push("active_session_id = NULL");
+        }
+      }
 
       if (body.grade !== undefined) { updates.push("grade = ?"); bindings.push(body.grade); }
       if (body.type !== undefined) { updates.push("type = ?"); bindings.push(body.type); }
@@ -636,6 +642,14 @@ export async function handleBulkCreateUsers(request, env, params, query, adminUs
           const targetWindows = item.allowed_windows !== undefined ? String(item.allowed_windows).trim() : existing.allowed_windows;
           if (targetWindows !== undefined && isDiff(targetWindows, existing.allowed_windows)) {
             fieldUpdates.push("allowed_windows = ?"); fieldBinds.push(targetWindows);
+          }
+
+          if (item.user_status !== undefined && isDiff(item.user_status, existing.user_status)) {
+            const sc = String(item.user_status).trim().toLowerCase();
+            fieldUpdates.push("user_status = ?"); fieldBinds.push(sc);
+            if (sc !== "active") {
+              fieldUpdates.push("active_session_id = NULL");
+            }
           }
 
           if (passwordChanged && newPasswordHash) {
@@ -970,7 +984,11 @@ export async function handleUpdateUser(request, env, params, query, adminUser) {
         return jsonResponse({ error: "Status must be 'active', 'locked', or 'disabled'." }, 400);
       }
       updates.push("user_status = ?"); bindings.push(statusClean);
-      if (statusClean === "active") { updates.push("failed_attempt = ?"); bindings.push(0); }
+      if (statusClean === "active") {
+        updates.push("failed_attempt = ?"); bindings.push(0);
+      } else {
+        updates.push("active_session_id = NULL");
+      }
     }
 
     if (body.role !== undefined) {

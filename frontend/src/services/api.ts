@@ -101,10 +101,41 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     if (!originalRequest) return Promise.reject(error);
 
+    const status = error.response?.status;
+    const errorData = error.response?.data as any;
+    const errorMsg = (errorData?.error || errorData?.detail || errorData?.message || "").toString().toLowerCase();
 
+    // 1. Immediate Force Logout for Locked / Disabled / Terminated Accounts
+    const isAccountLockedOrDisabled = 
+      errorData?.account_status === "locked" ||
+      errorData?.account_status === "disabled" ||
+      errorMsg.includes("account is locked") ||
+      errorMsg.includes("account is disabled") ||
+      errorMsg.includes("session terminated") ||
+      (status === 403 && (errorMsg.includes("account is") || errorMsg.includes("disabled") || errorMsg.includes("locked")));
+
+    if (isAccountLockedOrDisabled) {
+      tokenPersistence.clear();
+      try {
+        localStorage.removeItem("user");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+      } catch (_) {}
+
+      const alertMsg = errorData?.error || errorData?.detail || "Your account has been locked or disabled. Session terminated.";
+      try {
+        sessionStorage.setItem("account_lock_msg", alertMsg);
+      } catch (_) {}
+
+      if (!window.location.hash.includes("/login")) {
+        window.location.hash = "#/login";
+        window.location.reload();
+      }
+      return Promise.reject(error);
+    }
     
     // 2. Token expiry logic (401 Unauthorized)
-    if (error.response?.status === 401) {
+    if (status === 401) {
       const refreshToken = localStorage.getItem("refresh_token");
       
       // Try refreshing the token if we have a refresh token and haven't retried yet
@@ -144,9 +175,17 @@ api.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${access_token}`;
           }
           return api(originalRequest);
-        } catch (refreshError) {
+        } catch (refreshError: any) {
           processQueue(refreshError, null);
           
+          const rData = refreshError.response?.data as any;
+          const rMsg = (rData?.error || rData?.detail || "").toString().toLowerCase();
+          if (rData?.account_status === "locked" || rData?.account_status === "disabled" || rMsg.includes("account is") || rMsg.includes("locked") || rMsg.includes("disabled")) {
+            try {
+              sessionStorage.setItem("account_lock_msg", rData?.error || "Your account has been locked or disabled. Session terminated.");
+            } catch (_) {}
+          }
+
           // Refresh failed — clear credentials and redirect to login
           tokenPersistence.clear();
           window.location.hash = "#/login";

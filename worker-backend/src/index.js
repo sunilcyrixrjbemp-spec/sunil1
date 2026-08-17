@@ -625,8 +625,11 @@ export default {
       }
 
       if (user.user_status !== "active") {
+        if (user.active_session_id) {
+          await env.DB.prepare("UPDATE users SET active_session_id = NULL WHERE user_id = ?").bind(user.user_id).run().catch(() => {});
+        }
         return injectResponseHeaders(
-          forbiddenResponse(`Account is ${user.user_status}. Please contact admin.`, origin),
+          unauthorizedResponse(`Account is ${user.user_status}. Session terminated. Please contact administrator.`, origin),
           requestId, origin
         );
       }

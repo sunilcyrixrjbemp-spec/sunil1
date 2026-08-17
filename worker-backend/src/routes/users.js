@@ -105,14 +105,23 @@ export async function handleChangePassword(request, env, params, query, user) {
   const strength = validatePasswordStrength(new_password);
   if (!strength.isValid) return errorResponse(strength.errors.join("; "), 400);
 
-  // 5. Password history (last 5)
-  const history = await env.DB.prepare(
-    `SELECT hashed_password FROM password_histories WHERE user_id = ? ORDER BY created_at DESC LIMIT 5`
-  ).bind(user.user_id).all();
+  // Resolve numeric user.id (primary key for foreign key in password_histories)
+  let numericUserId = user.id;
+  if (!numericUserId) {
+    const userRow = await env.DB.prepare("SELECT id FROM users WHERE user_id = ?").bind(user.user_id).first();
+    numericUserId = userRow?.id;
+  }
 
-  for (const row of (history?.results || [])) {
-    if (await verifyPassword(new_password, row.hashed_password)) {
-      return errorResponse("You cannot reuse any of your last 5 passwords.", 400);
+  // 5. Password history (last 5)
+  if (numericUserId) {
+    const history = await env.DB.prepare(
+      `SELECT hashed_password FROM password_histories WHERE user_id = ? ORDER BY created_at DESC LIMIT 5`
+    ).bind(numericUserId).all();
+
+    for (const row of (history?.results || [])) {
+      if (await verifyPassword(new_password, row.hashed_password)) {
+        return errorResponse("You cannot reuse any of your last 5 passwords.", 400);
+      }
     }
   }
 
@@ -120,10 +129,17 @@ export async function handleChangePassword(request, env, params, query, user) {
   const newHash = await getPasswordHash(new_password);
   const now = new Date().toISOString();
 
-  await env.DB.batch([
-    env.DB.prepare(`UPDATE users SET hashed_password = ? WHERE user_id = ?`).bind(newHash, user.user_id),
-    env.DB.prepare(`INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)`).bind(user.user_id, newHash, now),
-  ]);
+  const statements = [
+    env.DB.prepare(`UPDATE users SET hashed_password = ?, updated_at = ? WHERE user_id = ?`).bind(newHash, now, user.user_id),
+  ];
+
+  if (numericUserId) {
+    statements.push(
+      env.DB.prepare(`INSERT INTO password_histories (user_id, hashed_password, created_at) VALUES (?, ?, ?)`).bind(numericUserId, newHash, now)
+    );
+  }
+
+  await env.DB.batch(statements);
 
   return jsonResponse({ status: "success", message: "Password updated successfully." });
 }

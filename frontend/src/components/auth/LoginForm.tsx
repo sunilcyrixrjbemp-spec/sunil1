@@ -52,6 +52,17 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     writeTestResult: ""
   });
 
+  // ── Show account lock message if redirected after session termination ──────
+  React.useEffect(() => {
+    try {
+      const lockMsg = sessionStorage.getItem("account_lock_msg");
+      if (lockMsg) {
+        setStatusMessage({ type: "error", text: lockMsg });
+        sessionStorage.removeItem("account_lock_msg");
+      }
+    } catch (_) {}
+  }, []);
+
   // ── Diagnostics — UNTOUCHED logic ─────────────────────────────────────────
   const runDiagnostics = async () => {
     try {
