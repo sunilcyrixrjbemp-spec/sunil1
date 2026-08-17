@@ -511,6 +511,14 @@ export default function AnalysisPage() {
 
     return { qty, val };
   };
+  const parseSanitizedCount = (raw: any): number => {
+    if (raw === null || raw === undefined || raw === "") return 0;
+    const num = Number(raw);
+    if (isNaN(num) || num <= 0) return 0;
+    // If > 100000, raw value is an asset barcode number (e.g. 80048906156719100000) stored instead of count quantity
+    if (num > 100000) return 1;
+    return Math.round(num);
+  };
 
   // Activity aggregates
   const activityStats = useMemo(() => {
@@ -523,16 +531,16 @@ export default function AnalysisPage() {
     let mobiliseCount = 0;
 
     activeExpenses.forEach(e => {
-      callsAssigned += Number(e.calls_assigned || 0);
-      callsCompleted += Number(e.calls_completed || 0);
-      pmsCount += Number(e.pms_count || 0);
-      calibrationCount += Number(e.calibration_count || 0);
+      callsAssigned += parseSanitizedCount(e.calls_assigned);
+      callsCompleted += parseSanitizedCount(e.calls_completed);
+      pmsCount += parseSanitizedCount(e.pms_count);
+      calibrationCount += parseSanitizedCount(e.calibration_count);
 
       const { qty, val } = getAssetTaggingMetrics(e);
       assetTaggingCount += qty;
       assetTaggingValue += val;
 
-      mobiliseCount += Number(e.mobilise_asset_count || e.mobilise_count || 0);
+      mobiliseCount += parseSanitizedCount(e.mobilise_asset_count || e.mobilise_count);
     });
 
     return {

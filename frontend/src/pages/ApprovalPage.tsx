@@ -562,8 +562,8 @@ export default function ApprovalPage() {
       let newTravelAmount = leg.travel_amount;
 
       if (field === "km") {
-        const dbBikeRate = expenseDetails?.rate_bike || 4.5;
-        const dbCarRate = expenseDetails?.rate_car || 9.0;
+        const dbBikeRate = expenseDetails?.rate_bike || 5.0;
+        const dbCarRate = expenseDetails?.rate_car || 11.0;
         const mode = leg.mode || targetOriginal.mode || targetOriginal.travel_mode;
         const defaultRate = mode === "Car" ? dbCarRate : dbBikeRate;
 

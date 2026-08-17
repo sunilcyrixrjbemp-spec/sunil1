@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { 
-  Card, 
-  Button, 
+  Card as AntCard, 
   Table, 
   Form, 
   Input, 
@@ -15,7 +14,6 @@ import {
   Space, 
   Divider, 
   Tabs, 
-  Badge, 
   Tooltip,
   Alert,
   message
@@ -26,12 +24,30 @@ import {
   XCircle, 
   FileSpreadsheet, 
   Layers, 
-  Download, 
   Eye, 
   CornerDownRight,
   Smartphone,
-  Sparkles
+  Sparkles,
+  ArrowUpRight,
+  ShieldCheck,
+  TrendingUp,
+  DollarSign,
+  Users,
+  Activity,
+  Plus,
+  Filter,
+  RefreshCw,
+  Search,
+  Grid as GridIcon,
+  Sliders,
+  Send,
+  Zap
 } from "lucide-react";
+
+import { Card } from "../components/common/Card";
+import { Button } from "../components/common/Button";
+import { ButtonGroup, ActionToolbar, ActionGrid } from "../components/common/ButtonLayout";
+import { GridContainer, StatCard, BentoGrid } from "../components/common/GridContainer";
 import { UIverseButton } from "../components/common/UIverseButton";
 
 const { Title, Text, Paragraph } = Typography;
@@ -40,8 +56,9 @@ const { TextArea } = Input;
 
 export default function DesignSystemPage() {
   const [form] = Form.useForm();
-  const [activeTab, setActiveTab] = useState("palette");
+  const [activeTab, setActiveTab] = useState("cards");
   const [loading, setLoading] = useState(false);
+  const [activeSegment, setActiveSegment] = useState("all");
 
   // Mock data for table/list views
   const claimsData = [
@@ -90,25 +107,24 @@ export default function DesignSystemPage() {
     }, 1000);
   };
 
-  // Status tag renderer helper
   const renderStatusTag = (status: string) => {
     switch (status.toLowerCase()) {
       case "approved":
         return (
-          <Tag color="success" className="font-semibold flex items-center gap-1 w-fit">
+          <Tag color="success" className="font-semibold flex items-center gap-1 w-fit m-0">
             <CheckCircle2 size={12} /> Approved
           </Tag>
         );
       case "rejected":
         return (
-          <Tag color="error" className="font-semibold flex items-center gap-1 w-fit">
+          <Tag color="error" className="font-semibold flex items-center gap-1 w-fit m-0">
             <XCircle size={12} /> Rejected
           </Tag>
         );
       case "pending":
       default:
         return (
-          <Tag color="warning" className="font-semibold flex items-center gap-1 w-fit">
+          <Tag color="warning" className="font-semibold flex items-center gap-1 w-fit m-0">
             <Clock size={12} /> Pending
           </Tag>
         );
@@ -164,28 +180,25 @@ export default function DesignSystemPage() {
         <Space size={8}>
           <Tooltip title="View Details">
             <Button 
-              size="small" 
-              type="text" 
-              icon={<Eye size={14} className="text-gray-500" />}
+              size="xs" 
+              variant="ghost" 
+              iconLeft={<Eye size={14} className="text-gray-500" />}
               onClick={() => message.info(`Viewing details for ${record.claimId}`)}
             />
           </Tooltip>
           {record.status === "pending" && (
             <>
               <Button 
-                size="small" 
-                type="primary" 
-                ghost
-                className="hover:!bg-green-50"
-                style={{ borderColor: "#16A34A", color: "#16A34A" }}
+                size="xs" 
+                variant="outline"
+                className="hover:!bg-emerald-50 !text-emerald-700 !border-emerald-300"
                 onClick={() => message.success(`Approved ${record.claimId}`)}
               >
                 Approve
               </Button>
               <Button 
-                size="small" 
-                danger 
-                ghost
+                size="xs" 
+                variant="danger"
                 onClick={() => message.error(`Rejected ${record.claimId}`)}
               >
                 Reject
@@ -200,19 +213,24 @@ export default function DesignSystemPage() {
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
       {/* Header Banner */}
-      <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 rounded-2xl border border-indigo-900/50 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-white">
         <div>
-          <Title level={4} style={{ margin: 0, color: "#1F2937" }} className="flex items-center gap-2">
-            <Layers className="text-indigo-600" size={22} /> Cyrix Field Ops Design System
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              Component System v2.0
+            </span>
+          </div>
+          <Title level={3} style={{ margin: 0, color: "#ffffff" }} className="flex items-center gap-2">
+            <Layers className="text-indigo-400" size={24} /> Cyrix UI Component Architecture
           </Title>
-          <Paragraph type="secondary" style={{ margin: "4px 0 0 0", fontSize: "12px" }}>
-            A comprehensive, interactive style guide demonstrating visual and functional consistency using Ant Design (v5).
+          <Paragraph className="!text-slate-300 !m-0 text-xs md:text-sm mt-1">
+            Modern, ultra-responsive Card UI components, Button layouts, Button groups, Action Toolbars & Responsive Grid Systems.
           </Paragraph>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge status="processing" text="Active Theme" />
-          <Divider type="vertical" />
-          <Text type="secondary" className="font-mono text-xs">v1.0.0-compact</Text>
+        <div className="flex items-center gap-3">
+          <Button variant="glow" size="sm" iconLeft={<Sparkles size={14} />}>
+            Explore Components
+          </Button>
         </div>
       </div>
 
@@ -221,15 +239,325 @@ export default function DesignSystemPage() {
         activeKey={activeTab}
         onChange={setActiveTab}
         type="card"
-        className="bg-white p-4 rounded-lg border border-gray-200 shadow-xs"
+        className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs"
         items={[
           {
-            key: "uiverse",
-            label: "UIverse & Interactive Elements",
+            key: "cards",
+            label: "🃏 Modern Card UI",
             children: (
               <div className="space-y-6 pt-2">
                 <Alert
-                  message="UIverse.io Interactive Elements & Color Hunt Integration"
+                  message="Card UI Showcase"
+                  description="Flexible, beautiful Cards featuring glassmorphism, subtle gradients, metric badges, headers, and footer action bars."
+                  type="info"
+                  showIcon
+                />
+
+                <div>
+                  <Title level={5} className="mb-4">Card Variants Showcase</Title>
+                  <GridContainer cols={3} gap="md">
+                    {/* Default Card */}
+                    <Card 
+                      title="Standard Action Card" 
+                      subtitle="Default subtle card with crisp borders"
+                      icon={<ShieldCheck size={18} />}
+                      badge={<Tag color="blue">Active</Tag>}
+                      footer={<span className="font-semibold text-indigo-600 flex items-center gap-1 cursor-pointer">View Policy <ArrowUpRight size={14} /></span>}
+                    >
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Standard card for dashboard widgets, summary items, and detail views. Clean spacing and typography.
+                      </p>
+                    </Card>
+
+                    {/* Gradient Card */}
+                    <Card 
+                      variant="gradient"
+                      title="Gradient Highlight Card" 
+                      subtitle="Premium gradient accent card"
+                      icon={<Zap size={18} />}
+                      badge={<Tag color="purple">Featured</Tag>}
+                      footer={<span className="font-medium text-slate-500">Updated 5m ago</span>}
+                    >
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Subtle background gradient for highlight metrics, priority warnings, or standout operational alerts.
+                      </p>
+                    </Card>
+
+                    {/* Glass Card */}
+                    <Card 
+                      variant="glass"
+                      title="Glassmorphism Card" 
+                      subtitle="Frosted glass backdrop effect"
+                      icon={<Sparkles size={18} />}
+                      badge={<Tag color="cyan">Glass UI</Tag>}
+                      footer={<span className="font-semibold text-slate-800">Translucent backdrop</span>}
+                    >
+                      <p className="text-xs text-slate-700 leading-relaxed">
+                        Modern glassmorphic panel with blurred background backdrop filters and subtle inner shadows.
+                      </p>
+                    </Card>
+
+                    {/* Metric Card */}
+                    <Card 
+                      variant="metric"
+                      title="Metric Summary Card" 
+                      subtitle="Real-time analytical stats"
+                      icon={<TrendingUp size={18} />}
+                    >
+                      <div className="space-y-2">
+                        <div className="text-2xl font-extrabold text-slate-900">₹1,48,920</div>
+                        <div className="flex items-center gap-2 text-xs text-emerald-600 font-semibold">
+                          <CheckCircle2 size={14} /> +18.4% vs last month
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Bordered Card */}
+                    <Card 
+                      variant="bordered"
+                      title="Interactive Bordered Card" 
+                      subtitle="Hover border transition"
+                      interactive
+                    >
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Hover over this card to observe the subtle scale, border accent, and shadow transition effects.
+                      </p>
+                    </Card>
+
+                    {/* Flat Card */}
+                    <Card 
+                      variant="flat"
+                      title="Flat Container Card" 
+                      subtitle="Low-contrast flat container"
+                    >
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        Clean flat background for nesting secondary information, input fields, or secondary lists.
+                      </p>
+                    </Card>
+                  </GridContainer>
+                </div>
+              </div>
+            )
+          },
+          {
+            key: "buttons",
+            label: "🔘 Buttons & Button Layouts",
+            children: (
+              <div className="space-y-6 pt-2">
+                <Alert
+                  message="Button Variants & Layout Orchestration"
+                  description="Interactive buttons with glow, gradient, shimmer effects, plus Action Toolbars, Segmented Controls, and Button Groups."
+                  type="success"
+                  showIcon
+                />
+
+                {/* Button Variants */}
+                <div>
+                  <Title level={5} className="mb-3">Button Variants & Sizes</Title>
+                  <div className="p-5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button variant="primary">Primary</Button>
+                      <Button variant="secondary">Secondary</Button>
+                      <Button variant="outline">Outline</Button>
+                      <Button variant="ghost">Ghost</Button>
+                      <Button variant="danger">Danger</Button>
+                      <Button variant="gradient">Gradient</Button>
+                      <Button variant="glow">Glow Effect</Button>
+                      <Button variant="glass">Glass</Button>
+                      <Button variant="primary" shimmer iconLeft={<Send size={14} />}>
+                        Shimmer Button
+                      </Button>
+                    </div>
+
+                    <Divider style={{ margin: "12px 0" }} />
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-xs font-semibold text-slate-500 uppercase">Sizes:</span>
+                      <Button size="xs" variant="primary">Extra Small (xs)</Button>
+                      <Button size="sm" variant="primary">Small (sm)</Button>
+                      <Button size="md" variant="primary">Medium (md)</Button>
+                      <Button size="lg" variant="primary">Large (lg)</Button>
+                      <Button size="xl" variant="primary">Extra Large (xl)</Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Button Layouts & Groups */}
+                <div>
+                  <Title level={5} className="mb-3">Button Groups & Toolbars</Title>
+                  <div className="space-y-4">
+                    {/* Action Toolbar */}
+                    <div>
+                      <Text type="secondary" className="text-xs block mb-2 font-medium">1. Action Toolbar (Header Control Row)</Text>
+                      <ActionToolbar 
+                        title={<span className="flex items-center gap-2 text-indigo-900"><Filter size={16} /> Claims Control Toolbar</span>}
+                        leftActions={
+                          <>
+                            <Button size="sm" variant="outline" iconLeft={<Search size={14} />}>Search</Button>
+                            <Button size="sm" variant="secondary" iconLeft={<RefreshCw size={14} />}>Sync</Button>
+                          </>
+                        }
+                        rightActions={
+                          <Button size="sm" variant="gradient" iconLeft={<Plus size={14} />}>New Claim</Button>
+                        }
+                      />
+                    </div>
+
+                    {/* Segmented Control */}
+                    <div>
+                      <Text type="secondary" className="text-xs block mb-2 font-medium">2. Segmented Button Group (Filter Control)</Text>
+                      <ButtonGroup variant="segmented">
+                        {["all", "pending", "approved", "rejected"].map((seg) => (
+                          <button
+                            key={seg}
+                            onClick={() => setActiveSegment(seg)}
+                            className={`px-4 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
+                              activeSegment === seg
+                                ? "bg-white text-indigo-600 shadow-xs"
+                                : "text-slate-600 hover:text-slate-900"
+                            }`}
+                          >
+                            {seg} Claims
+                          </button>
+                        ))}
+                      </ButtonGroup>
+                    </div>
+
+                    {/* Attached Button Group */}
+                    <div>
+                      <Text type="secondary" className="text-xs block mb-2 font-medium">3. Attached Button Group</Text>
+                      <ButtonGroup variant="attached">
+                        <Button variant="outline" size="sm">Left Action</Button>
+                        <Button variant="outline" size="sm">Middle Action</Button>
+                        <Button variant="outline" size="sm">Right Action</Button>
+                      </ButtonGroup>
+                    </div>
+
+                    {/* Quick Action Grid */}
+                    <div>
+                      <Text type="secondary" className="text-xs block mb-2 font-medium">4. Quick Action Button Grid (Mobile & Dashboard)</Text>
+                      <ActionGrid columns={4}>
+                        <Button variant="glass" size="md" iconLeft={<Plus size={16} />} fullWidth>Submit Claim</Button>
+                        <Button variant="glass" size="md" iconLeft={<FileSpreadsheet size={16} />} fullWidth>Export Data</Button>
+                        <Button variant="glass" size="md" iconLeft={<CheckCircle2 size={16} />} fullWidth>Approve Batch</Button>
+                        <Button variant="glass" size="md" iconLeft={<Sliders size={16} />} fullWidth>Settings</Button>
+                      </ActionGrid>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          },
+          {
+            key: "grids",
+            label: "🔲 Responsive Grids & Bento",
+            children: (
+              <div className="space-y-6 pt-2">
+                <Alert
+                  message="Grid Layout System"
+                  description="Responsive Grid Containers, Stat Metrics Grids, and asymmetric Bento Box layouts for maximum analytical clarity."
+                  type="info"
+                  showIcon
+                  icon={<GridIcon className="text-indigo-600" size={18} />}
+                />
+
+                {/* Stat Grid */}
+                <div>
+                  <Title level={5} className="mb-3">Stat Metric Grid (4-Col Grid)</Title>
+                  <GridContainer cols={4} gap="md">
+                    <StatCard 
+                      title="Total Claims"
+                      value="1,492"
+                      change="+12.5%"
+                      changeType="increase"
+                      icon={<DollarSign size={20} />}
+                      badge="July 2026"
+                      accentColor="indigo"
+                    />
+                    <StatCard 
+                      title="Pending Approval"
+                      value="34"
+                      change="-5.2%"
+                      changeType="decrease"
+                      icon={<Clock size={20} />}
+                      badge="Needs Action"
+                      accentColor="amber"
+                    />
+                    <StatCard 
+                      title="Approved Amount"
+                      value="₹12.4L"
+                      change="+24.1%"
+                      changeType="increase"
+                      icon={<CheckCircle2 size={20} />}
+                      badge="98.2% Pass"
+                      accentColor="emerald"
+                    />
+                    <StatCard 
+                      title="Active Field Staff"
+                      value="184"
+                      change="Stable"
+                      changeType="neutral"
+                      icon={<Users size={20} />}
+                      badge="12 Zones"
+                      accentColor="purple"
+                    />
+                  </GridContainer>
+                </div>
+
+                {/* Bento Grid */}
+                <div>
+                  <Title level={5} className="mb-3">Bento Box Grid Layout</Title>
+                  <BentoGrid>
+                    <div className="md:col-span-2 bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-6 rounded-2xl shadow-md flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Zap size={18} className="text-amber-400" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">Feature Highlight</span>
+                        </div>
+                        <h3 className="text-xl font-bold mb-2 text-white">Automated Claim Validation Engine</h3>
+                        <p className="text-xs text-indigo-200 leading-relaxed max-w-lg">
+                          Real-time OCR receipt scanning, location distance checks, policy compliance deductions, and auto-flagging of suspicious duplicate entries.
+                        </p>
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-indigo-800/80 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1"><ShieldCheck size={14} /> Active Protection</span>
+                        <Button size="xs" variant="glow">View Rules</Button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Quick Stat</span>
+                        <div className="text-3xl font-extrabold text-indigo-600">4.8m</div>
+                        <p className="text-xs text-slate-500 mt-1 font-medium">Average approval turnaround time</p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1 text-xs text-emerald-600 font-semibold">
+                        <TrendingUp size={14} /> 32% faster than target
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+                      <div>
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">System Health</span>
+                        <div className="text-3xl font-extrabold text-slate-900">99.9%</div>
+                        <p className="text-xs text-slate-500 mt-1 font-medium">Worker backend uptime</p>
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1 text-xs text-slate-500">
+                        <Activity size={14} className="text-indigo-600" /> Cloudflare Edge Workers
+                      </div>
+                    </div>
+                  </BentoGrid>
+                </div>
+              </div>
+            )
+          },
+          {
+            key: "uiverse",
+            label: "⚡ UIverse Interactive Elements",
+            children: (
+              <div className="space-y-6 pt-2">
+                <Alert
+                  message="UIverse.io Interactive Elements & Custom Controls"
                   description="Explore glowing 3D buttons, neon badges, dual-ring orbit loaders, and Color Hunt harmonized color tokens."
                   type="success"
                   showIcon
@@ -238,7 +566,7 @@ export default function DesignSystemPage() {
 
                 <div>
                   <Title level={5} className="mb-3">UIverse Interactive Buttons</Title>
-                  <div className="flex flex-wrap items-center gap-4 p-5 bg-slate-900 rounded-2xl">
+                  <div className="flex flex-wrap items-center gap-4 p-6 bg-slate-900 rounded-2xl shadow-xl">
                     <UIverseButton variant="glow" iconLeft={<Sparkles size={16} />}>
                       Glow Action
                     </UIverseButton>
@@ -261,12 +589,12 @@ export default function DesignSystemPage() {
           },
           {
             key: "palette",
-            label: "Theme & Palette",
+            label: "🎨 Palette & Typography",
             children: (
               <div className="space-y-6 pt-2">
                 <Alert
-                  message="Global Styles Inherited"
-                  description="Ant Design relies on Design Tokens. Below are the primary brand tokens mapped to Cyrix colors, combined with the Compact Algorithm for high-density mobile and desktop screens."
+                  message="Global Styles & Palette System"
+                  description="Design Tokens mapped to Cyrix brand colors combined with compact typography and status indicators."
                   type="info"
                   showIcon
                 />
@@ -275,32 +603,32 @@ export default function DesignSystemPage() {
                   <Title level={5} className="mb-3">Brand & Status Colors</Title>
                   <Row gutter={[16, 16]}>
                     <Col xs={12} sm={8} md={6}>
-                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
+                      <AntCard size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
                         <div className="h-12 w-full rounded-md mb-2 bg-[#2563EB]"></div>
                         <Text strong className="block text-gray-900">Primary Accent</Text>
                         <Text type="secondary" className="text-xs">#2563EB (Royal Blue)</Text>
-                      </Card>
+                      </AntCard>
                     </Col>
                     <Col xs={12} sm={8} md={6}>
-                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
+                      <AntCard size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
                         <div className="h-12 w-full rounded-md mb-2 bg-[#16A34A]"></div>
                         <Text strong className="block text-gray-900">Approved (Success)</Text>
                         <Text type="secondary" className="text-xs">#16A34A (Green-600)</Text>
-                      </Card>
+                      </AntCard>
                     </Col>
                     <Col xs={12} sm={8} md={6}>
-                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
+                      <AntCard size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
                         <div className="h-12 w-full rounded-md mb-2 bg-[#D97706]"></div>
                         <Text strong className="block text-gray-900">Pending (Warning)</Text>
                         <Text type="secondary" className="text-xs">#D97706 (Amber-600)</Text>
-                      </Card>
+                      </AntCard>
                     </Col>
                     <Col xs={12} sm={8} md={6}>
-                      <Card size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
+                      <AntCard size="small" bodyStyle={{ padding: "12px" }} className="text-center border border-gray-200 shadow-xs">
                         <div className="h-12 w-full rounded-md mb-2 bg-[#DC2626]"></div>
                         <Text strong className="block text-gray-900">Rejected (Error)</Text>
                         <Text type="secondary" className="text-xs">#DC2626 (Red-600)</Text>
-                      </Card>
+                      </AntCard>
                     </Col>
                   </Row>
                 </div>
@@ -308,8 +636,8 @@ export default function DesignSystemPage() {
                 <Divider style={{ margin: "16px 0" }} />
 
                 <div>
-                  <Title level={5} className="mb-3">Typography System (Inter)</Title>
-                  <Card size="small" className="space-y-4 border border-gray-200 bg-slate-50/50 shadow-xs">
+                  <Title level={5} className="mb-3">Typography System</Title>
+                  <AntCard size="small" className="space-y-4 border border-gray-200 bg-slate-50/50 shadow-xs">
                     <div>
                       <Title level={2} style={{ margin: 0, color: "#0B0F19" }}>Heading 2 (28px/34px)</Title>
                       <Text type="secondary" className="text-xs">Page titles and primary section headers</Text>
@@ -324,24 +652,24 @@ export default function DesignSystemPage() {
                     </div>
                     <div>
                       <Text className="block text-sm font-semibold text-gray-900">Body Medium - 14px/20px Semibold</Text>
-                      <Text className="block text-sm text-gray-700">Body Regular - 14px/20px Normal (Primary UI descriptions and body text)</Text>
-                      <Text type="secondary" style={{ fontSize: "12px" }}>Caption Text - 12px/16px Regular (Timestamps, minor subtitles, codes)</Text>
+                      <Text className="block text-sm text-gray-700">Body Regular - 14px/20px Normal</Text>
+                      <Text type="secondary" style={{ fontSize: "12px" }}>Caption Text - 12px/16px Regular</Text>
                     </div>
-                  </Card>
+                  </AntCard>
                 </div>
               </div>
             )
           },
           {
             key: "form",
-            label: "Submit Expense Form",
+            label: "📋 Form & Controls",
             children: (
               <div className="space-y-4 pt-2">
                 <Paragraph type="secondary" style={{ fontSize: "12px" }}>
-                  A compact, structured form setup matching the <strong>Submit Expense Form</strong> screen requirements. Standardized input dimensions, label placement, and inline validations.
+                  A compact, structured form setup matching the <strong>Submit Expense Form</strong> screen requirements.
                 </Paragraph>
 
-                <Card className="border border-gray-200 bg-gray-50/30 max-w-2xl mx-auto" size="small">
+                <AntCard className="border border-gray-200 bg-gray-50/30 max-w-2xl mx-auto" size="small">
                   <Form
                     form={form}
                     layout="vertical"
@@ -412,33 +740,33 @@ export default function DesignSystemPage() {
                     </Form.Item>
 
                     <div className="flex justify-end gap-2 pt-2">
-                      <Button onClick={() => form.resetFields()}>Reset</Button>
-                      <Button type="primary" htmlType="submit" loading={loading} className="bg-indigo-600 hover:bg-indigo-700">
+                      <Button variant="secondary" size="sm" onClick={() => form.resetFields()}>Reset</Button>
+                      <Button variant="primary" size="sm" htmlType="submit" isLoading={loading}>
                         Submit Claim
                       </Button>
                     </div>
                   </Form>
-                </Card>
+                </AntCard>
               </div>
             )
           },
           {
             key: "approval",
-            label: "Approval Center (Table)",
+            label: "📊 Table Listing",
             children: (
               <div className="space-y-4 pt-2">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                   <div>
                     <Paragraph type="secondary" style={{ fontSize: "12px", margin: 0 }}>
-                      High-density tabular listing optimized for desktop displays in the <strong>Approval Center</strong>. Displays metadata compactly to maximize visibility of key data.
+                      High-density tabular listing optimized for desktop displays.
                     </Paragraph>
                   </div>
-                  <Button type="primary" size="small" icon={<FileSpreadsheet size={14} />} className="bg-indigo-600">
+                  <Button variant="primary" size="sm" iconLeft={<FileSpreadsheet size={14} />}>
                     Export List
                   </Button>
                 </div>
 
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-xs">
                   <Table 
                     dataSource={claimsData} 
                     columns={columns} 
@@ -450,129 +778,38 @@ export default function DesignSystemPage() {
             )
           },
           {
-            key: "details",
-            label: "Claim Details (Card)",
-            children: (
-              <div className="space-y-4 pt-2">
-                <Paragraph type="secondary" style={{ fontSize: "12px" }}>
-                  A card-based summary layout representation of the <strong>Claim Details Review</strong> screen. Clean organization of tags, structured grids, and actions.
-                </Paragraph>
-
-                <Card 
-                  title={
-                    <div className="flex justify-between items-center w-full">
-                      <Space size={8}>
-                        <Text strong className="font-mono text-indigo-600">CLM-9920</Text>
-                        <Text type="secondary">• Site Visit Fuel Allowance</Text>
-                      </Space>
-                      {renderStatusTag("pending")}
-                    </div>
-                  }
-                  className="max-w-3xl mx-auto border border-gray-200"
-                  size="small"
-                >
-                  <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12}>
-                      <div className="space-y-2">
-                        <div>
-                          <Text type="secondary" className="block text-[11px] uppercase font-bold tracking-wider">Submitted By</Text>
-                          <Text className="font-semibold text-gray-800">Sunil Vishnoi (CY-1002)</Text>
-                        </div>
-                        <div>
-                          <Text type="secondary" className="block text-[11px] uppercase font-bold tracking-wider">Date of Expense</Text>
-                          <Text className="font-medium">July 18, 2026</Text>
-                        </div>
-                        <div>
-                          <Text type="secondary" className="block text-[11px] uppercase font-bold tracking-wider">Site Zone</Text>
-                          <Text className="font-medium">Bikaner Zone</Text>
-                        </div>
-                      </div>
-                    </Col>
-                    
-                    <Col xs={24} sm={12}>
-                      <div className="space-y-2">
-                        <div>
-                          <Text type="secondary" className="block text-[11px] uppercase font-bold tracking-wider">Amount Claimed</Text>
-                          <Text className="text-lg font-bold text-indigo-600">₹1,500.00</Text>
-                        </div>
-                        <div>
-                          <Text type="secondary" className="block text-[11px] uppercase font-bold tracking-wider">Category</Text>
-                          <Text className="font-medium">Food & Allowance</Text>
-                        </div>
-                        <div>
-                          <Text type="secondary" className="block text-[11px] uppercase font-bold tracking-wider">Attachments</Text>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Tag color="blue" className="cursor-pointer font-medium hover:border-indigo-400">
-                              <Download size={10} className="inline mr-1" /> fuel_receipt.png
-                            </Tag>
-                          </div>
-                        </div>
-                      </div>
-                    </Col>
-                  </Row>
-
-                  <Divider style={{ margin: "12px 0" }} />
-
-                  <div className="space-y-2">
-                    <Text type="secondary" className="block text-[11px] uppercase font-bold tracking-wider">Business Purpose Details</Text>
-                    <Text className="text-gray-700 bg-gray-50 p-2 rounded block border border-gray-100" style={{ fontSize: "12px" }}>
-                      Fuel refill at BPCL petrol pump during visit to site BIK-39 for setup inspection and vendor meeting.
-                    </Text>
-                  </div>
-
-                  <Divider style={{ margin: "12px 0" }} />
-
-                  <div className="space-y-3">
-                    <Text strong style={{ fontSize: "12px" }}>Reviewer Decision Comments</Text>
-                    <TextArea rows={2} placeholder="Add approval remarks or reason for rejection here..." />
-                    <div className="flex justify-end gap-2">
-                      <Button size="small" type="primary" ghost style={{ borderColor: "#16A34A", color: "#16A34A" }} onClick={() => message.success("Claim Approved")}>
-                        Approve Claim
-                      </Button>
-                      <Button size="small" danger ghost onClick={() => message.error("Claim Rejected")}>
-                        Reject Claim
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            )
-          },
-          {
             key: "mobile",
-            label: "Mobile View (Cards List)",
+            label: "📱 Mobile Card View",
             children: (
               <div className="space-y-4 pt-2">
                 <Paragraph type="secondary" style={{ fontSize: "12px" }}>
-                  Demonstrates how the tabular list seamlessly transitions into space-saving <strong>Card-Based Listings</strong> on mobile/tablet viewports to maintain UI readability.
+                  Demonstrates how tabular data seamlessly transitions into <strong>Card-Based Listings</strong> on mobile devices.
                 </Paragraph>
 
-                <div className="max-w-md mx-auto bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-3">
+                <div className="max-w-md mx-auto bg-slate-100/70 p-4 rounded-2xl border border-slate-200/80 space-y-3">
                   <div className="flex justify-between items-center px-1">
-                    <Text strong className="text-xs text-gray-500 uppercase tracking-wider">Active Claims (3)</Text>
-                    <Smartphone size={16} className="text-gray-400" />
+                    <Text strong className="text-xs text-slate-500 uppercase tracking-wider">Active Claims (3)</Text>
+                    <Smartphone size={16} className="text-slate-400" />
                   </div>
 
                   {claimsData.map((item) => (
-                    <Card key={item.key} size="small" className="shadow-xs hover:border-indigo-300 transition-colors border border-gray-200">
+                    <Card key={item.key} variant="default" padding="sm" interactive className="shadow-xs hover:border-indigo-300">
                       <div className="flex justify-between items-start">
                         <div>
                           <Text strong className="font-mono text-xs text-indigo-600 block">{item.claimId}</Text>
-                          <Text className="font-semibold text-gray-800 text-sm">{item.employee}</Text>
+                          <Text className="font-semibold text-slate-900 text-sm">{item.employee}</Text>
                           <Text type="secondary" className="block text-[11px] mt-0.5">{item.category} • {item.date}</Text>
                         </div>
                         <div className="text-right flex flex-col items-end gap-1">
-                          <Text className="font-bold text-gray-800 text-sm">₹{item.amount.toLocaleString("en-IN")}</Text>
+                          <Text className="font-bold text-slate-900 text-sm">₹{item.amount.toLocaleString("en-IN")}</Text>
                           {renderStatusTag(item.status)}
                         </div>
                       </div>
-                      <div className="mt-2.5 pt-2 border-t border-gray-100 flex justify-between items-center">
+                      <div className="mt-3 pt-2 border-t border-slate-100 flex justify-between items-center">
                         <Text type="secondary" style={{ fontSize: "10px" }} className="uppercase font-bold">{item.zone}</Text>
-                        <Space size={8}>
-                          <Button size="small" type="text" className="text-[11px] p-0 flex items-center gap-1 font-semibold text-indigo-600">
-                            Details <CornerDownRight size={12} />
-                          </Button>
-                        </Space>
+                        <Button size="xs" variant="ghost" className="!text-indigo-600 p-0 hover:bg-transparent" iconRight={<CornerDownRight size={12} />}>
+                          Details
+                        </Button>
                       </div>
                     </Card>
                   ))}

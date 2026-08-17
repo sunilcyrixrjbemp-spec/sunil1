@@ -404,14 +404,20 @@ const LegDetailCard = ({
   const origKm = leg.original_km ?? leg.original_distance_km;
 
   // DYNAMIC RATES FETCHED FROM DB ALLOWANCE MASTER BY GRADE
-  const dbBikeRate = leg.rate_bike || leg.bike_rate || userAllowance?.rate_bike || claimMaster?.rate_bike || claimMaster?.allowance?.rate_bike || 4.5;
-  const dbCarRate = leg.rate_car || leg.car_rate || userAllowance?.rate_car || claimMaster?.rate_car || claimMaster?.allowance?.rate_car || 9.0;
+  const rawBike = leg.rate_bike || leg.bike_rate || userAllowance?.rate_bike || claimMaster?.rate_bike || claimMaster?.allowance?.rate_bike;
+  const dbBikeRate = (!rawBike || parseFloat(rawBike) === 4.5) ? 5.0 : parseFloat(rawBike);
+
+  const rawCar = leg.rate_car || leg.car_rate || userAllowance?.rate_car || claimMaster?.rate_car || claimMaster?.allowance?.rate_car;
+  const dbCarRate = (!rawCar || parseFloat(rawCar) === 9.0 || parseFloat(rawCar) === 9) ? 11.0 : parseFloat(rawCar);
+
   const dbOutDistrictDa = userAllowance?.daily_out_district || claimMaster?.daily_out_district || claimMaster?.allowance?.daily_out_district || 150;
   
   const isCar = mode.toLowerCase().includes("car") || mode.toLowerCase().includes("four");
-  const ratePerKm = leg.rate_per_km
+  const rawRatePerKm = leg.rate_per_km
     ? parseFloat(leg.rate_per_km)
     : (leg.rate ? parseFloat(leg.rate) : (isCar ? dbCarRate : dbBikeRate));
+
+  const ratePerKm = (rawRatePerKm === 4.5) ? 5.0 : ((rawRatePerKm === 9.0 || rawRatePerKm === 9) ? 11.0 : rawRatePerKm);
   
   // Deep Parse activity details / meta
   const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
@@ -1881,13 +1887,19 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
     const isCar = mode.toLowerCase().includes("car") || mode.toLowerCase().includes("four");
     
     // Dynamic rate_per_km from database allowance_master by Grade
-    const dbBikeRate = leg.rate_bike || leg.bike_rate || userAllowance?.rate_bike || c.rate_bike || c.allowance?.rate_bike || 4.5;
-    const dbCarRate = leg.rate_car || leg.car_rate || userAllowance?.rate_car || c.rate_car || c.allowance?.rate_car || 9.0;
+    const rawBike = leg.rate_bike || leg.bike_rate || userAllowance?.rate_bike || c.rate_bike || c.allowance?.rate_bike;
+    const dbBikeRate = (!rawBike || parseFloat(rawBike) === 4.5) ? 5.0 : parseFloat(rawBike);
+
+    const rawCar = leg.rate_car || leg.car_rate || userAllowance?.rate_car || c.rate_car || c.allowance?.rate_car;
+    const dbCarRate = (!rawCar || parseFloat(rawCar) === 9.0 || parseFloat(rawCar) === 9) ? 11.0 : parseFloat(rawCar);
+
     const dbOutDistrictDa = userAllowance?.daily_out_district || c.daily_out_district || c.allowance?.daily_out_district || 150;
 
-    const ratePerKm = leg.rate_per_km
+    const rawRatePerKm = leg.rate_per_km
       ? parseFloat(leg.rate_per_km)
       : (leg.rate ? parseFloat(leg.rate) : (isCar ? dbCarRate : dbBikeRate));
+
+    const ratePerKm = (rawRatePerKm === 4.5) ? 5.0 : ((rawRatePerKm === 9.0 || rawRatePerKm === 9) ? 11.0 : rawRatePerKm);
 
     const ta = parseFloat(leg.amount ?? leg.travel_amount ?? 0);
     const origTa = parseFloat(leg.original_amount ?? leg.original_travel_amount ?? 0);

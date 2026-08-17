@@ -422,14 +422,14 @@ export default function ConsolidatedReportPage() {
                 {/* 7. Bike Rate */}
                 <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
                   <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">Bike Travel Rate</span>
-                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.rate_bike || 4.5).toFixed(2)} / KM</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.rate_bike || 5.0).toFixed(2)} / KM</span>
                   <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Rate per kilometer when using personal bike.</p>
                 </div>
 
                 {/* 8. Car Rate */}
                 <div className="p-3 bg-white border border-slate-300 rounded-none shadow-2xs">
                   <span className="text-[9px] font-extrabold uppercase tracking-wider text-[#4A6A8A] block mb-0.5">Car Travel Rate</span>
-                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.rate_car || 9.0).toFixed(2)} / KM</span>
+                  <span className="text-sm font-black text-slate-900 block mb-1 font-mono">₹{(selectedPolicy.rate_car || 11.0).toFixed(2)} / KM</span>
                   <p className="text-[9.5px] text-slate-500 font-semibold leading-snug m-0">Rate per kilometer when using personal car.</p>
                 </div>
               </div>

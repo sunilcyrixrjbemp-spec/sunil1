@@ -1000,8 +1000,8 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   const existingAutoReq = autoReqs.length > 0 ? { status: autoReqs[0].status, requested_value: autoReqs[0].requested_value } : null;
 
   // BUG2A FIX: Use grade-specific rates first; fallback to any-grade only if missing
-  const resolvedBikeRate = gradeBikeRate?.rate_per_km ?? defaultBike?.rate_per_km ?? 4.5;
-  const resolvedCarRate  = gradeCarRate?.rate_per_km  ?? defaultCar?.rate_per_km  ?? 9.0;
+  const resolvedBikeRate = gradeBikeRate?.rate_per_km ?? defaultBike?.rate_per_km ?? 5.0;
+  const resolvedCarRate  = gradeCarRate?.rate_per_km  ?? defaultCar?.rate_per_km  ?? 11.0;
 
   const allowanceDict = {
     policy_missing: !allowance,
@@ -2031,15 +2031,15 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
         const submitter = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(masterRow.user_id).first();
         
-        let rateBike = 4.5;
-        let rateCar = 9.0;
+        let rateBike = 5.0;
+        let rateCar = 11.0;
         if (submitter) {
           const gradeToLookup = (submitter.designation || "").toLowerCase().includes("specialist") ? "O1" : (submitter.grade || "O1");
           const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
           const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1").first();
           const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1").first();
-          const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
-          const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
+          const fallbackBikeRate = defaultBike?.rate_per_km || 5.0;
+          const fallbackCarRate = defaultCar?.rate_per_km || 11.0;
 
           if (allowance) {
             rateBike = allowance.vehicle_type === "Bike" ? allowance.rate_per_km : fallbackBikeRate;
@@ -2204,15 +2204,15 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
       limitYear = parseInt(pl.for_month.split("-")[0], 10);
     }
 
-    let rateBike = 4.5;
-    let rateCar = 9.0;
+    let rateBike = 5.0;
+    let rateCar = 11.0;
     if (submitter) {
       const gradeToLookup = (submitter.designation || "").toLowerCase().includes("specialist") ? "O1" : (submitter.grade || "O1");
       const allowance = await env.DB.prepare("SELECT * FROM allowance_master WHERE grade = ?").bind(gradeToLookup).first();
       const defaultBike = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Bike' LIMIT 1").first();
       const defaultCar = await env.DB.prepare("SELECT rate_per_km FROM allowance_master WHERE vehicle_type = 'Car' LIMIT 1").first();
-      const fallbackBikeRate = defaultBike?.rate_per_km || 4.5;
-      const fallbackCarRate = defaultCar?.rate_per_km || 9.0;
+      const fallbackBikeRate = defaultBike?.rate_per_km || 5.0;
+      const fallbackCarRate = defaultCar?.rate_per_km || 11.0;
 
       if (allowance) {
         rateBike = allowance.vehicle_type === "Bike" ? allowance.rate_per_km : fallbackBikeRate;
@@ -2332,8 +2332,8 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     };
   });
 
-  const rateBike = 4.5;
-  const rateCar = 9.0;
+  const rateBike = 5.0;
+  const rateCar = 11.0;
 
   let itineraryRows = itineraries.results || [];
   if (itineraryRows.length === 0) {
@@ -5192,10 +5192,10 @@ export async function handleGetConsolidatedReport(request, env, params, query, u
 
         let km_part = 0;
         if (mode === "bike") {
-          km_part = parseFloat(leg.distance_km || 0) * 4.5;
+          km_part = parseFloat(leg.distance_km || 0) * 5.0;
           bike_km += parseFloat(leg.distance_km || 0);
         } else if (mode === "car") {
-          km_part = parseFloat(leg.distance_km || 0) * 9.0;
+          km_part = parseFloat(leg.distance_km || 0) * 11.0;
           car_km += parseFloat(leg.distance_km || 0);
         }
 

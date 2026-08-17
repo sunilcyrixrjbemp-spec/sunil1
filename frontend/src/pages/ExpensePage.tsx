@@ -77,15 +77,15 @@ const formatToDDMMYYYY = (dateStr: any): string => {
 const getCardStatusClass = (status: string) => {
   const s = (status || "").toLowerCase().trim();
   if (s.includes("approve") || s.includes("approved")) {
-    return "border border-emerald-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(16,185,129,0.3),0_2px_4px_-2px_rgba(16,185,129,0.3)]";
+    return "border-l-4 border-l-emerald-600 border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 cursor-pointer transition-all sharp-card shadow-xs";
   }
   if (s.includes("reject") || s.includes("rejected")) {
-    return "border border-rose-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(239,68,68,0.3),0_2px_4px_-2px_rgba(239,68,68,0.3)]";
+    return "border-l-4 border-l-rose-600 border border-rose-200 bg-rose-50/60 hover:bg-rose-100/70 cursor-pointer transition-all sharp-card shadow-xs";
   }
   if (s.includes("pending") || s.includes("submitted") || s.includes("return")) {
-    return "border border-amber-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors sharp-card shadow-[0_4px_12px_-1px_rgba(245,158,11,0.3),0_2px_4px_-2px_rgba(245,158,11,0.3)]";
+    return "border-l-4 border-l-amber-500 border border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 cursor-pointer transition-all sharp-card shadow-xs";
   }
-  return "border border-slate-300 bg-[#f1f5f9] hover:bg-slate-200 cursor-pointer transition-colors shadow-sm sharp-card";
+  return "border-l-4 border-l-slate-400 border border-slate-200 bg-slate-50/70 hover:bg-slate-100/80 cursor-pointer transition-all shadow-xs sharp-card";
 };
 
 const getAttachmentsArray = (attachments: any): string[] => {
@@ -1822,6 +1822,24 @@ export default function ExpensePage() {
             if (destDists.length > 0 && (!updatedLeg.district || !destDists.includes(updatedLeg.district))) {
               updatedLeg.district = destDists[0];
             }
+          }
+        }
+
+        // MAX 3 DIGITS (MAX 999) VALIDATION FOR QUANTITY COUNTS
+        const fieldStr = field as string;
+        if (
+          fieldStr === "mobilise_asset_count" ||
+          fieldStr === "calibration_count" ||
+          fieldStr === "pms_count" ||
+          fieldStr === "calls_assigned" ||
+          fieldStr === "calls_completed"
+        ) {
+          const strVal = String(value || "").replace(/\D/g, "");
+          if (strVal.length > 3 || Number(strVal) > 999) {
+            toast.error("Count quantity cannot exceed 3 digits (Max 999)", { id: "max-3-digit-count" });
+            (updatedLeg as any)[field] = strVal.slice(0, 3);
+          } else {
+            (updatedLeg as any)[field] = strVal;
           }
         }
 
@@ -5512,6 +5530,13 @@ export default function ExpensePage() {
                                   <input
                                     type="number"
                                     min="0"
+                                    max="999"
+                                    maxLength={3}
+                                    onInput={(e) => {
+                                      if (e.currentTarget.value.length > 3) {
+                                        e.currentTarget.value = e.currentTarget.value.slice(0, 3);
+                                      }
+                                    }}
                                     value={leg.mobilise_asset_count || ""}
                                     onChange={(e) => handleItineraryChange(leg.leg, "mobilise_asset_count", e.target.value)}
                                     className="input-lte font-semibold"
@@ -5534,6 +5559,13 @@ export default function ExpensePage() {
                                   <input
                                     type="number"
                                     min="0"
+                                    max="999"
+                                    maxLength={3}
+                                    onInput={(e) => {
+                                      if (e.currentTarget.value.length > 3) {
+                                        e.currentTarget.value = e.currentTarget.value.slice(0, 3);
+                                      }
+                                    }}
                                     value={leg.calibration_count || ""}
                                     onChange={(e) => handleItineraryChange(leg.leg, "calibration_count", e.target.value)}
                                     className="input-lte font-semibold"
@@ -5920,7 +5952,7 @@ export default function ExpensePage() {
                         <div
                           key={exp.id}
                           onClick={() => handleViewDetails(exp.id)}
-                          className={`sharp-card bg-white border border-slate-200 rounded-xl p-3.5 space-y-3 active:bg-slate-50 transition-all cursor-pointer text-xs ${getCardStatusClass(exp.status)}`}
+                          className={`rounded-xl p-3.5 space-y-3 transition-all cursor-pointer text-xs ${getCardStatusClass(exp.status)}`}
                         >
                           <div className="flex justify-between items-center border-b border-slate-100 pb-2 flex-wrap gap-1">
                             <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{exp.expense_code}</span>
@@ -6041,7 +6073,7 @@ export default function ExpensePage() {
                         return (
                           <div
                             key={idx}
-                            className={`sharp-card bg-white border border-slate-200 rounded-xl p-3.5 space-y-3 transition-all cursor-pointer text-xs ${getCardStatusClass(leg.parentStatus)}`}
+                            className={`rounded-xl p-3.5 space-y-3 transition-all cursor-pointer text-xs ${getCardStatusClass(leg.parentStatus)}`}
                           >
                             <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                               <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{leg.parentCode}</span>

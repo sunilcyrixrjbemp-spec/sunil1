@@ -244,8 +244,8 @@ export async function getBootstrapDataHelper(env, user, options = {}) {
       currentAuto: al.current_month_auto  || 0,
       maxAuto:     (al.max_auto_per_month || 1000) + (expenseInit.approved_auto || 0),
       vehicleType: al.vehicle_type || "Bike",
-      rateBike:    al.rate_bike    || 4.5,
-      rateCar:     al.rate_car     || 9.0
+      rateBike:    al.rate_bike    || 5.0,
+      rateCar:     al.rate_car     || 11.0
     };
   }
 

@@ -124,6 +124,24 @@ import {
   handleTestWhatsappDispatch
 } from "./routes/whatsapp.js";
 
+// KPI Module handlers
+import {
+  handleGetKpiAssignment, handleSaveKpiAssignment, handleSubmitKpiAssignment,
+  handleApproveKpiAssignment, handleRejectKpiAssignment, handleSetKpiStartsFrom,
+  handleGetKpiSubmission, handleSaveKpiSubmission, handleSubmitKpiSubmission,
+  handleScoreKpiSubmission, handleFinalizeKpiSubmission, handleReturnKpiSubmission,
+  handleGetKpiHistory,
+  handleGetKpiYearAnalytics, handleGetKpiAttainment,
+  handleGetKpiTeam, handleGetKpiTeamMembers, handleGetTeamMemberSummary,
+  handleGetPendingApprovals,
+  handleGetKpiDeletions, handleRaiseKpiDeletion, handleApproveDeletion, handleRejectDeletion,
+  handleGetKpiQueries, handleRaiseKpiQuery, handleRespondToQuery,
+  handleGetKpiNotifications
+} from "./routes/kpi.js";
+
+// KPI DB Migration
+import { runMigrationsKpi, checkKpiTableStatus } from "./utils/db-migrate-kpi.js";
+
 // ─── Router — O(1) Method-Grouped Hash Map Router ────────────────────────────
 class Router {
   constructor() {
@@ -459,6 +477,63 @@ router.delete("/api/expense/:id", handleDeleteExpense, true);
 router.post("/api/expense/:id/reverse", handleReverseExpense, true);
 router.post("/api/expense/log-client-glitch", handleLogClientGlitch, true);
 router.get("/api/expense/kv-diagnostic-logs", handleGetKvDiagnosticLogs, true);
+
+// ─── KPI Module Endpoints ───────────────────────────────────────────────────────────────────
+// KPI Assignments (setup, approval workflow)
+router.get("/api/kpi/assignment", handleGetKpiAssignment, true);
+router.post("/api/kpi/assignment", handleSaveKpiAssignment, true);
+router.post("/api/kpi/assignment/:id/submit", handleSubmitKpiAssignment, true);
+router.post("/api/kpi/assignment/:id/approve", handleApproveKpiAssignment, true);
+router.post("/api/kpi/assignment/:id/reject", handleRejectKpiAssignment, true);
+router.post("/api/kpi/assignment/:id/starts-from", handleSetKpiStartsFrom, true);
+// KPI Submissions (monthly self-assessment)
+router.get("/api/kpi/submission", handleGetKpiSubmission, true);
+router.post("/api/kpi/submission", handleSaveKpiSubmission, true);
+router.post("/api/kpi/submission/:id/submit", handleSubmitKpiSubmission, true);
+router.post("/api/kpi/submission/:id/score", handleScoreKpiSubmission, true);
+router.post("/api/kpi/submission/:id/finalize", handleFinalizeKpiSubmission, true);
+router.post("/api/kpi/submission/:id/return", handleReturnKpiSubmission, true);
+// KPI History
+router.get("/api/kpi/history", handleGetKpiHistory, true);
+// KPI Analytics
+router.get("/api/kpi/analytics/year", handleGetKpiYearAnalytics, true);
+router.get("/api/kpi/analytics/attainment", handleGetKpiAttainment, true);
+// KPI Team (manager)
+router.get("/api/kpi/team/members", handleGetKpiTeamMembers, true);
+router.get("/api/kpi/team/:employeeId/summary", handleGetTeamMemberSummary, true);
+router.get("/api/kpi/team", handleGetKpiTeam, true);
+// KPI Approvals
+router.get("/api/kpi/approvals/pending", handleGetPendingApprovals, true);
+// KPI Deletion Requests
+router.get("/api/kpi/deletions", handleGetKpiDeletions, true);
+router.post("/api/kpi/deletions", handleRaiseKpiDeletion, true);
+router.post("/api/kpi/deletions/:id/approve", handleApproveDeletion, true);
+router.post("/api/kpi/deletions/:id/reject", handleRejectDeletion, true);
+// KPI Score Queries
+router.get("/api/kpi/queries", handleGetKpiQueries, true);
+router.post("/api/kpi/queries", handleRaiseKpiQuery, true);
+router.post("/api/kpi/queries/:id/respond", handleRespondToQuery, true);
+// KPI Notifications
+router.get("/api/kpi/notifications", handleGetKpiNotifications, true);
+// KPI DB Migration
+router.post("/api/admin/run-migrations-kpi", async (req, env, params, query, user) => {
+  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
+  try {
+    const result = await runMigrationsKpi(env.DB);
+    return jsonResponse({ success: result.errors.length === 0, message: `KPI Migrations complete — ${result.applied.length} applied, ${result.errors.length} errors`, applied: result.applied, errors: result.errors });
+  } catch (e) {
+    return errorResponse("KPI Migration error: " + e.message, 500);
+  }
+}, true, ["Admin"]);
+router.get("/api/admin/migration-status-kpi", async (req, env, params, query, user) => {
+  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
+  try {
+    const status = await checkKpiTableStatus(env.DB);
+    return jsonResponse({ success: true, kpi_status: status });
+  } catch (e) {
+    return errorResponse("KPI status check error: " + e.message, 500);
+  }
+}, true, ["Admin"]);
 
 // ─── No DB Proxy Needed — Single D1, direct env.DB ───────────────────────────
 // wrapDB removed in v2.1.0 (single-server architecture)

@@ -610,7 +610,14 @@ export const SaaSBarChart: React.FC<SaaSBarChartProps> = ({
     );
   }
 
-  const values = data.map((d) => Number(d[valueKey] || d.amount || d.count || d.value || 0));
+  const sanitizeBarVal = (d: any): number => {
+    const raw = Number(d[valueKey] || d.amount || d.count || d.value || 0);
+    if (isNaN(raw) || raw <= 0) return 0;
+    if (!isCurrency && raw > 100000) return 1;
+    return raw;
+  };
+
+  const values = data.map((d) => sanitizeBarVal(d));
   const maxVal = Math.max(...values, 1);
 
   const colors = [
@@ -638,7 +645,7 @@ export const SaaSBarChart: React.FC<SaaSBarChartProps> = ({
 
   // Calculate overlay line curve points (Connecting top centers of all 3D pillars)
   const linePoints = data.map((item, i) => {
-    const val = Number(item[valueKey] || item.amount || item.count || item.value || 0);
+    const val = sanitizeBarVal(item);
     const barH = Math.max(10, (val / maxVal) * chartH);
     const x = padding.left + i * (barWidth + barGap) + (chartW - (numBars * barWidth + (numBars - 1) * barGap)) / 2;
     const y = padding.top + chartH - barH;
@@ -699,7 +706,7 @@ export const SaaSBarChart: React.FC<SaaSBarChartProps> = ({
 
         {/* 3D Vertical Extruded Column Pillars */}
         {data.map((item, i) => {
-          const val = Number(item[valueKey] || item.amount || item.count || item.value || 0);
+          const val = sanitizeBarVal(item);
           const name = String(item[nameKey] || item.name || `Item #${i + 1}`);
           const barH = Math.max(10, (val / maxVal) * chartH);
           const x = padding.left + i * (barWidth + barGap) + (chartW - (numBars * barWidth + (numBars - 1) * barGap)) / 2;

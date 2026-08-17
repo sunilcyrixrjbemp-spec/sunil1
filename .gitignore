@@ -81,3 +81,5 @@ worker-backend/.dev.vars
 **/.wrangler/
 !.dev.vars.example
 !.env.example
+worker-backend/sync-prod-users.sql
+worker-backend/update_all_bills_base64.sql
