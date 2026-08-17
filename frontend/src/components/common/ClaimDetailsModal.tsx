@@ -471,9 +471,13 @@ const LegDetailCard = ({
   const baseLocationDeductionReason = leg.base_location_deduction_reason || leg.base_location_reason || leg.base_location_policy || leg.location_policy_reason || "";
 
   // Work Metrics (Strict Barcode Check)
-  const validCallsInList = (act.callsList && Array.isArray(act.callsList))
-    ? act.callsList.filter((c: any) => c && c.barcode && String(c.barcode).trim() !== "").length
-    : 0;
+  const callsFromAct = (act.callsList && Array.isArray(act.callsList) && act.callsList.length > 0)
+    ? act.callsList
+    : (Array.isArray(leg.calls_list) && leg.calls_list.length > 0
+        ? leg.calls_list
+        : (Array.isArray(leg.calls) && leg.calls.length > 0 ? leg.calls : []));
+
+  const validCallsInList = callsFromAct.length;
   
   const calculatedDeduction = (legDeductionAmt > 0)
     ? legDeductionAmt
@@ -489,7 +493,9 @@ const LegDetailCard = ({
   const hasLegDeduction = (calculatedDeduction > 0 || isTaEdited || isDaEdited || isKmEdited || isValidText(kmDeductionReason) || isValidText(daDeductionReason) || (isFirstLeg && isValidText(baseLocationDeductionReason)));
 
   // Work Metrics
-  const callsClosed = validCallsInList > 0 ? validCallsInList : 0;
+  const callsClosed = validCallsInList > 0 
+    ? validCallsInList 
+    : (parseInt(leg.ws_closed || leg.calls_count || leg.calls_closed || leg.ws_assigned || "0", 10) || (isValidText(act.callsBarcode) || isValidText(leg.calls_barcode) ? 1 : 0));
   const pmsCount = leg.pms_count || leg.ws_pms || 0;
   const calibCount = leg.calibration_count || 0;
   const mobiCount = leg.mobilise_count || leg.mobilise_asset_count || 0;
@@ -506,7 +512,7 @@ const LegDetailCard = ({
   const rawPurpose = leg.visit_purpose || leg.purpose || act.text || "";
   const purpose = isValidText(rawPurpose) ? String(rawPurpose).trim() : "";
   
-  const rawOtherReason = leg.other_reason || leg.other_desc || leg.local_purchase_remark || act.otherDesc || "";
+  const rawOtherReason = leg.other_reason || leg.other_desc || (act.otherDesc && act.otherDesc !== localPurRemark ? act.otherDesc : "");
   const otherReason = isValidText(rawOtherReason) ? String(rawOtherReason).trim() : "";
 
   // STRICT ZERO WORK CHECK: Calls badge ONLY IF callsClosed > 0!
@@ -516,7 +522,7 @@ const LegDetailCard = ({
   const hasMobi = mobiCount > 0;
   const hasAssetTagging = assetTagging > 0 || (act.assetsList && act.assetsList.length > 0);
 
-  const isOtherCategory = mode.toLowerCase().includes("other") || (otherReason && !hospitalName && !equipmentName && act.pmsList.length === 0);
+  const isOtherCategory = mode.toLowerCase().includes("other");
 
   // Strict URL Normalizer
   const toFullUrl = (u: any) => {
@@ -652,14 +658,14 @@ const LegDetailCard = ({
   const otherBillUrl = getLegOtherBillUrl();
 
   // Construct Effective Calls List for Excel Table Format
-  const effectiveCallsList = act.callsList.length > 0 ? act.callsList : (
-    (callsClosed > 0 || isValidText(act.callsBarcode) || isValidText(act.callsType) || isValidText(act.callsStatus)) ? [{
-      barcode: act.callsBarcode || barcode || "—",
-      equipment: act.equipmentName || equipmentName || "—",
-      hospital: act.parsed?.calls_asset_details?.hospital_name || act.hospitalName || hospitalName || "—",
-      call_type: act.callsType || "Service Call",
-      status: act.callsStatus || "Attended & Closed",
-      attachment_url: act.attachmentUrl || travelTaBillUrl || ""
+  const effectiveCallsList = callsFromAct.length > 0 ? callsFromAct : (
+    (callsClosed > 0 || isValidText(act.callsBarcode) || isValidText(leg.calls_barcode) || isValidText(act.callsType) || isValidText(act.callsStatus)) ? [{
+      barcode: act.callsBarcode || leg.calls_barcode || barcode || "—",
+      equipment: act.equipmentName || leg.equipment_name || equipmentName || "—",
+      hospital: act.parsed?.calls_asset_details?.hospital_name || leg.hospital_name || act.hospitalName || hospitalName || "—",
+      call_type: act.callsType || leg.calls_type || "Service Call",
+      status: act.callsStatus || leg.calls_status || "Attended & Closed",
+      attachment_url: act.attachmentUrl || leg.calls_photo_url || travelTaBillUrl || ""
     }] : []
   );
 
@@ -888,8 +894,8 @@ const LegDetailCard = ({
         </div>
       )}
 
-      {/* IF REASON IS OTHER: ONLY RENDER THE CLEAN OTHER REASON BOX AND NOTHING ELSE! */}
-      {isOtherCategory && otherReason ? (
+      {/* Reason for Other Mode / Category Banner (If Present) */}
+      {isOtherCategory && otherReason && (
         <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-amber-950 font-semibold text-[10.5px] flex items-center gap-2">
           <Info size={14} className="text-amber-700 shrink-0" />
           <div>
@@ -897,234 +903,234 @@ const LegDetailCard = ({
             <span className="text-slate-900 font-bold">{otherReason}</span>
           </div>
         </div>
-      ) : (
-        <>
-          {/* HOSPITAL & EQUIPMENT DETAILS BOX (ONLY IF HOSPITAL NAME OR EQUIPMENT NAME EXISTS) */}
-          {(hospitalName || equipmentName || barcode) && (
-            <div className="bg-slate-50 p-2 rounded border border-slate-200/80 space-y-1 text-[10px]">
-              {hospitalName && (
-                <div className="font-bold text-slate-700 border-b border-slate-200 pb-1 flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-emerald-800 font-extrabold"><Building2 size={11} /> {hospitalName}</span>
-                  {travelTaBillUrl && (
-                    <button
-                      onClick={() => setLightboxImage(travelTaBillUrl)}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
-                    >
-                      <Eye size={10} /> View Photo
-                    </button>
-                  )}
-                </div>
-              )}
+      )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 pt-0.5 text-[9.5px]">
-                {equipmentName && <div><b className="text-slate-500 uppercase text-[8.5px]">Equipment:</b> <span className="font-bold text-slate-900">{equipmentName}</span></div>}
-                {equipmentModel && <div><b className="text-slate-500 uppercase text-[8.5px]">Model:</b> <span className="font-semibold text-slate-800">{equipmentModel}</span></div>}
-                {barcode && <div><b className="text-slate-500 uppercase text-[8.5px]">Barcode:</b> <span className="font-mono font-bold text-[#4A6A8A]">{barcode}</span></div>}
-                {schedule && <div><b className="text-slate-500 uppercase text-[8.5px]">Schedule:</b> <span className="font-bold text-emerald-700">{schedule}</span></div>}
-                {department && <div><b className="text-slate-500 uppercase text-[8.5px]">Department:</b> <span className="font-semibold text-slate-800">{department}</span></div>}
-              </div>
-            </div>
-          )}
-
-          {/* Work Badges Summary - ONLY SHOW TAGS IF WORK COMPLETED IS STRICTLY > 0 */}
-          {(hasCalls || hasPms || hasCalib || hasMobi || hasAssetTagging) && (
-            <div className="flex flex-wrap gap-1 items-center">
-              {hasCalls && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  <PhoneCall size={9} /> {callsClosed} Calls Done {act.callsType ? `(${act.callsType})` : ""}
-                </span>
-              )}
-              {hasPms && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <Wrench size={9} /> {pmsCount || (act.pmsList ? act.pmsList.length : 1)} PMS Done {act.pmsFrequency ? `(${act.pmsFrequency})` : ""}
-                </span>
-              )}
-              {hasCalib && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                  <Crosshair size={9} /> {calibCount} Calibration
-                </span>
-              )}
-              {hasMobi && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                  <Truck size={9} /> {mobiCount} Mobilisation
-                </span>
-              )}
-              {hasAssetTagging && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  <Tag size={9} /> {assetTagging || act.assetQuantity || 1} Tagged
-                </span>
+      {/* HOSPITAL & EQUIPMENT DETAILS BOX (ONLY IF HOSPITAL NAME OR EQUIPMENT NAME EXISTS) */}
+      {(hospitalName || equipmentName || barcode) && (
+        <div className="bg-slate-50 p-2 rounded border border-slate-200/80 space-y-1 text-[10px]">
+          {hospitalName && (
+            <div className="font-bold text-slate-700 border-b border-slate-200 pb-1 flex items-center justify-between">
+              <span className="flex items-center gap-1 text-emerald-800 font-extrabold"><Building2 size={11} /> {hospitalName}</span>
+              {travelTaBillUrl && (
+                <button
+                  onClick={() => setLightboxImage(travelTaBillUrl)}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
+                >
+                  <Eye size={10} /> View Photo
+                </button>
               )}
             </div>
           )}
 
-          {/* CALLS WORK LIST - EXCEL TABLE FORMAT */}
-          {hasCalls && effectiveCallsList.length > 0 && (
-            <div className="space-y-1 text-[9.5px]">
-              <div className="flex items-center justify-between font-bold text-blue-900 border-b border-blue-100 pb-1">
-                <span className="flex items-center gap-1"><PhoneCall size={10} /> Calls Work List ({effectiveCallsList.length})</span>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 pt-0.5 text-[9.5px]">
+            {equipmentName && <div><b className="text-slate-500 uppercase text-[8.5px]">Equipment:</b> <span className="font-bold text-slate-900">{equipmentName}</span></div>}
+            {equipmentModel && <div><b className="text-slate-500 uppercase text-[8.5px]">Model:</b> <span className="font-semibold text-slate-800">{equipmentModel}</span></div>}
+            {barcode && <div><b className="text-slate-500 uppercase text-[8.5px]">Barcode:</b> <span className="font-mono font-bold text-[#4A6A8A]">{barcode}</span></div>}
+            {schedule && <div><b className="text-slate-500 uppercase text-[8.5px]">Schedule:</b> <span className="font-bold text-emerald-700">{schedule}</span></div>}
+            {department && <div><b className="text-slate-500 uppercase text-[8.5px]">Department:</b> <span className="font-semibold text-slate-800">{department}</span></div>}
+          </div>
+        </div>
+      )}
 
-              <div className="overflow-x-auto border border-blue-200 rounded-lg shadow-2xs">
-                <table className="w-full text-left border-collapse text-[10px]">
-                  <thead>
-                    <tr className="bg-blue-50/80 text-blue-900 font-extrabold uppercase border-b border-blue-200 text-[9px]">
-                      <th className="py-1 px-2">#</th>
-                      <th className="py-1 px-2">Complaint ID</th>
-                      <th className="py-1 px-2">Barcode</th>
-                      <th className="py-1 px-2">Equipment Name</th>
-                      <th className="py-1 px-2">Hospital Name</th>
-                      <th className="py-1 px-2">Call Type</th>
-                      <th className="py-1 px-2">Status</th>
-                      <th className="py-1 px-2">Action Taken</th>
-                      <th className="py-1 px-2">Spare Replaced</th>
-                      <th className="py-1 px-2 text-center">Attachments</th>
+      {/* Work Badges Summary - ONLY SHOW TAGS IF WORK COMPLETED IS STRICTLY > 0 */}
+      {(hasCalls || hasPms || hasCalib || hasMobi || hasAssetTagging) && (
+        <div className="flex flex-wrap gap-1 items-center">
+          {hasCalls && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+              <PhoneCall size={9} /> {callsClosed} Calls Done {act.callsType ? `(${act.callsType})` : ""}
+            </span>
+          )}
+          {hasPms && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <Wrench size={9} /> {pmsCount || (act.pmsList ? act.pmsList.length : 1)} PMS Done {act.pmsFrequency ? `(${act.pmsFrequency})` : ""}
+            </span>
+          )}
+          {hasCalib && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+              <Crosshair size={9} /> {calibCount} Calibration
+            </span>
+          )}
+          {hasMobi && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+              <Truck size={9} /> {mobiCount} Mobilisation
+            </span>
+          )}
+          {hasAssetTagging && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <Tag size={9} /> {assetTagging || act.assetQuantity || 1} Tagged
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* CALLS WORK LIST - EXCEL TABLE FORMAT */}
+      {hasCalls && effectiveCallsList.length > 0 && (
+        <div className="space-y-1 text-[9.5px]">
+          <div className="flex items-center justify-between font-bold text-blue-900 border-b border-blue-100 pb-1">
+            <span className="flex items-center gap-1"><PhoneCall size={10} /> Calls Work List ({effectiveCallsList.length})</span>
+          </div>
+
+          <div className="overflow-x-auto border border-blue-200 rounded-lg shadow-2xs">
+            <table className="w-full text-left border-collapse text-[10px]">
+              <thead>
+                <tr className="bg-blue-50/80 text-blue-900 font-extrabold uppercase border-b border-blue-200 text-[9px]">
+                  <th className="py-1 px-2">#</th>
+                  <th className="py-1 px-2">Complaint ID</th>
+                  <th className="py-1 px-2">Barcode</th>
+                  <th className="py-1 px-2">Equipment Name</th>
+                  <th className="py-1 px-2">Hospital Name</th>
+                  <th className="py-1 px-2">Call Type</th>
+                  <th className="py-1 px-2">Status</th>
+                  <th className="py-1 px-2">Action Taken</th>
+                  <th className="py-1 px-2">Spare Replaced</th>
+                  <th className="py-1 px-2 text-center">Attachments</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-blue-100 bg-white">
+                {effectiveCallsList.map((cItem: any, cIdx: number) => {
+                  const cComplaintId = cItem.complaint_id || cItem.calls_complaint_id || cItem.call_id || "—";
+                  const cCode = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no || barcode || "—";
+                  
+                  const rawEquipment = cItem.equipment || cItem.equipment_name || cItem.asset_name || equipmentName || (cCode !== "—" ? barcodeMap[cCode]?.equipment : "");
+                  const cEquipment = isValidText(rawEquipment) ? rawEquipment : (cCode !== "—" && barcodeMap[cCode]?.equipment ? barcodeMap[cCode].equipment : "—");
+                  
+                  const rawHospital = cItem.hospital || cItem.hospital_name || cItem.facility_name || hospitalName || (cCode !== "—" ? barcodeMap[cCode]?.hospital : "");
+                  const cHospital = isValidText(rawHospital) ? rawHospital : (cCode !== "—" && barcodeMap[cCode]?.hospital ? barcodeMap[cCode].hospital : "—");
+
+                  const cType = cItem.call_type || cItem.calls_type || cItem.type || act.callsType || "Service Call";
+                  const cStatus = cItem.status || cItem.calls_status || act.callsStatus || "Attended & Closed";
+                  const cActionTaken = cItem.action_taken || cItem.calls_action_taken || "—";
+                  const cSpareReplaced = cItem.spare_replaced || cItem.calls_spare_replaced || "No";
+                  const cSpareVal = cItem.spare_estimated_value || cItem.calls_spare_estimated_value || 0;
+                  const cSpareName = cItem.spare_name || cItem.calls_spare_name || "";
+                  
+                  const cUrl = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url || cItem.url || cItem.file_url || cItem.photo || cItem.service_report_photo || cItem.calls_asset_details?.attachment_url || cItem.calls_asset_details?.photo_url || cItem.calls_asset_details?.url || "";
+                  const fullCUrl = formatImageUrl(cUrl);
+                  const fullOldSpareUrl = formatImageUrl(cItem.old_spare_photo || cItem.calls_old_spare_photo || "");
+                  const fullNewSpareUrl = formatImageUrl(cItem.new_spare_photo || cItem.calls_new_spare_photo || "");
+
+                  return (
+                    <tr key={cIdx} className="hover:bg-blue-50/40 font-medium">
+                      <td className="py-1 px-2 font-bold text-blue-800">{cIdx + 1}</td>
+                      <td className="py-1 px-2 font-mono font-bold text-blue-800">{cComplaintId}</td>
+                      <td className="py-1 px-2 font-mono font-bold text-[#4A6A8A]">{cCode}</td>
+                      <td className="py-1 px-2 font-bold text-slate-800">{cEquipment}</td>
+                      <td className="py-1 px-2 text-slate-700">{cHospital}</td>
+                      <td className="py-1 px-2 font-semibold text-blue-800">{cType}</td>
+                      <td className="py-1 px-2 font-bold text-emerald-700">{cStatus}</td>
+                      <td className="py-1 px-2 text-slate-800 max-w-[140px] truncate">{cActionTaken}</td>
+                      <td className="py-1 px-2 font-bold">
+                        {cSpareReplaced === "Yes" ? (
+                          <span className="text-amber-800 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">Yes {cSpareName ? `(${cSpareName} - ₹${cSpareVal})` : `(₹${cSpareVal})`}</span>
+                        ) : (
+                          <span className="text-slate-500">No</span>
+                        )}
+                      </td>
+                      <td className="py-1 px-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {fullCUrl && (
+                            <button
+                              onClick={() => setLightboxImage(fullCUrl)}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-700 text-white text-[8px] font-bold hover:bg-blue-800 transition-colors"
+                            >
+                              <Eye size={9} /> Report
+                            </button>
+                          )}
+                          {fullOldSpareUrl && (
+                            <button
+                              onClick={() => setLightboxImage(fullOldSpareUrl)}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-600 text-white text-[8px] font-bold hover:bg-amber-700 transition-colors"
+                            >
+                              <Eye size={9} /> Old
+                            </button>
+                          )}
+                          {fullNewSpareUrl && (
+                            <button
+                              onClick={() => setLightboxImage(fullNewSpareUrl)}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[8px] font-bold hover:bg-emerald-700 transition-colors"
+                            >
+                              <Eye size={9} /> New
+                            </button>
+                          )}
+                          {!fullCUrl && !fullOldSpareUrl && !fullNewSpareUrl && (
+                            <span className="text-slate-400 font-medium">—</span>
+                          )}
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-blue-100 bg-white">
-                    {effectiveCallsList.map((cItem: any, cIdx: number) => {
-                      const cComplaintId = cItem.complaint_id || cItem.calls_complaint_id || cItem.call_id || "—";
-                      const cCode = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no || barcode || "—";
-                      
-                      const rawEquipment = cItem.equipment || cItem.equipment_name || cItem.asset_name || equipmentName || (cCode !== "—" ? barcodeMap[cCode]?.equipment : "");
-                      const cEquipment = isValidText(rawEquipment) ? rawEquipment : (cCode !== "—" && barcodeMap[cCode]?.equipment ? barcodeMap[cCode].equipment : "—");
-                      
-                      const rawHospital = cItem.hospital || cItem.hospital_name || cItem.facility_name || hospitalName || (cCode !== "—" ? barcodeMap[cCode]?.hospital : "");
-                      const cHospital = isValidText(rawHospital) ? rawHospital : (cCode !== "—" && barcodeMap[cCode]?.hospital ? barcodeMap[cCode].hospital : "—");
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                      const cType = cItem.call_type || cItem.calls_type || cItem.type || act.callsType || "Service Call";
-                      const cStatus = cItem.status || cItem.calls_status || act.callsStatus || "Attended & Closed";
-                      const cActionTaken = cItem.action_taken || cItem.calls_action_taken || "—";
-                      const cSpareReplaced = cItem.spare_replaced || cItem.calls_spare_replaced || "No";
-                      const cSpareVal = cItem.spare_estimated_value || cItem.calls_spare_estimated_value || 0;
-                      const cSpareName = cItem.spare_name || cItem.calls_spare_name || "";
-                      
-                      const cUrl = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url || cItem.url || cItem.file_url || cItem.photo || cItem.service_report_photo || cItem.calls_asset_details?.attachment_url || cItem.calls_asset_details?.photo_url || cItem.calls_asset_details?.url || "";
-                      const fullCUrl = formatImageUrl(cUrl);
-                      const fullOldSpareUrl = formatImageUrl(cItem.old_spare_photo || cItem.calls_old_spare_photo || "");
-                      const fullNewSpareUrl = formatImageUrl(cItem.new_spare_photo || cItem.calls_new_spare_photo || "");
+      {/* PMS WORK LIST - EXCEL TABLE FORMAT */}
+      {act.pmsList.length > 0 && (
+        <div className="space-y-1 text-[9.5px]">
+          <div className="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-100 pb-1">
+            <span className="flex items-center gap-1"><Wrench size={10} /> PMS Work List ({act.pmsList.length})</span>
+          </div>
 
-                      return (
-                        <tr key={cIdx} className="hover:bg-blue-50/40 font-medium">
-                          <td className="py-1 px-2 font-bold text-blue-800">{cIdx + 1}</td>
-                          <td className="py-1 px-2 font-mono font-bold text-blue-800">{cComplaintId}</td>
-                          <td className="py-1 px-2 font-mono font-bold text-[#4A6A8A]">{cCode}</td>
-                          <td className="py-1 px-2 font-bold text-slate-800">{cEquipment}</td>
-                          <td className="py-1 px-2 text-slate-700">{cHospital}</td>
-                          <td className="py-1 px-2 font-semibold text-blue-800">{cType}</td>
-                          <td className="py-1 px-2 font-bold text-emerald-700">{cStatus}</td>
-                          <td className="py-1 px-2 text-slate-800 max-w-[140px] truncate">{cActionTaken}</td>
-                          <td className="py-1 px-2 font-bold">
-                            {cSpareReplaced === "Yes" ? (
-                              <span className="text-amber-800 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">Yes {cSpareName ? `(${cSpareName} - ₹${cSpareVal})` : `(₹${cSpareVal})`}</span>
-                            ) : (
-                              <span className="text-slate-500">No</span>
-                            )}
-                          </td>
-                          <td className="py-1 px-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              {fullCUrl && (
-                                <button
-                                  onClick={() => setLightboxImage(fullCUrl)}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-700 text-white text-[8px] font-bold hover:bg-blue-800 transition-colors"
-                                >
-                                  <Eye size={9} /> Report
-                                </button>
-                              )}
-                              {fullOldSpareUrl && (
-                                <button
-                                  onClick={() => setLightboxImage(fullOldSpareUrl)}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-700 text-white text-[8px] font-bold hover:bg-amber-800 transition-colors"
-                                >
-                                  <Eye size={9} /> Old Spare
-                                </button>
-                              )}
-                              {fullNewSpareUrl && (
-                                <button
-                                  onClick={() => setLightboxImage(fullNewSpareUrl)}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-700 text-white text-[8px] font-bold hover:bg-emerald-800 transition-colors"
-                                >
-                                  <Eye size={9} /> New Spare
-                                </button>
-                              )}
-                              {!fullCUrl && !fullOldSpareUrl && !fullNewSpareUrl && "—"}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          <div className="overflow-x-auto border border-emerald-200 rounded-lg shadow-2xs">
+            <table className="w-full text-left border-collapse text-[10px]">
+              <thead>
+                <tr className="bg-emerald-50/80 text-emerald-900 font-extrabold uppercase border-b border-emerald-200 text-[9px]">
+                  <th className="py-1 px-2">#</th>
+                  <th className="py-1 px-2">Barcode</th>
+                  <th className="py-1 px-2">Equipment Name</th>
+                  <th className="py-1 px-2">Hospital Name</th>
+                  <th className="py-1 px-2">Schedule</th>
+                  <th className="py-1 px-2 text-center">Attachment</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-emerald-100 bg-white">
+                {act.pmsList.map((pItem: any, pIdx: number) => {
+                  const pCode = pItem.barcode || pItem.pms_barcode || pItem.code || pItem.serial_no || pItem.asset_barcode || "—";
+                  
+                  const rawEquipment = pItem.equipment || pItem.equipment_name || pItem.asset_name || pItem.equipment_model || pItem.model || equipmentName || (pCode !== "—" ? barcodeMap[pCode]?.equipment : "");
+                  const pEquipment = isValidText(rawEquipment) ? rawEquipment : (pCode !== "—" && barcodeMap[pCode]?.equipment ? barcodeMap[pCode].equipment : "—");
+                  
+                  const rawHospital = pItem.hospital || pItem.hospital_name || pItem.facility_name || hospitalName || (pCode !== "—" ? barcodeMap[pCode]?.hospital : "");
+                  const pHospital = isValidText(rawHospital) ? rawHospital : (pCode !== "—" && barcodeMap[pCode]?.hospital ? barcodeMap[pCode].hospital : "—");
 
-          {/* PMS WORK LIST - EXCEL TABLE FORMAT */}
-          {act.pmsList.length > 0 && (
-            <div className="space-y-1 text-[9.5px]">
-              <div className="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-100 pb-1">
-                <span className="flex items-center gap-1"><Wrench size={10} /> PMS Work List ({act.pmsList.length})</span>
-              </div>
+                  const pSched = pItem.schedule || pItem.pms_frequency || pItem.frequency || act.pmsFrequency || schedule || "—";
+                  const pUrl = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url || pItem.url || pItem.file_url || pItem.photo || pItem.service_report_photo || pItem.pms_asset_details?.attachment_url || pItem.pms_asset_details?.photo_url || pItem.pms_asset_details?.url || "";
+                  const fullPUrl = formatImageUrl(pUrl);
 
-              <div className="overflow-x-auto border border-emerald-200 rounded-lg shadow-2xs">
-                <table className="w-full text-left border-collapse text-[10px]">
-                  <thead>
-                    <tr className="bg-emerald-50/80 text-emerald-900 font-extrabold uppercase border-b border-emerald-200 text-[9px]">
-                      <th className="py-1 px-2">#</th>
-                      <th className="py-1 px-2">Barcode</th>
-                      <th className="py-1 px-2">Equipment Name</th>
-                      <th className="py-1 px-2">Hospital Name</th>
-                      <th className="py-1 px-2">Schedule</th>
-                      <th className="py-1 px-2 text-center">Attachment</th>
+                  return (
+                    <tr key={pIdx} className="hover:bg-emerald-50/40 font-medium">
+                      <td className="py-1 px-2 font-bold text-emerald-800">{pIdx + 1}</td>
+                      <td className="py-1 px-2 font-mono font-bold text-[#4A6A8A]">{pCode}</td>
+                      <td className="py-1 px-2 font-bold text-slate-800">{pEquipment}</td>
+                      <td className="py-1 px-2 text-slate-700">{pHospital}</td>
+                      <td className="py-1 px-2 font-semibold text-emerald-700">{pSched}</td>
+                      <td className="py-1 px-2 text-center">
+                        {fullPUrl ? (
+                          <button
+                            onClick={() => setLightboxImage(fullPUrl)}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
+                          >
+                            <Eye size={10} /> View Photo
+                          </button>
+                        ) : "—"}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-emerald-100 bg-white">
-                    {act.pmsList.map((pItem: any, pIdx: number) => {
-                      const pCode = pItem.barcode || pItem.pms_barcode || pItem.code || pItem.serial_no || pItem.asset_barcode || "—";
-                      
-                      const rawEquipment = pItem.equipment || pItem.equipment_name || pItem.asset_name || pItem.equipment_model || pItem.model || equipmentName || (pCode !== "—" ? barcodeMap[pCode]?.equipment : "");
-                      const pEquipment = isValidText(rawEquipment) ? rawEquipment : (pCode !== "—" && barcodeMap[pCode]?.equipment ? barcodeMap[pCode].equipment : "—");
-                      
-                      const rawHospital = pItem.hospital || pItem.hospital_name || pItem.facility_name || hospitalName || (pCode !== "—" ? barcodeMap[pCode]?.hospital : "");
-                      const pHospital = isValidText(rawHospital) ? rawHospital : (pCode !== "—" && barcodeMap[pCode]?.hospital ? barcodeMap[pCode].hospital : "—");
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-                      const pSched = pItem.schedule || pItem.pms_frequency || pItem.frequency || act.pmsFrequency || schedule || "—";
-                      const pUrl = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url || pItem.url || pItem.file_url || pItem.photo || pItem.service_report_photo || pItem.pms_asset_details?.attachment_url || pItem.pms_asset_details?.photo_url || pItem.pms_asset_details?.url || "";
-                      const fullPUrl = formatImageUrl(pUrl);
-
-                      return (
-                        <tr key={pIdx} className="hover:bg-emerald-50/40 font-medium">
-                          <td className="py-1 px-2 font-bold text-emerald-800">{pIdx + 1}</td>
-                          <td className="py-1 px-2 font-mono font-bold text-[#4A6A8A]">{pCode}</td>
-                          <td className="py-1 px-2 font-bold text-slate-800">{pEquipment}</td>
-                          <td className="py-1 px-2 text-slate-700">{pHospital}</td>
-                          <td className="py-1 px-2 font-semibold text-emerald-700">{pSched}</td>
-                          <td className="py-1 px-2 text-center">
-                            {fullPUrl ? (
-                              <button
-                                onClick={() => setLightboxImage(fullPUrl)}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
-                              >
-                                <Eye size={10} /> View Photo
-                              </button>
-                            ) : "—"}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Clean Purpose & Other Reason Text */}
-          {(purpose || otherReason) && (
-            <div className="bg-slate-50 p-2 rounded border border-slate-100 space-y-1 text-[10px]">
-              {purpose && <div><b className="text-slate-500">Purpose / Details:</b> <span className="text-slate-700 font-medium">{purpose}</span></div>}
-              {otherReason && <div className="bg-amber-50 p-1.5 rounded border border-amber-200 text-amber-900 font-medium"><b className="text-amber-800">Reason for Other Mode / Category:</b> {otherReason}</div>}
-            </div>
-          )}
-        </>
+      {/* Clean Purpose & Other Reason Text */}
+      {(purpose || (!isOtherCategory && otherReason)) && (
+        <div className="bg-slate-50 p-2 rounded border border-slate-100 space-y-1 text-[10px]">
+          {purpose && <div><b className="text-slate-500">Purpose / Details:</b> <span className="text-slate-700 font-medium">{purpose}</span></div>}
+          {!isOtherCategory && otherReason && <div className="bg-amber-50 p-1.5 rounded border border-amber-200 text-amber-900 font-medium"><b className="text-amber-800">Reason for Other Mode / Category:</b> {otherReason}</div>}
+        </div>
       )}
 
       {/* HISTORICAL MINIMUM ROUTE BENCHMARK AUDIT CARD (APPROVER ONLY MATCH POPUP) */}
