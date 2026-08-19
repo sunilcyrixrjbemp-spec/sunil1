@@ -966,7 +966,7 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
         SUM(CASE WHEN LOWER(TRIM(i.sub_mode)) = 'auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
       FROM expense_itineraries i
       JOIN expenses e ON i.exp_id = e.expense_code
-      WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status NOT IN ('rejected', 'returned_to_draft')
+      WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND LOWER(TRIM(e.status)) NOT IN ('rejected', 'returned_to_draft', 'cancelled', 'admin_cancelled')
     `).bind(targetUser.id, monthName, yearVal).first(),
     env.DB.prepare(`SELECT key, value FROM system_settings WHERE key IN ('max_past_days_limit', 'monthly_cutoff_day')`).all()
   ]);
@@ -3138,7 +3138,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       SUM(CASE WHEN LOWER(TRIM(i.sub_mode)) = 'auto' THEN COALESCE(i.sub_amount, 0.0) ELSE 0.0 END) as total_auto
     FROM expense_itineraries i
     JOIN expenses e ON i.exp_id = e.expense_code
-    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND e.status NOT IN ('rejected', 'returned_to_draft')
+    WHERE e.user_id = ? AND e.month = ? AND e.year = ? AND LOWER(TRIM(e.status)) NOT IN ('rejected', 'returned_to_draft', 'cancelled', 'admin_cancelled')
   `;
   const statsBinds = [user.id, claim_month, claim_year];
   if (editExpenseId) {
@@ -3833,7 +3833,7 @@ export async function handleRetroactiveBasePolicyCheck(request, env, params, que
     SELECT id, expense_code, itinerary, amount, original_amount
     FROM expenses
     WHERE user_id = ? AND LOWER(month) = LOWER(?) AND year = ?
-      AND LOWER(status) NOT IN ('rejected', 'returned_to_draft')
+      AND LOWER(status) NOT IN ('rejected', 'returned_to_draft', 'cancelled', 'admin_cancelled')
   `).bind(targetUser.id, currentMonth, currentYear).all().catch(() => ({ results: [] }));
 
   const expenses = activeExpenses.results || [];
@@ -4056,7 +4056,7 @@ export async function handleBulkRetroactivePolicyCheck(request, env, params, que
     let expensesQuery = `
       SELECT id, expense_code, itinerary, amount, original_amount
       FROM expenses
-      WHERE user_id = ? AND LOWER(status) NOT IN ('rejected', 'returned_to_draft')
+      WHERE user_id = ? AND LOWER(status) NOT IN ('rejected', 'returned_to_draft', 'cancelled', 'admin_cancelled')
     `;
     const expensesBinds = [targetUser.id];
     if (scopeMonth) { expensesQuery += " AND LOWER(month) = LOWER(?)"; expensesBinds.push(scopeMonth); }

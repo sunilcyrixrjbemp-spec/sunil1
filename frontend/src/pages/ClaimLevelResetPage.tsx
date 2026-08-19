@@ -170,8 +170,13 @@ export default function ClaimLevelResetPage() {
   const pendingAmount = getStatsSums(statsPendingClaims);
   const rejectedAmount = getStatsSums(statsRejectedClaims);
 
-  const totalKm = filteredClaims.reduce((sum, e) => sum + (parseFloat(e.total_km || e.distance_km || e.distance || 0) || 0), 0);
-  const totalAuto = filteredClaims.reduce((sum, e) => sum + (parseFloat(e.total_auto || e.auto_amount || e.sub_amount || 0) || 0), 0);
+  const activeValidClaims = filteredClaims.filter(c => {
+    const s = (c.status || "").toLowerCase();
+    return s !== "cancelled" && s !== "admin_cancelled" && s !== "rejected";
+  });
+
+  const totalKm = activeValidClaims.reduce((sum, e) => sum + (parseFloat(e.total_km || e.distance_km || e.distance || 0) || 0), 0);
+  const totalAuto = activeValidClaims.reduce((sum, e) => sum + (parseFloat(e.total_auto || e.auto_amount || e.sub_amount || 0) || 0), 0);
 
   const handleOpenResetModal = (e: React.MouseEvent, id: number, code: string) => {
     e.stopPropagation();

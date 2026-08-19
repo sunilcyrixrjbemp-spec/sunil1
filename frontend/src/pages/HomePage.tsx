@@ -1212,8 +1212,12 @@ export default function HomePage() {
   const pendingAmount = getStatsSums(statsPendingClaims);
   const rejectedAmount = getStatsSums(statsRejectedClaims);
 
-  // KM and Auto totals respect active tab and all filters
-  const statsNonLimitList = statsClaimsList.filter(e => e.category !== "Limit Request");
+  // KM and Auto totals respect active tab and all filters (excluding cancelled & rejected claims)
+  const statsNonLimitList = statsClaimsList.filter(e => {
+    if (e.category === "Limit Request") return false;
+    const s = (e.status || "").toLowerCase();
+    return s !== "cancelled" && s !== "admin_cancelled" && s !== "rejected";
+  });
   const totalFilteredKmStats = statsNonLimitList.reduce((sum, e) => sum + (parseFloat(e.total_km || e.distance_km || e.distance || 0) || 0), 0);
   const totalFilteredAutoStats = statsNonLimitList.reduce((sum, e) => sum + (parseFloat(e.total_auto || e.auto_amount || e.sub_amount || 0) || 0), 0);
 

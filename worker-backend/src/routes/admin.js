@@ -100,7 +100,7 @@ async function runRetroactivePolicyCheck(env, existingUser, newBaseLocation, tim
     SELECT id, expense_code, itinerary, amount, original_amount
     FROM expenses
     WHERE user_id = ? AND LOWER(month) = LOWER(?) AND year = ?
-      AND LOWER(status) NOT IN ('rejected', 'returned_to_draft')
+      AND LOWER(status) NOT IN ('rejected', 'returned_to_draft', 'cancelled', 'admin_cancelled')
   `).bind(existingUser.id, currentMonth, currentYear).all().catch(err => {
     console.error("Database query failed in runRetroactivePolicyCheck (expenses):", err);
     return { results: [] };
