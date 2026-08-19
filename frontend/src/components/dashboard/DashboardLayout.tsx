@@ -22,7 +22,8 @@ import {
   TrendingUp,
   ChevronRight,
   ChevronLeft,
-  LayoutGrid
+  LayoutGrid,
+  RotateCcw
 } from "lucide-react";
 import ProgressLoader from "../common/ProgressLoader";
 import Badge from "../common/Badge";
@@ -39,9 +40,10 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: "home", name: "Overview", path: "/home", icon: Home, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"], gradientFrom: "from-blue-500", gradientTo: "to-indigo-600", shadowColor: "rgba(37, 99, 235, 0.35)" },
+  { id: "home", name: "Overview", path: "/home", roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"], icon: Home, gradientFrom: "from-blue-500", gradientTo: "to-indigo-600", shadowColor: "rgba(37, 99, 235, 0.35)" },
   { id: "new_dashboard", name: "Executive Dashboard", path: "/new-dashboard", icon: TrendingUp, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-violet-500", gradientTo: "to-purple-600", shadowColor: "rgba(124, 58, 237, 0.35)" },
   { id: "admin", name: "Admin Panel", path: "/admin", icon: Settings, roles: ["Admin"], gradientFrom: "from-slate-600", gradientTo: "to-slate-800", shadowColor: "rgba(100, 116, 139, 0.35)" },
+  { id: "claim_level_reset", name: "Claim Level Reset", path: "/admin/claim-level-reset", icon: RotateCcw, roles: ["Admin"], gradientFrom: "from-indigo-600", gradientTo: "to-blue-700", shadowColor: "rgba(79, 70, 229, 0.35)" },
   { id: "approval", name: "Approval Center", path: "/approval-center", icon: CheckSquare, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "VP", "Travel Desk", "MIS"], gradientFrom: "from-amber-500", gradientTo: "to-orange-600", shadowColor: "rgba(245, 158, 11, 0.35)" },
   { id: "expense", name: "Expense Claims", path: "/submit-expense", icon: FilePlus, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Project Head", "Travel Desk", "VP", "Accountant", "MIS"], gradientFrom: "from-emerald-500", gradientTo: "to-teal-600", shadowColor: "rgba(16, 185, 129, 0.35)" },
   { id: "mis_report", name: "MIS Reports", path: "/mis-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-cyan-500", gradientTo: "to-blue-600", shadowColor: "rgba(6, 182, 212, 0.35)" },
@@ -60,7 +62,7 @@ const SIDEBAR_SECTIONS = [
   { label: "Workspace", ids: ["home", "new_dashboard"] },
   { label: "Claims & Approvals", ids: ["expense", "approval"] },
   { label: "Reports & Analytics", ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report"] },
-  { label: "Administration", ids: ["admin", "asset_upload"] },
+  { label: "Administration", ids: ["admin", "claim_level_reset", "asset_upload"] },
   { label: "Account", ids: ["profile", "help"] },
 ];
 
@@ -144,7 +146,12 @@ export default function DashboardLayout() {
     if (isMobileScreen && ["report", "consolidated_report", "mis_report"].includes(item.id.toLowerCase())) {
       return false;
     }
-    return allowedWindows.includes(item.id.toLowerCase());
+    const idLower = item.id.toLowerCase();
+    const roleLower = (user.role || "").toLowerCase();
+    if (idLower === "claim_level_reset" && (roleLower === "admin" || allowedWindows.includes("admin") || allowedWindows.includes("approval") || user.role === "Admin")) {
+      return true;
+    }
+    return allowedWindows.includes(idLower);
   });
 
   const handleLogout = async () => {
@@ -155,12 +162,14 @@ export default function DashboardLayout() {
     navigate("/login", { replace: true });
   };
 
-  const currentActiveItem = MENU_ITEMS.find((item) => {
-    if (item.path === "/home" && location.pathname === "/home") return true;
-    return item.path !== "/home" && location.pathname.startsWith(item.path);
-  });
+  const currentActiveItem = [...MENU_ITEMS]
+    .sort((a, b) => b.path.length - a.path.length)
+    .find((item) => {
+      if (item.path === "/home") return location.pathname === "/home";
+      return location.pathname === item.path || location.pathname.startsWith(item.path + "/");
+    });
 
-  const hasAccess = !currentActiveItem || allowedWindows.includes(currentActiveItem.id.toLowerCase());
+  const hasAccess = !currentActiveItem || allowedWindows.includes(currentActiveItem.id.toLowerCase()) || (currentActiveItem.id === "claim_level_reset" && ((user.role || "").toLowerCase() === "admin" || allowedWindows.includes("admin")));
   const initials = user?.name ? user.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "U";
 
   return (

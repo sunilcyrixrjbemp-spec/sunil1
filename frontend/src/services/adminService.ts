@@ -166,6 +166,19 @@ export const adminService = {
     return response.data;
   },
 
+  getExpenseHierarchyLevels: async (expenseId: number): Promise<any> => {
+    const response = await api.get(`/admin/expenses/${expenseId}/hierarchy-levels`);
+    return response.data;
+  },
+
+  resetExpenseApprovalLevel: async (expenseId: number, targetLevel: number, comments: string): Promise<any> => {
+    const response = await api.post(`/admin/expenses/${expenseId}/reset-level`, {
+      target_level: targetLevel,
+      comments
+    });
+    return response.data;
+  },
+
   runMigrations: async (): Promise<any> => {
     const response = await api.post("/admin/run-migrations");
     return response.data;

@@ -7,6 +7,7 @@ import { formatToIST } from "../utils/timezone";
 import { safeStorageSetItem } from "../utils/safeStorage";
 
 import { UploadCloud, Pencil, Trash2, Plus, Download, Zap } from "lucide-react";
+import ResetApprovalLevelModal from "../components/admin/ResetApprovalLevelModal";
 import { 
   Table, 
   Popconfirm, 
@@ -351,7 +352,6 @@ export default function AdminPage() {
     localStorage.setItem("admin_active_tab", tab);
     window.scrollTo({ top: 0, behavior: "instant" });
     if (tab === "settings") {
-      fetchRejectedClaims("");
       fetchAllowanceRates();
     } else if (tab === "facilities") {
       fetchFacilities();
@@ -419,11 +419,11 @@ export default function AdminPage() {
   });
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // Rejected claims state
-  const [rejectedSearch, setRejectedSearch] = useState("");
-  const [rejectedClaims, setRejectedClaims] = useState<any[]>([]);
-  const [loadingRejected, setLoadingRejected] = useState(false);
-  const [actioningClaimId, setActioningClaimId] = useState<number | null>(null);
+  const [resetModalState, setResetModalState] = useState<{ isOpen: boolean; expenseId: number; expenseCode: string }>({
+    isOpen: false,
+    expenseId: 0,
+    expenseCode: "",
+  });
 
   // Single User Create Form state
   const [eCode, setECode] = useState("");
@@ -591,39 +591,6 @@ export default function AdminPage() {
       setError(getErrorMessage(err, "Failed to save system settings."));
     } finally {
       setSavingSettings(false);
-    }
-  };
-
-  const fetchRejectedClaims = async (queryStr = "") => {
-    setLoadingRejected(true);
-    try {
-      const res = await adminService.searchRejectedExpenses(queryStr);
-      if (res && res.success) {
-        setRejectedClaims(res.data || []);
-      }
-    } catch (err) {
-      console.error("Failed to load rejected claims", err);
-    } finally {
-      setLoadingRejected(false);
-    }
-  };
-
-  const handleResubmitClaim = async (claimId: number) => {
-    if (!confirm("Are you sure you want to reset the status of this claim to Submitted? This will route it back to Level 1 approval.")) {
-      return;
-    }
-    setActioningClaimId(claimId);
-    try {
-      const res = await adminService.resubmitRejectedExpense(claimId);
-      if (res && res.success) {
-        alert(res.message || "Claim status reset to Submitted successfully.");
-        // Reload list
-        fetchRejectedClaims(rejectedSearch);
-      }
-    } catch (err: any) {
-      alert(err.response?.data?.error || err.message || "Failed to reset claim status.");
-    } finally {
-      setActioningClaimId(null);
     }
   };
 
@@ -2678,89 +2645,6 @@ export default function AdminPage() {
               </div>
             </form>
           </div>
-
-          {/* Override Rejected Claims Panel */}
-          <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs p-3 space-y-2.5">
-            <div className="border-b border-slate-100 pb-1.5 flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider m-0 flex items-center gap-1.5 font-mono">
-                  <span className="text-rose-600">↩</span> Override / Re-submit Rejected Claims
-                </h3>
-                <p className="text-slate-500 text-[10px] mt-0.5 font-semibold leading-none">
-                  Reset rejected claims back to 'Submitted' and re-initialize approval routing from L1.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-1.5">
-              <input
-                type="text"
-                value={rejectedSearch}
-                onChange={(e) => setRejectedSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    fetchRejectedClaims(rejectedSearch);
-                  }
-                }}
-                className="flex-1 px-2.5 py-1 text-xs font-mono font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5"
-                placeholder="Search by Claim Code, Employee Code, or Name..."
-              />
-              <button
-                type="button"
-                onClick={() => fetchRejectedClaims(rejectedSearch)}
-                className="px-3 py-1 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-[11px] font-extrabold uppercase tracking-wider cursor-pointer border-0 shadow-2xs h-7.5 transition-all"
-              >
-                Search
-              </button>
-            </div>
-
-            {loadingRejected ? (
-              <div className="text-center py-4 text-xs text-slate-500 font-extrabold uppercase tracking-wider">
-                Loading rejected claims...
-              </div>
-            ) : rejectedClaims.length === 0 ? (
-              <div className="text-center py-4 text-xs text-slate-400 font-bold uppercase tracking-wider border border-dashed border-slate-200 rounded-lg">
-                No rejected claims found matching search criteria.
-              </div>
-            ) : (
-              <div className="border border-slate-200/90 rounded-lg overflow-x-auto shadow-2xs">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-800 text-white border-b border-slate-700">
-                      <th className="p-2 font-black text-white text-[9.5px] uppercase font-mono">Claim Code</th>
-                      <th className="p-2 font-black text-white text-[9.5px] uppercase">Employee</th>
-                      <th className="p-2 font-black text-white text-[9.5px] uppercase font-mono">Expense Date</th>
-                      <th className="p-2 font-black text-white text-[9.5px] uppercase font-mono">Amount</th>
-                      <th className="p-2 font-black text-white text-[9.5px] uppercase text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rejectedClaims.map((claim) => (
-                      <tr key={claim.id} className="border-b border-slate-100 hover:bg-blue-50/40 transition-colors">
-                        <td className="p-2 font-mono font-extrabold text-slate-900 text-xs">{claim.expense_code}</td>
-                        <td className="p-2">
-                          <div className="font-extrabold text-slate-900 text-xs leading-none">{claim.employee_name}</div>
-                          <div className="text-[9.5px] text-slate-400 font-mono font-bold mt-0.5">{claim.employee_code}</div>
-                        </td>
-                        <td className="p-2 text-slate-600 font-mono font-bold text-xs">{claim.expense_date}</td>
-                        <td className="p-2 font-mono font-extrabold text-slate-900 text-xs">₹{parseFloat(claim.amount).toLocaleString()}</td>
-                        <td className="p-2 text-right">
-                          <button
-                            type="button"
-                            disabled={actioningClaimId === claim.id}
-                            onClick={() => handleResubmitClaim(claim.id)}
-                            className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10.5px] font-black uppercase tracking-wider cursor-pointer border-0 shadow-2xs disabled:opacity-60 transition-all"
-                          >
-                            {actioningClaimId === claim.id ? "Resetting..." : "Reset to Submitted"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         </div>
       ) : activeTab === "facilities" ? (
         /* ================= FACILITIES & NO TA/DA TAB ================= */
@@ -4625,6 +4509,14 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      <ResetApprovalLevelModal
+        isOpen={resetModalState.isOpen}
+        onClose={() => setResetModalState({ isOpen: false, expenseId: 0, expenseCode: "" })}
+        expenseId={resetModalState.expenseId}
+        expenseCode={resetModalState.expenseCode}
+        onSuccess={() => {}}
+      />
     </>
   );
 }

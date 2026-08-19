@@ -24,6 +24,7 @@ import {
   ArrowRight, Info, Navigation, RotateCcw
 } from "lucide-react";
 import api from "../../services/api";
+import ResetApprovalLevelModal from "../admin/ResetApprovalLevelModal";
 
 const DEFAULT_WORKER_URL = "https://fieldops-api.sunilbishnoi.workers.dev";
 const rawBase = (api.defaults.baseURL || "").replace(/\/api$/, "");
@@ -276,6 +277,22 @@ const parseActivityDetails = (raw: any): ParsedActivity => {
     assetsList,
     parsed: obj
   };
+};
+
+const parseItineraryList = (raw: any): any[] => {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed && typeof parsed === "object") return [parsed];
+      } catch (e) {}
+    }
+  }
+  return [];
 };
 
 // ─── TRAVEL MODE CHIP ────────────────────────────────────────────────────────
@@ -1493,19 +1510,19 @@ interface ClaimDetailsModalProps {
   open: boolean;
   claimDetails: any;
   user: any;
-  comments: string;
-  setComments: (v: string) => void;
-  actionLoading: boolean;
+  comments?: string;
+  setComments?: (v: string) => void;
+  actionLoading?: boolean;
   loadingDetails?: boolean;
-  handleApprove: () => void;
-  handleReject: () => void;
+  handleApprove?: () => void;
+  handleReject?: () => void;
   handleReturn?: () => void;
-  handleDeleteClaim: (id: number) => void;
+  handleDeleteClaim?: (id: number) => void;
   onClose: () => void;
-  navigate: (path: string) => void;
-  setLightboxImage: (url: string) => void;
-  getStatusBadgeClass: (status: string, record?: any) => string;
-  getStatusLabel: (status: string, record?: any) => string;
+  navigate?: (path: string) => void;
+  setLightboxImage?: (url: string) => void;
+  getStatusBadgeClass?: (status: string, record?: any) => string;
+  getStatusLabel?: (status: string, record?: any) => string;
   sourceMode?: "approval" | "expense" | "home";
   editedLegs?: any[];
   onLegAmountChange?: (index: number, field: string, value: string | number) => void;
@@ -1514,11 +1531,216 @@ interface ClaimDetailsModalProps {
 
 const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   open, claimDetails, user,
-  comments, setComments, actionLoading, loadingDetails, handleApprove, handleReject, handleReturn,
-  handleDeleteClaim, onClose, navigate, setLightboxImage,
-  getStatusBadgeClass, getStatusLabel, sourceMode,
+  comments = "", setComments = () => {}, actionLoading = false, loadingDetails = false,
+  handleApprove = () => {}, handleReject = () => {}, handleReturn = () => {},
+  handleDeleteClaim = () => {}, onClose, navigate = () => {}, setLightboxImage = () => {},
+  getStatusBadgeClass = () => "", getStatusLabel = () => "", sourceMode,
   editedLegs, onLegAmountChange, onLegRemarkChange
 }) => {
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [showRejectBox, setShowRejectBox] = useState(false);
+  const [showReturnBox, setShowReturnBox] = useState(false);
+  const [barcodeMap, setBarcodeMap] = useState<Record<string, { equipment: string; hospital: string }>>({});
+  const [userAllowance, setUserAllowance] = useState<any>(null);
+  const [routeBenchmarks, setRouteBenchmarks] = useState<Record<number, any>>({});
+
+  useEffect(() => {
+    if (!claimDetails) {
+      setAuditLogs([]);
+      return;
+    }
+    const expId = claimDetails.expense_code || claimDetails.id || claimDetails.expense_id || claimDetails.exp_id;
+    if (expId) {
+      api.get(`/expense/${encodeURIComponent(expId)}/audit-trail`)
+        .then(res => {
+          if (res.data && Array.isArray(res.data.audit_logs)) {
+            setAuditLogs(res.data.audit_logs);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [claimDetails]);
+
+  useEffect(() => {
+    if (!open || !claimDetails) return;
+    const itineraries = parseItineraryList(claimDetails.itineraries)
+      .concat(parseItineraryList(claimDetails.legs))
+      .concat(parseItineraryList(claimDetails.itinerary_list))
+      .concat(parseItineraryList(claimDetails.itinerary));
+
+    const homeKeywords = ["home", "residence", "house", "room", "flat", "base", "stay"];
+
+    itineraries.forEach((leg: any, idx: number) => {
+      const fromLoc = (leg.from_location || leg.from_district || "").trim();
+      const toLoc = (leg.to_location || leg.to_district || "").trim();
+      if (!fromLoc || !toLoc) return;
+
+      const isHome = homeKeywords.some(kw => fromLoc.toLowerCase().includes(kw) || toLoc.toLowerCase().includes(kw));
+      if (isHome) return;
+
+      const token = localStorage.getItem("token") || "";
+      const apiUrl = import.meta.env.VITE_API_URL || "https://fieldops-api.sunilbishnoi.workers.dev/api";
+      const cleanApi = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
+
+      const targetUserId = claimDetails.user_id || claimDetails.userId || "";
+      const targetUserName = claimDetails.user_name || claimDetails.userName || "";
+
+      fetch(`${cleanApi}/approval/route-benchmark?from=${encodeURIComponent(fromLoc)}&to=${encodeURIComponent(toLoc)}&user_id=${encodeURIComponent(targetUserId)}&user_name=${encodeURIComponent(targetUserName)}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.success && data.hasBenchmark) {
+          setRouteBenchmarks(prev => ({
+            ...prev,
+            [idx]: {
+              global: data.benchmark,
+              sameUser: data.sameUserBenchmark
+            }
+          }));
+        }
+      })
+      .catch(() => {});
+    });
+  }, [open, claimDetails]);
+
+  useEffect(() => {
+    if (!claimDetails) return;
+    const urlsToPreload: string[] = [];
+
+    const attachments = getAttachmentsArray(claimDetails.attachments_detailed || claimDetails.attachments || claimDetails.bills || claimDetails.photos);
+    attachments.forEach((att: any) => {
+      const url = typeof att === "string" ? att : (att.file_url || att.url || "");
+      if (url) {
+        const fullUrl = formatImageUrl(url);
+        if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+      }
+    });
+
+    const itineraries = parseItineraryList(claimDetails.itineraries)
+      .concat(parseItineraryList(claimDetails.legs))
+      .concat(parseItineraryList(claimDetails.itinerary_list))
+      .concat(parseItineraryList(claimDetails.itinerary));
+
+    itineraries.forEach((leg: any) => {
+      const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
+      const candidateUrls = [
+        leg.travel_bill, leg.ta_bill, leg.ticket_url, leg.bus_bill, leg.train_ticket,
+        leg.attachment_url, leg.photo_url, leg.bill_url, leg.service_report_url, act.attachmentUrl,
+        leg.hotel_bill, leg.hotel_photo, leg.hotel_url, leg.stay_bill,
+        leg.local_purchase_bill, leg.local_purchase_photo, leg.local_purchase_url, leg.lp_bill,
+        leg.other_bill, leg.other_photo, leg.parcel_photo, leg.oth_bill
+      ];
+
+      candidateUrls.forEach((u: any) => {
+        if (u && typeof u === "string") {
+          const fullUrl = formatImageUrl(u);
+          if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+        }
+      });
+
+      if (act.callsList) {
+        act.callsList.forEach((cItem: any) => {
+          const u = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url;
+          if (u && typeof u === "string") {
+            const fullUrl = formatImageUrl(u);
+            if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+          }
+        });
+      }
+
+      if (act.pmsList) {
+        act.pmsList.forEach((pItem: any) => {
+          const u = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url;
+          if (u && typeof u === "string") {
+            const fullUrl = formatImageUrl(u);
+            if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
+          }
+        });
+      }
+    });
+
+    urlsToPreload.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, [claimDetails]);
+
+  useEffect(() => {
+    if (!claimDetails) return;
+    const subCode = claimDetails.submitter_code || claimDetails.user_id;
+    if (subCode) {
+      api.get(`/expense/init?userId=${encodeURIComponent(subCode)}`)
+        .then(res => {
+          if (res.data && res.data.allowance) {
+            setUserAllowance(res.data.allowance);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [claimDetails]);
+
+  useEffect(() => {
+    if (!claimDetails) return;
+    const itineraries = parseItineraryList(claimDetails.itineraries)
+      .concat(parseItineraryList(claimDetails.legs))
+      .concat(parseItineraryList(claimDetails.itinerary_list))
+      .concat(parseItineraryList(claimDetails.itinerary));
+
+    const barcodesToFetch: string[] = [];
+
+    itineraries.forEach((leg: any) => {
+      const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
+      
+      act.pmsList.forEach((pItem: any) => {
+        const code = pItem.barcode || pItem.pms_barcode || pItem.code || pItem.serial_no || pItem.asset_barcode;
+        const eq = pItem.equipment || pItem.equipment_name || pItem.asset_name || act.equipmentName || leg.equipment_name;
+        const hosp = pItem.hospital || pItem.hospital_name || pItem.facility_name || act.hospitalName || leg.hospital_name;
+        if (code && code !== "—" && (!isValidText(eq) || !isValidText(hosp)) && !barcodeMap[code]) {
+          if (!barcodesToFetch.includes(code)) barcodesToFetch.push(code);
+        }
+      });
+
+      const effectiveCalls = act.callsList.length > 0 ? act.callsList : (
+        (leg.calls_completed > 0 || isValidText(act.callsBarcode)) ? [{
+          barcode: act.callsBarcode || leg.barcode,
+          equipment: act.equipmentName || leg.equipment_name,
+          hospital: act.parsed?.calls_asset_details?.hospital_name || act.hospitalName || leg.hospital_name
+        }] : []
+      );
+
+      effectiveCalls.forEach((cItem: any) => {
+        const code = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no;
+        const eq = cItem.equipment || cItem.equipment_name || cItem.asset_name || act.equipmentName || leg.equipment_name;
+        const hosp = cItem.hospital || cItem.hospital_name || cItem.facility_name || act.hospitalName || leg.hospital_name;
+        if (code && code !== "—" && (!isValidText(eq) || !isValidText(hosp)) && !barcodeMap[code]) {
+          if (!barcodesToFetch.includes(code)) barcodesToFetch.push(code);
+        }
+      });
+    });
+
+    if (barcodesToFetch.length > 0) {
+      barcodesToFetch.forEach((code) => {
+        api.get(`/expense/verify-barcode?barcode=${encodeURIComponent(code)}`)
+          .then((res: any) => {
+            const data = res.data;
+            if (data && (data.valid || data.success)) {
+              const eq = data.data?.equipment_name || data.asset_name || "";
+              const hosp = data.data?.hospital_name || data.hospital_name || "";
+              if (eq || hosp) {
+                setBarcodeMap((prev) => ({
+                  ...prev,
+                  [code]: { equipment: eq, hospital: hosp }
+                }));
+              }
+            }
+          })
+          .catch(() => {});
+      });
+    }
+  }, [claimDetails]);
+
   if (loadingDetails || !claimDetails) {
     if (!open) return null;
     return (
@@ -1591,211 +1813,6 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       </Modal>
     );
   }
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-
-  useEffect(() => {
-    if (!claimDetails) {
-      setAuditLogs([]);
-      return;
-    }
-    const expId = claimDetails.expense_code || claimDetails.id || claimDetails.expense_id || claimDetails.exp_id;
-    if (expId) {
-      api.get(`/expense/${encodeURIComponent(expId)}/audit-trail`)
-        .then(res => {
-          if (res.data && Array.isArray(res.data.audit_logs)) {
-            setAuditLogs(res.data.audit_logs);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [claimDetails]);
-
-  const [showRejectBox, setShowRejectBox] = useState(false);
-  const [showReturnBox, setShowReturnBox] = useState(false);
-  const [barcodeMap, setBarcodeMap] = useState<Record<string, { equipment: string; hospital: string }>>({});
-  const [userAllowance, setUserAllowance] = useState<any>(null);
-  const [routeBenchmarks, setRouteBenchmarks] = useState<Record<number, any>>({});
-
-  useEffect(() => {
-    if (!open || !claimDetails) return;
-    const itineraries = Array.isArray(claimDetails.itineraries) && claimDetails.itineraries.length > 0
-      ? claimDetails.itineraries
-      : (Array.isArray(claimDetails.legs) ? claimDetails.legs : []);
-
-    const homeKeywords = ["home", "residence", "house", "room", "flat", "base", "stay"];
-
-    itineraries.forEach((leg: any, idx: number) => {
-      const fromLoc = (leg.from_location || leg.from_district || "").trim();
-      const toLoc = (leg.to_location || leg.to_district || "").trim();
-      if (!fromLoc || !toLoc) return;
-
-      const isHome = homeKeywords.some(kw => fromLoc.toLowerCase().includes(kw) || toLoc.toLowerCase().includes(kw));
-      if (isHome) return;
-
-      const token = localStorage.getItem("token") || "";
-      const apiUrl = import.meta.env.VITE_API_URL || "https://fieldops-api.sunilbishnoi.workers.dev/api";
-      const cleanApi = apiUrl.endsWith("/") ? apiUrl.slice(0, -1) : apiUrl;
-
-      const targetUserId = claimDetails.user_id || claimDetails.userId || "";
-      const targetUserName = claimDetails.user_name || claimDetails.userName || "";
-
-      fetch(`${cleanApi}/approval/route-benchmark?from=${encodeURIComponent(fromLoc)}&to=${encodeURIComponent(toLoc)}&user_id=${encodeURIComponent(targetUserId)}&user_name=${encodeURIComponent(targetUserName)}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.success && data.hasBenchmark) {
-          setRouteBenchmarks(prev => ({
-            ...prev,
-            [idx]: {
-              global: data.benchmark,
-              sameUser: data.sameUserBenchmark
-            }
-          }));
-        }
-      })
-      .catch(() => {});
-    });
-  }, [open, claimDetails]);
-
-  // INSTANT PHOTO PREFETCHER INTO BROWSER MEMORY (0ms DELAY WHEN CLICKING VIEW PHOTO / VIEW BILL)
-  useEffect(() => {
-    if (!claimDetails) return;
-    const urlsToPreload: string[] = [];
-
-    const attachments = getAttachmentsArray(claimDetails.attachments_detailed || claimDetails.attachments || claimDetails.bills || claimDetails.photos);
-    attachments.forEach((att: any) => {
-      const url = typeof att === "string" ? att : (att.file_url || att.url || "");
-      if (url) {
-        const fullUrl = formatImageUrl(url);
-        if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
-      }
-    });
-
-    const itineraries = Array.isArray(claimDetails.itineraries) && claimDetails.itineraries.length > 0
-      ? claimDetails.itineraries
-      : (Array.isArray(claimDetails.legs) ? claimDetails.legs : []);
-
-    itineraries.forEach((leg: any) => {
-      const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
-      const candidateUrls = [
-        leg.travel_bill, leg.ta_bill, leg.ticket_url, leg.bus_bill, leg.train_ticket,
-        leg.attachment_url, leg.photo_url, leg.bill_url, leg.service_report_url, act.attachmentUrl,
-        leg.hotel_bill, leg.hotel_photo, leg.hotel_url, leg.stay_bill,
-        leg.local_purchase_bill, leg.local_purchase_photo, leg.local_purchase_url, leg.lp_bill,
-        leg.other_bill, leg.other_photo, leg.parcel_photo, leg.oth_bill
-      ];
-
-      candidateUrls.forEach((u: any) => {
-        if (u && typeof u === "string") {
-          const fullUrl = formatImageUrl(u);
-          if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
-        }
-      });
-
-      if (act.callsList) {
-        act.callsList.forEach((cItem: any) => {
-          const u = cItem.attachment_url || cItem.service_report_url || cItem.photo_url || cItem.image_url;
-          if (u && typeof u === "string") {
-            const fullUrl = formatImageUrl(u);
-            if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
-          }
-        });
-      }
-
-      if (act.pmsList) {
-        act.pmsList.forEach((pItem: any) => {
-          const u = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url;
-          if (u && typeof u === "string") {
-            const fullUrl = formatImageUrl(u);
-            if (fullUrl && !fullUrl.toLowerCase().endsWith(".pdf")) urlsToPreload.push(fullUrl);
-          }
-        });
-      }
-    });
-
-    urlsToPreload.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, [claimDetails]);
-
-  // Dynamic Allowance Master Grade Rates Fetcher
-  useEffect(() => {
-    if (!claimDetails) return;
-    const subCode = claimDetails.submitter_code || claimDetails.user_id;
-    if (subCode) {
-      api.get(`/expense/init?userId=${encodeURIComponent(subCode)}`)
-        .then(res => {
-          if (res.data && res.data.allowance) {
-            setUserAllowance(res.data.allowance);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [claimDetails]);
-
-  // Auto-resolve missing barcode details via backend asset API
-  useEffect(() => {
-    if (!claimDetails) return;
-    const itineraries = Array.isArray(claimDetails.itineraries) && claimDetails.itineraries.length > 0
-      ? claimDetails.itineraries
-      : (Array.isArray(claimDetails.legs) ? claimDetails.legs : []);
-
-    const barcodesToFetch: string[] = [];
-
-    itineraries.forEach((leg: any) => {
-      const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
-      
-      // PMS barcodes
-      act.pmsList.forEach((pItem: any) => {
-        const code = pItem.barcode || pItem.pms_barcode || pItem.code || pItem.serial_no || pItem.asset_barcode;
-        const eq = pItem.equipment || pItem.equipment_name || pItem.asset_name || act.equipmentName || leg.equipment_name;
-        const hosp = pItem.hospital || pItem.hospital_name || pItem.facility_name || act.hospitalName || leg.hospital_name;
-        if (code && code !== "—" && (!isValidText(eq) || !isValidText(hosp)) && !barcodeMap[code]) {
-          if (!barcodesToFetch.includes(code)) barcodesToFetch.push(code);
-        }
-      });
-
-      // Calls barcodes
-      const effectiveCalls = act.callsList.length > 0 ? act.callsList : (
-        (leg.calls_completed > 0 || isValidText(act.callsBarcode)) ? [{
-          barcode: act.callsBarcode || leg.barcode,
-          equipment: act.equipmentName || leg.equipment_name,
-          hospital: act.parsed?.calls_asset_details?.hospital_name || act.hospitalName || leg.hospital_name
-        }] : []
-      );
-
-      effectiveCalls.forEach((cItem: any) => {
-        const code = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no;
-        const eq = cItem.equipment || cItem.equipment_name || cItem.asset_name || act.equipmentName || leg.equipment_name;
-        const hosp = cItem.hospital || cItem.hospital_name || cItem.facility_name || act.hospitalName || leg.hospital_name;
-        if (code && code !== "—" && (!isValidText(eq) || !isValidText(hosp)) && !barcodeMap[code]) {
-          if (!barcodesToFetch.includes(code)) barcodesToFetch.push(code);
-        }
-      });
-    });
-
-    if (barcodesToFetch.length > 0) {
-      barcodesToFetch.forEach((code) => {
-        api.get(`/expense/verify-barcode?barcode=${encodeURIComponent(code)}`)
-          .then((res: any) => {
-            const data = res.data;
-            if (data && (data.valid || data.success)) {
-              const eq = data.data?.equipment_name || data.asset_name || "";
-              const hosp = data.data?.hospital_name || data.hospital_name || "";
-              if (eq || hosp) {
-                setBarcodeMap((prev) => ({
-                  ...prev,
-                  [code]: { equipment: eq, hospital: hosp }
-                }));
-              }
-            }
-          })
-          .catch(() => {});
-      });
-    }
-  }, [claimDetails]);
 
   if (!claimDetails) return null;
 
@@ -1855,15 +1872,14 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const formattedApprovedLimit = isClaimRejected
     ? (limitType === "KM" ? "0 KM" : "₹0")
     : (limitType === "KM" ? `${parseFloat(String(approvedLimitVal)).toFixed(0)} KM` : rupee(approvedLimitVal));
-  const itineraries = (Array.isArray(c.itineraries) && c.itineraries.length > 0)
-    ? c.itineraries
-    : ((Array.isArray(c.legs) && c.legs.length > 0)
-        ? c.legs
-        : ((Array.isArray(c.itinerary_list) && c.itinerary_list.length > 0)
-            ? c.itinerary_list
-            : ((Array.isArray(editedLegs) && editedLegs.length > 0)
-                ? editedLegs
-                : (Array.isArray(c.itinerary) ? c.itinerary : []))));
+  const parsedItinList = parseItineraryList(c.itineraries)
+    .concat(parseItineraryList(c.legs))
+    .concat(parseItineraryList(c.itinerary_list))
+    .concat(parseItineraryList(c.itinerary));
+
+  const itineraries = (parsedItinList.length > 0)
+    ? parsedItinList
+    : (Array.isArray(editedLegs) && editedLegs.length > 0 ? editedLegs : []);
 
   const rejectorName = rejectedStep?.approver_name || rejectedStep?.approver || c.rejected_by_name || c.rejector_name || c.rejected_by || "Manager / Coordinator";
   const rejectorCode = rejectedStep?.approver_code || c.rejector_code || "";
@@ -2170,12 +2186,28 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   <XCircle size={10} /> Reject
                 </button>
                 {isCoordinator && (
-                  <button
-                    onClick={() => { setShowReturnBox(true); setShowRejectBox(false); }}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-500 text-white border border-amber-600 hover:bg-amber-600 transition-colors cursor-pointer"
-                  >
-                    <RotateCcw size={10} /> Return
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { setShowReturnBox(true); setShowRejectBox(false); }}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-500 text-white border border-amber-600 hover:bg-amber-600 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw size={10} /> Return
+                    </button>
+                    <button
+                      onClick={() => setShowResetModal(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 transition-colors cursor-pointer shadow-2xs"
+                      title="Select specific approval hierarchy level to re-route this claim to"
+                    >
+                      <RotateCcw size={10} /> Reset Level
+                    </button>
+                    <button
+                      onClick={() => setShowResetModal(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-600 text-white border border-rose-700 hover:bg-rose-700 transition-colors cursor-pointer shadow-2xs"
+                      title="Cancel this expense claim completely and record audit log"
+                    >
+                      <XCircle size={10} /> Cancel Claim
+                    </button>
+                  </>
                 )}
               </>
             )}
@@ -2636,6 +2668,17 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         )}
 
       </div>
+
+      <ResetApprovalLevelModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        expenseId={c.id}
+        expenseCode={c.expense_code || c.claim_id || `#${c.id}`}
+        onSuccess={() => {
+          if (onClose) onClose();
+          if (typeof window !== "undefined") window.location.reload();
+        }}
+      />
     </Modal>
   );
 };

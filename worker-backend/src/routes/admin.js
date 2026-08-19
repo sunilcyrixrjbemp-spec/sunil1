@@ -2080,3 +2080,307 @@ export async function handleDeleteFacility(request, env, params, query) {
     return jsonResponse({ success: false, error: e.message || "Failed to delete facility" }, 500);
   }
 }
+
+/**
+ * GET /api/admin/expenses/:expense_id/hierarchy-levels
+ * Fetches all hierarchy approval levels and assigned approver names for a claim
+ */
+export async function handleGetExpenseHierarchyLevels(request, env, params, query, adminUser) {
+  if (!adminUser || adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  const expenseId = parseInt(params.expense_id, 10);
+  if (isNaN(expenseId) || !expenseId) {
+    return jsonResponse({ error: "Invalid expense ID" }, 400);
+  }
+
+  try {
+    const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
+    if (!expense) {
+      return jsonResponse({ error: "Expense claim not found" }, 404);
+    }
+
+    const submitter = await env.DB.prepare("SELECT id, name, user_id, role, designation FROM users WHERE id = ?").bind(expense.user_id).first();
+
+    const hierarchyRes = await env.DB.prepare(`
+      SELECT 
+        ha.level_number,
+        ha.approver_id,
+        u.name as approver_name,
+        u.user_id as approver_emp_code,
+        u.role as approver_role,
+        u.designation as approver_designation
+      FROM hierarchy_approvers ha
+      JOIN hierarchy_requesters hr ON ha.hierarchy_id = hr.hierarchy_id
+      JOIN users u ON ha.approver_id = u.id
+      WHERE hr.user_id = ?
+      ORDER BY ha.level_number ASC
+    `).bind(expense.user_id).all();
+
+    let levels = hierarchyRes.results || [];
+
+    if (levels.length === 0) {
+      const existingApprovalsRes = await env.DB.prepare(`
+        SELECT 
+          a.level_number,
+          a.approver_id,
+          a.status as current_status,
+          u.name as approver_name,
+          u.user_id as approver_emp_code,
+          u.role as approver_role,
+          u.designation as approver_designation
+        FROM approvals a
+        JOIN users u ON a.approver_id = u.id
+        WHERE a.expense_id = ?
+        ORDER BY a.level_number ASC
+      `).bind(expenseId).all();
+
+      levels = existingApprovalsRes.results || [];
+    } else {
+      const currentApprovalsRes = await env.DB.prepare(`
+        SELECT level_number, status, comments, updated_at FROM approvals WHERE expense_id = ?
+      `).bind(expenseId).all();
+
+      const statusMap = {};
+      for (const a of (currentApprovalsRes.results || [])) {
+        statusMap[a.level_number] = a.status;
+      }
+
+      levels = levels.map(lvl => ({
+        ...lvl,
+        current_status: statusMap[lvl.level_number] || "waiting"
+      }));
+    }
+
+    return jsonResponse({
+      success: true,
+      expense_id: expense.id,
+      expense_code: expense.expense_code,
+      amount: expense.amount,
+      current_status: expense.status,
+      submitter: submitter || { name: "Unknown Submitter" },
+      levels
+    });
+  } catch (err) {
+    console.error("Failed to fetch expense hierarchy levels:", err);
+    return jsonResponse({ error: "Failed to fetch expense hierarchy levels: " + err.message }, 500);
+  }
+}
+
+/**
+ * POST /api/admin/expenses/:expense_id/reset-level
+ * Resets an expense claim to a specific approval level (e.g. Level 1, Level 2) and updates approval statuses accordingly
+ */
+export async function handleResetExpenseApprovalLevel(request, env, params, query, adminUser) {
+  if (!adminUser || adminUser.role !== "Admin") {
+    return jsonResponse({ error: "Access denied" }, 403);
+  }
+
+  const expenseId = parseInt(params.expense_id, 10);
+  if (isNaN(expenseId) || !expenseId) {
+    return jsonResponse({ error: "Invalid expense ID" }, 400);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return jsonResponse({ error: "Invalid JSON request body" }, 400);
+  }
+
+  const { target_level, comments } = body;
+  const targetLevelNum = parseInt(target_level, 10);
+  if (isNaN(targetLevelNum) || targetLevelNum < 1) {
+    return jsonResponse({ error: "Target level number must be at least 1" }, 400);
+  }
+
+  if (!comments || !comments.trim()) {
+    return jsonResponse({ error: "Reason/comments for resetting approval level is mandatory" }, 400);
+  }
+
+  const timestamp = new Date().toISOString();
+
+  try {
+    const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
+    if (!expense) {
+      return jsonResponse({ error: "Expense claim not found" }, 404);
+    }
+
+    const hierarchyRes = await env.DB.prepare(`
+      SELECT 
+        ha.level_number,
+        ha.approver_id,
+        u.name as approver_name,
+        u.user_id as approver_emp_code,
+        u.role as approver_role
+      FROM hierarchy_approvers ha
+      JOIN hierarchy_requesters hr ON ha.hierarchy_id = hr.hierarchy_id
+      JOIN users u ON ha.approver_id = u.id
+      WHERE hr.user_id = ?
+      ORDER BY ha.level_number ASC
+    `).bind(expense.user_id).all();
+
+    let hierarchy = hierarchyRes.results || [];
+
+    if (hierarchy.length === 0) {
+      const existingApprovalsRes = await env.DB.prepare(`
+        SELECT 
+          a.level_number,
+          a.approver_id,
+          u.name as approver_name,
+          u.user_id as approver_emp_code,
+          u.role as approver_role
+        FROM approvals a
+        JOIN users u ON a.approver_id = u.id
+        WHERE a.expense_id = ?
+        ORDER BY a.level_number ASC
+      `).bind(expenseId).all();
+
+      hierarchy = existingApprovalsRes.results || [];
+    }
+
+    if (hierarchy.length === 0) {
+      return jsonResponse({ error: "No approval hierarchy found for this employee or claim." }, 400);
+    }
+
+    const isCancelAction = targetLevelNum === -1 || target_level === "admin_cancelled" || String(target_level).toLowerCase() === "admin_cancelled";
+
+    if (isCancelAction) {
+      const statements = [];
+      const newMainStatus = "cancelled";
+
+      statements.push({
+        sql: "UPDATE expenses SET status = ?, updated_at = ? WHERE id = ?",
+        params: [newMainStatus, timestamp, expenseId]
+      });
+
+      statements.push({
+        sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ?",
+        params: [timestamp, expenseId]
+      });
+
+      statements.push({
+        sql: `INSERT INTO expense_audit_logs (expense_id, expense_code, user_id, actor_id, actor_name, actor_role, action_type, field_name, old_value, new_value, change_reason)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params: [
+          expenseId, expense.expense_code, expense.user_id, adminUser.id, adminUser.name, adminUser.role || "Admin",
+          "ADMIN_CANCELLED", "status", expense.status, newMainStatus, comments
+        ]
+      });
+
+      await runBatchWrite(env, statements);
+
+      const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
+      if (submitter) {
+        await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '❌ Claim Cancelled by Admin', ?, 'error', 0, '/home', ?)", [
+          submitter.user_id,
+          `Your claim ${expense.expense_code} (₹${expense.amount}) has been cancelled by Admin. Reason: ${comments}`,
+          timestamp
+        ]);
+      }
+
+      return jsonResponse({
+        success: true,
+        message: `Expense claim ${expense.expense_code} has been cancelled by Admin.`,
+        new_status: newMainStatus,
+        target_level: -1
+      });
+    }
+
+    const maxLevel = Math.max(...hierarchy.map(h => h.level_number));
+    if (targetLevelNum > maxLevel) {
+      return jsonResponse({ error: `Target level ${targetLevelNum} exceeds maximum hierarchy level (${maxLevel})` }, 400);
+    }
+
+    const targetApprover = hierarchy.find(h => h.level_number === targetLevelNum);
+    if (!targetApprover) {
+      return jsonResponse({ error: `Approver for level ${targetLevelNum} not found` }, 400);
+    }
+
+    const newMainStatus = targetLevelNum === 1 ? "submitted" : `submitted_l${targetLevelNum}`;
+
+    const statements = [];
+
+    statements.push({
+      sql: "UPDATE expenses SET status = ?, updated_at = ? WHERE id = ?",
+      params: [newMainStatus, timestamp, expenseId]
+    });
+
+    statements.push({
+      sql: "DELETE FROM approvals WHERE expense_id = ?",
+      params: [expenseId]
+    });
+
+    for (const step of hierarchy) {
+      let stepStatus = "waiting";
+      let stepComments = "";
+      if (step.level_number < targetLevelNum) {
+        stepStatus = "approved";
+        stepComments = "Auto-approved prior level during Admin re-route";
+      } else if (step.level_number === targetLevelNum) {
+        stepStatus = "pending";
+        stepComments = "";
+      } else {
+        stepStatus = "waiting";
+        stepComments = "";
+      }
+
+      statements.push({
+        sql: `INSERT INTO approvals (expense_id, approver_id, level_number, status, comments, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        params: [
+          expenseId,
+          step.approver_id,
+          step.level_number,
+          stepStatus,
+          stepComments,
+          timestamp,
+          timestamp
+        ]
+      });
+    }
+
+    statements.push({
+      sql: `INSERT INTO expense_audit_logs (expense_id, expense_code, user_id, actor_id, actor_name, actor_role, action_type, field_name, old_value, new_value, change_reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      params: [
+        expenseId, expense.expense_code, expense.user_id, adminUser.id, adminUser.name, adminUser.role || "Admin",
+        "RESET_APPROVAL_LEVEL", "approval_level", expense.status, newMainStatus, comments
+      ]
+    });
+
+    await runBatchWrite(env, statements);
+
+    const submitter = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(expense.user_id).first();
+    const targetApproverUser = await env.DB.prepare("SELECT * FROM users WHERE id = ?").bind(targetApprover.approver_id).first();
+
+    if (submitter) {
+      await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '🔄 Claim Approval Level Reset', ?, 'info', 0, '/home', ?)", [
+        submitter.user_id,
+        `Your claim ${expense.expense_code} approval level has been reset to Level ${targetLevelNum} (${targetApprover.approver_name}) by Admin. Reason: ${comments}`,
+        timestamp
+      ]);
+    }
+
+    if (targetApproverUser) {
+      await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, '📥 New Claim for Review (Reset)', ?, 'warning', 0, '/approval-center', ?)", [
+        targetApproverUser.user_id,
+        `Claim ${expense.expense_code} (₹${expense.amount}) has been reset by Admin and is pending your review at Level ${targetLevelNum}.`,
+        timestamp
+      ]);
+    }
+
+    return jsonResponse({
+      success: true,
+      message: `Expense claim ${expense.expense_code} successfully reset to Level ${targetLevelNum} (Approver: ${targetApprover.approver_name})`,
+      new_status: newMainStatus,
+      target_level: targetLevelNum,
+      approver_name: targetApprover.approver_name
+    });
+  } catch (err) {
+    console.error("Failed to reset expense approval level:", err);
+    return jsonResponse({ error: "Failed to reset approval level: " + err.message }, 500);
+  }
+}
+

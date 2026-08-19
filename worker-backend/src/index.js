@@ -58,6 +58,7 @@ import {
   handleExportHierarchies, handleBulkImportHierarchies, handleRepairStuckApprovals,
   handleGetSystemSettings, handleSaveSystemSettings,
   handleSearchRejectedExpenses, handleResubmitRejectedExpense,
+  handleGetExpenseHierarchyLevels, handleResetExpenseApprovalLevel,
   handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates,
   handleTestTime, handleRevertClaimDeductions, handleBulkToggleBulkApproval,
   handleGetFacilities, handleSaveFacility, handleDeleteFacility
@@ -261,6 +262,8 @@ router.get("/api/admin/settings", handleGetSystemSettings, true, ["Admin"]);
 router.post("/api/admin/settings", handleSaveSystemSettings, true, ["Admin"]);
 router.get("/api/admin/expenses/rejected", handleSearchRejectedExpenses, true);
 router.post("/api/admin/expenses/:expense_id/resubmit", handleResubmitRejectedExpense, true, ["Admin"]);
+router.get("/api/admin/expenses/:expense_id/hierarchy-levels", handleGetExpenseHierarchyLevels, true, ["Admin"]);
+router.post("/api/admin/expenses/:expense_id/reset-level", handleResetExpenseApprovalLevel, true, ["Admin"]);
 router.post("/api/admin/one-time-adjust", handleOneTimeAdjust, true, ["Admin"]);
 router.get("/api/admin/users", handleListUsers, true, ["Admin"]);
 router.post("/api/admin/users/bulk", handleBulkCreateUsers, true, ["Admin"]);
