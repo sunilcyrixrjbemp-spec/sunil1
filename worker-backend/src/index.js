@@ -112,6 +112,12 @@ import {
   handleGetJobStatus as handleGetComplaintJobStatus
 } from "./routes/complaints.js";
 
+// Live Contract Penalty Engine handlers
+import {
+  handleLivePenaltySummary,
+  handleLivePenaltyRecords
+} from "./routes/penaltyLive.js";
+
 // Attendance handlers
 import {
   handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies
@@ -457,6 +463,10 @@ router.put("/api/complaints/upload/file/:job_id", handleDirectComplaintFileUploa
 router.post("/api/complaints/upload/file/:job_id", handleDirectComplaintFileUpload, true);
 router.post("/api/complaints/upload/enqueue", handleEnqueueComplaintJob, true);
 router.get("/api/complaints/upload-jobs/:job_id", handleGetComplaintJobStatus, true);
+
+// ─── Live Contract Penalty Engine Endpoints ─────────────────────────────────
+router.get("/api/complaints/live-penalty/summary", handleLivePenaltySummary, true);
+router.get("/api/complaints/live-penalty/records", handleLivePenaltyRecords, true);
 
 // ─── Reports Endpoints ────────────────────────────────────────────────────────
 router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);
