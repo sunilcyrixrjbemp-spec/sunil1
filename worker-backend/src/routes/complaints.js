@@ -363,54 +363,33 @@ export async function handleUploadChunk(request, env, params, query, user) {
       });
     }
 
-    // 2. Query existing status of unique complaint IDs in DB in safe slices of 100
-    const uniqueIds = Array.from(new Set(validComplaintIds));
-    const existingMap = new Map();
-    for (let i = 0; i < uniqueIds.length; i += 100) {
-      const idSlice = uniqueIds.slice(i, i + 100);
-      const placeholders = idSlice.map(() => "?").join(",");
-      const existingRows = await env.DB.prepare(`
-        SELECT complaint_id, complaint_status FROM complaints WHERE complaint_id IN (${placeholders})
-      `).bind(...idSlice).all();
-
-      for (const er of (existingRows.results || [])) {
-        existingMap.set(String(er.complaint_id), String(er.complaint_status || "").trim());
-      }
-    }
-
-    let insertedCount = 0;
-    let updatedCount = 0;
-    let skippedFinalClosed = 0;
-
-    for (const p of validRowParams) {
-      const cId = p[0];
-      if (existingMap.has(cId)) {
-        const currentDbStatus = existingMap.get(cId);
-        if (currentDbStatus === "Final Closed") {
-          skippedFinalClosed++;
-        } else {
-          updatedCount++;
-        }
-      } else {
-        insertedCount++;
-      }
-    }
-
-    // 3. Execute batched parameter upsert statements with fresh prepared statements
-    // Cloudflare D1 batch size is limited to <= 100 statements
+    // 2. Direct locked batch upsert (ZERO PRE-SELECT READS)
+    // SQLite's ON CONFLICT DO UPDATE WHERE complaint_status != 'Final Closed' automatically:
+    // - Inserts new complaints (changes = 1)
+    // - Updates existing non-Final Closed complaints (Engineer Closed, Attended, Pending, Re-Open) (changes = 1)
+    // - Skips existing Final Closed complaints completely without modifying (changes = 0)
     const D1_BATCH_SIZE = 50;
+    let totalProcessedChanges = 0;
 
     for (let i = 0; i < validRowParams.length; i += D1_BATCH_SIZE) {
       const batchSlice = validRowParams.slice(i, i + D1_BATCH_SIZE);
       const batchStatements = batchSlice.map(p => env.DB.prepare(LOCKED_COMPLAINT_UPSERT_SQL).bind(...p));
-      await env.DB.batch(batchStatements);
+      const batchResults = await env.DB.batch(batchStatements);
+
+      for (const res of batchResults) {
+        if (res && res.meta && typeof res.meta.changes === "number") {
+          totalProcessedChanges += res.meta.changes;
+        }
+      }
     }
+
+    const skippedFinalClosed = Math.max(validRowParams.length - totalProcessedChanges, 0);
 
     return jsonResponse({
       status: "success",
       total_rows: rows.length,
-      inserted: insertedCount,
-      updated: updatedCount,
+      inserted: totalProcessedChanges,
+      updated: totalProcessedChanges,
       skipped_final_closed: skippedFinalClosed,
       skipped_invalid: skippedInvalid
     });

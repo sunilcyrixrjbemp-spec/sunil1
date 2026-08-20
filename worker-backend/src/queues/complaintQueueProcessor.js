@@ -115,40 +115,25 @@ export async function processComplaintJobDirectly(jobId, fileKey, uploaderId, en
       }
 
       if (batchRowParams.length > 0) {
-        // Query existing status in slices of 500 for stats
-        const existingMap = new Map();
-        for (let j = 0; j < batchComplaintIds.length; j += 500) {
-          const idSlice = batchComplaintIds.slice(j, j + 500);
-          const placeholders = idSlice.map(() => "?").join(",");
-          const existingRows = await env.DB.prepare(`
-            SELECT complaint_id, complaint_status FROM complaints WHERE complaint_id IN (${placeholders})
-          `).bind(...idSlice).all();
+        // Direct locked batch upsert (ZERO PRE-SELECT READS)
+        const D1_BATCH_SIZE = 50;
+        let batchChanges = 0;
 
-          for (const er of (existingRows.results || [])) {
-            existingMap.set(String(er.complaint_id), String(er.complaint_status || "").trim());
-          }
-        }
+        for (let k = 0; k < batchRowParams.length; k += D1_BATCH_SIZE) {
+          const subSlice = batchRowParams.slice(k, k + D1_BATCH_SIZE);
+          const stmts = subSlice.map(p => env.DB.prepare(LOCKED_COMPLAINT_UPSERT_SQL).bind(...p));
+          const results = await env.DB.batch(stmts);
 
-        for (const params of batchRowParams) {
-          const cId = params[0];
-          if (existingMap.has(cId)) {
-            const currentDbStatus = existingMap.get(cId);
-            if (currentDbStatus === "Final Closed") {
-              totalSkippedFinalClosed++;
-            } else {
-              totalUpdated++;
+          for (const res of results) {
+            if (res && res.meta && typeof res.meta.changes === "number") {
+              batchChanges += res.meta.changes;
             }
-          } else {
-            totalInserted++;
           }
         }
 
-        // Execute batch D1 statements (chunk into 500 statements per D1 batch)
-        for (let k = 0; k < batchRowParams.length; k += 500) {
-          const subSlice = batchRowParams.slice(k, k + 500);
-          const stmts = subSlice.map(p => stmtTemplate.bind(...p));
-          await env.DB.batch(stmts);
-        }
+        totalInserted += batchChanges;
+        totalUpdated += batchChanges;
+        totalSkippedFinalClosed += Math.max(batchRowParams.length - batchChanges, 0);
       }
 
       totalProcessed += slice.length;
