@@ -22,8 +22,7 @@ import {
   TrendingUp,
   ChevronRight,
   ChevronLeft,
-  LayoutGrid,
-  RotateCcw
+  LayoutGrid
 } from "lucide-react";
 import ProgressLoader from "../common/ProgressLoader";
 import Badge from "../common/Badge";
@@ -43,7 +42,6 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "home", name: "Overview", path: "/home", roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"], icon: Home, gradientFrom: "from-blue-500", gradientTo: "to-indigo-600", shadowColor: "rgba(37, 99, 235, 0.35)" },
   { id: "new_dashboard", name: "Executive Dashboard", path: "/new-dashboard", icon: TrendingUp, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-violet-500", gradientTo: "to-purple-600", shadowColor: "rgba(124, 58, 237, 0.35)" },
   { id: "admin", name: "Admin Panel", path: "/admin", icon: Settings, roles: ["Admin"], gradientFrom: "from-slate-600", gradientTo: "to-slate-800", shadowColor: "rgba(100, 116, 139, 0.35)" },
-  { id: "claim_level_reset", name: "Claim Level Reset", path: "/admin/claim-level-reset", icon: RotateCcw, roles: ["Admin"], gradientFrom: "from-indigo-600", gradientTo: "to-blue-700", shadowColor: "rgba(79, 70, 229, 0.35)" },
   { id: "approval", name: "Approval Center", path: "/approval-center", icon: CheckSquare, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "VP", "Travel Desk", "MIS"], gradientFrom: "from-amber-500", gradientTo: "to-orange-600", shadowColor: "rgba(245, 158, 11, 0.35)" },
   { id: "expense", name: "Expense Claims", path: "/submit-expense", icon: FilePlus, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Project Head", "Travel Desk", "VP", "Accountant", "MIS"], gradientFrom: "from-emerald-500", gradientTo: "to-teal-600", shadowColor: "rgba(16, 185, 129, 0.35)" },
   { id: "mis_report", name: "MIS Reports", path: "/mis-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-cyan-500", gradientTo: "to-blue-600", shadowColor: "rgba(6, 182, 212, 0.35)" },
