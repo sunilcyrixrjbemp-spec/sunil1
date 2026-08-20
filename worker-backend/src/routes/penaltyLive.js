@@ -1,6 +1,7 @@
 /**
  * 🔒 BEMMP Rajasthan Contract Live Penalty Engine (RMSCL NIB-825 Specs)
  * Real-time dynamic computation with zero static database bloat
+ * Includes CA-grade Audit Breakdown & Standby / Warranty Waiver Engine
  */
 
 import { jsonResponse, errorResponse } from "../utils/http.js";
@@ -41,6 +42,11 @@ export function parseDate(val) {
 let cachedMasters = null;
 let lastMasterFetch = 0;
 const CACHE_TTL = 10 * 60 * 1000;
+
+// In-memory isolate cache for summary calculation (TTL = 3 minutes)
+let cachedSummary = null;
+let lastSummaryFetch = 0;
+const SUMMARY_CACHE_TTL = 3 * 60 * 1000;
 
 export async function getPenaltyMasters(env, forceRefresh = false) {
   const now = Date.now();
@@ -97,6 +103,7 @@ export async function getPenaltyMasters(env, forceRefresh = false) {
 
 /**
  * 🔒 Pure Computation Engine for a single Complaint record
+ * Evaluates full NIB-825 SLA, Surcharges, and Standby/Warranty Waivers
  */
 export function computeComplaintPenalty(complaint, masters, nowMs = Date.now()) {
   const { criticalSet, mchMap, assetMap, standbySet, diMapByHosp, diMapByDist } = masters;
@@ -107,7 +114,8 @@ export function computeComplaintPenalty(complaint, masters, nowMs = Date.now()) 
   const distName = (complaint.district_name || "").trim();
   const complaintId = String(complaint.complaint_id || "").trim();
   const isWarranty = (complaint.is_under_warranty || "").trim().toLowerCase() === "yes";
-  const isStandby = standbySet.has(complaintId) || (complaint.is_under_warranty || "").trim().toLowerCase() === "yes";
+  const isStandby = standbySet.has(complaintId);
+  const isExempted = isWarranty || isStandby;
 
   // 1. Determine Hospital Category (MCH vs Others)
   let isMch = false;
@@ -151,12 +159,13 @@ export function computeComplaintPenalty(complaint, masters, nowMs = Date.now()) 
   let attendPenalty = 0;
   let attendHourDiff = 0;
   let attendPerDay = 0;
+  const attendSlaHours = isMch ? 1 : 24;
 
   if (raiseMs) {
     const effectiveAttendMs = attendMs || nowMs;
     attendHourDiff = Math.max((effectiveAttendMs - raiseMs) / (1000 * 60 * 60), 0);
 
-    if (!isWarranty && !isStandby) {
+    if (!isExempted) {
       if (isMch) {
         if (attendHourDiff > 1) {
           const daysOver = Math.floor(attendHourDiff / 24);
@@ -195,32 +204,45 @@ export function computeComplaintPenalty(complaint, masters, nowMs = Date.now()) 
   }
 
   let delayPenalty = 0;
+  let unwaivedDelayPenalty = 0;
   let penaltyDownDays = 0;
   let perDayDelayPenalty = 0;
+  let totalDowntimeHours = 0;
 
   if (raiseMs && closeMs) {
+    totalDowntimeHours = Math.max((closeMs - raiseMs) / (1000 * 60 * 60), 0);
     const penaltyStartMs = raiseMs + (graceHours * 60 * 60 * 1000);
     const downDurationMs = closeMs - penaltyStartMs;
 
     if (downDurationMs > 0) {
       penaltyDownDays = Math.ceil(downDurationMs / (1000 * 60 * 60 * 24));
 
-      if (!isStandby && !isWarranty) {
-        let base = isMch ? (slab * penaltyDownDays * 2) : (slab * penaltyDownDays * 1);
-        if (isCritical) base *= 1.1;
+      let base = isMch ? (slab * penaltyDownDays * 2) : (slab * penaltyDownDays * 1);
+      if (isCritical) base *= 1.1;
+      unwaivedDelayPenalty = base;
+
+      if (!isExempted) {
         delayPenalty = base;
       }
     }
 
-    if (isOpen && !isStandby && !isWarranty) {
+    if (isOpen) {
       let baseDaily = isMch ? (slab * 2) : slab;
       if (isCritical) baseDaily *= 1.1;
-      perDayDelayPenalty = baseDaily;
+      if (!isExempted) {
+        perDayDelayPenalty = baseDaily;
+      }
     }
   }
 
   const totalPenalty = attendPenalty + delayPenalty;
   const totalPerDay = perDayDelayPenalty + attendPerDay;
+  const unwaivedTotalPenalty = attendPenalty + unwaivedDelayPenalty;
+  const waivedPenalty = Math.max(0, unwaivedTotalPenalty - totalPenalty);
+
+  let waiverType = "None";
+  if (isStandby) waiverType = "Standby Provided";
+  else if (isWarranty) waiverType = "Under Warranty";
 
   // DI & Coordinator mapping
   const diInfo = diMapByHosp.get(hospNameLower) || diMapByDist.get(distName.toLowerCase()) || {};
@@ -239,11 +261,19 @@ export function computeComplaintPenalty(complaint, masters, nowMs = Date.now()) 
     complaint_status: complaint.complaint_status || (isOpen ? "Open" : "Closed"),
     is_under_warranty: isWarranty ? "Yes" : "No",
     standby: isStandby ? "Yes" : "No",
+    is_exempted: isExempted,
+    waiver_type: waiverType,
     attend_hour_diff: Number(attendHourDiff.toFixed(2)),
+    attend_sla_hours: attendSlaHours,
+    grace_hours: graceHours,
+    total_downtime_hours: Number(totalDowntimeHours.toFixed(1)),
     attend_penalty: Math.round(attendPenalty),
     attend_per_day: Math.round(attendPerDay),
     penalty_down_days: penaltyDownDays,
     delay_penalty: Math.round(delayPenalty),
+    unwaived_delay_penalty: Math.round(unwaivedDelayPenalty),
+    unwaived_total_penalty: Math.round(unwaivedTotalPenalty),
+    waived_penalty: Math.round(waivedPenalty),
     per_day_delay_penalty: Math.round(perDayDelayPenalty),
     total_penalty: Math.round(totalPenalty),
     total_per_day: Math.round(totalPerDay),
@@ -263,14 +293,21 @@ export function computeComplaintPenalty(complaint, masters, nowMs = Date.now()) 
 
 /**
  * GET /api/complaints/live-penalty/summary
- * Real-time overall KPI metrics and District/Coordinator breakdowns
+ * Real-time overall KPI metrics and District/Coordinator breakdowns with 3-minute Cache
  */
 export async function handleLivePenaltySummary(request, env, params, query, user) {
   try {
-    const masters = await getPenaltyMasters(env);
+    const forceRefresh = query?.force === "true" || query?.force === "1";
+    const now = Date.now();
+
+    if (!forceRefresh && cachedSummary && (now - lastSummaryFetch < SUMMARY_CACHE_TTL)) {
+      return jsonResponse(cachedSummary);
+    }
+
+    const masters = await getPenaltyMasters(env, forceRefresh);
     const nowMs = Date.now();
 
-    // Query all complaints (or active/open by default if requested)
+    // Query all complaints
     const { results } = await env.DB.prepare(`
       SELECT 
         complaint_id, district_name, hospital_type, hospital_name, bar_code,
@@ -292,6 +329,14 @@ export async function handleLivePenaltySummary(request, env, params, query, user
     let othersPerDay = 0;
     let totalAttendPenalty = 0;
     let totalDelayPenalty = 0;
+    let totalWaivedPenalty = 0;
+    let standbyCount = 0;
+    let standbyWaivedPenalty = 0;
+    let warrantyCount = 0;
+    let warrantyWaivedPenalty = 0;
+    let criticalPenaltyTotal = 0;
+    let mchTotalPenalty = 0;
+    let othersTotalPenalty = 0;
 
     const districtMap = new Map();
     const coordinatorMap = new Map();
@@ -303,6 +348,26 @@ export async function handleLivePenaltySummary(request, env, params, query, user
       totalPenalty += calc.total_penalty;
       totalAttendPenalty += calc.attend_penalty;
       totalDelayPenalty += calc.delay_penalty;
+      totalWaivedPenalty += calc.waived_penalty;
+
+      if (calc.is_critical) {
+        criticalPenaltyTotal += calc.total_penalty;
+      }
+
+      if (calc.hospital_type === "MCH") {
+        mchTotalPenalty += calc.total_penalty;
+      } else {
+        othersTotalPenalty += calc.total_penalty;
+      }
+
+      if (calc.standby === "Yes") {
+        standbyCount++;
+        standbyWaivedPenalty += calc.waived_penalty;
+      }
+      if (calc.is_under_warranty === "Yes") {
+        warrantyCount++;
+        warrantyWaivedPenalty += calc.waived_penalty;
+      }
 
       if (calc.status === "Open") {
         openTickets++;
@@ -336,11 +401,16 @@ export async function handleLivePenaltySummary(request, env, params, query, user
           per_day_penalty: 0,
           mch_per_day: 0,
           others_per_day: 0,
-          unattended_count: 0
+          unattended_count: 0,
+          standby_count: 0,
+          waived_penalty: 0
         });
       }
       const dStat = districtMap.get(dist);
       dStat.total_penalty += calc.total_penalty;
+      dStat.waived_penalty += calc.waived_penalty;
+      if (calc.standby === "Yes") dStat.standby_count++;
+
       if (calc.status === "Open") {
         dStat.open_tickets++;
         dStat.per_day_penalty += calc.total_per_day;
@@ -358,11 +428,13 @@ export async function handleLivePenaltySummary(request, env, params, query, user
           total_penalty: 0,
           per_day_penalty: 0,
           open_tickets: 0,
-          open_penalty_tickets: 0
+          open_penalty_tickets: 0,
+          waived_penalty: 0
         });
       }
       const cStat = coordinatorMap.get(coord);
       cStat.total_penalty += calc.total_penalty;
+      cStat.waived_penalty += calc.waived_penalty;
       if (calc.status === "Open") {
         cStat.open_tickets++;
         cStat.per_day_penalty += calc.total_per_day;
@@ -376,11 +448,13 @@ export async function handleLivePenaltySummary(request, env, params, query, user
           zone: zone,
           total_penalty: 0,
           per_day_penalty: 0,
-          open_tickets: 0
+          open_tickets: 0,
+          waived_penalty: 0
         });
       }
       const zStat = zoneMap.get(zone);
       zStat.total_penalty += calc.total_penalty;
+      zStat.waived_penalty += calc.waived_penalty;
       if (calc.status === "Open") {
         zStat.open_tickets++;
         zStat.per_day_penalty += calc.total_per_day;
@@ -391,7 +465,7 @@ export async function handleLivePenaltySummary(request, env, params, query, user
     const coordinatorList = Array.from(coordinatorMap.values()).sort((a, b) => b.total_penalty - a.total_penalty);
     const zoneList = Array.from(zoneMap.values()).sort((a, b) => b.total_penalty - a.total_penalty);
 
-    return jsonResponse({
+    const responsePayload = {
       status: "success",
       live_timestamp: new Date(nowMs).toISOString(),
       kpis: {
@@ -407,12 +481,25 @@ export async function handleLivePenaltySummary(request, env, params, query, user
         mch_open_count: mchOpenCount,
         others_open_count: othersOpenCount,
         mch_per_day_penalty: mchPerDay,
-        others_per_day_penalty: othersPerDay
+        others_per_day_penalty: othersPerDay,
+        total_waived_penalty: totalWaivedPenalty,
+        standby_count: standbyCount,
+        standby_waived_penalty: standbyWaivedPenalty,
+        warranty_count: warrantyCount,
+        warranty_waived_penalty: warrantyWaivedPenalty,
+        critical_penalty_total: criticalPenaltyTotal,
+        mch_total_penalty: mchTotalPenalty,
+        others_total_penalty: othersTotalPenalty
       },
       districts: districtList,
       coordinators: coordinatorList,
       zones: zoneList
-    });
+    };
+
+    cachedSummary = responsePayload;
+    lastSummaryFetch = now;
+
+    return jsonResponse(responsePayload);
   } catch (err) {
     console.error("handleLivePenaltySummary error:", err);
     return errorResponse(err.message || "Failed to calculate live penalty summary", 500);
@@ -428,15 +515,19 @@ export async function handleLivePenaltyRecords(request, env, params, query, user
     const masters = await getPenaltyMasters(env);
     const nowMs = Date.now();
 
-    const page = Math.max(parseInt(query.page, 10) || 1, 1);
-    const limit = Math.min(Math.max(parseInt(query.limit, 10) || 50, 10), 500);
+    const page = Math.max(parseInt(query?.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(query?.limit, 10) || 50, 10), 500);
     const offset = (page - 1) * limit;
 
-    const districtFilter = (query.district || "").trim().toLowerCase();
-    const statusFilter = (query.status || "").trim().toLowerCase(); // "open", "closed", "all"
-    const criticalFilter = (query.critical || "").trim().toLowerCase(); // "yes", "no"
-    const search = (query.search || "").trim().toLowerCase();
-    const onlyPenalty = query.only_penalty === "true" || query.only_penalty === "1";
+    const districtFilter = (query?.district || "").trim().toLowerCase();
+    const zoneFilter = (query?.zone || "").trim().toLowerCase();
+    const hospitalTypeFilter = (query?.hospital_type || "").trim().toLowerCase();
+    const statusFilter = (query?.status || "").trim().toLowerCase(); // "open", "closed", "all"
+    const criticalFilter = (query?.critical || "").trim().toLowerCase(); // "yes", "no"
+    const standbyFilter = (query?.standby || "").trim().toLowerCase(); // "yes", "no"
+    const warrantyFilter = (query?.warranty || "").trim().toLowerCase(); // "yes", "no"
+    const search = (query?.search || "").trim().toLowerCase();
+    const onlyPenalty = query?.only_penalty === "true" || query?.only_penalty === "1";
 
     let sql = `
       SELECT 
@@ -460,6 +551,12 @@ export async function handleLivePenaltyRecords(request, env, params, query, user
       whereClauses.push("complaint_status IN ('Closed', 'Final Closed', 'Engineer Closed')");
     }
 
+    if (warrantyFilter === "yes") {
+      whereClauses.push("LOWER(is_under_warranty) = 'yes'");
+    } else if (warrantyFilter === "no") {
+      whereClauses.push("(is_under_warranty IS NULL OR LOWER(is_under_warranty) != 'yes')");
+    }
+
     if (search) {
       whereClauses.push("(LOWER(complaint_id) LIKE ? OR LOWER(equipment_name) LIKE ? OR LOWER(hospital_name) LIKE ? OR LOWER(bar_code) LIKE ?)");
       const term = `%${search}%`;
@@ -470,12 +567,26 @@ export async function handleLivePenaltyRecords(request, env, params, query, user
       sql += " WHERE " + whereClauses.join(" AND ");
     }
 
-    sql += " ORDER BY created_at DESC";
+    sql += " ORDER BY id DESC";
 
     const { results } = await env.DB.prepare(sql).bind(...binds).all();
 
     // Compute live calculations
     let calculated = (results || []).map(c => computeComplaintPenalty(c, masters, nowMs));
+
+    if (zoneFilter) {
+      calculated = calculated.filter(c => (c.zone_name || "").toLowerCase().includes(zoneFilter));
+    }
+
+    if (hospitalTypeFilter) {
+      calculated = calculated.filter(c => (c.hospital_type || "").toLowerCase() === hospitalTypeFilter);
+    }
+
+    if (standbyFilter === "yes") {
+      calculated = calculated.filter(c => c.standby === "Yes");
+    } else if (standbyFilter === "no") {
+      calculated = calculated.filter(c => c.standby !== "Yes");
+    }
 
     if (onlyPenalty) {
       calculated = calculated.filter(c => c.total_penalty > 0 || c.total_per_day > 0);
@@ -502,7 +613,9 @@ export async function handleLivePenaltyRecords(request, env, params, query, user
     console.error("handleLivePenaltyRecords error:", err);
     return errorResponse(err.message || "Failed to fetch live penalty records", 500);
   }
-}/**
+}
+
+/**
  * GET /api/complaints/live-penalty/repeaters
  * Equipment / Hospital combinations with 2+ complaints (Repeater Calls)
  */
@@ -547,18 +660,13 @@ export async function handleLivePenaltyRepeaters(request, env, params, query, us
 
       let key;
       if (groupBy === "hospital") {
-        // Group by hospital + district (all complaints of same hospital)
         const hName = (c.hospital_name || "").trim();
         const dName = (c.district_name || "").trim();
-        if (!hName) continue; // skip if no hospital
+        if (!hName) continue;
         key = `HOSP|||${hName}|||${dName}`;
       } else {
-        // Group STRICTLY by barcode — one barcode = one physical machine
         const bc = (c.bar_code || "").trim();
-        if (!bc) {
-          // If no barcode, skip — can't reliably identify the physical asset
-          continue;
-        }
+        if (!bc) continue;
         key = `BC|||${bc}`;
       }
 
@@ -630,7 +738,7 @@ export async function handleLivePenaltyRepeaters(request, env, params, query, us
     const totalPages = Math.ceil(repeaters.length / limit);
     const paged = repeaters.slice(offset, offset + limit);
 
-    // Remove heavy `complaints` array from paged results to keep response light
+    // Keep response light
     const pagedLight = paged.map(({ complaints, ...rest }) => ({ 
       ...rest,
       recent_complaints: complaints.slice(0, 5)
@@ -657,5 +765,132 @@ export async function handleLivePenaltyRepeaters(request, env, params, query, us
   } catch (err) {
     console.error("handleLivePenaltyRepeaters error:", err);
     return errorResponse(err.message || "Failed to fetch repeater calls", 500);
+  }
+}
+
+/**
+ * GET /api/complaints/live-penalty/standby-waivers
+ * Detailed audit ledger of all complaints with Standby or Warranty exemptions
+ */
+export async function handleLivePenaltyStandbyWaivers(request, env, params, query, user) {
+  try {
+    const masters = await getPenaltyMasters(env);
+    const nowMs = Date.now();
+
+    const page = Math.max(parseInt(query?.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(query?.limit, 10) || 50, 10), 200);
+    const offset = (page - 1) * limit;
+    const typeFilter = (query?.type || "all").toLowerCase(); // "standby" | "warranty" | "all"
+
+    const { results } = await env.DB.prepare(`
+      SELECT 
+        complaint_id, district_name, hospital_type, hospital_name, bar_code,
+        equipment_name, equipment_model, complaint_raise_date, complaint_close_date,
+        complaint_status, total_downtime, estimated_cost, penalty_days,
+        complaint_final_close, attend_date, is_under_warranty
+      FROM complaints
+    `).all();
+
+    const waivedList = [];
+    let totalStandbyCount = 0;
+    let totalWarrantyCount = 0;
+    let totalStandbySaved = 0;
+    let totalWarrantySaved = 0;
+
+    for (const c of (results || [])) {
+      const calc = computeComplaintPenalty(c, masters, nowMs);
+
+      if (calc.standby === "Yes") {
+        totalStandbyCount++;
+        totalStandbySaved += calc.waived_penalty;
+      }
+      if (calc.is_under_warranty === "Yes") {
+        totalWarrantyCount++;
+        totalWarrantySaved += calc.waived_penalty;
+      }
+
+      if (calc.is_exempted) {
+        if (typeFilter === "standby" && calc.standby !== "Yes") continue;
+        if (typeFilter === "warranty" && calc.is_under_warranty !== "Yes") continue;
+        waivedList.push(calc);
+      }
+    }
+
+    waivedList.sort((a, b) => b.waived_penalty - a.waived_penalty);
+
+    const totalRecords = waivedList.length;
+    const paginated = waivedList.slice(offset, offset + limit);
+
+    return jsonResponse({
+      status: "success",
+      summary: {
+        total_exempt_complaints: totalStandbyCount + totalWarrantyCount,
+        total_waived_penalty: totalStandbySaved + totalWarrantySaved,
+        standby_count: totalStandbyCount,
+        standby_saved_penalty: totalStandbySaved,
+        warranty_count: totalWarrantyCount,
+        warranty_saved_penalty: totalWarrantySaved
+      },
+      page,
+      limit,
+      total_records: totalRecords,
+      total_pages: Math.ceil(totalRecords / limit),
+      records: paginated
+    });
+  } catch (err) {
+    console.error("handleLivePenaltyStandbyWaivers error:", err);
+    return errorResponse(err.message || "Failed to fetch standby waivers", 500);
+  }
+}
+
+/**
+ * POST /api/complaints/live-penalty/toggle-standby
+ * Toggle or register standby machine for a complaint
+ */
+export async function handleLivePenaltyToggleStandby(request, env, params, query, user) {
+  try {
+    const body = await request.json();
+    const complaintId = String(body.complaint_id || "").trim();
+    const action = body.action || "toggle"; // "add" | "remove" | "toggle"
+
+    if (!complaintId) {
+      return errorResponse("Complaint ID is required", 400);
+    }
+
+    const existing = await env.DB.prepare(`
+      SELECT id FROM penalty_standby_data WHERE complaint_id = ?
+    `).bind(complaintId).first();
+
+    let isStandby = false;
+
+    if (existing) {
+      if (action === "remove" || action === "toggle") {
+        await env.DB.prepare(`DELETE FROM penalty_standby_data WHERE complaint_id = ?`).bind(complaintId).run();
+        isStandby = false;
+      } else {
+        isStandby = true;
+      }
+    } else {
+      if (action === "add" || action === "toggle") {
+        await env.DB.prepare(`
+          INSERT INTO penalty_standby_data (complaint_id, call_status) VALUES (?, 'Standby Provided')
+        `).bind(complaintId).run();
+        isStandby = true;
+      }
+    }
+
+    // Bust master and summary caches
+    cachedMasters = null;
+    cachedSummary = null;
+
+    return jsonResponse({
+      status: "success",
+      complaint_id: complaintId,
+      is_standby: isStandby,
+      message: isStandby ? "Standby machine registered. Penalty waived." : "Standby removed. Penalty resumed."
+    });
+  } catch (err) {
+    console.error("handleLivePenaltyToggleStandby error:", err);
+    return errorResponse(err.message || "Failed to toggle standby", 500);
   }
 }

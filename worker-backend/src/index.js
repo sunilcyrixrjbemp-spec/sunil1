@@ -116,7 +116,9 @@ import {
 import {
   handleLivePenaltySummary,
   handleLivePenaltyRecords,
-  handleLivePenaltyRepeaters
+  handleLivePenaltyRepeaters,
+  handleLivePenaltyStandbyWaivers,
+  handleLivePenaltyToggleStandby
 } from "./routes/penaltyLive.js";
 
 // Attendance handlers
@@ -469,6 +471,8 @@ router.get("/api/complaints/upload-jobs/:job_id", handleGetComplaintJobStatus, t
 router.get("/api/complaints/live-penalty/summary", handleLivePenaltySummary, true);
 router.get("/api/complaints/live-penalty/records", handleLivePenaltyRecords, true);
 router.get("/api/complaints/live-penalty/repeaters", handleLivePenaltyRepeaters, true);
+router.get("/api/complaints/live-penalty/standby-waivers", handleLivePenaltyStandbyWaivers, true);
+router.post("/api/complaints/live-penalty/toggle-standby", handleLivePenaltyToggleStandby, true);
 
 // ─── Reports Endpoints ────────────────────────────────────────────────────────
 router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);

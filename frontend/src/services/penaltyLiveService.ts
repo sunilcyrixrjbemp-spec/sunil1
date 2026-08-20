@@ -15,6 +15,14 @@ export interface LivePenaltyKPIs {
   others_open_count: number;
   mch_per_day_penalty: number;
   others_per_day_penalty: number;
+  total_waived_penalty?: number;
+  standby_count?: number;
+  standby_waived_penalty?: number;
+  warranty_count?: number;
+  warranty_waived_penalty?: number;
+  critical_penalty_total?: number;
+  mch_total_penalty?: number;
+  others_total_penalty?: number;
 }
 
 export interface DistrictPenaltyStat {
@@ -29,6 +37,8 @@ export interface DistrictPenaltyStat {
   mch_per_day: number;
   others_per_day: number;
   unattended_count: number;
+  standby_count?: number;
+  waived_penalty?: number;
 }
 
 export interface CoordinatorPenaltyStat {
@@ -37,6 +47,7 @@ export interface CoordinatorPenaltyStat {
   per_day_penalty: number;
   open_tickets: number;
   open_penalty_tickets: number;
+  waived_penalty?: number;
 }
 
 export interface ZonePenaltyStat {
@@ -44,6 +55,7 @@ export interface ZonePenaltyStat {
   total_penalty: number;
   per_day_penalty: number;
   open_tickets: number;
+  waived_penalty?: number;
 }
 
 export interface LivePenaltySummaryResponse {
@@ -70,11 +82,19 @@ export interface ComplaintPenaltyRecord {
   complaint_status: string;
   is_under_warranty: "Yes" | "No";
   standby: "Yes" | "No";
+  is_exempted?: boolean;
+  waiver_type?: string;
   attend_hour_diff: number;
+  attend_sla_hours?: number;
+  grace_hours?: number;
+  total_downtime_hours?: number;
   attend_penalty: number;
   attend_per_day: number;
   penalty_down_days: number;
   delay_penalty: number;
+  unwaived_delay_penalty?: number;
+  unwaived_total_penalty?: number;
+  waived_penalty?: number;
   per_day_delay_penalty: number;
   total_penalty: number;
   total_per_day: number;
@@ -148,10 +168,30 @@ export interface LivePenaltyRepeatersResponse {
   repeaters: RepeaterCallEntry[];
 }
 
+// ─── Standby Waivers Response ────────────────────────────────────────────────
+export interface StandbyWaiverSummary {
+  total_exempt_complaints: number;
+  total_waived_penalty: number;
+  standby_count: number;
+  standby_saved_penalty: number;
+  warranty_count: number;
+  warranty_saved_penalty: number;
+}
+
+export interface LivePenaltyStandbyWaiversResponse {
+  status: string;
+  summary: StandbyWaiverSummary;
+  page: number;
+  limit: number;
+  total_records: number;
+  total_pages: number;
+  records: ComplaintPenaltyRecord[];
+}
+
 // ─── Service ──────────────────────────────────────────────────────────────────
 export const penaltyLiveService = {
-  async getSummary(): Promise<LivePenaltySummaryResponse> {
-    const res = await api.get("/complaints/live-penalty/summary");
+  async getSummary(params?: { force?: boolean }): Promise<LivePenaltySummaryResponse> {
+    const res = await api.get("/complaints/live-penalty/summary", { params });
     return res.data;
   },
 
@@ -159,8 +199,12 @@ export const penaltyLiveService = {
     page?: number;
     limit?: number;
     district?: string;
-    status?: "open" | "closed" | "all";
+    zone?: string;
+    hospital_type?: string;
+    status?: "open" | "closed" | "all" | "";
     critical?: "yes" | "no" | "";
+    standby?: "yes" | "no" | "";
+    warranty?: "yes" | "no" | "";
     search?: string;
     only_penalty?: boolean;
   }): Promise<LivePenaltyRecordsResponse> {
@@ -176,6 +220,25 @@ export const penaltyLiveService = {
     district?: string;
   }): Promise<LivePenaltyRepeatersResponse> {
     const res = await api.get("/complaints/live-penalty/repeaters", { params });
+    return res.data;
+  },
+
+  async getStandbyWaivers(params?: {
+    page?: number;
+    limit?: number;
+    type?: "standby" | "warranty" | "all";
+  }): Promise<LivePenaltyStandbyWaiversResponse> {
+    const res = await api.get("/complaints/live-penalty/standby-waivers", { params });
+    return res.data;
+  },
+
+  async toggleStandby(complaint_id: string, action: "add" | "remove" | "toggle" = "toggle"): Promise<{
+    status: string;
+    complaint_id: string;
+    is_standby: boolean;
+    message: string;
+  }> {
+    const res = await api.post("/complaints/live-penalty/toggle-standby", { complaint_id, action });
     return res.data;
   }
 };
