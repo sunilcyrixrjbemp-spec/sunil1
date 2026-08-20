@@ -2195,13 +2195,22 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   </button>
                 )}
                 {isAdmin && (
-                  <button
-                    onClick={() => setShowResetModal(true)}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-600 text-white border border-rose-700 hover:bg-rose-700 transition-colors cursor-pointer shadow-2xs"
-                    title="Cancel this expense claim completely and record audit log"
-                  >
-                    <XCircle size={10} /> Cancel Claim
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setShowResetModal(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 transition-colors cursor-pointer shadow-2xs"
+                      title="Select specific approval hierarchy level to re-route this claim to"
+                    >
+                      <RotateCcw size={10} /> Reset Level
+                    </button>
+                    <button
+                      onClick={() => setShowResetModal(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-600 text-white border border-rose-700 hover:bg-rose-700 transition-colors cursor-pointer shadow-2xs"
+                      title="Cancel this expense claim completely and record audit log"
+                    >
+                      <XCircle size={10} /> Cancel Claim
+                    </button>
+                  </>
                 )}
               </>
             )}

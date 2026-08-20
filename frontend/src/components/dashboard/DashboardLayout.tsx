@@ -23,7 +23,8 @@ import {
   ChevronRight,
   ChevronLeft,
   LayoutGrid,
-  UploadCloud
+  UploadCloud,
+  RotateCcw
 } from "lucide-react";
 import ProgressLoader from "../common/ProgressLoader";
 import Badge from "../common/Badge";
@@ -47,6 +48,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "expense", name: "Expense Claims", path: "/submit-expense", icon: FilePlus, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Project Head", "Travel Desk", "VP", "Accountant", "MIS"], gradientFrom: "from-emerald-500", gradientTo: "to-teal-600", shadowColor: "rgba(16, 185, 129, 0.35)" },
   { id: "mis_report", name: "MIS Reports", path: "/mis-report", icon: FileSpreadsheet, roles: ["Admin", "Manager", "Division Manager", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-cyan-500", gradientTo: "to-blue-600", shadowColor: "rgba(6, 182, 212, 0.35)" },
   { id: "kpi", name: "KPI Metrics", path: "/kpi-dashboard", icon: Gauge, roles: ["Admin", "Manager", "Division Manager", "Engineer", "Coordinator", "Project Head", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-rose-500", gradientTo: "to-red-600", shadowColor: "rgba(244, 63, 94, 0.35)" },
+  { id: "claim_level_reset", name: "Claim Level Reset", path: "/admin/claim-level-reset", icon: RotateCcw, roles: ["Admin"], gradientFrom: "from-amber-600", gradientTo: "to-orange-700", shadowColor: "rgba(217, 119, 6, 0.35)" },
   { id: "complaint_upload", name: "Complaint Upload", path: "/complaint-upload", icon: UploadCloud, roles: ["Admin", "Coordinator", "MIS", "Manager", "Division Manager", "Project Head", "Travel Desk", "VP", "Accountant"], gradientFrom: "from-indigo-600", gradientTo: "to-blue-700", shadowColor: "rgba(79, 70, 229, 0.35)" },
   { id: "asset_upload", name: "Asset Master", path: "/asset-upload", icon: Package, roles: ["Admin", "Coordinator", "MIS", "Engineer"], gradientFrom: "from-pink-500", gradientTo: "to-rose-600", shadowColor: "rgba(236, 72, 153, 0.35)" },
   { id: "penalty_report", name: "Penalty Audit", path: "/penalty-report", icon: ShieldAlert, roles: ["Admin", "Manager", "Division Manager", "Accountant", "MIS", "VP", "Travel Desk"], gradientFrom: "from-red-500", gradientTo: "to-rose-700", shadowColor: "rgba(239, 68, 68, 0.35)" },
@@ -62,7 +64,7 @@ const SIDEBAR_SECTIONS = [
   { label: "Workspace", ids: ["home", "new_dashboard"] },
   { label: "Claims & Approvals", ids: ["expense", "approval"] },
   { label: "Reports & Analytics", ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report"] },
-  { label: "Administration", ids: ["admin", "complaint_upload", "asset_upload"] },
+  { label: "Administration", ids: ["admin", "claim_level_reset", "complaint_upload", "asset_upload"] },
   { label: "Account", ids: ["profile", "help"] },
 ];
 
@@ -147,10 +149,19 @@ export default function DashboardLayout() {
       return false;
     }
     const idLower = item.id.toLowerCase();
-    const roleLower = (user.role || "").toLowerCase();
-    if (idLower === "claim_level_reset" && (roleLower === "admin" || allowedWindows.includes("admin") || allowedWindows.includes("approval") || user.role === "Admin")) {
+    const roleLower = (user?.role || user?.designation || "").trim().toLowerCase();
+
+    // 🔒 Admin sees ALL pages by default without exception
+    if (roleLower === "admin" || user?.role === "Admin") {
       return true;
     }
+
+    // Role-based allowance
+    const itemRoles = (item.roles || []).map((r: string) => r.toLowerCase());
+    if (itemRoles.includes(roleLower)) {
+      return true;
+    }
+
     return allowedWindows.includes(idLower);
   });
 
