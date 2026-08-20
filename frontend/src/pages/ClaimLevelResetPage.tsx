@@ -104,8 +104,24 @@ export default function ClaimLevelResetPage() {
   };
 
   useEffect(() => {
-    loadAllClaims();
+    if ((user?.role || user?.designation || "").toLowerCase() === "admin") {
+      loadAllClaims();
+    }
   }, [selectMonth]);
+
+  const isAdmin = (user?.role || user?.designation || "").toLowerCase() === "admin";
+
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-white border border-slate-200 shadow-2xs">
+        <XCircle className="w-12 h-12 text-rose-500 mb-3" />
+        <h2 className="text-base font-black text-slate-800 uppercase tracking-wider">Access Denied</h2>
+        <p className="text-xs text-slate-500 mt-1 max-w-sm font-semibold">
+          Claim Level Reset is restricted strictly to System Administrators only.
+        </p>
+      </div>
+    );
+  }
 
   // Clean zone helper
   const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();

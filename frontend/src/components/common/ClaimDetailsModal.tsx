@@ -1839,7 +1839,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   // APPROVAL CENTER ONLY: Approve, Reject & Return buttons
   const pendingStep = c.approvals?.find((a: any) => a.approver_code === user?.user_id && a.status === "pending");
   const roleLower = (user?.role || user?.designation || "").toLowerCase();
-  const isCoordinator = roleLower.includes("coordinator") || roleLower === "admin";
+  const isAdmin = roleLower === "admin";
+  const isCoordinator = roleLower.includes("coordinator") || isAdmin;
   const canApprove = isApprovalPage && !isSubmittingEngineer && (!!pendingStep || isCoordinator || ["submitted", "pending"].includes((c.status || "").toLowerCase()));
   const canEditAmounts = isApprovalPage && !isSubmittingEngineer && (canApprove || isCoordinator || roleLower.includes("manager") || roleLower.includes("head") || roleLower.includes("lead") || roleLower.includes("zonal") || roleLower.includes("supervisor"));
 
@@ -2186,13 +2187,15 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   <XCircle size={10} /> Reject
                 </button>
                 {isCoordinator && (
+                  <button
+                    onClick={() => { setShowReturnBox(true); setShowRejectBox(false); }}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-500 text-white border border-amber-600 hover:bg-amber-600 transition-colors cursor-pointer"
+                  >
+                    <RotateCcw size={10} /> Return
+                  </button>
+                )}
+                {isAdmin && (
                   <>
-                    <button
-                      onClick={() => { setShowReturnBox(true); setShowRejectBox(false); }}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-500 text-white border border-amber-600 hover:bg-amber-600 transition-colors cursor-pointer"
-                    >
-                      <RotateCcw size={10} /> Return
-                    </button>
                     <button
                       onClick={() => setShowResetModal(true)}
                       className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 transition-colors cursor-pointer shadow-2xs"
