@@ -2508,6 +2508,13 @@ export async function handleDeleteExpense(request, env, params, query, user) {
   // Soft-cancel: Update status to 'cancelled' to preserve full audit history and data integrity
   await env.DB.prepare("UPDATE expenses SET status = 'cancelled', updated_at = ? WHERE id = ?").bind(nowISO, expenseId).run();
 
+  // Also cancel any active/waiting approval requests in approvals table
+  try {
+    await env.DB.prepare("UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND status IN ('pending', 'waiting')").bind(nowISO, expenseId).run();
+  } catch (e) {
+    console.error("Failed to cancel approvals in approvals table:", e);
+  }
+
   // Audit log entry for cancellation
   try {
     await env.DB.prepare(`

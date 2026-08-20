@@ -256,6 +256,7 @@ export async function fetchPendingApprovals(env, user) {
       JOIN expenses e ON a.expense_id = e.id
       LEFT JOIN users u ON e.user_id = u.id
       WHERE a.approver_id = ? AND a.status = 'pending'
+        AND LOWER(TRIM(e.status)) NOT IN ('cancelled', 'rejected', 'returned_to_draft', 'admin_cancelled')
         AND (e.processing_status IS NULL OR e.processing_status != 'QUEUED')
         AND EXISTS (
           SELECT 1 
@@ -689,6 +690,11 @@ export async function handleApprove(request, env, params, query, user) {
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
 
+  const expStatus = String(expense.status || "").toLowerCase().trim();
+  if (["cancelled", "rejected", "returned_to_draft", "admin_cancelled"].includes(expStatus)) {
+    return jsonResponse({ error: `Cannot approve this claim because its status is already '${expense.status}'.` }, 400);
+  }
+
   if (expense.user_id === user.id) {
     return jsonResponse({ error: "Self-approval of expense claims is not permitted" }, 400);
   }
@@ -896,6 +902,11 @@ export async function handleReject(request, env, params, query, user) {
 
   const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expenseId).first();
   if (!expense) return jsonResponse({ error: "Expense claim not found" }, 404);
+
+  const expStatus = String(expense.status || "").toLowerCase().trim();
+  if (["cancelled", "rejected", "returned_to_draft", "admin_cancelled"].includes(expStatus)) {
+    return jsonResponse({ error: `Cannot reject this claim because its status is already '${expense.status}'.` }, 400);
+  }
 
   if (expense.user_id === user.id) {
     return jsonResponse({ error: "Self-rejection of expense claims is not permitted" }, 400);
