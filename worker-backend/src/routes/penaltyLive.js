@@ -547,10 +547,19 @@ export async function handleLivePenaltyRepeaters(request, env, params, query, us
 
       let key;
       if (groupBy === "hospital") {
-        key = `${(c.hospital_name || "").trim()}|||${(c.district_name || "").trim()}`;
+        // Group by hospital + district (all complaints of same hospital)
+        const hName = (c.hospital_name || "").trim();
+        const dName = (c.district_name || "").trim();
+        if (!hName) continue; // skip if no hospital
+        key = `HOSP|||${hName}|||${dName}`;
       } else {
-        // Default: group by barcode (same physical asset)
-        key = `${(c.bar_code || "").trim()}|||${(c.equipment_name || "").trim()}|||${(c.hospital_name || "").trim()}`;
+        // Group STRICTLY by barcode — one barcode = one physical machine
+        const bc = (c.bar_code || "").trim();
+        if (!bc) {
+          // If no barcode, skip — can't reliably identify the physical asset
+          continue;
+        }
+        key = `BC|||${bc}`;
       }
 
       if (!groupMap.has(key)) {
