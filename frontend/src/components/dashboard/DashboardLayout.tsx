@@ -180,7 +180,14 @@ export default function DashboardLayout() {
       return location.pathname === item.path || location.pathname.startsWith(item.path + "/");
     });
 
-  const hasAccess = !currentActiveItem || allowedWindows.includes(currentActiveItem.id.toLowerCase()) || (currentActiveItem.id === "claim_level_reset" && ((user.role || "").toLowerCase() === "admin" || allowedWindows.includes("admin")));
+  const roleLower = (user?.role || user?.designation || "").trim().toLowerCase();
+  const isAdmin = roleLower === "admin" || user?.role === "Admin";
+
+  const hasAccess =
+    isAdmin ||
+    !currentActiveItem ||
+    allowedWindows.includes(currentActiveItem.id.toLowerCase()) ||
+    (currentActiveItem.roles && currentActiveItem.roles.map((r: string) => r.toLowerCase()).includes(roleLower));
   const initials = user?.name ? user.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "U";
 
   return (

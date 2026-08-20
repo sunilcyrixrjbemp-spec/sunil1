@@ -72,12 +72,28 @@ export default function ComplaintUploadPage() {
     async function verifyAccess() {
       setCheckingPermission(true);
       try {
+        const localUser = JSON.parse(localStorage.getItem("user") || "null");
+        const roleLower = (localUser?.role || localUser?.designation || "").trim().toLowerCase();
+        if (roleLower === "admin") {
+          setHasPermission(true);
+          setIsAdmin(true);
+          setCheckingPermission(false);
+          return;
+        }
+
         const res = await complaintService.checkPermission();
-        setHasPermission(res.can_upload);
+        setHasPermission(res.can_upload || res.is_admin);
         setIsAdmin(res.is_admin);
       } catch (err) {
         console.error("Failed to check complaint upload permissions:", err);
-        setHasPermission(false);
+        const localUser = JSON.parse(localStorage.getItem("user") || "null");
+        const roleLower = (localUser?.role || localUser?.designation || "").trim().toLowerCase();
+        if (roleLower === "admin") {
+          setHasPermission(true);
+          setIsAdmin(true);
+        } else {
+          setHasPermission(false);
+        }
       } finally {
         setCheckingPermission(false);
       }
