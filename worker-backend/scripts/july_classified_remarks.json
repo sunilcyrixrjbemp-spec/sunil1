@@ -1,0 +1,1868 @@
+[
+  {
+    "desc": "Mobile recharge",
+    "count": 10,
+    "totalAmt": 3125,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcel received",
+    "count": 13,
+    "totalAmt": 2550,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Food with BME - Skynior Fine-Dine & Lounge Jodhpur (Bill No: A5922)",
+    "count": 1,
+    "totalAmt": 2473,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Food with BME - Vijay Restaurant Jodhpur (Bill No: 10307)",
+    "count": 1,
+    "totalAmt": 2150,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Food with BME - Fun N Food Restaurant Jodhpur (Bill No: 26-27/18853)",
+    "count": 1,
+    "totalAmt": 2019,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "HOTEL SANDAS INN",
+    "count": 1,
+    "totalAmt": 1500,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Team Dinner",
+    "count": 1,
+    "totalAmt": 1361,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Dental chair sector motor repair",
+    "count": 1,
+    "totalAmt": 1300,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Local purchase for freezes spare parts",
+    "count": 1,
+    "totalAmt": 1200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Freeze Moter",
+    "count": 1,
+    "totalAmt": 1121,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel send Jodhpur office",
+    "count": 2,
+    "totalAmt": 1100,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Purchased 32 gb pendrive for software installation",
+    "count": 1,
+    "totalAmt": 900,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Hotel bill",
+    "count": 1,
+    "totalAmt": 900,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Ecg machine Power Supply",
+    "count": 1,
+    "totalAmt": 700,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Fan purchase for  bi pap compressor",
+    "count": 1,
+    "totalAmt": 637,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel send Jodhpur",
+    "count": 1,
+    "totalAmt": 600,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Corrier DTDC from udaipur to Kerela trc",
+    "count": 1,
+    "totalAmt": 600,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Mobile bill",
+    "count": 2,
+    "totalAmt": 599,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "OLP REALLY SET",
+    "count": 1,
+    "totalAmt": 580,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcal received, parcal send jodhpur and ajmer, tape perchage for packaging",
+    "count": 1,
+    "totalAmt": 570,
+    "category": "COURIER"
+  },
+  {
+    "desc": "2.55 mm cable, kattel connector and power plug 2",
+    "count": 1,
+    "totalAmt": 566,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Return Hanumangarh to Bikaner",
+    "count": 1,
+    "totalAmt": 550,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcel send Jodhpur x ray tube",
+    "count": 1,
+    "totalAmt": 550,
+    "category": "COURIER"
+  },
+  {
+    "desc": "New joining 4 person lunch bill.  (Jyoti Ma'am asked me to have lunch outside and submit the bill under expenses)",
+    "count": 1,
+    "totalAmt": 545,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Auto",
+    "count": 4,
+    "totalAmt": 500,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "TOLL",
+    "count": 1,
+    "totalAmt": 500,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Travel charges loading taxi",
+    "count": 2,
+    "totalAmt": 500,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Lunch food",
+    "count": 1,
+    "totalAmt": 480,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": ".",
+    "count": 1,
+    "totalAmt": 470,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Collect parsal",
+    "count": 3,
+    "totalAmt": 450,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Luggage charges",
+    "count": 1,
+    "totalAmt": 450,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Kettle heating element parts",
+    "count": 1,
+    "totalAmt": 414,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Traveling from jodhpur to sirohi",
+    "count": 1,
+    "totalAmt": 410,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "DTDC courier",
+    "count": 1,
+    "totalAmt": 400,
+    "category": "COURIER"
+  },
+  {
+    "desc": "2 parcal received, tape perchage  parcal pack , parcal send  Nagaur to ajmer",
+    "count": 1,
+    "totalAmt": 400,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Autoclave valve",
+    "count": 1,
+    "totalAmt": 390,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Tools of  goti pana set",
+    "count": 1,
+    "totalAmt": 380,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "11 meter 1.5 mm wire, pvc tape roll, tapariya tester",
+    "count": 1,
+    "totalAmt": 375,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Transformer 12-0-12 (5amp)",
+    "count": 1,
+    "totalAmt": 360,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Welding",
+    "count": 2,
+    "totalAmt": 350,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Adapter 12v 3 amp",
+    "count": 1,
+    "totalAmt": 350,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Mini tool bag",
+    "count": 1,
+    "totalAmt": 350,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Capacitor",
+    "count": 2,
+    "totalAmt": 340,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Charger and fuse",
+    "count": 1,
+    "totalAmt": 330,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "W40+screw driver+clip+fevitite",
+    "count": 1,
+    "totalAmt": 325,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Wire",
+    "count": 2,
+    "totalAmt": 320,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Power cable and pin top",
+    "count": 1,
+    "totalAmt": 310,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Wd40",
+    "count": 2,
+    "totalAmt": 300,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Purchase LAN cable.",
+    "count": 1,
+    "totalAmt": 300,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Send Courier sonography convex probe (Ahmdabad)",
+    "count": 1,
+    "totalAmt": 300,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Sim balance",
+    "count": 1,
+    "totalAmt": 300,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel Nagaur to parbatsar",
+    "count": 2,
+    "totalAmt": 300,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Recharge due to Sim not available",
+    "count": 1,
+    "totalAmt": 299,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Compressor renewal charges",
+    "count": 1,
+    "totalAmt": 299,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Under warranty compressor renewal charges",
+    "count": 1,
+    "totalAmt": 299,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Local purchases",
+    "count": 1,
+    "totalAmt": 299,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Monthly Phone bill",
+    "count": 1,
+    "totalAmt": 299,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Cylinder Travel Charges  Loading taxi",
+    "count": 1,
+    "totalAmt": 299,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Mobile Recharge",
+    "count": 1,
+    "totalAmt": 299,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "FOOD",
+    "count": 1,
+    "totalAmt": 298,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Fuse,connecter,VDR etc",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Power supply board repair",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Isopropyl  Alcohal",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Led for ot light",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Internal tubing, power cord",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Power supply Cable (7 Meter),Relay, fuse",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Suction oil and  plug top",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Transformer and main switch",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "A4 size paper",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Microscope supply locally repair",
+    "count": 1,
+    "totalAmt": 290,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "WD-40",
+    "count": 1,
+    "totalAmt": 285,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "CPU Fan",
+    "count": 1,
+    "totalAmt": 285,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "TIFFIN AND LUNCH",
+    "count": 1,
+    "totalAmt": 280,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Motor purchase",
+    "count": 1,
+    "totalAmt": 280,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "PCB board repair by vendor",
+    "count": 1,
+    "totalAmt": 280,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Lain cable",
+    "count": 1,
+    "totalAmt": 280,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Sv valve 220v  for tissue processor",
+    "count": 1,
+    "totalAmt": 280,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Wire 12 miter + 2 on off switch",
+    "count": 1,
+    "totalAmt": 272,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "30 meter 6*8mm  tube (pipe).",
+    "count": 1,
+    "totalAmt": 270,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Cab",
+    "count": 1,
+    "totalAmt": 264,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "",
+    "count": 3,
+    "totalAmt": 260,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcal received, parcal send",
+    "count": 1,
+    "totalAmt": 260,
+    "category": "COURIER"
+  },
+  {
+    "desc": "2 Irradiance Meter Dispatch To Lucknow To Mr. Monu",
+    "count": 1,
+    "totalAmt": 260,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Snacks for Team",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Courier",
+    "count": 2,
+    "totalAmt": 250,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Oil",
+    "count": 2,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Power supply board repair, motor",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Dental chair west coupler",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Courier- parcel sent to jodhpur TRC",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Tube received",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Paper rim for printer",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "ICU bed welding",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Power cord and fuse , need  Isopropyl alcohol",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Wd 40 & service brush",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Relay and, 5 miter wire",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Centrifuge machine power cable",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Power cord and fuse 6 A",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "tube head from salumber to udaipur bus charge",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Night up down charge",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Power socket and fuse socket",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Corier slip",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcel received and sent by bus autoclave glass tube",
+    "count": 1,
+    "totalAmt": 250,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Wd 40, 2 for labour table 3 oiling and servicing",
+    "count": 1,
+    "totalAmt": 240,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Wd 40 2 pic for cleaning and oiling 3 table",
+    "count": 1,
+    "totalAmt": 240,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "10 pin connecter & 7 screw,washer,nut",
+    "count": 1,
+    "totalAmt": 240,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Bearing 4",
+    "count": 1,
+    "totalAmt": 235,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "PARCEL  +PARKING",
+    "count": 1,
+    "totalAmt": 230,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Charging adaptor",
+    "count": 1,
+    "totalAmt": 224,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "12 volt Relay.",
+    "count": 1,
+    "totalAmt": 220,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Purchase tool kit",
+    "count": 1,
+    "totalAmt": 220,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Make spring help by local shoap",
+    "count": 1,
+    "totalAmt": 220,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Power supply Cable And Carbon Brush",
+    "count": 1,
+    "totalAmt": 220,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Collect 3 parcel and send to SDH nohar",
+    "count": 1,
+    "totalAmt": 220,
+    "category": "COURIER"
+  },
+  {
+    "desc": "My Room to Ajmer Railway station+Ganganagar rail station to Hotel",
+    "count": 1,
+    "totalAmt": 220,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Packing tape & rectifier",
+    "count": 1,
+    "totalAmt": 210,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "3 pin top 16 amp, 2. Switch on off, 3 controler switch",
+    "count": 1,
+    "totalAmt": 210,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Mosfet and capacitor",
+    "count": 1,
+    "totalAmt": 210,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel received from jodhpur TRC",
+    "count": 1,
+    "totalAmt": 210,
+    "category": "COURIER"
+  },
+  {
+    "desc": "100",
+    "count": 2,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Adapter 12.2amp",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "received the parcel from Bhadra",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Compressor tubing , T-piece connector",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "A4 size rim purchase for office use",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Oil for suction machine",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Matrial received from bhadra 2parcel ,manish expances,",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Bhadra xray tube collect 4/6/26 tube",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "lubricants",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcel",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Welding autoclave handle",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "2 Bearing purchase for x-ray machine",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Sbc board sent udaipur by bus",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "M -Seal and Anabond",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Collect parsal from bhadra Power supply of biochemistry .",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Kabze for centrifuge machine",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Dinner at 08/7/2026",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Gift for principal Pen",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Lath work",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Rajgarh motor nut bolt 4",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Zorrik,tape,",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "1. Nagaur to Makrana parcel    2. Nagaur to ladnu parcel -100 ( 7/7/26 )",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Charger",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Food",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Waste coupler and Teplon tep",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Toll tax",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcal received bus",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Lunch Bill",
+    "count": 1,
+    "totalAmt": 200,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "WD 40",
+    "count": 1,
+    "totalAmt": 190,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Lath work bone drill",
+    "count": 1,
+    "totalAmt": 190,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Switch and fuse",
+    "count": 1,
+    "totalAmt": 189,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Tape and WD- 40",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parking",
+    "count": 6,
+    "totalAmt": 180,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Spare for wheighing machine",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Cleaning Brush",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Power cord",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Cooling fan",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Packing Tape -2",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Boand tite  , m sil , aerolite",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Courier receipt",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Carbon brush",
+    "count": 3,
+    "totalAmt": 180,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Purchased 15 LEDs and 2 twizzers for sn medical college microscopes complaints",
+    "count": 1,
+    "totalAmt": 180,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Power cable",
+    "count": 1,
+    "totalAmt": 170,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Courier Received",
+    "count": 3,
+    "totalAmt": 170,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Local expenses",
+    "count": 1,
+    "totalAmt": 170,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Dinner, after monthly meeting approved by di",
+    "count": 1,
+    "totalAmt": 170,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Capictor 60-80 mfd",
+    "count": 1,
+    "totalAmt": 170,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Oil & packing tape",
+    "count": 1,
+    "totalAmt": 170,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Local purchase filter and Tubing",
+    "count": 1,
+    "totalAmt": 170,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Driver board repair",
+    "count": 1,
+    "totalAmt": 170,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Female ceramic connector, Araldite, teflon",
+    "count": 1,
+    "totalAmt": 170,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel sent to TRC by courier for repairing fetal Doppler  bali DH pali",
+    "count": 1,
+    "totalAmt": 160,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Power cord Long",
+    "count": 1,
+    "totalAmt": 160,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Soldering wire",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "M-Seal",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Udaipur parsal Received ( suction compressor)",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Scrue driver and anabond fast",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "CPU courier Aspur",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Zorrik",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "T-piece connectors for Fabius GSP",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Isopropyl alcohol",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Ventilator compressor tubing",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "12 miter wire purchase both complaint but bill not available",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Tie rap,fuse",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "auto fare",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Tap role and replay",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Print out",
+    "count": 1,
+    "totalAmt": 150,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "Compressor A. C Socket Panel",
+    "count": 1,
+    "totalAmt": 145,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Teflon and Electric Tape,pen",
+    "count": 1,
+    "totalAmt": 140,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Register for office use",
+    "count": 1,
+    "totalAmt": 140,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "Hotel to Bus stand+ Bus stand to Hospital",
+    "count": 1,
+    "totalAmt": 140,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Hospital to Bus stand+Bus stand to Hotel",
+    "count": 1,
+    "totalAmt": 140,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parsal received and  Local market purchase 2mtr cable",
+    "count": 1,
+    "totalAmt": 140,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Relly and OLP really market purchase",
+    "count": 1,
+    "totalAmt": 130,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Araldite,fewikwik",
+    "count": 1,
+    "totalAmt": 130,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "WT 40 OIL LUBRICANT X-RAY MACHINE TUBE SIDE HENDAL NOT WORKING PROPERLY",
+    "count": 1,
+    "totalAmt": 130,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Spare for dental chair",
+    "count": 1,
+    "totalAmt": 130,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Cable tie packet",
+    "count": 1,
+    "totalAmt": 130,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Ganganagar Bus stand to Hotel",
+    "count": 2,
+    "totalAmt": 130,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Hotel  to Ganganagar Bus stand+ Chunawadh Chc",
+    "count": 1,
+    "totalAmt": 130,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "VDR",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Auto use",
+    "count": 2,
+    "totalAmt": 120,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Purchase Wire 10 meter 1.5mm",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Purchase IC",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "CELLO  TAP",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Wire 2 core 10 Miter",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Mov,fuses",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Three pin top",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "I went to market for the company shirt fitting.\"",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Box file",
+    "count": 1,
+    "totalAmt": 120,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "W40",
+    "count": 1,
+    "totalAmt": 110,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Hospital to Bus stand+ Bus stand to Hotel",
+    "count": 1,
+    "totalAmt": 110,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Hotel to Bus stand+Bus stand to My Room",
+    "count": 1,
+    "totalAmt": 110,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Scruu",
+    "count": 1,
+    "totalAmt": 110,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "MCH VISIT",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcel received by bus ropiya travelers",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Switch",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel charges given to bus driver",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Office cleaning",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Courier box , bubble sheet, Tape",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Tea for medical College lab staff",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Local hmh Element collected",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Three pin top for autoclave compilnt",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Bus fare for nephro scope received from d-med after and dental air rotor",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Gas Control Kit Tubes 2Meter",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Power plug,  fuse",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "12v DC relay",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Welding work's for cr Reader",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "C mos battery",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Teflon ,Marker",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "Auto charges pratapgarh travels office to Roo",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Wire and tubing",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Breakfast expenses",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "For purchase spare wire",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Wire/fuse",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "My Room to Ajmer Bus Stand+ Beawar Bus Stand to Hospital",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "A K Hospital to Beawar Bus Stand+ Ajmer Bus Stand to My Room",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "My Room to Ajmer Bus Stand+ Bandarwara to Bhinay Hospital",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Bhinay Hospital to Bandarwara+Ajmer Bus Stand to My Room",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcel collect vacuum Machine to udaipur",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "COURIER"
+  },
+  {
+    "desc": "100watt bulb with holder testing.",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel ( CBC sent to prabtsar )( auto )",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Dental chair & baby weighing machine",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parsal received sumerpur bus stand and other activities",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "COURIER"
+  },
+  {
+    "desc": "5 Fuse",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Nagaur to Makrana parcel",
+    "count": 1,
+    "totalAmt": 100,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Silicone jelly",
+    "count": 1,
+    "totalAmt": 95,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Top pluge 3 pin purchase for service (16amp)",
+    "count": 1,
+    "totalAmt": 90,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Envelope for office use",
+    "count": 1,
+    "totalAmt": 80,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Parcel rcvd by bus sanderao repaired spot light",
+    "count": 1,
+    "totalAmt": 80,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Cleaning brush",
+    "count": 1,
+    "totalAmt": 80,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Push button",
+    "count": 1,
+    "totalAmt": 80,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Pvc tep teplon tep",
+    "count": 1,
+    "totalAmt": 80,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Ceramic Female  Plug",
+    "count": 1,
+    "totalAmt": 80,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Spare for ventilater",
+    "count": 1,
+    "totalAmt": 80,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Tap and on/off switch",
+    "count": 1,
+    "totalAmt": 80,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Electric tape or cleaning brush",
+    "count": 1,
+    "totalAmt": 75,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Pen and Marker",
+    "count": 1,
+    "totalAmt": 75,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "My Room to Ajmer Bus stand+ Nagaur Bus Stand to  Merta City Hospital",
+    "count": 1,
+    "totalAmt": 75,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Marta City Hospital to Nagaur Bus stand+ Ajmer Bus Stand to My Room",
+    "count": 1,
+    "totalAmt": 75,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Fevikwik",
+    "count": 1,
+    "totalAmt": 72,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Courier charges",
+    "count": 1,
+    "totalAmt": 70,
+    "category": "COURIER"
+  },
+  {
+    "desc": "IC 4049 and IC 4066",
+    "count": 1,
+    "totalAmt": 70,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Araldite",
+    "count": 1,
+    "totalAmt": 70,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Feviwick+3 Meter Wire +Carbon burus",
+    "count": 1,
+    "totalAmt": 70,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Taplon tape and m seal",
+    "count": 1,
+    "totalAmt": 70,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Switch & wire purchase for suction",
+    "count": 1,
+    "totalAmt": 70,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel receiving charges",
+    "count": 1,
+    "totalAmt": 70,
+    "category": "COURIER"
+  },
+  {
+    "desc": "The shopkeeper charged a fee for disconnecting both connectors of the pressure regulator.(Tightly locked)",
+    "count": 1,
+    "totalAmt": 70,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Fevitite",
+    "count": 1,
+    "totalAmt": 65,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Fivicvip,pen,marcel",
+    "count": 1,
+    "totalAmt": 65,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Carbon brush purchase",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "3 Carbon burus+ tape",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Bike Parking",
+    "count": 2,
+    "totalAmt": 60,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Packing tape",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "BIKE PARKING",
+    "count": 2,
+    "totalAmt": 60,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Heater element plug",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "3 pin plug top",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Balaab",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Stationary Tape Pen Marker",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "Contactor collect",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "3 Print condemnation latter",
+    "count": 1,
+    "totalAmt": 60,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "Chopasani Satellite Hospital To Home",
+    "count": 1,
+    "totalAmt": 54,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "AUTO room to bhilwara and tonk",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "3 pin top",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Sent the parcel 📦 to by bus sanderaw",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Nut/bolt",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Marker and Pen",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "Stationary item",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "PRINTING"
+  },
+  {
+    "desc": "Parcel received by bus ropiya",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Electric Wire 10ft",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Taplan+wasar",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "New purchase Vesline  x-ray machine HT  Cable ke liye",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Parcel received ropiya travel",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Wire purchase",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Nutbolt welding",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Hotel to Ganganagar Bus stand",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Leth+screw",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Nut, bolt, Fuse 6amp, 10amp",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "X ray machine screw purchase online call",
+    "count": 1,
+    "totalAmt": 50,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Fuse",
+    "count": 1,
+    "totalAmt": 45,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Courier received",
+    "count": 1,
+    "totalAmt": 40,
+    "category": "COURIER"
+  },
+  {
+    "desc": "Software Parcel by rapido from MDM.",
+    "count": 1,
+    "totalAmt": 40,
+    "category": "COURIER"
+  },
+  {
+    "desc": "IC 4049 and 4066 purchase for x-rya machine",
+    "count": 1,
+    "totalAmt": 40,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Brush",
+    "count": 1,
+    "totalAmt": 40,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Feviquick",
+    "count": 1,
+    "totalAmt": 40,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Electric tape",
+    "count": 2,
+    "totalAmt": 35,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "BIKE  PARKING",
+    "count": 1,
+    "totalAmt": 30,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Oil fill",
+    "count": 1,
+    "totalAmt": 30,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "PARKING",
+    "count": 1,
+    "totalAmt": 30,
+    "category": "MISCELLANEOUS"
+  },
+  {
+    "desc": "Screw and washers",
+    "count": 1,
+    "totalAmt": 25,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Fuse(3A)",
+    "count": 1,
+    "totalAmt": 20,
+    "category": "SPARE_PURCHASE"
+  },
+  {
+    "desc": "Mobile Sim  Recharge  july  month",
+    "count": 1,
+    "totalAmt": 0,
+    "category": "MISCELLANEOUS"
+  }
+]

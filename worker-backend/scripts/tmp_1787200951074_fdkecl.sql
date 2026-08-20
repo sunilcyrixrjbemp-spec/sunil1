@@ -1,0 +1,1 @@
+SELECT user_id, advance_amount, month, year FROM engineer_advances WHERE UPPER(month) = 'JULY';

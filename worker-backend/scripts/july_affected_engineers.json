@@ -1,0 +1,5156 @@
+[
+  {
+    "ee_code": "E1793",
+    "ee_name": "Ratan Lal",
+    "designation": "Biomedical Engineer",
+    "district": "Bikaner",
+    "totalOtherAmount": 3600,
+    "prev_spare": 0,
+    "prev_courier": 180,
+    "prev_printing": 3420,
+    "prev_misc": 0,
+    "new_spare": 2970,
+    "new_courier": 180,
+    "new_printing": 450,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000025",
+        "claimDate": "2026-07-04",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "VDR",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000052",
+        "claimDate": "2026-07-01",
+        "amount": 390,
+        "origAmount": 390,
+        "remark": "Autoclave valve",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000378",
+        "claimDate": "2026-07-09",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Fuse,connecter,VDR etc",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000378",
+        "claimDate": "2026-07-09",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Oil",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000526",
+        "claimDate": "2026-07-10",
+        "amount": 130,
+        "origAmount": 130,
+        "remark": "Araldite,fewikwik",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000587",
+        "claimDate": "2026-07-11",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Led for ot light",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000732",
+        "claimDate": "2026-07-12",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Oil for suction machine",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000845",
+        "claimDate": "2026-07-03",
+        "amount": 210,
+        "origAmount": 210,
+        "remark": "Packing tape & rectifier",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000845",
+        "claimDate": "2026-07-03",
+        "amount": 80,
+        "origAmount": 80,
+        "remark": "Envelope for office use",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-000852",
+        "claimDate": "2026-07-06",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Paper rim for printer",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-001160",
+        "claimDate": "2026-07-15",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Spare for wheighing machine",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001315",
+        "claimDate": "2026-07-16",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "Packing tape",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002108",
+        "claimDate": "2026-07-20",
+        "amount": 130,
+        "origAmount": 130,
+        "remark": "Spare for dental chair",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002108",
+        "claimDate": "2026-07-20",
+        "amount": 80,
+        "origAmount": 80,
+        "remark": "Spare for ventilater",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002418",
+        "claimDate": "2026-07-25",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "For purchase spare wire",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002516",
+        "claimDate": "2026-07-27",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Oil",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002516",
+        "claimDate": "2026-07-27",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Courier receipt",
+        "oldCat": "COURIER",
+        "newCat": "COURIER",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-002685",
+        "claimDate": "2026-07-28",
+        "amount": 130,
+        "origAmount": 130,
+        "remark": "Cable tie packet",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002685",
+        "claimDate": "2026-07-28",
+        "amount": 170,
+        "origAmount": 170,
+        "remark": "Oil & packing tape",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003198",
+        "claimDate": "2026-07-29",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "Box file",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-003198",
+        "claimDate": "2026-07-29",
+        "amount": 240,
+        "origAmount": 240,
+        "remark": "10 pin connecter & 7 screw,washer,nut",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2157",
+    "ee_name": "Sheraram Choyal",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Nagaur",
+    "totalOtherAmount": 359,
+    "prev_spare": 1530,
+    "prev_courier": 0,
+    "prev_printing": 359,
+    "prev_misc": 0,
+    "new_spare": 1530,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 359,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001392",
+        "claimDate": "2026-07-15",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002364",
+        "claimDate": "2026-07-21",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1720",
+    "ee_name": "Somvir Singh",
+    "designation": "District Incharge",
+    "district": "Churu",
+    "totalOtherAmount": 100,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 100,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 100,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000063",
+        "claimDate": "2026-07-02",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "MCH VISIT",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1924",
+    "ee_name": "Kamaljeet singh shekhawat",
+    "designation": "Specialist Engineer (Radiology)",
+    "district": "Bikaner",
+    "totalOtherAmount": 380,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 380,
+    "prev_misc": 0,
+    "new_spare": 180,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 200,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001206",
+        "claimDate": "2026-07-16",
+        "amount": 130,
+        "origAmount": 130,
+        "remark": "WT 40 OIL LUBRICANT X-RAY MACHINE TUBE SIDE HENDAL NOT WORKING PROPERLY",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001918",
+        "claimDate": "2026-07-22",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "New purchase Vesline  x-ray machine HT  Cable ke liye",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003658",
+        "claimDate": "2026-07-29",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Auto",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003658",
+        "claimDate": "2026-07-29",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Auto",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2049",
+    "ee_name": "Narendra Kumar Kumawat",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Bikaner",
+    "totalOtherAmount": 610,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 610,
+    "prev_misc": 0,
+    "new_spare": 180,
+    "new_courier": 0,
+    "new_printing": 430,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001886",
+        "claimDate": "2026-07-22",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Packing Tape -2",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002542",
+        "claimDate": "2026-07-19",
+        "amount": 140,
+        "origAmount": 140,
+        "remark": "Register for office use",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-003491",
+        "claimDate": "2026-07-31",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "A4 size paper",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      }
+    ]
+  },
+  {
+    "ee_code": "E1877",
+    "ee_name": "Sampat Kumar",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Churu",
+    "totalOtherAmount": 1660,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 1660,
+    "prev_misc": 0,
+    "new_spare": 1510,
+    "new_courier": 150,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000616",
+        "claimDate": "2026-07-11",
+        "amount": 280,
+        "origAmount": 280,
+        "remark": "Motor purchase",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001245",
+        "claimDate": "2026-07-14",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Power cord",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001309",
+        "claimDate": "2026-07-16",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Cooling fan",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001645",
+        "claimDate": "2026-07-17",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001837",
+        "claimDate": "2026-07-21",
+        "amount": 20,
+        "origAmount": 20,
+        "remark": "Fuse(3A)",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002007",
+        "claimDate": "2026-07-22",
+        "amount": 580,
+        "origAmount": 580,
+        "remark": "OLP REALLY SET",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002294",
+        "claimDate": "2026-07-23",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Wire and tubing",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003594",
+        "claimDate": "2026-07-31",
+        "amount": 170,
+        "origAmount": 170,
+        "remark": "Local purchase filter and Tubing",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "CT602",
+    "ee_name": "Shubham Soni",
+    "designation": "Support Engineer",
+    "district": "Bhilwara",
+    "totalOtherAmount": 170,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 170,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 170,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000065",
+        "claimDate": "2026-07-06",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Auto use",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000080",
+        "claimDate": "2026-07-02",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "AUTO room to bhilwara and tonk",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000115",
+        "claimDate": "2026-07-07",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Auto use",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2120",
+    "ee_name": "Manendra Sen",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Bhilwara",
+    "totalOtherAmount": 689,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 689,
+    "prev_misc": 0,
+    "new_spare": 390,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 299,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001625",
+        "claimDate": "2026-07-17",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Recharge due to Sim not available",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002170",
+        "claimDate": "2026-07-21",
+        "amount": 40,
+        "origAmount": 40,
+        "remark": "Brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003387",
+        "claimDate": "2026-07-27",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Charger",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003393",
+        "claimDate": "2026-07-29",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Tap role and replay",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1927",
+    "ee_name": "Shubam Verma",
+    "designation": "Specialist Engineer",
+    "district": "Ajmer",
+    "totalOtherAmount": 300,
+    "prev_spare": 235,
+    "prev_courier": 0,
+    "prev_printing": 300,
+    "prev_misc": 0,
+    "new_spare": 235,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 300,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003528",
+        "claimDate": "2026-07-31",
+        "amount": 300,
+        "origAmount": 300,
+        "remark": "Mobile bill",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1753",
+    "ee_name": "Gurjant Singh",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Bhilwara",
+    "totalOtherAmount": 150,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 150,
+    "prev_misc": 0,
+    "new_spare": 150,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000091",
+        "claimDate": "2026-07-01",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Soldering wire",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1614",
+    "ee_name": "WASIM KHAN",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Churu",
+    "totalOtherAmount": 1110,
+    "prev_spare": 2100,
+    "prev_courier": 0,
+    "prev_printing": 1110,
+    "prev_misc": 0,
+    "new_spare": 3210,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000501",
+        "claimDate": "2026-07-09",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Dental chair west coupler",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001150",
+        "claimDate": "2026-07-15",
+        "amount": 80,
+        "origAmount": 80,
+        "remark": "Pvc tep teplon tep",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001717",
+        "claimDate": "2026-07-20",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "C mos battery",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002735",
+        "claimDate": "2026-07-27",
+        "amount": 280,
+        "origAmount": 280,
+        "remark": "Sv valve 220v  for tissue processor",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002910",
+        "claimDate": "2026-07-28",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Rajgarh motor nut bolt 4",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003534",
+        "claimDate": "2026-07-30",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Waste coupler and Teplon tep",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1703",
+    "ee_name": "Sumit Sharma",
+    "designation": "District In-charge",
+    "district": "Udaipur",
+    "totalOtherAmount": 400,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 400,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 250,
+    "new_printing": 0,
+    "new_misc": 150,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002122",
+        "claimDate": "2026-07-21",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "tube head from salumber to udaipur bus charge",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003298",
+        "claimDate": "2026-07-25",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "auto fare",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1809",
+    "ee_name": "Vinod Kumar tailor",
+    "designation": "Lead Engineer",
+    "district": "Pratapgarh",
+    "totalOtherAmount": 100,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 100,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 100,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001932",
+        "claimDate": "2026-07-18",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Auto charges pratapgarh travels office to Roo",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1618",
+    "ee_name": "Aminur Rahaman Molla",
+    "designation": "District In-charge",
+    "district": "Ganganagar",
+    "totalOtherAmount": 2078,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 2078,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 2078,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000246",
+        "claimDate": "2026-07-02",
+        "amount": 280,
+        "origAmount": 280,
+        "remark": "TIFFIN AND LUNCH",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001712",
+        "claimDate": "2026-07-18",
+        "amount": 1500,
+        "origAmount": 1500,
+        "remark": "HOTEL SANDAS INN",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001713",
+        "claimDate": "2026-07-19",
+        "amount": 298,
+        "origAmount": 298,
+        "remark": "FOOD",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1718",
+    "ee_name": "Yaseen Ahamad",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Chittorgarh",
+    "totalOtherAmount": 150,
+    "prev_spare": 45,
+    "prev_courier": 0,
+    "prev_printing": 150,
+    "prev_misc": 0,
+    "new_spare": 195,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000990",
+        "claimDate": "2026-07-14",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Scrue driver and anabond fast",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2197",
+    "ee_name": "Dilip Kumar Saini",
+    "designation": "Specialist Engineer (Lab)",
+    "district": "Hanumangarh",
+    "totalOtherAmount": 1560,
+    "prev_spare": 0,
+    "prev_courier": 70,
+    "prev_printing": 1490,
+    "prev_misc": 0,
+    "new_spare": 220,
+    "new_courier": 1140,
+    "new_printing": 0,
+    "new_misc": 200,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000131",
+        "claimDate": "2026-07-02",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Collect parsal",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000137",
+        "claimDate": "2026-07-06",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Collect parsal",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000141",
+        "claimDate": "2026-07-07",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Collect parsal",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000222",
+        "claimDate": "2026-07-08",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Courier charges",
+        "oldCat": "COURIER",
+        "newCat": "COURIER",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-000379",
+        "claimDate": "2026-07-09",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "received the parcel from Bhadra",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001254",
+        "claimDate": "2026-07-16",
+        "amount": 220,
+        "origAmount": 220,
+        "remark": "Purchase tool kit",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001692",
+        "claimDate": "2026-07-20",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Collect parsal from bhadra Power supply of biochemistry .",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002297",
+        "claimDate": "2026-07-25",
+        "amount": 220,
+        "origAmount": 220,
+        "remark": "Collect 3 parcel and send to SDH nohar",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003425",
+        "claimDate": "2026-07-31",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Food",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2154",
+    "ee_name": "Ravinder",
+    "designation": "Jr Biomedical Engineer",
+    "district": "Churu",
+    "totalOtherAmount": 950,
+    "prev_spare": 499,
+    "prev_courier": 0,
+    "prev_printing": 950,
+    "prev_misc": 0,
+    "new_spare": 1199,
+    "new_courier": 250,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002301",
+        "claimDate": "2026-07-25",
+        "amount": 700,
+        "origAmount": 700,
+        "remark": "Ecg machine Power Supply",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003469",
+        "claimDate": "2026-07-21",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Parcel received and sent by bus autoclave glass tube",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1850",
+    "ee_name": "Deepesh Salvi",
+    "designation": "Specialist Engineer",
+    "district": "Udaipur",
+    "totalOtherAmount": 170,
+    "prev_spare": 635,
+    "prev_courier": 0,
+    "prev_printing": 170,
+    "prev_misc": 0,
+    "new_spare": 805,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000151",
+        "claimDate": "2026-07-07",
+        "amount": 170,
+        "origAmount": 170,
+        "remark": "Power cable",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1665",
+    "ee_name": "RUPESH",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Churu",
+    "totalOtherAmount": 1160,
+    "prev_spare": 1180,
+    "prev_courier": 0,
+    "prev_printing": 1160,
+    "prev_misc": 0,
+    "new_spare": 1180,
+    "new_courier": 1100,
+    "new_printing": 60,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000155",
+        "claimDate": "2026-07-02",
+        "amount": 600,
+        "origAmount": 600,
+        "remark": "Parcel send Jodhpur",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000159",
+        "claimDate": "2026-07-04",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Parcel received by bus ropiya travelers",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001037",
+        "claimDate": "2026-07-13",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Parcel received by bus ropiya",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002752",
+        "claimDate": "2026-07-27",
+        "amount": 300,
+        "origAmount": 300,
+        "remark": "Parcel send Jodhpur office",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002754",
+        "claimDate": "2026-07-28",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Parcel received ropiya travel",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003518",
+        "claimDate": "2026-07-30",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "3 Print condemnation latter",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      }
+    ]
+  },
+  {
+    "ee_code": "E1859",
+    "ee_name": "Narendra Pushkarna",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Udaipur",
+    "totalOtherAmount": 100,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 100,
+    "prev_misc": 0,
+    "new_spare": 100,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000874",
+        "claimDate": "2026-07-12",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Three pin top for autoclave compilnt",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2167",
+    "ee_name": "Mohammad Javed",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Banswara",
+    "totalOtherAmount": 270,
+    "prev_spare": 900,
+    "prev_courier": 0,
+    "prev_printing": 270,
+    "prev_misc": 0,
+    "new_spare": 1170,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000395",
+        "claimDate": "2026-07-09",
+        "amount": 270,
+        "origAmount": 270,
+        "remark": "30 meter 6*8mm  tube (pipe).",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1628",
+    "ee_name": "Bilal Khan",
+    "designation": "Specialist Engineer (BBR)",
+    "district": "Ajmer",
+    "totalOtherAmount": 170,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 170,
+    "prev_misc": 0,
+    "new_spare": 170,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001764",
+        "claimDate": "2026-07-21",
+        "amount": 170,
+        "origAmount": 170,
+        "remark": "Capictor 60-80 mfd",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1731",
+    "ee_name": "Alok Prasad",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Nagaur",
+    "totalOtherAmount": 1720,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 1720,
+    "prev_misc": 0,
+    "new_spare": 290,
+    "new_courier": 1430,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001851",
+        "claimDate": "2026-07-21",
+        "amount": 400,
+        "origAmount": 400,
+        "remark": "2 parcal received, tape perchage  parcal pack , parcal send  Nagaur to ajmer",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002083",
+        "claimDate": "2026-07-23",
+        "amount": 260,
+        "origAmount": 260,
+        "remark": "Parcal received, parcal send",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002206",
+        "claimDate": "2026-07-24",
+        "amount": 570,
+        "origAmount": 570,
+        "remark": "Parcal received, parcal send jodhpur and ajmer, tape perchage for packaging",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003817",
+        "claimDate": "2026-07-25",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcal received bus",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003827",
+        "claimDate": "2026-07-29",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Microscope supply locally repair",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1757",
+    "ee_name": "Aniket Raj Pal",
+    "designation": "Sr. Specialist Engineer-X-Ray",
+    "district": "Jodhpur",
+    "totalOtherAmount": 910,
+    "prev_spare": 2330,
+    "prev_courier": 0,
+    "prev_printing": 910,
+    "prev_misc": 0,
+    "new_spare": 3200,
+    "new_courier": 40,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000470",
+        "claimDate": "2026-07-10",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "Purchase IC",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001043",
+        "claimDate": "2026-07-01",
+        "amount": 40,
+        "origAmount": 40,
+        "remark": "Software Parcel by rapido from MDM.",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001051",
+        "claimDate": "2026-07-04",
+        "amount": 80,
+        "origAmount": 80,
+        "remark": "Push button",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001053",
+        "claimDate": "2026-07-05",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Wd40",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001111",
+        "claimDate": "2026-07-11",
+        "amount": 300,
+        "origAmount": 300,
+        "remark": "Purchase LAN cable.",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001117",
+        "claimDate": "2026-07-15",
+        "amount": 220,
+        "origAmount": 220,
+        "remark": "12 volt Relay.",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1889",
+    "ee_name": "Akhil Kumar",
+    "designation": "Specialist Engineer-Critical",
+    "district": "Jodhpur",
+    "totalOtherAmount": 4199,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 4199,
+    "prev_misc": 0,
+    "new_spare": 3750,
+    "new_courier": 0,
+    "new_printing": 150,
+    "new_misc": 299,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000271",
+        "claimDate": "2026-07-07",
+        "amount": 190,
+        "origAmount": 190,
+        "remark": "WD 40",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000281",
+        "claimDate": "2026-07-06",
+        "amount": 45,
+        "origAmount": 45,
+        "remark": "Fuse",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000283",
+        "claimDate": "2026-07-03",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "M-Seal",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000340",
+        "claimDate": "2026-07-09",
+        "amount": 95,
+        "origAmount": 95,
+        "remark": "Silicone jelly",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000451",
+        "claimDate": "2026-07-10",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Compressor tubing , T-piece connector",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000584",
+        "claimDate": "2026-07-11",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Isopropyl  Alcohal",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001014",
+        "claimDate": "2026-07-14",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Marker and Pen",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-001039",
+        "claimDate": "2026-07-01",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Zorrik",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001044",
+        "claimDate": "2026-07-02",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "lubricants",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001116",
+        "claimDate": "2026-07-15",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Power plug,  fuse",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001262",
+        "claimDate": "2026-07-16",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Internal tubing, power cord",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001262",
+        "claimDate": "2026-07-16",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "T-piece connectors for Fabius GSP",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001428",
+        "claimDate": "2026-07-17",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Power cord and fuse , need  Isopropyl alcohol",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001428",
+        "claimDate": "2026-07-17",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Isopropyl alcohol",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001599",
+        "claimDate": "2026-07-19",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "M -Seal and Anabond",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001812",
+        "claimDate": "2026-07-21",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Teflon ,Marker",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-002040",
+        "claimDate": "2026-07-23",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Suction oil and  plug top",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002040",
+        "claimDate": "2026-07-23",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Power cord and fuse 6 A",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002188",
+        "claimDate": "2026-07-24",
+        "amount": 210,
+        "origAmount": 210,
+        "remark": "Mosfet and capacitor",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003223",
+        "claimDate": "2026-07-30",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Power socket and fuse socket",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003481",
+        "claimDate": "2026-07-31",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Mobile bill",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003481",
+        "claimDate": "2026-07-31",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Transformer and main switch",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2168",
+    "ee_name": "Harish kumar",
+    "designation": "Biomedical Engineer",
+    "district": "Jodhpur",
+    "totalOtherAmount": 1910,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 1910,
+    "prev_misc": 0,
+    "new_spare": 1835,
+    "new_courier": 0,
+    "new_printing": 75,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000345",
+        "claimDate": "2026-07-09",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "Purchase Wire 10 meter 1.5mm",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000457",
+        "claimDate": "2026-07-02",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Tape and WD- 40",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001015",
+        "claimDate": "2026-07-14",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Gas Control Kit Tubes 2Meter",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001125",
+        "claimDate": "2026-07-15",
+        "amount": 140,
+        "origAmount": 140,
+        "remark": "Teflon and Electric Tape,pen",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001239",
+        "claimDate": "2026-07-16",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Cleaning Brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001396",
+        "claimDate": "2026-07-17",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Wire",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001701",
+        "claimDate": "2026-07-19",
+        "amount": 75,
+        "origAmount": 75,
+        "remark": "Pen and Marker",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-001706",
+        "claimDate": "2026-07-20",
+        "amount": 285,
+        "origAmount": 285,
+        "remark": "WD-40",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001785",
+        "claimDate": "2026-07-21",
+        "amount": 220,
+        "origAmount": 220,
+        "remark": "Wire",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001942",
+        "claimDate": "2026-07-22",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Power supply Cable (7 Meter),Relay, fuse",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002043",
+        "claimDate": "2026-07-23",
+        "amount": 220,
+        "origAmount": 220,
+        "remark": "Power supply Cable And Carbon Brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E-1639",
+    "ee_name": "Khalid Sultan Lodi",
+    "designation": "Specialist Engineer (Lab)",
+    "district": "Jodhpur",
+    "totalOtherAmount": 1794,
+    "prev_spare": 1170,
+    "prev_courier": 0,
+    "prev_printing": 1794,
+    "prev_misc": 0,
+    "new_spare": 2910,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 54,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000221",
+        "claimDate": "2026-07-08",
+        "amount": 54,
+        "origAmount": 54,
+        "remark": "Chopasani Satellite Hospital To Home",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000661",
+        "claimDate": "2026-07-10",
+        "amount": 375,
+        "origAmount": 375,
+        "remark": "11 meter 1.5 mm wire, pvc tape roll, tapariya tester",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000661",
+        "claimDate": "2026-07-10",
+        "amount": 900,
+        "origAmount": 900,
+        "remark": "Purchased 32 gb pendrive for software installation",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002889",
+        "claimDate": "2026-07-25",
+        "amount": 285,
+        "origAmount": 285,
+        "remark": "CPU Fan",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003774",
+        "claimDate": "2026-07-31",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Purchased 15 LEDs and 2 twizzers for sn medical college microscopes complaints",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1617",
+    "ee_name": "Abhishek Vaishnav",
+    "designation": "Specialist Engineer (Lab)",
+    "district": "Tonk",
+    "totalOtherAmount": 1160,
+    "prev_spare": 1080,
+    "prev_courier": 0,
+    "prev_printing": 1160,
+    "prev_misc": 0,
+    "new_spare": 2240,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000233",
+        "claimDate": "2026-07-02",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Adapter 12.2amp",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000238",
+        "claimDate": "2026-07-03",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Switch",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000458",
+        "claimDate": "2026-07-04",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Power supply board repair, motor",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000471",
+        "claimDate": "2026-07-08",
+        "amount": 290,
+        "origAmount": 290,
+        "remark": "Power supply board repair",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000857",
+        "claimDate": "2026-07-11",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Wd40",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003744",
+        "claimDate": "2026-07-29",
+        "amount": 170,
+        "origAmount": 170,
+        "remark": "Driver board repair",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2005",
+    "ee_name": "Nilanjan Dey",
+    "designation": "Divisional Manager",
+    "district": "Jodhpur",
+    "totalOtherAmount": 1361,
+    "prev_spare": 1773,
+    "prev_courier": 0,
+    "prev_printing": 1361,
+    "prev_misc": 0,
+    "new_spare": 1773,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 1361,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002825",
+        "claimDate": "2026-07-28",
+        "amount": 1361,
+        "origAmount": 1361,
+        "remark": "Team Dinner",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1707",
+    "ee_name": "Paras Khatik",
+    "designation": "Sr.Service Engineer",
+    "district": "Udaipur",
+    "totalOtherAmount": 2641,
+    "prev_spare": 100,
+    "prev_courier": 550,
+    "prev_printing": 2091,
+    "prev_misc": 0,
+    "new_spare": 1921,
+    "new_courier": 550,
+    "new_printing": 0,
+    "new_misc": 270,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000303",
+        "claimDate": "2026-07-01",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Office cleaning",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000341",
+        "claimDate": "2026-07-02",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "Capacitor",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000367",
+        "claimDate": "2026-07-09",
+        "amount": 170,
+        "origAmount": 170,
+        "remark": "Local expenses",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000712",
+        "claimDate": "2026-07-12",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "CPU courier Aspur",
+        "oldCat": "COURIER",
+        "newCat": "COURIER",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-000899",
+        "claimDate": "2026-07-13",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "3 pin top",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001404",
+        "claimDate": "2026-07-17",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "ICU bed welding",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001702",
+        "claimDate": "2026-07-20",
+        "amount": 330,
+        "origAmount": 330,
+        "remark": "Charger and fuse",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001702",
+        "claimDate": "2026-07-20",
+        "amount": 400,
+        "origAmount": 400,
+        "remark": "DTDC courier",
+        "oldCat": "COURIER",
+        "newCat": "COURIER",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-001934",
+        "claimDate": "2026-07-22",
+        "amount": 637,
+        "origAmount": 637,
+        "remark": "Fan purchase for  bi pap compressor",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002183",
+        "claimDate": "2026-07-23",
+        "amount": 224,
+        "origAmount": 224,
+        "remark": "Charging adaptor",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002535",
+        "claimDate": "2026-07-25",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Ventilator compressor tubing",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002881",
+        "claimDate": "2026-07-29",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "Carbon brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2055",
+    "ee_name": "Bablu Kumar",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Jodhpur",
+    "totalOtherAmount": 300,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 300,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 300,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003472",
+        "claimDate": "2026-07-30",
+        "amount": 300,
+        "origAmount": 300,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1637",
+    "ee_name": "Sajaruddin",
+    "designation": "Senior Specialist Engineer (BBR)",
+    "district": "Tonk",
+    "totalOtherAmount": 220,
+    "prev_spare": 1000,
+    "prev_courier": 0,
+    "prev_printing": 220,
+    "prev_misc": 0,
+    "new_spare": 1220,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002830",
+        "claimDate": "2026-07-29",
+        "amount": 220,
+        "origAmount": 220,
+        "remark": "Capacitor",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2053",
+    "ee_name": "Ramesh Chand kumawat",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Pali",
+    "totalOtherAmount": 539,
+    "prev_spare": 260,
+    "prev_courier": 0,
+    "prev_printing": 539,
+    "prev_misc": 0,
+    "new_spare": 260,
+    "new_courier": 240,
+    "new_printing": 0,
+    "new_misc": 299,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003454",
+        "claimDate": "2026-07-29",
+        "amount": 140,
+        "origAmount": 140,
+        "remark": "Parsal received and  Local market purchase 2mtr cable",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003459",
+        "claimDate": "2026-07-31",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Parsal received sumerpur bus stand and other activities",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003459",
+        "claimDate": "2026-07-31",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1465",
+    "ee_name": "Rajendra Singh",
+    "designation": "District In-charge",
+    "district": "Pali",
+    "totalOtherAmount": 950,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 950,
+    "prev_misc": 0,
+    "new_spare": 200,
+    "new_courier": 200,
+    "new_printing": 0,
+    "new_misc": 550,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000300",
+        "claimDate": "2026-07-09",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Snacks for Team",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000302",
+        "claimDate": "2026-07-08",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Parcel charges given to bus driver",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000628",
+        "claimDate": "2026-07-11",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Tea for medical College lab staff",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000630",
+        "claimDate": "2026-07-02",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "A4 size rim purchase for office use",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000959",
+        "claimDate": "2026-07-13",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Bus fare for nephro scope received from d-med after and dental air rotor",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002484",
+        "claimDate": "2026-07-23",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Gift for principal Pen",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1740",
+    "ee_name": "Ashish Yadav",
+    "designation": "Biomedical Engineer",
+    "district": "Bikaner",
+    "totalOtherAmount": 900,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 900,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 900,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003551",
+        "claimDate": "2026-07-30",
+        "amount": 900,
+        "origAmount": 900,
+        "remark": "Hotel bill",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2225",
+    "ee_name": "Vinod",
+    "designation": "Biomedical Engineer",
+    "district": "Udaipur",
+    "totalOtherAmount": 410,
+    "prev_spare": 260,
+    "prev_courier": 0,
+    "prev_printing": 410,
+    "prev_misc": 0,
+    "new_spare": 670,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000336",
+        "claimDate": "2026-07-04",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "IC 4049 and IC 4066",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001181",
+        "claimDate": "2026-07-03",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "12v DC relay",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001182",
+        "claimDate": "2026-07-04",
+        "amount": 40,
+        "origAmount": 40,
+        "remark": "IC 4049 and 4066 purchase for x-rya machine",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001183",
+        "claimDate": "2026-07-10",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "2 Bearing purchase for x-ray machine",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1691",
+    "ee_name": "RAKESH SARAN",
+    "designation": "Specialist Engineer (Lab)",
+    "district": "Jodhpur",
+    "totalOtherAmount": 1210,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 1210,
+    "prev_misc": 0,
+    "new_spare": 1110,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 100,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000383",
+        "claimDate": "2026-07-08",
+        "amount": 130,
+        "origAmount": 130,
+        "remark": "Relly and OLP really market purchase",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000590",
+        "claimDate": "2026-07-11",
+        "amount": 566,
+        "origAmount": 566,
+        "remark": "2.55 mm cable, kattel connector and power plug 2",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002180",
+        "claimDate": "2026-07-24",
+        "amount": 414,
+        "origAmount": 414,
+        "remark": "Kettle heating element parts",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003450",
+        "claimDate": "2026-07-31",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Dental chair & baby weighing machine",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2156",
+    "ee_name": "Pardeep",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Nagaur",
+    "totalOtherAmount": 610,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 610,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 310,
+    "new_printing": 0,
+    "new_misc": 300,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001415",
+        "claimDate": "2026-07-14",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Auto",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001417",
+        "claimDate": "2026-07-15",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Auto",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003142",
+        "claimDate": "2026-07-28",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Parcel ( CBC sent to prabtsar )( auto )",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003142",
+        "claimDate": "2026-07-28",
+        "amount": 210,
+        "origAmount": 210,
+        "remark": "Parcel received from jodhpur TRC",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1860",
+    "ee_name": "Ranjeet Singh",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Pali",
+    "totalOtherAmount": 930,
+    "prev_spare": 0,
+    "prev_courier": 410,
+    "prev_printing": 520,
+    "prev_misc": 0,
+    "new_spare": 390,
+    "new_courier": 490,
+    "new_printing": 50,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000683",
+        "claimDate": "2026-07-01",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Courier- parcel sent to jodhpur TRC",
+        "oldCat": "COURIER",
+        "newCat": "COURIER",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-000900",
+        "claimDate": "2026-07-13",
+        "amount": 80,
+        "origAmount": 80,
+        "remark": "Parcel rcvd by bus sanderao repaired spot light",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000900",
+        "claimDate": "2026-07-13",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "Carbon brush purchase",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001016",
+        "claimDate": "2026-07-14",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Stationary item",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-001169",
+        "claimDate": "2026-07-07",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Switch & wire purchase for suction",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001170",
+        "claimDate": "2026-07-08",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Oil fill",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001771",
+        "claimDate": "2026-07-20",
+        "amount": 160,
+        "origAmount": 160,
+        "remark": "Parcel sent to TRC by courier for repairing fetal Doppler  bali DH pali",
+        "oldCat": "COURIER",
+        "newCat": "COURIER",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-002302",
+        "claimDate": "2026-07-25",
+        "amount": 180,
+        "origAmount": 180,
+        "remark": "Boand tite  , m sil , aerolite",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002762",
+        "claimDate": "2026-07-28",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Wire purchase",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003158",
+        "claimDate": "2026-07-30",
+        "amount": 0,
+        "origAmount": 299,
+        "remark": "Mobile Sim  Recharge  july  month",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2119",
+    "ee_name": "Mahaveer Singh Parihar",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Jodhpur",
+    "totalOtherAmount": 299,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 299,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 299,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003669",
+        "claimDate": "2026-07-31",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1692",
+    "ee_name": "Suraj Singh",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Pali",
+    "totalOtherAmount": 175,
+    "prev_spare": 130,
+    "prev_courier": 0,
+    "prev_printing": 175,
+    "prev_misc": 0,
+    "new_spare": 255,
+    "new_courier": 50,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000910",
+        "claimDate": "2026-07-13",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Sent the parcel 📦 to by bus sanderaw",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001559",
+        "claimDate": "2026-07-19",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "Heater element plug",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001705",
+        "claimDate": "2026-07-20",
+        "amount": 65,
+        "origAmount": 65,
+        "remark": "Fivicvip,pen,marcel",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1940",
+    "ee_name": "Vijendra Kumar Prajapati",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Pali",
+    "totalOtherAmount": 1184,
+    "prev_spare": 315,
+    "prev_courier": 0,
+    "prev_printing": 1184,
+    "prev_misc": 0,
+    "new_spare": 1030,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 469,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000626",
+        "claimDate": "2026-07-10",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Araldite",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001303",
+        "claimDate": "2026-07-04",
+        "amount": 170,
+        "origAmount": 170,
+        "remark": "Dinner, after monthly meeting approved by di",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001842",
+        "claimDate": "2026-07-18",
+        "amount": 145,
+        "origAmount": 145,
+        "remark": "Compressor A. C Socket Panel",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001843",
+        "claimDate": "2026-07-19",
+        "amount": 80,
+        "origAmount": 80,
+        "remark": "Ceramic Female  Plug",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003819",
+        "claimDate": "2026-07-30",
+        "amount": 170,
+        "origAmount": 170,
+        "remark": "Female ceramic connector, Araldite, teflon",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003826",
+        "claimDate": "2026-07-26",
+        "amount": 160,
+        "origAmount": 160,
+        "remark": "Power cord Long",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003835",
+        "claimDate": "2026-07-22",
+        "amount": 40,
+        "origAmount": 40,
+        "remark": "Feviquick",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003837",
+        "claimDate": "2026-07-31",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003843",
+        "claimDate": "2026-07-25",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Nut, bolt, Fuse 6amp, 10amp",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1751",
+    "ee_name": "Krishsna Vyas",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Nagaur",
+    "totalOtherAmount": 600,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 600,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 600,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003094",
+        "claimDate": "2026-07-16",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "1. Nagaur to Makrana parcel    2. Nagaur to ladnu parcel -100 ( 7/7/26 )",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003335",
+        "claimDate": "2026-07-22",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Parcel Nagaur to parbatsar",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-08/26-000046",
+        "claimDate": "2026-07-29",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Parcel Nagaur to parbatsar",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-08/26-000048",
+        "claimDate": "2026-07-31",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Nagaur to Makrana parcel",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2081",
+    "ee_name": "Satarupa Duary",
+    "designation": "Specialist Engineer-Critical",
+    "district": "Jodhpur",
+    "totalOtherAmount": 200,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 200,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 200,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003927",
+        "claimDate": "2026-07-31",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Lunch Bill",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1852",
+    "ee_name": "Ritesh pandey",
+    "designation": "Sr. Specialist Engineer (Lab)",
+    "district": "Bikaner",
+    "totalOtherAmount": 550,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 550,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 550,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000985",
+        "claimDate": "2026-07-08",
+        "amount": 550,
+        "origAmount": 550,
+        "remark": "Return Hanumangarh to Bikaner",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1821",
+    "ee_name": "Shiv Lal Patel",
+    "designation": "Biomedical Engineer",
+    "district": "Udaipur",
+    "totalOtherAmount": 300,
+    "prev_spare": 320,
+    "prev_courier": 0,
+    "prev_printing": 300,
+    "prev_misc": 0,
+    "new_spare": 620,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003177",
+        "claimDate": "2026-07-30",
+        "amount": 300,
+        "origAmount": 350,
+        "remark": "Sim balance",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1672",
+    "ee_name": "Amol Singh Mehta",
+    "designation": "Lead Engineer",
+    "district": "Ajmer",
+    "totalOtherAmount": 200,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 200,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 200,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003644",
+        "claimDate": "2026-07-31",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Toll tax",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1701",
+    "ee_name": "Sarvesh Chaurasia",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Pali",
+    "totalOtherAmount": 135,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 135,
+    "prev_misc": 0,
+    "new_spare": 75,
+    "new_courier": 0,
+    "new_printing": 60,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002569",
+        "claimDate": "2026-07-21",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "Stationary Tape Pen Marker",
+        "oldCat": "PRINTING",
+        "newCat": "PRINTING",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-002582",
+        "claimDate": "2026-07-25",
+        "amount": 25,
+        "origAmount": 25,
+        "remark": "Screw and washers",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002585",
+        "claimDate": "2026-07-27",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Carbon brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2052",
+    "ee_name": "MITHILESH KUMAR",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Pali",
+    "totalOtherAmount": 1420,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 1420,
+    "prev_misc": 0,
+    "new_spare": 1420,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000519",
+        "claimDate": "2026-07-10",
+        "amount": 15,
+        "origAmount": 15,
+        "remark": "Electric tape",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000709",
+        "claimDate": "2026-07-12",
+        "amount": 325,
+        "origAmount": 325,
+        "remark": "W40+screw driver+clip+fevitite",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000713",
+        "claimDate": "2026-07-07",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Feviwick+3 Meter Wire +Carbon burus",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000930",
+        "claimDate": "2026-07-04",
+        "amount": 110,
+        "origAmount": 110,
+        "remark": "W40",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000931",
+        "claimDate": "2026-07-05",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Nut/bolt",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001099",
+        "claimDate": "2026-07-01",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "3 Carbon burus+ tape",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001099",
+        "claimDate": "2026-07-01",
+        "amount": 280,
+        "origAmount": 280,
+        "remark": "PCB board repair by vendor",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001102",
+        "claimDate": "2026-07-09",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Electric Wire 10ft",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001297",
+        "claimDate": "2026-07-16",
+        "amount": 65,
+        "origAmount": 65,
+        "remark": "Fevitite",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001411",
+        "claimDate": "2026-07-17",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Taplan+wasar",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001498",
+        "claimDate": "2026-07-18",
+        "amount": 75,
+        "origAmount": 75,
+        "remark": "Electric tape or cleaning brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002559",
+        "claimDate": "2026-07-27",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Wire/fuse",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002943",
+        "claimDate": "2026-07-29",
+        "amount": 20,
+        "origAmount": 20,
+        "remark": "Electric tape",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003509",
+        "claimDate": "2026-07-31",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Leth+screw",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003520",
+        "claimDate": "2026-07-30",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "5 Fuse",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1705",
+    "ee_name": "Dinesh Chandra Vyas",
+    "designation": "Biomedical Engineer",
+    "district": "Banswara",
+    "totalOtherAmount": 280,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 280,
+    "prev_misc": 0,
+    "new_spare": 130,
+    "new_courier": 150,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000814",
+        "claimDate": "2026-07-09",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Udaipur parsal Received ( suction compressor)",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001960",
+        "claimDate": "2026-07-21",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "3 pin plug top",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003581",
+        "claimDate": "2026-07-31",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "The shopkeeper charged a fee for disconnecting both connectors of the pressure regulator.(Tightly locked)",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1776",
+    "ee_name": "Sumit Kumar",
+    "designation": "District In-charge",
+    "district": "Chittorgarh",
+    "totalOtherAmount": 240,
+    "prev_spare": 0,
+    "prev_courier": 40,
+    "prev_printing": 200,
+    "prev_misc": 0,
+    "new_spare": 200,
+    "new_courier": 40,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000533",
+        "claimDate": "2026-07-01",
+        "amount": 40,
+        "origAmount": 40,
+        "remark": "Courier received",
+        "oldCat": "COURIER",
+        "newCat": "COURIER",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-001226",
+        "claimDate": "2026-07-16",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Sbc board sent udaipur by bus",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1905",
+    "ee_name": "Krishna Solanki",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Jodhpur",
+    "totalOtherAmount": 1397,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 1397,
+    "prev_misc": 0,
+    "new_spare": 598,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 799,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001826",
+        "claimDate": "2026-07-15",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Compressor renewal charges",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001831",
+        "claimDate": "2026-07-18",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Under warranty compressor renewal charges",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003587",
+        "claimDate": "2026-07-28",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Cylinder Travel Charges  Loading taxi",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003599",
+        "claimDate": "2026-07-30",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Travel charges loading taxi",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003611",
+        "claimDate": "2026-07-31",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Travel charges loading taxi",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1724",
+    "ee_name": "Fazlurrahman",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Pali",
+    "totalOtherAmount": 2942,
+    "prev_spare": 1010,
+    "prev_courier": 300,
+    "prev_printing": 2642,
+    "prev_misc": 0,
+    "new_spare": 3652,
+    "new_courier": 300,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000966",
+        "claimDate": "2026-07-13",
+        "amount": 80,
+        "origAmount": 80,
+        "remark": "Cleaning brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001542",
+        "claimDate": "2026-07-18",
+        "amount": 300,
+        "origAmount": 300,
+        "remark": "Send Courier sonography convex probe (Ahmdabad)",
+        "oldCat": "COURIER",
+        "newCat": "COURIER",
+        "isChanged": false
+      },
+      {
+        "expCode": "RJ-07/26-001549",
+        "claimDate": "2026-07-17",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Welding work's for cr Reader",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001558",
+        "claimDate": "2026-07-15",
+        "amount": 1200,
+        "origAmount": 1200,
+        "remark": "Local purchase for freezes spare parts",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001566",
+        "claimDate": "2026-07-05",
+        "amount": 240,
+        "origAmount": 240,
+        "remark": "Wd 40, 2 for labour table 3 oiling and servicing",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001633",
+        "claimDate": "2026-07-09",
+        "amount": 210,
+        "origAmount": 210,
+        "remark": "3 pin top 16 amp, 2. Switch on off, 3 controler switch",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001736",
+        "claimDate": "2026-07-20",
+        "amount": 240,
+        "origAmount": 240,
+        "remark": "Wd 40 2 pic for cleaning and oiling 3 table",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002332",
+        "claimDate": "2026-07-11",
+        "amount": 72,
+        "origAmount": 72,
+        "remark": "Fevikwik",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002340",
+        "claimDate": "2026-07-23",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Welding",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002399",
+        "claimDate": "2026-07-25",
+        "amount": 350,
+        "origAmount": 350,
+        "remark": "Adapter 12v 3 amp",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2269",
+    "ee_name": "Deepak Saket",
+    "designation": "Specialist Engineer(Xray)",
+    "district": "Jodhpur",
+    "totalOtherAmount": 549,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 549,
+    "prev_misc": 0,
+    "new_spare": 299,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 250,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002002",
+        "claimDate": "2026-07-16",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Local purchases",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002144",
+        "claimDate": "2026-07-13",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Night up down charge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2153",
+    "ee_name": "Vikas",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Rajsamand",
+    "totalOtherAmount": 630,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 630,
+    "prev_misc": 0,
+    "new_spare": 430,
+    "new_courier": 200,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001159",
+        "claimDate": "2026-07-15",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Taplon tape and m seal",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002777",
+        "claimDate": "2026-07-27",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Nutbolt welding",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002777",
+        "claimDate": "2026-07-27",
+        "amount": 310,
+        "origAmount": 310,
+        "remark": "Power cable and pin top",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003154",
+        "claimDate": "2026-07-29",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1629",
+    "ee_name": "Anoop mishra",
+    "designation": "Biomedical Engineer",
+    "district": "Ganganagar",
+    "totalOtherAmount": 500,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 500,
+    "prev_misc": 0,
+    "new_spare": 100,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 400,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000772",
+        "claimDate": "2026-07-01",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "100",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000772",
+        "claimDate": "2026-07-01",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "100",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001940",
+        "claimDate": "2026-07-21",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001940",
+        "claimDate": "2026-07-21",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003006",
+        "claimDate": "2026-07-28",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "100watt bulb with holder testing.",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1667",
+    "ee_name": "Mandeep",
+    "designation": "Biomedical Engineer",
+    "district": "Ajmer",
+    "totalOtherAmount": 470,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 470,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 470,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000711",
+        "claimDate": "2026-07-06",
+        "amount": 470,
+        "origAmount": 470,
+        "remark": ".",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1684",
+    "ee_name": "Sudhir Kumar",
+    "designation": "District In-charge",
+    "district": "Jaipur",
+    "totalOtherAmount": 910,
+    "prev_spare": 120,
+    "prev_courier": 0,
+    "prev_printing": 910,
+    "prev_misc": 0,
+    "new_spare": 240,
+    "new_courier": 430,
+    "new_printing": 0,
+    "new_misc": 360,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000764",
+        "claimDate": "2026-07-01",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "CELLO  TAP",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000764",
+        "claimDate": "2026-07-01",
+        "amount": 230,
+        "origAmount": 230,
+        "remark": "PARCEL  +PARKING",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000766",
+        "claimDate": "2026-07-02",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "BIKE PARKING",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000768",
+        "claimDate": "2026-07-03",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "BIKE PARKING",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000768",
+        "claimDate": "2026-07-03",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "PARKING",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000791",
+        "claimDate": "2026-07-10",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "BIKE  PARKING",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000859",
+        "claimDate": "2026-07-13",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Bike Parking",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001003",
+        "claimDate": "2026-07-14",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Parking",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001003",
+        "claimDate": "2026-07-14",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001211",
+        "claimDate": "2026-07-16",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Parking",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001388",
+        "claimDate": "2026-07-17",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Parking",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002511",
+        "claimDate": "2026-07-27",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Bike Parking",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002684",
+        "claimDate": "2026-07-28",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Parking",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003179",
+        "claimDate": "2026-07-30",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Parking",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003446",
+        "claimDate": "2026-07-31",
+        "amount": 30,
+        "origAmount": 30,
+        "remark": "Parking",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2136",
+    "ee_name": "Lalit Kumar",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Churu",
+    "totalOtherAmount": 1150,
+    "prev_spare": 200,
+    "prev_courier": 0,
+    "prev_printing": 1150,
+    "prev_misc": 0,
+    "new_spare": 200,
+    "new_courier": 800,
+    "new_printing": 0,
+    "new_misc": 350,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000800",
+        "claimDate": "2026-07-06",
+        "amount": 800,
+        "origAmount": 800,
+        "remark": "Parcel send Jodhpur office",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001909",
+        "claimDate": "2026-07-22",
+        "amount": 350,
+        "origAmount": 350,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2050",
+    "ee_name": "Manish",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Hanumangarh",
+    "totalOtherAmount": 650,
+    "prev_spare": 330,
+    "prev_courier": 0,
+    "prev_printing": 650,
+    "prev_misc": 0,
+    "new_spare": 330,
+    "new_courier": 650,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000795",
+        "claimDate": "2026-07-08",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Tube received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002906",
+        "claimDate": "2026-07-29",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003486",
+        "claimDate": "2026-07-31",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1695",
+    "ee_name": "Nikhil Audichya",
+    "designation": "Specialist Engineer (Dialysis)",
+    "district": "Udaipur",
+    "totalOtherAmount": 600,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 600,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 600,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003181",
+        "claimDate": "2026-07-17",
+        "amount": 600,
+        "origAmount": 600,
+        "remark": "Corrier DTDC from udaipur to Kerela trc",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2295",
+    "ee_name": "Shridhar Pareek",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Hanumangarh",
+    "totalOtherAmount": 2960,
+    "prev_spare": 60,
+    "prev_courier": 0,
+    "prev_printing": 2960,
+    "prev_misc": 0,
+    "new_spare": 2560,
+    "new_courier": 460,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-000851",
+        "claimDate": "2026-07-04",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Matrial received from bhadra 2parcel ,manish expances,",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000854",
+        "claimDate": "2026-07-06",
+        "amount": 380,
+        "origAmount": 380,
+        "remark": "Tools of  goti pana set",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000854",
+        "claimDate": "2026-07-06",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Bhadra xray tube collect 4/6/26 tube",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-000861",
+        "claimDate": "2026-07-11",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Local hmh Element collected",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001163",
+        "claimDate": "2026-07-15",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Welding autoclave handle",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001377",
+        "claimDate": "2026-07-17",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "Mov,fuses",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001480",
+        "claimDate": "2026-07-18",
+        "amount": 1300,
+        "origAmount": 1300,
+        "remark": "Dental chair sector motor repair",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001732",
+        "claimDate": "2026-07-21",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Welding",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001916",
+        "claimDate": "2026-07-22",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Kabze for centrifuge machine",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002698",
+        "claimDate": "2026-07-28",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "Contactor collect",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2155",
+    "ee_name": "Sachin",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Rajsamand",
+    "totalOtherAmount": 70,
+    "prev_spare": 500,
+    "prev_courier": 0,
+    "prev_printing": 70,
+    "prev_misc": 0,
+    "new_spare": 500,
+    "new_courier": 70,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002388",
+        "claimDate": "2026-07-20",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Parcel receiving charges",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1662",
+    "ee_name": "Vinod Kumar Pushkarna",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Udaipur",
+    "totalOtherAmount": 640,
+    "prev_spare": 954,
+    "prev_courier": 0,
+    "prev_printing": 640,
+    "prev_misc": 0,
+    "new_spare": 1344,
+    "new_courier": 250,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002566",
+        "claimDate": "2026-07-11",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Lath work",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002581",
+        "claimDate": "2026-07-02",
+        "amount": 190,
+        "origAmount": 190,
+        "remark": "Lath work bone drill",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003268",
+        "claimDate": "2026-07-28",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Corier slip",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1693",
+    "ee_name": "RAVINDERPAL",
+    "designation": "Specialist Engineer (BBR)",
+    "district": "Jodhpur",
+    "totalOtherAmount": 250,
+    "prev_spare": 105,
+    "prev_courier": 0,
+    "prev_printing": 250,
+    "prev_misc": 0,
+    "new_spare": 355,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001675",
+        "claimDate": "2026-07-20",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Relay and, 5 miter wire",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2095",
+    "ee_name": "Arjun Sharma",
+    "designation": "Specialist Engineer",
+    "district": "Jodhpur",
+    "totalOtherAmount": 110,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 110,
+    "prev_misc": 0,
+    "new_spare": 110,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003676",
+        "claimDate": "2026-07-31",
+        "amount": 110,
+        "origAmount": 110,
+        "remark": "Scruu",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1700",
+    "ee_name": "Mukesh sharma",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Jodhpur",
+    "totalOtherAmount": 480,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 480,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 480,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-004018",
+        "claimDate": "2026-07-31",
+        "amount": 480,
+        "origAmount": 480,
+        "remark": "Lunch food",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2270",
+    "ee_name": "Bharat",
+    "designation": "Specialist Engineer(Xray)",
+    "district": "Barmer",
+    "totalOtherAmount": 1347,
+    "prev_spare": 180,
+    "prev_courier": 0,
+    "prev_printing": 1347,
+    "prev_misc": 0,
+    "new_spare": 1227,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 300,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001258",
+        "claimDate": "2026-07-07",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "Wire 2 core 10 Miter",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001465",
+        "claimDate": "2026-07-08",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "Balaab",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001678",
+        "claimDate": "2026-07-12",
+        "amount": 272,
+        "origAmount": 272,
+        "remark": "Wire 12 miter + 2 on off switch",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001684",
+        "claimDate": "2026-07-14",
+        "amount": 235,
+        "origAmount": 235,
+        "remark": "Bearing 4",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001690",
+        "claimDate": "2026-07-16",
+        "amount": 360,
+        "origAmount": 360,
+        "remark": "Transformer 12-0-12 (5amp)",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002877",
+        "claimDate": "2026-07-06",
+        "amount": 300,
+        "origAmount": 300,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1630",
+    "ee_name": "Banti kumar",
+    "designation": "Specialist Engineer (CR)",
+    "district": "Jodhpur",
+    "totalOtherAmount": 750,
+    "prev_spare": 380,
+    "prev_courier": 0,
+    "prev_printing": 750,
+    "prev_misc": 0,
+    "new_spare": 1130,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001612",
+        "claimDate": "2026-07-14",
+        "amount": 280,
+        "origAmount": 280,
+        "remark": "Lain cable",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001615",
+        "claimDate": "2026-07-15",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Wd 40 & service brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-001626",
+        "claimDate": "2026-07-17",
+        "amount": 220,
+        "origAmount": 220,
+        "remark": "Make spring help by local shoap",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2323",
+    "ee_name": "NEERAJ KUMAR VERMA",
+    "designation": "Biomedical Engineer",
+    "district": "Jodhpur",
+    "totalOtherAmount": 844,
+    "prev_spare": 299,
+    "prev_courier": 0,
+    "prev_printing": 844,
+    "prev_misc": 0,
+    "new_spare": 299,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 844,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001296",
+        "claimDate": "2026-07-03",
+        "amount": 545,
+        "origAmount": 545,
+        "remark": "New joining 4 person lunch bill.  (Jyoti Ma'am asked me to have lunch outside and submit the bill under expenses)",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003870",
+        "claimDate": "2026-07-31",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Mobile Recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2324",
+    "ee_name": "Mohammad Tausif Hasan",
+    "designation": "Specialist Engineer-Critical",
+    "district": "Jodhpur",
+    "totalOtherAmount": 563,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 563,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 563,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002960",
+        "claimDate": "2026-07-30",
+        "amount": 264,
+        "origAmount": 264,
+        "remark": "Cab",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003513",
+        "claimDate": "2026-07-31",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2314",
+    "ee_name": "Amit Kumar Sarkar",
+    "designation": "Specialist Engineer (CR)",
+    "district": "Ajmer",
+    "totalOtherAmount": 550,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 550,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 550,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002071",
+        "claimDate": "2026-07-24",
+        "amount": 75,
+        "origAmount": 75,
+        "remark": "My Room to Ajmer Bus stand+ Nagaur Bus Stand to  Merta City Hospital",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002071",
+        "claimDate": "2026-07-24",
+        "amount": 75,
+        "origAmount": 75,
+        "remark": "Marta City Hospital to Nagaur Bus stand+ Ajmer Bus Stand to My Room",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002780",
+        "claimDate": "2026-07-28",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "My Room to Ajmer Bus Stand+ Beawar Bus Stand to Hospital",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002780",
+        "claimDate": "2026-07-28",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "A K Hospital to Beawar Bus Stand+ Ajmer Bus Stand to My Room",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002832",
+        "claimDate": "2026-07-29",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "My Room to Ajmer Bus Stand+ Bandarwara to Bhinay Hospital",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002832",
+        "claimDate": "2026-07-29",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Bhinay Hospital to Bandarwara+Ajmer Bus Stand to My Room",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2028",
+    "ee_name": "RAGHUNANDAN YADAV",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Barmer",
+    "totalOtherAmount": 70,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 70,
+    "prev_misc": 0,
+    "new_spare": 70,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003787",
+        "claimDate": "2026-07-30",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Carbon brush",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2307",
+    "ee_name": "Pradeep Kumar",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Rajsamand",
+    "totalOtherAmount": 120,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 120,
+    "prev_misc": 0,
+    "new_spare": 120,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001525",
+        "claimDate": "2026-07-08",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "Three pin top",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1973",
+    "ee_name": "Premsagar Bhardwaj",
+    "designation": "Calibration Engineer",
+    "district": "Bikaner",
+    "totalOtherAmount": 299,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 299,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 299,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001870",
+        "claimDate": "2026-07-01",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1723",
+    "ee_name": "Ramesh Chandra Patel",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Dungarpur",
+    "totalOtherAmount": 250,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 250,
+    "prev_misc": 0,
+    "new_spare": 250,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-001919",
+        "claimDate": "2026-07-17",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Centrifuge machine power cable",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1640",
+    "ee_name": "Rajkumar Vyas",
+    "designation": "Jr.Biomedical Engineer",
+    "district": "Udaipur",
+    "totalOtherAmount": 550,
+    "prev_spare": 890,
+    "prev_courier": 0,
+    "prev_printing": 550,
+    "prev_misc": 0,
+    "new_spare": 890,
+    "new_courier": 550,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003500",
+        "claimDate": "2026-07-30",
+        "amount": 550,
+        "origAmount": 550,
+        "remark": "Parcel send Jodhpur x ray tube",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1690",
+    "ee_name": "Khushwant Gahlot",
+    "designation": "Sr.Calibration Engineer",
+    "district": "Ajmer",
+    "totalOtherAmount": 260,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 260,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 260,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002567",
+        "claimDate": "2026-07-02",
+        "amount": 260,
+        "origAmount": 260,
+        "remark": "2 Irradiance Meter Dispatch To Lucknow To Mr. Monu",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1926",
+    "ee_name": "Sanjay Sisodia",
+    "designation": "Divisional Manager",
+    "district": "Ajmer",
+    "totalOtherAmount": 799,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 799,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 799,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002119",
+        "claimDate": "2026-07-17",
+        "amount": 500,
+        "origAmount": 500,
+        "remark": "TOLL",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002648",
+        "claimDate": "2026-07-27",
+        "amount": 299,
+        "origAmount": 299,
+        "remark": "Monthly Phone bill",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E-2298",
+    "ee_name": "Pankaj Saini",
+    "designation": "Service Engineer",
+    "district": "Barmer",
+    "totalOtherAmount": 381,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 381,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 381,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003409",
+        "claimDate": "2026-07-31",
+        "amount": 381,
+        "origAmount": 381,
+        "remark": "Mobile recharge",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1892",
+    "ee_name": "Manvendra Singh Yaduvanshi",
+    "designation": "Specialist Engineer-Critical",
+    "district": "Udaipur",
+    "totalOtherAmount": 539,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 539,
+    "prev_misc": 0,
+    "new_spare": 539,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002959",
+        "claimDate": "2026-07-06",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Zorrik,tape,",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003042",
+        "claimDate": "2026-07-02",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Tie rap,fuse",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004089",
+        "claimDate": "2026-07-17",
+        "amount": 189,
+        "origAmount": 189,
+        "remark": "Switch and fuse",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2320",
+    "ee_name": "Vivek kumar",
+    "designation": "Service Engineer",
+    "district": "Dungarpur",
+    "totalOtherAmount": 750,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 750,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 750,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002432",
+        "claimDate": "2026-07-07",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Breakfast expenses",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002434",
+        "claimDate": "2026-07-08",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Dinner at 08/7/2026",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003152",
+        "claimDate": "2026-07-09",
+        "amount": 450,
+        "origAmount": 450,
+        "remark": "Luggage charges",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1715",
+    "ee_name": "Aaftab",
+    "designation": "Specialist Engineer (BBR)",
+    "district": "Udaipur",
+    "totalOtherAmount": 1771,
+    "prev_spare": 3495,
+    "prev_courier": 0,
+    "prev_printing": 1771,
+    "prev_misc": 0,
+    "new_spare": 5166,
+    "new_courier": 100,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002770",
+        "claimDate": "2026-07-06",
+        "amount": 1121,
+        "origAmount": 1121,
+        "remark": "Freeze Moter",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002932",
+        "claimDate": "2026-07-09",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "12 miter wire purchase both complaint but bill not available",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-002945",
+        "claimDate": "2026-07-10",
+        "amount": 100,
+        "origAmount": 100,
+        "remark": "Parcel collect vacuum Machine to udaipur",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003896",
+        "claimDate": "2026-07-23",
+        "amount": 350,
+        "origAmount": 350,
+        "remark": "Mini tool bag",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003901",
+        "claimDate": "2026-07-26",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "X ray machine screw purchase online call",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2304",
+    "ee_name": "Suraj Kumar",
+    "designation": "Biomedical Engineer",
+    "district": "Udaipur",
+    "totalOtherAmount": 210,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 210,
+    "prev_misc": 0,
+    "new_spare": 90,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 120,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-002805",
+        "claimDate": "2026-07-22",
+        "amount": 90,
+        "origAmount": 90,
+        "remark": "Top pluge 3 pin purchase for service (16amp)",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003011",
+        "claimDate": "2026-07-09",
+        "amount": 120,
+        "origAmount": 120,
+        "remark": "I went to market for the company shirt fitting.\"",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1949",
+    "ee_name": "Mahanta Mondal",
+    "designation": "Sr.Specialist Engineer",
+    "district": "Ajmer",
+    "totalOtherAmount": 1030,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 1030,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 1030,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003412",
+        "claimDate": "2026-07-01",
+        "amount": 220,
+        "origAmount": 220,
+        "remark": "My Room to Ajmer Railway station+Ganganagar rail station to Hotel",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003427",
+        "claimDate": "2026-07-04",
+        "amount": 60,
+        "origAmount": 60,
+        "remark": "Ganganagar Bus stand to Hotel",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003437",
+        "claimDate": "2026-07-07",
+        "amount": 130,
+        "origAmount": 130,
+        "remark": "Hotel  to Ganganagar Bus stand+ Chunawadh Chc",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003437",
+        "claimDate": "2026-07-07",
+        "amount": 110,
+        "origAmount": 110,
+        "remark": "Hospital to Bus stand+ Bus stand to Hotel",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003439",
+        "claimDate": "2026-07-08",
+        "amount": 50,
+        "origAmount": 50,
+        "remark": "Hotel to Ganganagar Bus stand",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003439",
+        "claimDate": "2026-07-08",
+        "amount": 70,
+        "origAmount": 70,
+        "remark": "Ganganagar Bus stand to Hotel",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003442",
+        "claimDate": "2026-07-09",
+        "amount": 140,
+        "origAmount": 140,
+        "remark": "Hotel to Bus stand+ Bus stand to Hospital",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003442",
+        "claimDate": "2026-07-09",
+        "amount": 140,
+        "origAmount": 140,
+        "remark": "Hospital to Bus stand+Bus stand to Hotel",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-003445",
+        "claimDate": "2026-07-11",
+        "amount": 110,
+        "origAmount": 110,
+        "remark": "Hotel to Bus stand+Bus stand to My Room",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2335",
+    "ee_name": "Sandeep Pal",
+    "designation": "Sr. Biomedical Engineer",
+    "district": "Sirohi",
+    "totalOtherAmount": 410,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 410,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 410,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-003892",
+        "claimDate": "2026-07-15",
+        "amount": 410,
+        "origAmount": 410,
+        "remark": "Traveling from jodhpur to sirohi",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E2321",
+    "ee_name": "Anil Kumar",
+    "designation": "Biomedical Engineer",
+    "district": "Nagaur",
+    "totalOtherAmount": 1880,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 1880,
+    "prev_misc": 0,
+    "new_spare": 80,
+    "new_courier": 1800,
+    "new_printing": 0,
+    "new_misc": 0,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-004017",
+        "claimDate": "2026-07-16",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004020",
+        "claimDate": "2026-07-21",
+        "amount": 150,
+        "origAmount": 150,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004022",
+        "claimDate": "2026-07-23",
+        "amount": 250,
+        "origAmount": 250,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004024",
+        "claimDate": "2026-07-25",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004025",
+        "claimDate": "2026-07-27",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004027",
+        "claimDate": "2026-07-29",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004028",
+        "claimDate": "2026-07-30",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004028",
+        "claimDate": "2026-07-30",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004029",
+        "claimDate": "2026-07-31",
+        "amount": 200,
+        "origAmount": 200,
+        "remark": "Parcel received",
+        "oldCat": "PRINTING",
+        "newCat": "COURIER",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004053",
+        "claimDate": "2026-07-15",
+        "amount": 80,
+        "origAmount": 80,
+        "remark": "Tap and on/off switch",
+        "oldCat": "PRINTING",
+        "newCat": "SPARE_PURCHASE",
+        "isChanged": true
+      }
+    ]
+  },
+  {
+    "ee_code": "E1424",
+    "ee_name": "Vinod Kumar Jain",
+    "designation": "Project Head",
+    "district": "Jodhpur",
+    "totalOtherAmount": 6642,
+    "prev_spare": 0,
+    "prev_courier": 0,
+    "prev_printing": 6642,
+    "prev_misc": 0,
+    "new_spare": 0,
+    "new_courier": 0,
+    "new_printing": 0,
+    "new_misc": 6642,
+    "hasChanges": true,
+    "entries": [
+      {
+        "expCode": "RJ-07/26-004139",
+        "claimDate": "2026-07-30",
+        "amount": 2019,
+        "origAmount": 2019,
+        "remark": "Food with BME - Fun N Food Restaurant Jodhpur (Bill No: 26-27/18853)",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004170",
+        "claimDate": "2026-07-19",
+        "amount": 2473,
+        "origAmount": 2473,
+        "remark": "Food with BME - Skynior Fine-Dine & Lounge Jodhpur (Bill No: A5922)",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      },
+      {
+        "expCode": "RJ-07/26-004171",
+        "claimDate": "2026-07-12",
+        "amount": 2150,
+        "origAmount": 2150,
+        "remark": "Food with BME - Vijay Restaurant Jodhpur (Bill No: 10307)",
+        "oldCat": "PRINTING",
+        "newCat": "MISCELLANEOUS",
+        "isChanged": true
+      }
+    ]
+  }
+]
