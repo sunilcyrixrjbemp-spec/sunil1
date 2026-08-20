@@ -33,6 +33,8 @@ import NotFoundPage from "./pages/NotFoundPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
 import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
 import AdminEnterprisePage from "./pages/AdminEnterprisePage";
+import ComplaintUploadPage from "./pages/ComplaintUploadPage";
+import ComplaintUploadAccessAdmin from "./pages/ComplaintUploadAccessAdmin";
 
 import ProgressLoader from "./components/common/ProgressLoader";
 import InstallAppPrompt from "./components/common/InstallAppPrompt";
@@ -311,6 +313,8 @@ function App() {
                 <Route path="/help-center" element={<HelpPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/complaint-upload" element={<ComplaintUploadPage />} />
+                <Route path="/admin/complaint-upload-access" element={<ComplaintUploadAccessAdmin />} />
                 <Route path="/admin/claim-level-reset" element={<Navigate to="/home" replace />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
                 <Route path="/admin/enterprise" element={<AdminEnterprisePage />} />

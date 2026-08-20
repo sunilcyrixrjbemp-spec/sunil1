@@ -24,7 +24,11 @@ export async function processUploadBatch(batch, env) {
     try {
       const job = message.body;
 
-      if (job.type === "compress_and_store") {
+      if (job.type === "complaint_upload_job") {
+        const { processComplaintJobDirectly } = await import("./complaintQueueProcessor.js");
+        await processComplaintJobDirectly(job.job_id, job.file_key, job.uploaded_by, env);
+        message.ack();
+      } else if (job.type === "compress_and_store") {
         await processCompressAndStore(job, env);
         message.ack();
       } else if (job.type === "generate_thumbnail") {

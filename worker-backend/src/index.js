@@ -100,6 +100,18 @@ import {
 // Penalty handlers
 import { handleVerifyBarcode as handleVerifyPenaltyBarcode, handleSavePenalty, handleGetPenaltyList } from "./routes/penalty.js";
 
+// Complaint Management handlers (Standalone Ingestion System)
+import {
+  handleCheckPermission as handleCheckComplaintPermission,
+  handleListPermissions as handleListComplaintPermissions,
+  handleTogglePermission as handleToggleComplaintPermission,
+  handleUploadChunk as handleUploadComplaintChunk,
+  handleInitLargeUpload as handleInitLargeComplaintUpload,
+  handleDirectFileUpload as handleDirectComplaintFileUpload,
+  handleEnqueueJob as handleEnqueueComplaintJob,
+  handleGetJobStatus as handleGetComplaintJobStatus
+} from "./routes/complaints.js";
+
 // Attendance handlers
 import {
   handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies
@@ -434,6 +446,17 @@ router.get("/api/upload/file/gdrive/*", handleServeFile, false);
 router.get("/api/upload/file/gdrive/:key", handleServeFile, false);
 router.get("/profiles/*", handleServeFile, false);
 router.get("/profiles/:key", handleServeFile, false);
+
+// ─── Standalone Complaint Management Ingestion Endpoints ───────────────────
+router.get("/api/complaints/check-permission", handleCheckComplaintPermission, true);
+router.get("/api/complaints/permissions", handleListComplaintPermissions, true);
+router.post("/api/complaints/permissions/toggle", handleToggleComplaintPermission, true);
+router.post("/api/complaints/upload/chunk", handleUploadComplaintChunk, true);
+router.post("/api/complaints/upload/init-large", handleInitLargeComplaintUpload, true);
+router.put("/api/complaints/upload/file/:job_id", handleDirectComplaintFileUpload, true);
+router.post("/api/complaints/upload/file/:job_id", handleDirectComplaintFileUpload, true);
+router.post("/api/complaints/upload/enqueue", handleEnqueueComplaintJob, true);
+router.get("/api/complaints/upload-jobs/:job_id", handleGetComplaintJobStatus, true);
 
 // ─── Reports Endpoints ────────────────────────────────────────────────────────
 router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);
