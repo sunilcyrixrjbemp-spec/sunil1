@@ -6,7 +6,8 @@ import {
   Repeat2, MapPin, Star, BarChart3, Target, Flame,
   ChevronLeft, ChevronRight,
   FileSpreadsheet, Eye, HelpCircle,
-  X, Check, ShieldCheck
+  X, Check, ShieldCheck,
+  SlidersHorizontal
 } from "lucide-react";
 import toast from "react-hot-toast";
 import * as XLSX from "xlsx";
@@ -18,7 +19,9 @@ import {
   LivePenaltyStandbyWaiversResponse,
   DistrictPenaltyStat,
   RepeaterCallEntry,
-  ComplaintPenaltyRecord
+  ComplaintPenaltyRecord,
+  CoordinatorPenaltyStat,
+  ZonePenaltyStat
 } from "../services/penaltyLiveService";
 import { SaaSBarChart, SaaSDonutChart } from "../components/common/SaaSCharts";
 
@@ -47,7 +50,7 @@ function MiniBar({ value, max, color }: { value: number; max: number; color: str
 }
 
 export default function PenaltyModulePage() {
-  // ─── Active Tab ─────────────────────────────────────────────────────────────
+  // ─── Master View Tabs ───────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<"overview" | "districts" | "standby" | "repeaters" | "ledger">("overview");
 
   // ─── Data State ─────────────────────────────────────────────────────────────
@@ -63,7 +66,10 @@ export default function PenaltyModulePage() {
   const [loadingWaivers, setLoadingWaivers] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  // ─── Filter State for Ledger ────────────────────────────────────────────────
+  // ─── Quick Preset Filter ────────────────────────────────────────────────────
+  const [quickPreset, setQuickPreset] = useState<"all" | "incurring" | "critical" | "mch" | "standby" | "unattended">("all");
+
+  // ─── Ledger Multi-Filter State ──────────────────────────────────────────────
   const [recSearch, setRecSearch] = useState("");
   const [recDistrict, setRecDistrict] = useState("");
   const [recZone, setRecZone] = useState("");
@@ -92,6 +98,13 @@ export default function PenaltyModulePage() {
   // ─── CA Calculation Inspector Modal ─────────────────────────────────────────
   const [selectedAuditRecord, setSelectedAuditRecord] = useState<ComplaintPenaltyRecord | null>(null);
   const [showFormulaGuide, setShowFormulaGuide] = useState(false);
+
+  // ─── Live Clock ─────────────────────────────────────────────────────────────
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────────
   const fetchSummary = useCallback(async (force = false) => {
@@ -194,7 +207,52 @@ export default function PenaltyModulePage() {
     if (activeTab === "ledger") fetchRecords(recPage);
     if (activeTab === "repeaters") fetchRepeaters();
     if (activeTab === "standby") fetchWaivers();
-    toast.success("Live NIB-825 penalty data refreshed!");
+    toast.success("Live NIB-825 penalty calculations refreshed!");
+  };
+
+  // ─── Quick Preset Handlers ──────────────────────────────────────────────────
+  const applyQuickPreset = (preset: "all" | "incurring" | "critical" | "mch" | "standby" | "unattended") => {
+    setQuickPreset(preset);
+    setActiveTab("ledger");
+
+    if (preset === "all") {
+      setRecOnlyPenalty(false);
+      setRecCritical("");
+      setRecHospType("");
+      setRecStandby("");
+      setRecStatus("");
+    } else if (preset === "incurring") {
+      setRecOnlyPenalty(true);
+      setRecCritical("");
+      setRecHospType("");
+      setRecStandby("");
+      setRecStatus("open");
+    } else if (preset === "critical") {
+      setRecOnlyPenalty(false);
+      setRecCritical("yes");
+      setRecHospType("");
+      setRecStandby("");
+      setRecStatus("open");
+    } else if (preset === "mch") {
+      setRecOnlyPenalty(false);
+      setRecCritical("");
+      setRecHospType("MCH");
+      setRecStandby("");
+      setRecStatus("open");
+    } else if (preset === "standby") {
+      setRecOnlyPenalty(false);
+      setRecCritical("");
+      setRecHospType("");
+      setRecStandby("yes");
+      setRecStatus("");
+    } else if (preset === "unattended") {
+      setRecOnlyPenalty(false);
+      setRecCritical("");
+      setRecHospType("");
+      setRecStandby("");
+      setRecStatus("open");
+    }
+    fetchRecords(1);
   };
 
   // ─── Toggle Standby Action ──────────────────────────────────────────────────
@@ -207,9 +265,9 @@ export default function PenaltyModulePage() {
     try {
       const res = await penaltyLiveService.toggleStandby(complaintId.trim(), "toggle");
       if (res.is_standby) {
-        toast.success(`✓ Standby Provided for ${complaintId}! Delay penalty waived.`);
+        toast.success(`✓ Standby Provided for #${complaintId}! Delay penalty waived.`);
       } else {
-        toast.success(`Standby removed for ${complaintId}. Penalty resumed.`);
+        toast.success(`Standby removed for #${complaintId}. Penalty resumed.`);
       }
       setStandbyInputId("");
       fetchSummary(true);
@@ -224,46 +282,47 @@ export default function PenaltyModulePage() {
 
   // ─── Export to Excel ────────────────────────────────────────────────────────
   const handleExportFull = async () => {
-    const tid = toast.loading("Generating full CA audit spreadsheet...");
+    const tid = toast.loading("Exporting complete CA forensic audit ledger...");
     try {
       const all = await penaltyLiveService.getRecords({ page: 1, limit: 99999, status: "all" });
-      const rows = all.records.map((r, i) => ({
+      const rows = all.records.map((r: ComplaintPenaltyRecord, i: number) => ({
         "S.No": i + 1,
         "Complaint ID": r.complaint_id,
         "District": r.district_name,
-        "Hospital": r.hospital_name,
-        "Hospital Type": r.hospital_type,
+        "Zone": r.zone_name,
+        "Hospital Name": r.hospital_name,
+        "Facility Category": r.hospital_type,
         "Equipment Name": r.equipment_name,
         "Barcode": r.bar_code,
-        "Status": r.complaint_status,
-        "Critical (ICU/OT)": r.is_critical ? "Yes (+10%)" : "No",
-        "Asset Value (₹)": r.asset_value,
-        "Penalty Slab (₹/day)": r.penalty_slab,
-        "Raise Date": r.complaint_raise_date,
-        "Attend Date": r.attend_date,
-        "Close Date": r.complaint_close_date,
-        "Attend SLA (Hrs)": r.attend_sla_hours || (r.hospital_type === "MCH" ? 1 : 24),
-        "Attend Taken (Hrs)": r.attend_hour_diff,
-        "Attend Penalty (₹)": r.attend_penalty,
-        "Downtime (Days)": r.penalty_down_days,
-        "Standby Provided": r.standby,
-        "Under Warranty": r.is_under_warranty,
-        "Waiver Applied": r.waiver_type || (r.standby === "Yes" ? "Standby" : r.is_under_warranty === "Yes" ? "Warranty" : "None"),
-        "Waived Penalty (₹)": r.waived_penalty || 0,
-        "Delay Penalty (₹)": r.delay_penalty,
-        "Net Payable Penalty (₹)": r.total_penalty,
-        "Live Per-Day Burn (₹)": r.total_per_day,
-        "DI Name": r.di_name,
-        "Coordinator": r.coordinator_name,
-        "Zone": r.zone_name,
+        "Complaint Status": r.complaint_status,
+        "Critical (ICU/OT)": r.is_critical ? "Yes (+10% Surcharge)" : "No",
+        "Estimated Asset Value (₹)": r.asset_value,
+        "Contractual Penalty Slab (₹/day)": r.penalty_slab,
+        "Complaint Raise Date (IST)": r.complaint_raise_date,
+        "Engineer Attend Date (IST)": r.attend_date,
+        "Complaint Close Date (IST)": r.complaint_close_date,
+        "Attend SLA (Hours)": r.attend_sla_hours || (r.hospital_type === "MCH" ? 1 : 24),
+        "Attend Time Taken (Hours)": r.attend_hour_diff,
+        "Attendance Penalty (₹)": r.attend_penalty,
+        "Total Downtime (Days)": r.penalty_down_days,
+        "Resolution Grace SLA (Hours)": r.grace_hours || (r.hospital_type === "MCH" ? 6 : 48),
+        "Standby Machine Provided": r.standby,
+        "Under OEM Warranty": r.is_under_warranty,
+        "Exemption Applied": r.waiver_type || (r.standby === "Yes" ? "Standby" : r.is_under_warranty === "Yes" ? "Warranty" : "None"),
+        "Waived Delay Penalty (₹)": r.waived_penalty || 0,
+        "Payable Delay Penalty (₹)": r.delay_penalty,
+        "Final Net Payable Penalty (₹)": r.total_penalty,
+        "Active Daily Burn Rate (₹/day)": r.total_per_day,
+        "District In-Charge (DI)": r.di_name,
+        "Zonal Coordinator": r.coordinator_name,
       }));
 
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "CA Penalty Audit Ledger");
-      XLSX.writeFile(wb, `BEMMP_Penalty_Audit_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      XLSX.utils.book_append_sheet(wb, ws, "RMSCL BEMMP Penalty Audit");
+      XLSX.writeFile(wb, `RMSCL_BEMMP_Penalty_Audit_${new Date().toISOString().slice(0, 10)}.xlsx`);
       toast.dismiss(tid);
-      toast.success(`Exported ${rows.length.toLocaleString()} audited records!`);
+      toast.success(`Exported ${rows.length.toLocaleString()} verified audit records!`);
     } catch {
       toast.dismiss(tid);
       toast.error("Export failed");
@@ -273,7 +332,7 @@ export default function PenaltyModulePage() {
   // ─── Derived Data ───────────────────────────────────────────────────────────
   const kpis = summary?.kpis;
   const districts = useMemo(() => {
-    return [...(summary?.districts || [])].sort((a, b) => {
+    return [...(summary?.districts || [])].sort((a: DistrictPenaltyStat, b: DistrictPenaltyStat) => {
       if (distSort === "penalty") return b.total_penalty - a.total_penalty;
       if (distSort === "perday") return b.per_day_penalty - a.per_day_penalty;
       if (distSort === "waived") return (b.waived_penalty || 0) - (a.waived_penalty || 0);
@@ -281,28 +340,28 @@ export default function PenaltyModulePage() {
     });
   }, [summary?.districts, distSort]);
 
-  const maxDistPenalty = Math.max(...districts.map(d => d.total_penalty), 1);
+  const maxDistPenalty = Math.max(...districts.map((d: DistrictPenaltyStat) => d.total_penalty), 1);
 
   const distBarData = useMemo(() => {
-    return districts.slice(0, 10).map(d => ({
+    return districts.slice(0, 10).map((d: DistrictPenaltyStat) => ({
       name: d.district.length > 9 ? d.district.slice(0, 8) + "\u2026" : d.district,
       amount: d.total_penalty,
     }));
   }, [districts]);
 
   const zoneDonutData = useMemo(() => {
-    return (summary?.zones || []).map(z => ({
+    return (summary?.zones || []).map((z: ZonePenaltyStat) => ({
       name: z.zone || "Unassigned",
       value: z.total_penalty,
     }));
   }, [summary?.zones]);
 
   const coordList = useMemo(() => {
-    return [...(summary?.coordinators || [])].sort((a, b) => b.total_penalty - a.total_penalty).slice(0, 6);
+    return [...(summary?.coordinators || [])].sort((a: CoordinatorPenaltyStat, b: CoordinatorPenaltyStat) => b.total_penalty - a.total_penalty).slice(0, 6);
   }, [summary?.coordinators]);
 
   const toggleRepeater = (key: string) => {
-    setExpandedRepeaters(prev => {
+    setExpandedRepeaters((prev: Set<string>) => {
       const n = new Set(prev);
       if (n.has(key)) n.delete(key); else n.add(key);
       return n;
@@ -322,34 +381,48 @@ export default function PenaltyModulePage() {
   };
 
   return (
-    <div className="space-y-3.5 animate-fadeIn text-slate-800 font-sans p-3 sm:p-4 bg-slate-100 min-h-screen">
+    <div className="space-y-3 animate-fadeIn text-slate-800 font-sans p-3 sm:p-4 bg-[#f8fafc] min-h-screen">
 
       {/* ══════════════════════════════════════════════════════════════════════
-          1. HEADER & GLOBAL AUDIT BAR
+          1. ENTERPRISE TELEMETRY HEADER & COMMAND BAR
       ══════════════════════════════════════════════════════════════════════ */}
-      <div className="bg-[#1e293b] text-white px-4 py-3 rounded-lg shadow-md flex flex-wrap items-center justify-between gap-3 border-l-4 border-rose-500">
+      <div className="bg-[#0f172a] text-white px-4 py-3 rounded-xl shadow-lg border border-slate-800 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-rose-500/20 text-rose-400 rounded-lg shrink-0">
+          <div className="p-2.5 bg-gradient-to-br from-rose-600 to-red-700 text-white rounded-lg shadow-md shadow-rose-900/40">
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-sm font-black tracking-wide uppercase">BEMMP Rajasthan Penalty & SLA Audit</h1>
-              <span className="px-2 py-0.5 bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold rounded border border-rose-400/30">
-                RMSCL NIB-825
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-sm font-black tracking-wider uppercase text-white">
+                BEMMP Rajasthan Contractual Penalty & SLA Audit Suite
+              </h1>
+              <span className="px-2 py-0.5 bg-rose-500/20 text-rose-400 text-[10px] font-mono font-bold rounded border border-rose-500/30">
+                RMSCL NIB-825 Certified
+              </span>
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-mono font-bold rounded border border-emerald-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Live Engine Active
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">
-              Live Contractual Penalty Engine · Zero Static DB Bloat
-              {lastRefresh && ` · Refreshed ${lastRefresh.toLocaleTimeString("en-IN")}`}
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5 flex items-center gap-2">
+              <span>IST Clock: <strong className="text-slate-200 font-mono">{currentTime.toLocaleTimeString("en-IN")}</strong></span>
+              <span>·</span>
+              <span>Total Tracked Database Calls: <strong className="text-slate-200 font-mono">{kpis ? kpis.total_complaints.toLocaleString() : "..."}</strong></span>
+              {lastRefresh && (
+                <>
+                  <span>·</span>
+                  <span>Last Computed: <strong className="text-slate-300 font-mono">{lastRefresh.toLocaleTimeString("en-IN")}</strong></span>
+                </>
+              )}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Global Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setShowFormulaGuide(true)}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-bold transition-all border border-slate-600"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold transition-all border border-slate-700 hover:border-slate-600"
           >
             <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
             CA Rules & Slabs
@@ -357,103 +430,138 @@ export default function PenaltyModulePage() {
           <button
             onClick={() => handleRefreshAll()}
             disabled={loadingSummary}
-            className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-bold transition-all border border-slate-600 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition-all border border-slate-700 hover:border-slate-600 disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loadingSummary ? "animate-spin text-blue-400" : ""}`} />
-            Refresh
+            <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${loadingSummary ? "animate-spin" : ""}`} />
+            Recalculate Live
           </button>
           <button
             onClick={handleExportFull}
-            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold shadow transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-md shadow-emerald-950 transition-all"
           >
             <Download className="w-3.5 h-3.5" />
-            Export CA Ledger
+            Export CA Audit (Excel)
           </button>
         </div>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          2. COMPACT DENSE KPI STRIP (CA Executive Overview)
+          2. QUICK PRESET FILTER CHIPS
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-xs">
+        <span className="text-[10px] font-black uppercase text-slate-400 mr-1 shrink-0 flex items-center gap-1">
+          <SlidersHorizontal className="w-3 h-3" /> Quick Focus:
+        </span>
+
+        {[
+          { id: "all", label: "All Complaints", count: kpis?.total_complaints, color: "bg-slate-800 text-white" },
+          { id: "incurring", label: "🚨 Incurring Penalty (> ₹0)", count: kpis?.open_penalty_tickets, color: "bg-rose-600 text-white" },
+          { id: "critical", label: "⚡ Critical ICU/OT Open", count: kpis?.critical_open_count, color: "bg-purple-600 text-white" },
+          { id: "mch", label: "🏥 MCH High-Priority (12h)", count: kpis?.mch_open_count, color: "bg-emerald-600 text-white" },
+          { id: "standby", label: "🛡️ Standby Exempted", count: kpis?.standby_count, color: "bg-teal-600 text-white" },
+          { id: "unattended", label: "⏳ Open Tickets Pending", count: kpis?.open_tickets, color: "bg-blue-600 text-white" },
+        ].map(p => (
+          <button
+            key={p.id}
+            onClick={() => applyQuickPreset(p.id as any)}
+            className={`px-3 py-1 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 border ${
+              quickPreset === p.id
+                ? `${p.color} border-transparent shadow-xs font-black`
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
+            }`}
+          >
+            <span>{p.label}</span>
+            {p.count !== undefined && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${quickPreset === p.id ? "bg-black/20 text-white" : "bg-slate-100 text-slate-600"}`}>
+                {p.count.toLocaleString()}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          3. EXECUTIVE DENSE KPI METRICS GRID
       ══════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
-        
-        {/* Card 1: Total Penalty */}
-        <div className="bg-white p-3 rounded-lg border border-rose-200 shadow-xs border-t-3 border-t-rose-600">
+        {/* Card 1: Total Accumulated Penalty */}
+        <div className="bg-white p-3 rounded-xl border border-rose-200 shadow-xs border-t-4 border-t-rose-600 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 text-[10px] font-black uppercase">
             <span>Total Penalty</span>
             <Flame className="w-3.5 h-3.5 text-rose-500" />
           </div>
-          <div className="text-base font-black font-mono text-rose-700 mt-1 truncate">
+          <div className="text-lg font-black font-mono text-rose-700 mt-1 truncate">
             {kpis ? fmtINR(kpis.total_accumulated_penalty) : "—"}
           </div>
-          <div className="text-[10px] text-slate-500 mt-0.5 truncate">
-            {kpis ? `${kpis.total_complaints.toLocaleString()} total calls` : "Loading..."}
+          <div className="text-[10px] text-slate-500 mt-0.5 flex items-center justify-between">
+            <span>Attend: {kpis ? fmtINR(kpis.total_attend_penalty) : "—"}</span>
+            <span>Delay: {kpis ? fmtINR(kpis.total_delay_penalty) : "—"}</span>
           </div>
         </div>
 
-        {/* Card 2: Per Day Burn */}
-        <div className="bg-white p-3 rounded-lg border border-amber-200 shadow-xs border-t-3 border-t-amber-500">
+        {/* Card 2: Daily Burn Rate */}
+        <div className="bg-white p-3 rounded-xl border border-amber-200 shadow-xs border-t-4 border-t-amber-500 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 text-[10px] font-black uppercase">
             <span>Daily Burn Rate</span>
             <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
           </div>
-          <div className="text-base font-black font-mono text-amber-700 mt-1 truncate">
+          <div className="text-lg font-black font-mono text-amber-700 mt-1 truncate">
             {kpis ? fmtINR(kpis.total_per_day_penalty) : "—"}
           </div>
           <div className="text-[10px] text-amber-600 font-bold mt-0.5 truncate">
-            /day active penalty
+            {kpis ? `30-Day Proj: ${fmtINR(kpis.total_per_day_penalty * 30)}` : "Live accumulating"}
           </div>
         </div>
 
         {/* Card 3: Open Tickets */}
-        <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-xs border-t-3 border-t-blue-600">
+        <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-xs border-t-4 border-t-blue-600 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 text-[10px] font-black uppercase">
             <span>Open Tickets</span>
             <Activity className="w-3.5 h-3.5 text-blue-500" />
           </div>
-          <div className="text-base font-black font-mono text-slate-900 mt-1 truncate">
+          <div className="text-lg font-black font-mono text-slate-900 mt-1 truncate">
             {kpis ? kpis.open_tickets.toLocaleString() : "—"}
           </div>
           <div className="text-[10px] text-rose-600 font-bold mt-0.5 truncate">
-            {kpis ? `${kpis.open_penalty_tickets} incurring penalty` : ""}
+            {kpis ? `${kpis.open_penalty_tickets} incurring live penalty` : ""}
           </div>
         </div>
 
-        {/* Card 4: Critical Open (+10%) */}
-        <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-xs border-t-3 border-t-purple-600">
+        {/* Card 4: Critical Open */}
+        <div className="bg-white p-3 rounded-xl border border-purple-200 shadow-xs border-t-4 border-t-purple-600 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 text-[10px] font-black uppercase">
-            <span>Critical Open</span>
+            <span>Critical ICU/OT</span>
             <Star className="w-3.5 h-3.5 text-purple-500" />
           </div>
-          <div className="text-base font-black font-mono text-purple-800 mt-1 truncate">
+          <div className="text-lg font-black font-mono text-purple-800 mt-1 truncate">
             {kpis ? kpis.critical_open_count.toLocaleString() : "—"}
           </div>
           <div className="text-[10px] text-purple-600 font-bold mt-0.5 truncate">
-            +10% SLA Surcharge
+            +10% Surcharge Applied
           </div>
         </div>
 
-        {/* Card 5: MCH Daily */}
-        <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-xs border-t-3 border-t-emerald-600">
+        {/* Card 5: MCH Daily Burn */}
+        <div className="bg-white p-3 rounded-xl border border-emerald-200 shadow-xs border-t-4 border-t-emerald-600 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 text-[10px] font-black uppercase">
             <span>MCH Burn / Day</span>
             <Zap className="w-3.5 h-3.5 text-emerald-500" />
           </div>
-          <div className="text-base font-black font-mono text-emerald-700 mt-1 truncate">
+          <div className="text-lg font-black font-mono text-emerald-700 mt-1 truncate">
             {kpis ? fmtINR(kpis.mch_per_day_penalty) : "—"}
           </div>
           <div className="text-[10px] text-slate-500 mt-0.5 truncate">
-            {kpis ? `${kpis.mch_open_count} MCH open (12h SLA)` : ""}
+            {kpis ? `${kpis.mch_open_count} MCH open (12h SLA × 2)` : ""}
           </div>
         </div>
 
-        {/* Card 6: Others Daily */}
-        <div className="bg-white p-3 rounded-lg border border-indigo-200 shadow-xs border-t-3 border-t-indigo-600">
+        {/* Card 6: Others Daily Burn */}
+        <div className="bg-white p-3 rounded-xl border border-indigo-200 shadow-xs border-t-4 border-t-indigo-600 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 text-[10px] font-black uppercase">
-            <span>DH / CHC / Day</span>
+            <span>DH / CHC Burn / Day</span>
             <Building2 className="w-3.5 h-3.5 text-indigo-500" />
           </div>
-          <div className="text-base font-black font-mono text-indigo-700 mt-1 truncate">
+          <div className="text-lg font-black font-mono text-indigo-700 mt-1 truncate">
             {kpis ? fmtINR(kpis.others_per_day_penalty) : "—"}
           </div>
           <div className="text-[10px] text-slate-500 mt-0.5 truncate">
@@ -462,60 +570,60 @@ export default function PenaltyModulePage() {
         </div>
 
         {/* Card 7: Standby Savings / Waived */}
-        <div className="bg-white p-3 rounded-lg border border-teal-200 shadow-xs border-t-3 border-t-teal-600 col-span-2 sm:col-span-1">
+        <div className="bg-white p-3 rounded-xl border border-teal-200 shadow-xs border-t-4 border-t-teal-600 col-span-2 sm:col-span-1 flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 text-[10px] font-black uppercase">
-            <span>Standby Waived</span>
+            <span>Standby Savings</span>
             <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
           </div>
-          <div className="text-base font-black font-mono text-teal-700 mt-1 truncate">
+          <div className="text-lg font-black font-mono text-teal-700 mt-1 truncate">
             {kpis ? fmtINR(kpis.standby_waived_penalty || 0) : "—"}
           </div>
           <div className="text-[10px] text-teal-600 font-bold mt-0.5 truncate">
-            {kpis ? `${kpis.standby_count || 0} standby provided` : ""}
+            {kpis ? `${kpis.standby_count || 0} standby machines active` : ""}
           </div>
         </div>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          3. NAVIGATION TABS (5 Specialized Views)
+          4. ENTERPRISE NAVIGATION SUITE TABS
       ══════════════════════════════════════════════════════════════════════ */}
-      <div className="bg-white rounded-lg border border-slate-200 p-1 flex items-center gap-1 shadow-xs overflow-x-auto">
+      <div className="bg-white rounded-xl border border-slate-200 p-1 flex items-center gap-1 shadow-xs overflow-x-auto">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
             activeTab === "overview"
-              ? "bg-[#1e293b] text-white shadow-xs"
+              ? "bg-[#0f172a] text-white shadow-md"
               : "text-slate-600 hover:bg-slate-100"
           }`}
         >
-          <BarChart3 className="w-4 h-4" />
-          1. CA Executive Overview
+          <BarChart3 className="w-4 h-4 text-rose-400" />
+          1. Executive Operations & Risk Heatmap
         </button>
 
         <button
           onClick={() => setActiveTab("districts")}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
             activeTab === "districts"
-              ? "bg-[#1e293b] text-white shadow-xs"
+              ? "bg-[#0f172a] text-white shadow-md"
               : "text-slate-600 hover:bg-slate-100"
           }`}
         >
-          <MapPin className="w-4 h-4" />
-          2. District & DI Performance ({districts.length})
+          <MapPin className="w-4 h-4 text-blue-400" />
+          2. District & Territory Performance ({districts.length})
         </button>
 
         <button
           onClick={() => setActiveTab("standby")}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
             activeTab === "standby"
-              ? "bg-[#1e293b] text-white shadow-xs"
+              ? "bg-[#0f172a] text-white shadow-md"
               : "text-slate-600 hover:bg-slate-100"
           }`}
         >
-          <ShieldCheck className="w-4 h-4 text-teal-500" />
-          3. Standby & Waiver Center
+          <ShieldCheck className="w-4 h-4 text-teal-400" />
+          3. Standby & Waiver Protection Center
           {kpis?.standby_count ? (
-            <span className="ml-1 px-1.5 py-0.2 bg-teal-100 text-teal-800 rounded-full text-[10px]">
+            <span className="ml-1 px-1.5 py-0.2 bg-teal-100 text-teal-800 rounded-full text-[10px] font-mono">
               {kpis.standby_count}
             </span>
           ) : null}
@@ -523,63 +631,63 @@ export default function PenaltyModulePage() {
 
         <button
           onClick={() => setActiveTab("repeaters")}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
             activeTab === "repeaters"
-              ? "bg-[#1e293b] text-white shadow-xs"
+              ? "bg-[#0f172a] text-white shadow-md"
               : "text-slate-600 hover:bg-slate-100"
           }`}
         >
-          <Repeat2 className="w-4 h-4 text-rose-500" />
-          4. Repeater Calls & Asset Degradation
+          <Repeat2 className="w-4 h-4 text-amber-400" />
+          4. Asset Degradation & Chronic Repeaters
         </button>
 
         <button
           onClick={() => setActiveTab("ledger")}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
             activeTab === "ledger"
-              ? "bg-[#1e293b] text-white shadow-xs"
+              ? "bg-[#0f172a] text-white shadow-md"
               : "text-slate-600 hover:bg-slate-100"
           }`}
         >
-          <FileSpreadsheet className="w-4 h-4 text-blue-500" />
-          5. Complaint Audit Ledger
+          <FileSpreadsheet className="w-4 h-4 text-cyan-400" />
+          5. Forensic CA Audit Ledger
         </button>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
-          TAB 1: CA EXECUTIVE OVERVIEW & CHARTS
+          VIEW 1: EXECUTIVE OPERATIONS & RISK HEATMAP
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === "overview" && (
         <div className="space-y-3.5 animate-fadeIn">
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
             {/* Top 10 Districts Bar Chart */}
-            <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 p-4 shadow-xs">
+            <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-rose-600" />
                   <h3 className="text-xs font-black uppercase tracking-wide text-slate-900">
-                    Top 10 Districts by Accumulated Penalty
+                    Top 10 High-Exposure Districts (Total Accumulated Penalty)
                   </h3>
                 </div>
-                <span className="text-[10px] text-slate-500 font-bold">Amounts in ₹</span>
+                <span className="text-[10px] text-slate-400 font-mono">Live Contract Engine</span>
               </div>
               {distBarData.length > 0 ? (
-                <SaaSBarChart data={distBarData} height={200} />
+                <SaaSBarChart data={distBarData} height={210} />
               ) : (
-                <div className="h-[200px] flex items-center justify-center text-slate-400 text-xs font-bold">
-                  {loadingSummary ? "Calculating live penalty..." : "No data"}
+                <div className="h-[210px] flex items-center justify-center text-slate-400 text-xs font-bold">
+                  {loadingSummary ? "Calculating live penalty..." : "No data available"}
                 </div>
               )}
             </div>
 
             {/* Zone Distribution Donut */}
-            <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-xs flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="w-4 h-4 text-indigo-600" />
                   <h3 className="text-xs font-black uppercase tracking-wide text-slate-900">
-                    Zone Penalty Distribution
+                    Zonal Penalty Distribution
                   </h3>
                 </div>
                 {zoneDonutData.length > 0 ? (
@@ -591,12 +699,12 @@ export default function PenaltyModulePage() {
                 )}
               </div>
 
-              {/* Top 3 Coordinators Quick Glance */}
+              {/* Coordinator Ranking */}
               <div className="pt-3 border-t border-slate-100 space-y-1.5">
-                <span className="text-[10px] font-black uppercase text-slate-400 block">Top Coordinators</span>
-                {coordList.slice(0, 3).map((c, i) => (
+                <span className="text-[10px] font-black uppercase text-slate-400 block">Top Coordinators by Exposure</span>
+                {coordList.slice(0, 3).map((c: CoordinatorPenaltyStat, i: number) => (
                   <div key={c.coordinator} className="flex items-center justify-between text-xs">
-                    <span className="text-slate-700 font-bold truncate max-w-[130px]">
+                    <span className="text-slate-700 font-bold truncate max-w-[140px]">
                       <span className="text-slate-400 font-mono mr-1">#{i + 1}</span>
                       {c.coordinator}
                     </span>
@@ -607,56 +715,53 @@ export default function PenaltyModulePage() {
             </div>
           </div>
 
-          {/* Quick CA Executive Summary Table */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-            <div className="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
+          {/* CA SLA Rules & Contract Slabs Reference */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="bg-[#0f172a] text-white px-4 py-2.5 flex items-center justify-between">
               <span className="text-xs font-black uppercase tracking-wider flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                Contract SLA & Penalty Slab Matrix (RMSCL BEMMP Rajasthan Contract)
+                RMSCL NIB-825 Contractual SLA & Penalty Slab Matrix
               </span>
-              <span className="text-[10px] text-slate-300 font-mono">NIB-825 Rules Engine</span>
+              <span className="text-[10px] text-slate-300 font-mono">Government Contract Rules</span>
             </div>
 
             <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              {/* Box 1: Medical Colleges */}
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg space-y-1.5">
+              <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-lg space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-black text-emerald-900 uppercase text-[11px]">Medical College & Assoc. (MCH)</span>
+                  <span className="font-black text-emerald-900 uppercase text-[11px]">Medical College Hospitals (MCH)</span>
                   <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-900 text-[9px] font-black rounded">12h Period</span>
                 </div>
                 <div className="text-slate-700 space-y-1 text-[11px]">
-                  <div>• <strong>Attend SLA:</strong> 1 Hour (₹500/day if missed)</div>
+                  <div>• <strong>Attend SLA:</strong> 1 Hour (₹500/day after 1h)</div>
                   <div>• <strong>Resolution Grace:</strong> 6 Hours</div>
-                  <div>• <strong>Penalty Multiplier:</strong> 2x Daily Slab Rate</div>
-                  <div>• <strong>Critical Surcharge:</strong> +10% extra if ICU/OT</div>
+                  <div>• <strong>Delay Slab:</strong> 2x Daily Rate (2 periods/day)</div>
+                  <div>• <strong>Critical Surcharge:</strong> +10% on ICU/OT</div>
                 </div>
               </div>
 
-              {/* Box 2: District Hospitals */}
-              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-lg space-y-1.5">
+              <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-lg space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-black text-blue-900 uppercase text-[11px]">District Hospitals (DH / SDH)</span>
                   <span className="px-1.5 py-0.5 bg-blue-200 text-blue-900 text-[9px] font-black rounded">24h Period</span>
                 </div>
                 <div className="text-slate-700 space-y-1 text-[11px]">
-                  <div>• <strong>Attend SLA:</strong> 24 Hours (₹500/day if missed)</div>
+                  <div>• <strong>Attend SLA:</strong> 24 Hours (₹500/day after 24h)</div>
                   <div>• <strong>Resolution Grace:</strong> 48 Hours</div>
-                  <div>• <strong>Penalty Multiplier:</strong> 1x Daily Slab Rate</div>
-                  <div>• <strong>Critical Surcharge:</strong> +10% extra if ICU/OT</div>
+                  <div>• <strong>Delay Slab:</strong> 1x Daily Rate (1 period/day)</div>
+                  <div>• <strong>Critical Surcharge:</strong> +10% on ICU/OT</div>
                 </div>
               </div>
 
-              {/* Box 3: CHC / PHC */}
-              <div className="p-3 bg-purple-50/70 border border-purple-200 rounded-lg space-y-1.5">
+              <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-lg space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="font-black text-purple-900 uppercase text-[11px]">CHC / PHC / Dispensary</span>
+                  <span className="font-black text-purple-900 uppercase text-[11px]">Community Centers (CHC / PHC)</span>
                   <span className="px-1.5 py-0.5 bg-purple-200 text-purple-900 text-[9px] font-black rounded">24h Period</span>
                 </div>
                 <div className="text-slate-700 space-y-1 text-[11px]">
-                  <div>• <strong>Attend SLA:</strong> 24 Hours (₹500/day if missed)</div>
+                  <div>• <strong>Attend SLA:</strong> 24 Hours</div>
                   <div>• <strong>Resolution Grace:</strong> 72 Hours</div>
-                  <div>• <strong>Penalty Multiplier:</strong> 1x Daily Slab Rate</div>
-                  <div>• <strong>Standby Waiver:</strong> ₹0 penalty if standby given</div>
+                  <div>• <strong>Standby Waiver:</strong> ₹0 Delay Penalty if standby given</div>
+                  <div>• <strong>Warranty Exemption:</strong> ₹0 if under OEM warranty</div>
                 </div>
               </div>
             </div>
@@ -665,14 +770,14 @@ export default function PenaltyModulePage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          TAB 2: DISTRICT & DI PERFORMANCE TABLE
+          VIEW 2: DISTRICT & TERRITORY PERFORMANCE
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === "districts" && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden animate-fadeIn">
-          <div className="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden animate-fadeIn">
+          <div className="bg-[#0f172a] text-white px-4 py-3 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-blue-400" />
-              <h3 className="text-xs font-black uppercase tracking-wider">District Performance & DI Ranking</h3>
+              <h3 className="text-xs font-black uppercase tracking-wider">Territory Performance & Zonal Leaderboard</h3>
             </div>
             <div className="flex items-center gap-1 text-[11px]">
               <span className="text-slate-400 mr-1 font-bold">Sort By:</span>
@@ -680,8 +785,8 @@ export default function PenaltyModulePage() {
                 <button
                   key={s}
                   onClick={() => setDistSort(s)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-black uppercase transition-all ${
-                    distSort === s ? "bg-white text-slate-900 shadow-xs" : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  className={`px-2.5 py-1 rounded text-[10px] font-black uppercase transition-all ${
+                    distSort === s ? "bg-white text-slate-900 shadow-xs" : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                   }`}
                 >
                   {s === "penalty" ? "Total Penalty" : s === "perday" ? "Daily Burn" : s === "waived" ? "Standby Waived" : "Open Calls"}
@@ -699,9 +804,9 @@ export default function PenaltyModulePage() {
                   <th className="py-2.5 px-3">Zone</th>
                   <th className="py-2.5 px-3">Coordinator / DI</th>
                   <th className="py-2.5 px-3 text-center">Open Calls</th>
-                  <th className="py-2.5 px-3 text-center">Incurring Penalty</th>
+                  <th className="py-2.5 px-3 text-center">Pen. Calls</th>
                   <th className="py-2.5 px-3 text-right">MCH / Day</th>
-                  <th className="py-2.5 px-3 text-right">Others / Day</th>
+                  <th className="py-2.5 px-3 text-right">DH/CHC / Day</th>
                   <th className="py-2.5 px-3 text-right">Standby Waived</th>
                   <th className="py-2.5 px-3 text-right">Total Penalty</th>
                   <th className="py-2.5 px-3 text-right">Daily Burn</th>
@@ -711,11 +816,11 @@ export default function PenaltyModulePage() {
                 {districts.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="py-12 text-center text-slate-400 font-bold">
-                      {loadingSummary ? "Calculating district statistics..." : "No district data available"}
+                      {loadingSummary ? "Calculating territory statistics..." : "No district data available"}
                     </td>
                   </tr>
                 ) : (
-                  districts.map((d: DistrictPenaltyStat, idx) => (
+                  districts.map((d: DistrictPenaltyStat, idx: number) => (
                     <tr key={d.district} className="hover:bg-slate-50 transition-colors">
                       <td className="py-2 px-3 font-mono text-[10px] text-slate-400">{idx + 1}</td>
                       <td className="py-2 px-3">
@@ -756,16 +861,16 @@ export default function PenaltyModulePage() {
                 )}
               </tbody>
               {districts.length > 0 && (
-                <tfoot className="sticky bottom-0 bg-slate-800 text-white text-xs font-black z-10">
+                <tfoot className="sticky bottom-0 bg-[#0f172a] text-white text-xs font-black z-10">
                   <tr>
-                    <td className="py-2.5 px-3" colSpan={4}>TOTAL ({districts.length} Districts)</td>
-                    <td className="py-2.5 px-3 text-center">{districts.reduce((s, d) => s + d.open_tickets, 0).toLocaleString()}</td>
-                    <td className="py-2.5 px-3 text-center">{districts.reduce((s, d) => s + d.open_penalty_tickets, 0).toLocaleString()}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-emerald-300">{fmtINR(districts.reduce((s, d) => s + d.mch_per_day, 0))}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-blue-300">{fmtINR(districts.reduce((s, d) => s + d.others_per_day, 0))}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-teal-300">{fmtINR(districts.reduce((s, d) => s + (d.waived_penalty || 0), 0))}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-rose-300">{fmtINR(kpis?.total_accumulated_penalty ?? 0)}</td>
-                    <td className="py-2.5 px-3 text-right font-mono text-amber-300">{fmtINR(kpis?.total_per_day_penalty ?? 0)}</td>
+                    <td className="py-3 px-3" colSpan={4}>TOTAL ({districts.length} Districts)</td>
+                    <td className="py-3 px-3 text-center">{districts.reduce((s: number, d: DistrictPenaltyStat) => s + d.open_tickets, 0).toLocaleString()}</td>
+                    <td className="py-3 px-3 text-center">{districts.reduce((s: number, d: DistrictPenaltyStat) => s + d.open_penalty_tickets, 0).toLocaleString()}</td>
+                    <td className="py-3 px-3 text-right font-mono text-emerald-300">{fmtINR(districts.reduce((s: number, d: DistrictPenaltyStat) => s + d.mch_per_day, 0))}</td>
+                    <td className="py-3 px-3 text-right font-mono text-blue-300">{fmtINR(districts.reduce((s: number, d: DistrictPenaltyStat) => s + d.others_per_day, 0))}</td>
+                    <td className="py-3 px-3 text-right font-mono text-teal-300">{fmtINR(districts.reduce((s: number, d: DistrictPenaltyStat) => s + (d.waived_penalty || 0), 0))}</td>
+                    <td className="py-3 px-3 text-right font-mono text-rose-300">{fmtINR(kpis?.total_accumulated_penalty ?? 0)}</td>
+                    <td className="py-3 px-3 text-right font-mono text-amber-300">{fmtINR(kpis?.total_per_day_penalty ?? 0)}</td>
                   </tr>
                 </tfoot>
               )}
@@ -775,20 +880,20 @@ export default function PenaltyModulePage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          TAB 3: STANDBY & WAIVER CENTER
+          VIEW 3: STANDBY & WAIVER PROTECTION CENTER
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === "standby" && (
         <div className="space-y-3.5 animate-fadeIn">
           {/* Quick Register / Standby Tool */}
-          <div className="bg-white rounded-lg border border-teal-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-teal-50/50 to-white">
+          <div className="bg-white rounded-xl border border-teal-200 p-4 shadow-xs flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-teal-50/60 to-white">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-teal-600 text-white rounded-lg">
+              <div className="p-2.5 bg-teal-600 text-white rounded-xl shadow-sm">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-xs font-black uppercase text-teal-900">Standby Equipment Protection System</h3>
+                <h3 className="text-xs font-black uppercase text-teal-900">Standby Equipment Protection & Waiver System</h3>
                 <p className="text-[11px] text-slate-500">
-                  Providing a Standby Machine immediately stops delay penalty accumulation (₹0 Delay Penalty).
+                  Providing a working Standby Machine legally waives delay penalty accumulation (₹0 Delay Penalty).
                 </p>
               </div>
             </div>
@@ -800,12 +905,12 @@ export default function PenaltyModulePage() {
                 placeholder="Enter Complaint ID (e.g. 13126072-800091)"
                 value={standbyInputId}
                 onChange={e => setStandbyInputId(e.target.value)}
-                className="px-3 py-1.5 text-xs font-mono font-bold border border-slate-300 rounded focus:outline-none focus:border-teal-500 w-64 bg-white"
+                className="px-3 py-1.5 text-xs font-mono font-bold border border-slate-300 rounded-lg focus:outline-none focus:border-teal-500 w-64 bg-white"
               />
               <button
                 onClick={() => handleQuickStandbyToggle(standbyInputId)}
                 disabled={togglingStandby || !standbyInputId.trim()}
-                className="px-4 py-1.5 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white text-xs font-black rounded shadow-xs transition-all flex items-center gap-1.5"
+                className="px-4 py-1.5 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white text-xs font-black rounded-lg shadow-xs transition-all flex items-center gap-1.5"
               >
                 <Check className="w-3.5 h-3.5" />
                 {togglingStandby ? "Updating..." : "Toggle Standby"}
@@ -816,19 +921,19 @@ export default function PenaltyModulePage() {
           {/* Standby Summary Strip */}
           {waivers?.summary && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <div className="bg-white p-3 rounded-lg border border-slate-200 text-center">
+              <div className="bg-white p-3 rounded-xl border border-slate-200 text-center">
                 <span className="text-[10px] font-black uppercase text-slate-400 block">Total Waived Complaints</span>
                 <span className="text-lg font-mono font-black text-slate-900">{waivers.summary.total_exempt_complaints.toLocaleString()}</span>
               </div>
-              <div className="bg-white p-3 rounded-lg border border-teal-200 text-center">
+              <div className="bg-white p-3 rounded-xl border border-teal-200 text-center">
                 <span className="text-[10px] font-black uppercase text-teal-600 block">Standby Machines Provided</span>
                 <span className="text-lg font-mono font-black text-teal-700">{waivers.summary.standby_count.toLocaleString()}</span>
               </div>
-              <div className="bg-white p-3 rounded-lg border border-blue-200 text-center">
+              <div className="bg-white p-3 rounded-xl border border-blue-200 text-center">
                 <span className="text-[10px] font-black uppercase text-blue-600 block">Under Warranty Assets</span>
                 <span className="text-lg font-mono font-black text-blue-700">{waivers.summary.warranty_count.toLocaleString()}</span>
               </div>
-              <div className="bg-white p-3 rounded-lg border border-emerald-200 text-center">
+              <div className="bg-white p-3 rounded-xl border border-emerald-200 text-center">
                 <span className="text-[10px] font-black uppercase text-emerald-600 block">Total Penalty Saved</span>
                 <span className="text-lg font-mono font-black text-emerald-700">{fmtINR(waivers.summary.total_waived_penalty)}</span>
               </div>
@@ -836,8 +941,8 @@ export default function PenaltyModulePage() {
           )}
 
           {/* Waivers Table */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
-            <div className="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="bg-[#0f172a] text-white px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-teal-400" />
                 <h3 className="text-xs font-black uppercase tracking-wider">Standby & Warranty Waiver Audit Ledger</h3>
@@ -848,7 +953,7 @@ export default function PenaltyModulePage() {
                     key={t}
                     onClick={() => setStandbyTypeFilter(t)}
                     className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase transition-all ${
-                      standbyTypeFilter === t ? "bg-teal-600 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                      standbyTypeFilter === t ? "bg-teal-600 text-white" : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
                     {t === "all" ? "All Exemptions" : t === "standby" ? "Standby Only" : "Warranty Only"}
@@ -886,7 +991,7 @@ export default function PenaltyModulePage() {
                       </td>
                     </tr>
                   ) : (
-                    (waivers?.records || []).map((r) => (
+                    (waivers?.records || []).map((r: ComplaintPenaltyRecord) => (
                       <tr key={r.complaint_id} className="hover:bg-teal-50/40 transition-colors">
                         <td className="py-2 px-3 font-mono font-black text-blue-600">{r.complaint_id}</td>
                         <td className="py-2 px-3 font-mono text-slate-700">{r.bar_code}</td>
@@ -935,17 +1040,17 @@ export default function PenaltyModulePage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          TAB 4: REPEATER CALLS & ASSET DEGRADATION
+          VIEW 4: ASSET DEGRADATION & CHRONIC REPEATERS
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === "repeaters" && (
         <div className="space-y-3.5 animate-fadeIn">
           {/* Repeater Header Bar */}
-          <div className="bg-slate-800 text-white px-4 py-2.5 rounded-lg flex items-center justify-between flex-wrap gap-2">
+          <div className="bg-[#0f172a] text-white px-4 py-3 rounded-xl flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Repeat2 className="w-4 h-4 text-rose-400" />
               <div>
-                <h3 className="text-xs font-black uppercase tracking-wider">Repeater Calls Audit (Asset Degradation)</h3>
-                <span className="text-[10px] text-slate-400">1 Barcode = 1 Physical Machine Tracked Across History</span>
+                <h3 className="text-xs font-black uppercase tracking-wider">Chronic Failure & Machine Breakdown Analysis</h3>
+                <span className="text-[10px] text-slate-400">1 Barcode = 1 Physical Machine Tracked Across Complete Lifetime</span>
               </div>
             </div>
 
@@ -956,8 +1061,8 @@ export default function PenaltyModulePage() {
                   <button
                     key={n}
                     onClick={() => setRepMinCount(n)}
-                    className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${
-                      repMinCount === n ? "bg-rose-600 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                    className={`px-2.5 py-1 rounded text-[10px] font-black transition-all ${
+                      repMinCount === n ? "bg-rose-600 text-white" : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
                     {n}+
@@ -968,10 +1073,10 @@ export default function PenaltyModulePage() {
               <select
                 value={repDistrict}
                 onChange={e => setRepDistrict(e.target.value)}
-                className="px-2 py-1 text-xs font-bold bg-slate-700 text-white border border-slate-600 rounded focus:outline-none"
+                className="px-2.5 py-1 text-xs font-bold bg-slate-800 text-white border border-slate-700 rounded-lg focus:outline-none"
               >
                 <option value="">All Districts</option>
-                {districts.map(d => <option key={d.district} value={d.district}>{d.district}</option>)}
+                {districts.map((d: DistrictPenaltyStat) => <option key={d.district} value={d.district}>{d.district}</option>)}
               </select>
             </div>
           </div>
@@ -979,23 +1084,23 @@ export default function PenaltyModulePage() {
           {/* Repeater KPI Strip */}
           {repeaters?.summary && (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-              <div className="bg-white p-3 rounded-lg border border-slate-200 text-center">
+              <div className="bg-white p-3 rounded-xl border border-slate-200 text-center">
                 <span className="text-[10px] font-black uppercase text-slate-400 block">Repeater Assets</span>
                 <span className="text-lg font-mono font-black text-rose-700">{repeaters.summary.total_repeater_groups.toLocaleString()}</span>
               </div>
-              <div className="bg-white p-3 rounded-lg border border-slate-200 text-center">
-                <span className="text-[10px] font-black uppercase text-slate-400 block">Total Complaints</span>
+              <div className="bg-white p-3 rounded-xl border border-slate-200 text-center">
+                <span className="text-[10px] font-black uppercase text-slate-400 block">Total Repeat Calls</span>
                 <span className="text-lg font-mono font-black text-amber-700">{repeaters.summary.total_repeater_complaints.toLocaleString()}</span>
               </div>
-              <div className="bg-white p-3 rounded-lg border border-slate-200 text-center">
+              <div className="bg-white p-3 rounded-xl border border-slate-200 text-center">
                 <span className="text-[10px] font-black uppercase text-slate-400 block">Currently Open</span>
                 <span className="text-lg font-mono font-black text-blue-700">{repeaters.summary.active_repeaters.toLocaleString()}</span>
               </div>
-              <div className="bg-white p-3 rounded-lg border border-slate-200 text-center">
+              <div className="bg-white p-3 rounded-xl border border-slate-200 text-center">
                 <span className="text-[10px] font-black uppercase text-slate-400 block">Repeater Penalty</span>
                 <span className="text-lg font-mono font-black text-rose-700">{fmtINR(repeaters.summary.total_repeater_penalty)}</span>
               </div>
-              <div className="bg-white p-3 rounded-lg border border-slate-200 text-center">
+              <div className="bg-white p-3 rounded-xl border border-slate-200 text-center">
                 <span className="text-[10px] font-black uppercase text-slate-400 block">Repeater Daily Burn</span>
                 <span className="text-lg font-mono font-black text-amber-700">{fmtINR(repeaters.summary.total_repeater_per_day)}</span>
               </div>
@@ -1003,12 +1108,12 @@ export default function PenaltyModulePage() {
           )}
 
           {/* Repeater List Cards */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-xs divide-y divide-slate-100 overflow-hidden">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs divide-y divide-slate-100 overflow-hidden">
             {loadingRepeaters ? (
-              <div className="py-12 text-center text-slate-400 text-xs font-bold">Loading repeater call records...</div>
+              <div className="py-12 text-center text-slate-400 text-xs font-bold">Loading chronic breakdown records...</div>
             ) : (repeaters?.repeaters || []).length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-xs font-bold">
-                No repeater calls found with {repMinCount}+ complaints{repDistrict ? ` in ${repDistrict}` : ""}
+                No repeater machines found with {repMinCount}+ complaints{repDistrict ? ` in ${repDistrict}` : ""}
               </div>
             ) : (
               (repeaters?.repeaters || []).map((item: RepeaterCallEntry) => {
@@ -1060,11 +1165,11 @@ export default function PenaltyModulePage() {
                     {isExp && (
                       <div className="px-4 pb-3 bg-slate-50/70 border-t border-slate-200">
                         <span className="text-[10px] font-black uppercase text-slate-400 mt-2 mb-1.5 block">
-                          History of Calls on this Physical Machine ({item.recent_complaints.length} calls)
+                          Complaint Breakdown History for Barcode #{item.bar_code} ({item.recent_complaints.length} calls)
                         </span>
                         <div className="space-y-1">
                           {item.recent_complaints.map((rc) => (
-                            <div key={rc.complaint_id} className="flex items-center gap-3 text-xs bg-white px-3 py-1.5 border border-slate-200 rounded">
+                            <div key={rc.complaint_id} className="flex items-center gap-3 text-xs bg-white px-3 py-1.5 border border-slate-200 rounded-lg">
                               <span className="font-mono font-black text-blue-600 text-[11px]">{rc.complaint_id}</span>
                               <StatusBadge s={rc.status} />
                               <span className="text-slate-500 text-[11px]">Raised: {rc.raise_date?.slice(0, 11)}</span>
@@ -1087,28 +1192,28 @@ export default function PenaltyModulePage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          TAB 5: COMPLAINT AUDIT LEDGER WITH FULL FILTERS
+          VIEW 5: FORENSIC CA AUDIT LEDGER WITH MULTI-FILTER BAR
       ══════════════════════════════════════════════════════════════════════ */}
       {activeTab === "ledger" && (
-        <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden animate-fadeIn">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden animate-fadeIn">
           {/* Header */}
-          <div className="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between flex-wrap gap-2">
+          <div className="bg-[#0f172a] text-white px-4 py-3 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-blue-400" />
+              <FileSpreadsheet className="w-4 h-4 text-cyan-400" />
               <h3 className="text-xs font-black uppercase tracking-wider">
-                Comprehensive Complaint Audit Ledger
+                Forensic CA Complaint Audit Ledger
                 {records && (
-                  <span className="ml-2 bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded text-[10px] font-mono">
-                    {records.total_records.toLocaleString()} Records
+                  <span className="ml-2 bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded text-[10px] font-mono border border-cyan-400/30">
+                    {records.total_records.toLocaleString()} Verified Records
                   </span>
                 )}
               </h3>
             </div>
-            {loadingRecords && <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />}
+            {loadingRecords && <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />}
           </div>
 
-          {/* Full Filter Bar */}
-          <div className="p-3 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-2">
+          {/* Full Multi-Filter Bar */}
+          <div className="p-3.5 bg-slate-50 border-b border-slate-200 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-9 gap-2">
             {/* Search */}
             <div className="col-span-2 sm:col-span-2">
               <label className="block text-[9px] font-black uppercase text-slate-400 mb-0.5">Search</label>
@@ -1120,7 +1225,7 @@ export default function PenaltyModulePage() {
                   value={recSearch}
                   onChange={e => setRecSearch(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && fetchRecords(1)}
-                  className="w-full pl-7 pr-2 py-1 text-xs font-medium border border-slate-300 rounded focus:outline-none focus:border-blue-500 bg-white"
+                  className="w-full pl-7 pr-2 py-1.5 text-xs font-medium border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white"
                 />
               </div>
             </div>
@@ -1131,10 +1236,10 @@ export default function PenaltyModulePage() {
               <select
                 value={recDistrict}
                 onChange={e => setRecDistrict(e.target.value)}
-                className="w-full px-2 py-1 text-xs font-bold border border-slate-300 rounded focus:outline-none bg-white"
+                className="w-full px-2 py-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:outline-none bg-white"
               >
                 <option value="">All Districts</option>
-                {districts.map(d => <option key={d.district} value={d.district}>{d.district}</option>)}
+                {districts.map((d: DistrictPenaltyStat) => <option key={d.district} value={d.district}>{d.district}</option>)}
               </select>
             </div>
 
@@ -1144,10 +1249,10 @@ export default function PenaltyModulePage() {
               <select
                 value={recZone}
                 onChange={e => setRecZone(e.target.value)}
-                className="w-full px-2 py-1 text-xs font-bold border border-slate-300 rounded focus:outline-none bg-white"
+                className="w-full px-2 py-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:outline-none bg-white"
               >
                 <option value="">All Zones</option>
-                {(summary?.zones || []).map(z => <option key={z.zone} value={z.zone}>{z.zone}</option>)}
+                {(summary?.zones || []).map((z: ZonePenaltyStat) => <option key={z.zone} value={z.zone}>{z.zone}</option>)}
               </select>
             </div>
 
@@ -1157,7 +1262,7 @@ export default function PenaltyModulePage() {
               <select
                 value={recHospType}
                 onChange={e => setRecHospType(e.target.value as any)}
-                className="w-full px-2 py-1 text-xs font-bold border border-slate-300 rounded focus:outline-none bg-white"
+                className="w-full px-2 py-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:outline-none bg-white"
               >
                 <option value="">All Types</option>
                 <option value="MCH">MCH (12h SLA)</option>
@@ -1171,7 +1276,7 @@ export default function PenaltyModulePage() {
               <select
                 value={recStatus}
                 onChange={e => setRecStatus(e.target.value as any)}
-                className="w-full px-2 py-1 text-xs font-bold border border-slate-300 rounded focus:outline-none bg-white"
+                className="w-full px-2 py-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:outline-none bg-white"
               >
                 <option value="">All Status</option>
                 <option value="open">Open / Pending</option>
@@ -1185,7 +1290,7 @@ export default function PenaltyModulePage() {
               <select
                 value={recCritical}
                 onChange={e => setRecCritical(e.target.value as any)}
-                className="w-full px-2 py-1 text-xs font-bold border border-slate-300 rounded focus:outline-none bg-white"
+                className="w-full px-2 py-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:outline-none bg-white"
               >
                 <option value="">All Equipment</option>
                 <option value="yes">Critical (+10%)</option>
@@ -1211,7 +1316,7 @@ export default function PenaltyModulePage() {
                     setRecWarranty("");
                   }
                 }}
-                className="w-full px-2 py-1 text-xs font-bold border border-slate-300 rounded focus:outline-none bg-white"
+                className="w-full px-2 py-1.5 text-xs font-bold border border-slate-300 rounded-lg focus:outline-none bg-white"
               >
                 <option value="">All Records</option>
                 <option value="standby_yes">Standby Provided</option>
@@ -1232,7 +1337,7 @@ export default function PenaltyModulePage() {
               </label>
               <button
                 onClick={() => fetchRecords(1)}
-                className="px-3 py-1 bg-slate-800 hover:bg-slate-900 text-white text-xs font-black rounded transition-colors flex items-center justify-center gap-1 shrink-0"
+                className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-black rounded-lg transition-colors flex items-center justify-center gap-1 shrink-0 shadow-xs"
               >
                 <Filter className="w-3 h-3" /> Apply
               </button>
@@ -1255,7 +1360,7 @@ export default function PenaltyModulePage() {
                   <th className="py-2.5 px-3 text-right">Delay Pen.</th>
                   <th className="py-2.5 px-3 text-right">Net Penalty</th>
                   <th className="py-2.5 px-3 text-right">Per Day</th>
-                  <th className="py-2.5 px-3 text-center">Inspect</th>
+                  <th className="py-2.5 px-3 text-center">Inspector</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
@@ -1272,7 +1377,7 @@ export default function PenaltyModulePage() {
                     </td>
                   </tr>
                 ) : (
-                  (records?.records || []).map((r, idx) => {
+                  (records?.records || []).map((r: ComplaintPenaltyRecord, idx: number) => {
                     const rowNum = ((recPage - 1) * REC_LIMIT) + idx + 1;
                     return (
                       <tr key={r.complaint_id} className="hover:bg-slate-50 transition-colors">
@@ -1334,8 +1439,8 @@ export default function PenaltyModulePage() {
                         <td className="py-2 px-3 text-center">
                           <button
                             onClick={() => setSelectedAuditRecord(r)}
-                            className="p-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded transition-colors"
-                            title="Open CA Audit Calculation Breakdown"
+                            className="p-1.5 bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-lg transition-colors"
+                            title="Inspect CA Forensic Calculation"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
@@ -1350,26 +1455,26 @@ export default function PenaltyModulePage() {
 
           {/* Pagination */}
           {records && records.total_pages > 1 && (
-            <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
               <span className="text-xs text-slate-500 font-medium">
-                Page <strong className="text-slate-900">{recPage}</strong> of <strong className="text-slate-900">{records.total_pages}</strong> · {records.total_records.toLocaleString()} records
+                Page <strong className="text-slate-900">{recPage}</strong> of <strong className="text-slate-900">{records.total_pages}</strong> · {records.total_records.toLocaleString()} total audited records
               </span>
 
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => fetchRecords(recPage - 1)}
                   disabled={recPage <= 1 || loadingRecords}
-                  className="p-1.5 rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-40"
+                  className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-                <span className="px-3 py-1 bg-slate-800 text-white font-mono font-black text-xs rounded">
+                <span className="px-3 py-1 bg-[#0f172a] text-white font-mono font-black text-xs rounded-lg">
                   {recPage}
                 </span>
                 <button
                   onClick={() => fetchRecords(recPage + 1)}
                   disabled={recPage >= records.total_pages || loadingRecords}
-                  className="p-1.5 rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-40"
+                  className="p-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -1380,20 +1485,20 @@ export default function PenaltyModulePage() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          CA AUDIT CALCULATION INSPECTOR MODAL
+          CA FORENSIC CALCULATION INSPECTOR MODAL
       ══════════════════════════════════════════════════════════════════════ */}
       {selectedAuditRecord && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full border border-slate-300 overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-300 overflow-hidden max-h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
+            <div className="bg-[#0f172a] text-white px-5 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-rose-500 text-white rounded">
+                <div className="p-2 bg-rose-600 text-white rounded-lg">
                   <ShieldAlert className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wide">
-                    CA Audit Calculation Inspector
+                    CA Forensic Calculation Inspector (NIB-825 Audit)
                   </h3>
                   <span className="text-[11px] text-slate-400 font-mono">
                     Complaint ID: {selectedAuditRecord.complaint_id} · Barcode: {selectedAuditRecord.bar_code}
@@ -1412,7 +1517,7 @@ export default function PenaltyModulePage() {
             <div className="p-5 space-y-4 overflow-y-auto text-xs">
               
               {/* Asset & Hospital Profile */}
-              <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
                 <div>
                   <span className="text-[10px] font-black uppercase text-slate-400 block">Equipment Name</span>
                   <span className="font-bold text-slate-900">{selectedAuditRecord.equipment_name || "—"}</span>
@@ -1422,13 +1527,13 @@ export default function PenaltyModulePage() {
                   <span className="font-bold text-slate-900">{selectedAuditRecord.hospital_name} ({selectedAuditRecord.district_name})</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 block">Hospital Category & Period</span>
+                  <span className="text-[10px] font-black uppercase text-slate-400 block">Hospital Category & SLA Period</span>
                   <span className="font-bold text-slate-900">
-                    {selectedAuditRecord.hospital_type} ({selectedAuditRecord.hospital_type === "MCH" ? "12-Hour Period" : "24-Hour Period"})
+                    {selectedAuditRecord.hospital_type} ({selectedAuditRecord.hospital_type === "MCH" ? "12-Hour Period (2x daily rate)" : "24-Hour Period (1x daily rate)"})
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 block">Asset Value & Penalty Slab</span>
+                  <span className="text-[10px] font-black uppercase text-slate-400 block">Estimated Asset Value & Tender Slab</span>
                   <span className="font-bold text-slate-900">
                     {fmtFull(selectedAuditRecord.asset_value)} · <strong>{INR}{selectedAuditRecord.penalty_slab} / Slab</strong>
                   </span>
@@ -1436,7 +1541,7 @@ export default function PenaltyModulePage() {
               </div>
 
               {/* Step 1: Attendance SLA Audit */}
-              <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-lg space-y-2">
+              <div className="p-4 bg-blue-50/60 border border-blue-200 rounded-xl space-y-2">
                 <div className="flex items-center justify-between font-black text-blue-900 uppercase">
                   <span>Step 1: Attendance SLA Audit</span>
                   <span className="font-mono text-xs text-blue-800">
@@ -1452,9 +1557,9 @@ export default function PenaltyModulePage() {
               </div>
 
               {/* Step 2: Downtime & Resolution SLA Audit */}
-              <div className="p-3.5 bg-purple-50/60 border border-purple-200 rounded-lg space-y-2">
+              <div className="p-4 bg-purple-50/60 border border-purple-200 rounded-xl space-y-2">
                 <div className="flex items-center justify-between font-black text-purple-900 uppercase">
-                  <span>Step 2: Downtime & Resolution Audit</span>
+                  <span>Step 2: Downtime & Resolution SLA Audit</span>
                   <span className="font-mono text-xs text-purple-800">
                     Delay Penalty: {fmtFull(selectedAuditRecord.delay_penalty)}
                   </span>
@@ -1463,31 +1568,31 @@ export default function PenaltyModulePage() {
                   <div>• <strong>Close Date:</strong> {selectedAuditRecord.complaint_close_date || "Still Open (Live accumulating)"}</div>
                   <div>• <strong>Total Downtime:</strong> {selectedAuditRecord.penalty_down_days} Days</div>
                   <div>• <strong>Resolution Grace SLA:</strong> {selectedAuditRecord.hospital_type === "MCH" ? "6 Hours" : "48 - 72 Hours"}</div>
-                  <div>• <strong>Formula:</strong> {selectedAuditRecord.hospital_type === "MCH" ? `Slab (${INR}${selectedAuditRecord.penalty_slab}) × ${selectedAuditRecord.penalty_down_days} days × 2 (12h period)` : `Slab (${INR}${selectedAuditRecord.penalty_slab}) × ${selectedAuditRecord.penalty_down_days} days × 1`}</div>
+                  <div>• <strong>Formula Applied:</strong> {selectedAuditRecord.hospital_type === "MCH" ? `Slab (${INR}${selectedAuditRecord.penalty_slab}) × ${selectedAuditRecord.penalty_down_days} days × 2 (12h period)` : `Slab (${INR}${selectedAuditRecord.penalty_slab}) × ${selectedAuditRecord.penalty_down_days} days × 1`}</div>
                 </div>
               </div>
 
               {/* Step 3: Exemptions & Standby Check */}
-              <div className="p-3.5 bg-teal-50/60 border border-teal-200 rounded-lg space-y-2">
+              <div className="p-4 bg-teal-50/60 border border-teal-200 rounded-xl space-y-2">
                 <div className="flex items-center justify-between font-black text-teal-900 uppercase">
-                  <span>Step 3: Exemption & Standby Audit</span>
+                  <span>Step 3: Exemption & Standby Machine Audit</span>
                   <span className="font-mono text-xs text-teal-800">
                     Waived Amount: {fmtFull(selectedAuditRecord.waived_penalty || 0)}
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-700 space-y-1">
                   <div>• <strong>Standby Provided:</strong> {selectedAuditRecord.standby}</div>
-                  <div>• <strong>Under Warranty:</strong> {selectedAuditRecord.is_under_warranty}</div>
+                  <div>• <strong>Under OEM Warranty:</strong> {selectedAuditRecord.is_under_warranty}</div>
                   <div>• <strong>Critical Surcharge:</strong> {selectedAuditRecord.is_critical ? "Yes (+10% applied)" : "No"}</div>
                   <div>• <strong>Exemption Status:</strong> {selectedAuditRecord.standby === "Yes" ? "Delay Penalty WAIVED (₹0)" : selectedAuditRecord.is_under_warranty === "Yes" ? "Warranty Exemption WAIVED (₹0)" : "No Exemption Applicable"}</div>
                 </div>
               </div>
 
               {/* Final Summary Card */}
-              <div className="p-3.5 bg-slate-900 text-white rounded-lg flex items-center justify-between">
+              <div className="p-4 bg-[#0f172a] text-white rounded-xl flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 block">Final Net Audited Penalty</span>
-                  <span className="text-lg font-black font-mono text-rose-400">{fmtFull(selectedAuditRecord.total_penalty)}</span>
+                  <span className="text-[10px] font-black uppercase text-slate-400 block">Final Certified Penalty</span>
+                  <span className="text-xl font-black font-mono text-rose-400">{fmtFull(selectedAuditRecord.total_penalty)}</span>
                 </div>
                 {selectedAuditRecord.total_per_day > 0 && (
                   <div className="text-right">
@@ -1502,7 +1607,7 @@ export default function PenaltyModulePage() {
             <div className="px-5 py-3 bg-slate-100 border-t border-slate-200 flex justify-end">
               <button
                 onClick={() => setSelectedAuditRecord(null)}
-                className="px-4 py-1.5 bg-slate-800 text-white font-black text-xs rounded hover:bg-slate-900"
+                className="px-4 py-2 bg-slate-900 text-white font-black text-xs rounded-lg hover:bg-black"
               >
                 Close Inspector
               </button>
@@ -1515,9 +1620,9 @@ export default function PenaltyModulePage() {
           CA RULES & SLAB GUIDE MODAL
       ══════════════════════════════════════════════════════════════════════ */}
       {showFormulaGuide && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full border border-slate-300 overflow-hidden">
-            <div className="bg-slate-900 text-white px-5 py-3.5 flex items-center justify-between">
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-300 overflow-hidden">
+            <div className="bg-[#0f172a] text-white px-5 py-4 flex items-center justify-between">
               <h3 className="text-sm font-black uppercase tracking-wide flex items-center gap-2">
                 <HelpCircle className="w-4 h-4 text-amber-400" />
                 BEMMP Rajasthan Contract (NIB-825) CA Rules & Penalty Slabs
@@ -1588,7 +1693,7 @@ export default function PenaltyModulePage() {
             <div className="px-5 py-3 bg-slate-100 border-t border-slate-200 flex justify-end">
               <button
                 onClick={() => setShowFormulaGuide(false)}
-                className="px-4 py-1.5 bg-slate-800 text-white font-black text-xs rounded hover:bg-slate-900"
+                className="px-4 py-2 bg-slate-900 text-white font-black text-xs rounded-lg hover:bg-black"
               >
                 Got It
               </button>
