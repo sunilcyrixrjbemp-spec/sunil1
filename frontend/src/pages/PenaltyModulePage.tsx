@@ -1,1644 +1,581 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  ShieldAlert,
-  Plus,
-  Download,
-  Upload,
-  Clock,
-  FileSpreadsheet,
-  X,
-  FileText,
-  TrendingDown,
-  BarChart3,
-  PieChart,
-  Repeat,
-  Layers,
-  UserCheck,
-  Zap,
-  Lock,
-  Loader2,
-  Calendar,
-  DollarSign,
-  AlertCircle,
-  CheckCircle2 as ApprovedIcon,
-  XCircle,
-  Building2
+  ShieldAlert, RefreshCw, Download, TrendingUp,
+  Zap, Activity, Building2, Users,
+  ChevronDown, ChevronUp, Search, Filter,
+  Repeat2, MapPin, Star, BarChart3, Target, Flame,
+  ChevronLeft, ChevronRight, ArrowUpRight
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { penaltyService, PenaltyRecord, DailyPenaltyRecord } from "../services/penaltyService";
+import * as XLSX from "xlsx";
 import {
-  SaaSBarChart,
-  SaaSHorizontalBarChart,
-  SaaSDonutChart,
-  SaaS3DHybridTrendChart
-} from "../components/common/SaaSCharts";
+  penaltyLiveService,
+  LivePenaltySummaryResponse,
+  LivePenaltyRecordsResponse,
+  LivePenaltyRepeatersResponse,
+  DistrictPenaltyStat,
+  RepeaterCallEntry,
+} from "../services/penaltyLiveService";
+import { SaaSBarChart, SaaSDonutChart } from "../components/common/SaaSCharts";
+
+const INR = "\u20b9";
+
+const fmtINR = (n: number) => {
+  if (n >= 1_00_00_000) return `${INR}${(n / 1_00_00_000).toFixed(2)}Cr`;
+  if (n >= 1_00_000) return `${INR}${(n / 1_00_000).toFixed(2)}L`;
+  if (n >= 1_000) return `${INR}${(n / 1_000).toFixed(1)}K`;
+  return `${INR}${n.toLocaleString("en-IN")}`;
+};
+const fmtFull = (n: number) =>
+  `${INR}${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+
+function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+  return (
+    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+      <div className="h-full rounded-full transition-all duration-500"
+        style={{ width: `${pct}%`, backgroundColor: color }} />
+    </div>
+  );
+}
 
 export default function PenaltyModulePage() {
-  const [activeTab, setActiveTab] = useState<"monthly" | "dashboard" | "daily" | "repeated">("monthly");
-  const [subTab, setSubTab] = useState<"all" | "medical" | "dh" | "chc">("all");
-  const [loading, setLoading] = useState(false);
-  const [records, setRecords] = useState<PenaltyRecord[]>([]);
-  const [selectedComplaintId, setSelectedComplaintId] = useState<string>("");
-  const [dailyRecords, setDailyRecords] = useState<DailyPenaltyRecord[]>([]);
+  const [summary, setSummary] = useState<LivePenaltySummaryResponse | null>(null);
+  const [records, setRecords] = useState<LivePenaltyRecordsResponse | null>(null);
+  const [repeaters, setRepeaters] = useState<LivePenaltyRepeatersResponse | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+  const [loadingRepeaters, setLoadingRepeaters] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  // Multi-Filter State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("all");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [selectedZone, setSelectedZone] = useState("all");
-  const [selectedDistrict, setSelectedDistrict] = useState("all");
-  const [selectedDI, setSelectedDI] = useState("all");
-  const [selectedHospital, setSelectedHospital] = useState("all");
-  const [selectedEquipment, setSelectedEquipment] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [recSearch, setRecSearch] = useState("");
+  const [recDistrict, setRecDistrict] = useState("");
+  const [recStatus, setRecStatus] = useState<"" | "open" | "closed">("");
+  const [recCritical, setRecCritical] = useState<"" | "yes" | "no">("");
+  const [recOnlyPenalty, setRecOnlyPenalty] = useState(false);
+  const [recPage, setRecPage] = useState(1);
+  const REC_LIMIT = 50;
 
-  // Modals
-  const [showManualModal, setShowManualModal] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [repMinCount, setRepMinCount] = useState(2);
+  const [repDistrict, setRepDistrict] = useState("");
+  const [expandedRepeaters, setExpandedRepeaters] = useState<Set<string>>(new Set());
+  const [distSort, setDistSort] = useState<"penalty" | "perday" | "calls">("penalty");
 
-  // Bulk Upload State with High-Speed Progress Engine
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({
-    totalRows: 0,
-    processedRows: 0,
-    savedRows: 0,
-    skippedClosedRows: 0,
-    errorsCount: 0,
-    percentage: 0,
-    startTime: 0,
-    elapsedSeconds: 0,
-    currentChunk: 0,
-    totalChunks: 0
-  });
-  const [uploadReport, setUploadReport] = useState<any>(null);
-
-  // Manual Form State
-  const [formData, setFormData] = useState({
-    complaint_id: "",
-    barcode: "",
-    hospital_type: "CHC",
-    equipment_type: "Non-Critical",
-    is_critical: false,
-    complaint_raise_date: "",
-    attend_date: "",
-    close_date: "",
-    final_close_date: "",
-    condemnation_date: "",
-    attended_engineer_name: "",
-    close_engineer_id: "",
-    daily_penalty_rate: "500",
-    asset_value: "500000",
-    is_part_missing: false,
-    part_missing_days: "0",
-    is_standby_provided: false
-  });
-
-  const [barcodeVerified, setBarcodeVerified] = useState<boolean | null>(null);
-  const [barcodeAssetInfo, setBarcodeAssetInfo] = useState<any>(null);
-  const [verifyingBarcode, setVerifyingBarcode] = useState(false);
-
-  useEffect(() => {
-    fetchPenaltyList();
-  }, [selectedDistrict]);
-
-  const fetchPenaltyList = async () => {
-    setLoading(true);
+  const fetchSummary = useCallback(async () => {
+    setLoadingSummary(true);
     try {
-      const res = await penaltyService.getPenaltyList({
-        district: selectedDistrict !== "all" ? selectedDistrict : undefined,
-        search: searchQuery || undefined,
-        complaint_id: selectedComplaintId || undefined
+      const data = await penaltyLiveService.getSummary();
+      setSummary(data);
+      setLastRefresh(new Date());
+    } catch (e: any) {
+      toast.error("Summary load failed: " + (e.message || "error"));
+    } finally { setLoadingSummary(false); }
+  }, []);
+
+  const fetchRecords = useCallback(async (page = 1) => {
+    setLoadingRecords(true);
+    try {
+      const data = await penaltyLiveService.getRecords({
+        page, limit: REC_LIMIT,
+        search: recSearch || undefined,
+        district: recDistrict || undefined,
+        status: recStatus || "all",
+        critical: recCritical || undefined,
+        only_penalty: recOnlyPenalty || undefined,
       });
-      if (res.success) {
-        setRecords(res.records || []);
-        if (res.dailyRecords) {
-          setDailyRecords(res.dailyRecords);
-        }
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load penalty records.");
-    } finally {
-      setLoading(false);
-    }
-  };
+      setRecords(data);
+      setRecPage(page);
+    } catch (e: any) {
+      toast.error("Records load failed: " + (e.message || "error"));
+    } finally { setLoadingRecords(false); }
+  }, [recSearch, recDistrict, recStatus, recCritical, recOnlyPenalty]);
 
-  const handleVerifyBarcodeLive = async (code: string) => {
-    if (!code || code.trim().length < 4) {
-      setBarcodeVerified(null);
-      setBarcodeAssetInfo(null);
-      return;
-    }
-    setVerifyingBarcode(true);
+  const fetchRepeaters = useCallback(async () => {
+    setLoadingRepeaters(true);
     try {
-      const res = await penaltyService.verifyBarcode(code.trim());
-      if (res.success && res.valid) {
-        setBarcodeVerified(true);
-        setBarcodeAssetInfo(res.asset);
-        toast.success(`✓ Barcode Verified: ${res.asset.equipment_name} (${res.asset.hospital_name})`);
-      } else {
-        setBarcodeVerified(false);
-        setBarcodeAssetInfo(null);
-        toast.error(res.error || `❌ Error: Barcode #${code} not found in database Asset Inventory!`);
-      }
-    } catch (e) {
-      setBarcodeVerified(false);
-      setBarcodeAssetInfo(null);
-    } finally {
-      setVerifyingBarcode(false);
-    }
-  };
-
-  const handleManualSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.complaint_id || !formData.barcode) {
-      toast.error("Complaint ID and Barcode are required!");
-      return;
-    }
-
-    if (barcodeVerified === false) {
-      toast.error(`❌ Error: Barcode #${formData.barcode} not found in Asset Inventory! Entry Rejected.`);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const res = await penaltyService.savePenaltyEntries([formData]);
-      if (res.success) {
-        toast.success(res.message || "Penalty record saved successfully!");
-        setShowManualModal(false);
-        setFormData({
-          complaint_id: "",
-          barcode: "",
-          hospital_type: "CHC",
-          equipment_type: "Non-Critical",
-          is_critical: false,
-          complaint_raise_date: "",
-          attend_date: "",
-          close_date: "",
-          final_close_date: "",
-          condemnation_date: "",
-          attended_engineer_name: "",
-          close_engineer_id: "",
-          daily_penalty_rate: "500",
-          asset_value: "500000",
-          is_part_missing: false,
-          part_missing_days: "0",
-          is_standby_provided: false
-        });
-        setBarcodeVerified(null);
-        fetchPenaltyList();
-      } else {
-        toast.error((res.errors && res.errors[0]?.error) || "Validation failed.");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save penalty entry.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownloadCSVTemplate = () => {
-    const templateHeaders = [
-      "Complaint ID", "Barcode", "Hospital Type", "Complaint Raise Date",
-      "Attend Date", "Close Date", "Final Close Date",
-      "Is Standby Provided", "Is Part Missing"
-    ];
-
-    const sampleRow1 = [
-      "13126072-800091", "75043156", "CHC", "21-Jan-2025 16:30:47",
-      "23-Jan-2025 18:30:47", "15-May-2025 16:30:47", "15-May-2025 16:30:47",
-      "Yes", "No"
-    ];
-
-    const sampleRow2 = [
-      "SCRJ1234", "800489061567", "Medical College", "20-Jun-2025 10:07:15",
-      "20-Jun-2025 10:30:00", "20-Jun-2025 16:22:49", "20-Jun-2025 16:22:49",
-      "No", "Yes"
-    ];
-
-    const csvContent = "data:text/csv;charset=utf-8," + [
-      templateHeaders.join(","),
-      sampleRow1.map(x => `"${x}"`).join(","),
-      sampleRow2.map(x => `"${x}"`).join(",")
-    ].join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Complaint_Import_CSV_Template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("📥 CSV Import Template downloaded successfully!");
-  };
-
-  const handleCSVImportUpload = async () => {
-    if (!uploadFile) {
-      toast.error("Please select a CSV file to upload.");
-      return;
-    }
-
-    setUploading(true);
-    setUploadReport(null);
-
-    const startTime = Date.now();
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-        if (lines.length < 2) {
-          toast.error("CSV file contains no data rows.");
-          setUploading(false);
-          return;
-        }
-
-        const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, "").trim().toLowerCase());
-        const allEntries: any[] = [];
-
-        for (let i = 1; i < lines.length; i++) {
-          const cols = lines[i].split(",").map(c => c.replace(/^"|"$/g, "").trim());
-          if (cols.length < 2) continue;
-
-          const rowObj: any = {};
-          headers.forEach((h, idx) => {
-            rowObj[h] = cols[idx] || "";
-          });
-
-          allEntries.push({
-            complaint_id: rowObj["complaint id"] || rowObj["complaint_id"] || cols[0],
-            barcode: rowObj["barcode"] || rowObj["bar code"] || cols[1],
-            hospital_type: rowObj["hospital type"] || rowObj["hospital_type"] || cols[2] || "CHC",
-            complaint_raise_date: rowObj["complaint raise date"] || rowObj["raise_date"] || cols[3],
-            attend_date: rowObj["attend date"] || rowObj["attend_date"] || cols[4],
-            close_date: rowObj["close date"] || rowObj["close_date"] || cols[5],
-            final_close_date: rowObj["final close date"] || rowObj["final_close_date"] || cols[6] || rowObj["close date"] || cols[5],
-            is_standby_provided: (rowObj["is standby provided"] || rowObj["standby"] || cols[7] || "").toLowerCase() === "yes",
-            is_part_missing: (rowObj["is part missing"] || rowObj["part_missing"] || cols[8] || "").toLowerCase() === "yes"
-          });
-        }
-
-        const CHUNK_SIZE = 2000;
-        const totalRows = allEntries.length;
-        const totalChunks = Math.ceil(totalRows / CHUNK_SIZE);
-
-        let processedRows = 0;
-        let savedRows = 0;
-        let skippedClosedRows = 0;
-        let totalErrors = 0;
-        const combinedErrors: any[] = [];
-
-        setUploadProgress({
-          totalRows,
-          processedRows: 0,
-          savedRows: 0,
-          skippedClosedRows: 0,
-          errorsCount: 0,
-          percentage: 0,
-          startTime,
-          elapsedSeconds: 0,
-          currentChunk: 0,
-          totalChunks
-        });
-
-        for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
-          const chunkEntries = allEntries.slice(chunkIdx * CHUNK_SIZE, (chunkIdx + 1) * CHUNK_SIZE);
-          
-          try {
-            const res = await penaltyService.savePenaltyEntries(chunkEntries);
-            processedRows += chunkEntries.length;
-            savedRows += (res.saved || 0);
-            skippedClosedRows += (res.skippedFinalClosed || 0);
-            totalErrors += (res.errorsCount || 0);
-
-            if (res.errors && res.errors.length > 0) {
-              combinedErrors.push(...res.errors.map((e: any) => ({
-                row: (chunkIdx * CHUNK_SIZE) + e.row,
-                error: e.error
-              })));
-            }
-          } catch (e: any) {
-            totalErrors += chunkEntries.length;
-            combinedErrors.push({ row: (chunkIdx * CHUNK_SIZE) + 1, error: e.message || "Chunk request failed" });
-          }
-
-          const elapsedSec = parseFloat(((Date.now() - startTime) / 1000).toFixed(1));
-          const pct = Math.round((processedRows / totalRows) * 100);
-
-          setUploadProgress({
-            totalRows,
-            processedRows,
-            savedRows,
-            skippedClosedRows,
-            errorsCount: totalErrors,
-            percentage: pct,
-            startTime,
-            elapsedSeconds: elapsedSec,
-            currentChunk: chunkIdx + 1,
-            totalChunks
-          });
-        }
-
-        const totalElapsedSec = parseFloat(((Date.now() - startTime) / 1000).toFixed(1));
-        const finalReport = {
-          success: true,
-          totalRows,
-          savedRows,
-          skippedClosedRows,
-          errorsCount: totalErrors,
-          errors: combinedErrors,
-          elapsedSeconds: totalElapsedSec
-        };
-
-        setUploadReport(finalReport);
-        toast.success(`⚡ High-Speed Upload Completed in ${totalElapsedSec}s! ${savedRows.toLocaleString()} Saved, ${skippedClosedRows.toLocaleString()} Final Closed Skipped.`);
-        fetchPenaltyList();
-      } catch (err: any) {
-        toast.error("Failed to parse CSV file: " + err.message);
-      } finally {
-        setUploading(false);
-      }
-    };
-    reader.readAsText(uploadFile);
-  };
-
-  const handleExportExcel = (type: "23_columns" | "53_columns" = "23_columns") => {
-    if (records.length === 0) {
-      toast.error("No penalty records available to export.");
-      return;
-    }
-
-    let headers: string[] = [];
-    let rows: any[][] = [];
-
-    if (type === "23_columns") {
-      headers = [
-        "S.No.", "District Name", "Hospital Type", "Hospital Name", "Bar Code",
-        "Equipment Name", "Equipment Model", "Complaint ID", "Complaint Raise Date",
-        "Complaint Close Date", "Complaint Status", "Total Downtime (Hours)", "Estimated Cost",
-        "Penalty Days", "Complaint Final Close", "Attend Date", "Attend Penalty",
-        "Delay Penalty", "Total Penalty (Attend+Delay)", "Is Under Warranty",
-        "Service Provider Name", "Attended Service Engg ID", "Closing Service Engg ID"
-      ];
-
-      rows = records.map((r, idx) => [
-        idx + 1, r.district_name || "", r.hospital_type || "", r.hospital_name || "", r.bar_code,
-        r.equipment_name || "", r.equipment_model || "", r.complaint_id, r.complaint_raise_date,
-        r.complaint_close_date, r.status || "Final Closed", (r.total_downtime || 0) * 24,
-        r.asset_value || 0, r.chargeable_days || 0, r.final_close_date || r.complaint_close_date,
-        r.attend_date, 0, r.total_penalty || 0, r.total_penalty || 0, "No",
-        "Cyrix Healthcare", r.attended_engineer_name || "", r.close_engineer_id || ""
-      ]);
-    } else {
-      headers = Array.from({ length: 53 }, (_, i) => `Col_${i + 1}`);
-      headers[0] = "S.No.";
-      headers[1] = "District Name";
-      headers[2] = "Hospital Type";
-      headers[3] = "Hospital Name";
-      headers[4] = "Bar Code";
-      headers[5] = "Equipment Name";
-      headers[6] = "Equipment Model";
-      headers[7] = "Complaint ID";
-      headers[8] = "Complaint Raise Date";
-      headers[9] = "Complaint Close date";
-      headers[10] = "Complaint Status";
-      headers[11] = "Total Downtime";
-      headers[12] = "Estimated Cost";
-      headers[13] = "Penalty Days";
-      headers[14] = "Complaint Final Close";
-      headers[15] = "Attend Date";
-      headers[16] = "Attend Penalty";
-      headers[17] = "Delay Penalty";
-      headers[18] = "Total Penalty (Attend+Delay)";
-      headers[19] = "Is Under Warranty";
-      headers[20] = "Service Provider Name";
-      headers[21] = "Attended Service Engg ID";
-      headers[22] = "Closing Service Engg ID";
-      headers[23] = "Status";
-      headers[24] = "Hospital Type";
-      headers[25] = "Equipment Type";
-      headers[26] = "Asset Value";
-      headers[36] = "Penalty Slab";
-      headers[39] = "Total Penalty";
-      headers[43] = "Standby By Status";
-
-      rows = records.map((r, idx) => {
-        const rowArr = Array(53).fill("");
-        rowArr[0] = idx + 1;
-        rowArr[1] = r.district_name || "";
-        rowArr[2] = r.hospital_type || "";
-        rowArr[3] = r.hospital_name || "";
-        rowArr[4] = r.bar_code;
-        rowArr[5] = r.equipment_name || "";
-        rowArr[6] = r.equipment_model || "";
-        rowArr[7] = r.complaint_id;
-        rowArr[8] = r.complaint_raise_date;
-        rowArr[9] = r.complaint_close_date;
-        rowArr[10] = r.status || "Final Closed";
-        rowArr[11] = (r.total_downtime || 0) * 24;
-        rowArr[12] = r.asset_value || 0;
-        rowArr[13] = r.chargeable_days || 0;
-        rowArr[14] = r.final_close_date || r.complaint_close_date;
-        rowArr[15] = r.attend_date;
-        rowArr[16] = 0;
-        rowArr[17] = r.total_penalty || 0;
-        rowArr[18] = r.total_penalty || 0;
-        rowArr[19] = "No";
-        rowArr[20] = "Cyrix Healthcare";
-        rowArr[21] = r.attended_engineer_name || "";
-        rowArr[22] = r.close_engineer_id || "";
-        rowArr[23] = "Closed";
-        rowArr[24] = r.hospital_type || "";
-        rowArr[25] = r.equipment_type || "Non-Critical";
-        rowArr[26] = r.asset_value || 0;
-        rowArr[36] = r.penalty_slab_amount || 0;
-        rowArr[39] = r.total_penalty || 0;
-        rowArr[43] = r.standby_status || "";
-        return rowArr;
+      const data = await penaltyLiveService.getRepeaters({
+        group_by: "equipment", min_count: repMinCount,
+        district: repDistrict || undefined, limit: 100,
       });
-    }
+      setRepeaters(data);
+    } catch (e: any) {
+      toast.error("Repeaters load failed: " + (e.message || "error"));
+    } finally { setLoadingRepeaters(false); }
+  }, [repMinCount, repDistrict]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.map(x => `"${x}"`).join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Rajasthan_Penalty_File_${type}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success(`📥 Penalty File (${type === "23_columns" ? "23-Column Core" : "53-Column Full"}) exported!`);
+  useEffect(() => { fetchSummary(); fetchRepeaters(); fetchRecords(1); }, []);
+  useEffect(() => { fetchRepeaters(); }, [repMinCount, repDistrict]);
+  useEffect(() => { fetchRecords(1); }, [recDistrict, recStatus, recCritical, recOnlyPenalty]);
+
+  const handleRefresh = () => {
+    fetchSummary(); fetchRecords(recPage); fetchRepeaters();
+    toast.success("Live data refreshed!");
   };
 
-  // Filter Options
-  const filterOptions = useMemo(() => {
-    const districts = Array.from(new Set(records.map(r => r.district_name).filter(Boolean))).sort();
-    const hospitals = Array.from(new Set(records.map(r => r.hospital_name).filter(Boolean))).sort();
-    const equipmentList = Array.from(new Set(records.map(r => r.equipment_name).filter(Boolean))).sort();
-    const dis = Array.from(new Set(records.map(r => r.attended_engineer_name || r.di_name).filter(Boolean))).sort();
-    return { districts, hospitals, equipmentList, dis };
-  }, [records]);
+  const handleExport = async () => {
+    const tid = toast.loading("Fetching all records...");
+    try {
+      const all = await penaltyLiveService.getRecords({ page: 1, limit: 99999, status: "all" });
+      const rows = all.records.map((r, i) => ({
+        "S.No": i + 1, "Complaint ID": r.complaint_id, "District": r.district_name,
+        "Hospital": r.hospital_name, "Type": r.hospital_type,
+        "Equipment": r.equipment_name, "Barcode": r.bar_code, "Status": r.complaint_status,
+        "Critical": r.is_critical ? "Yes" : "No", "Warranty": r.is_under_warranty,
+        "Standby": r.standby, "Raise Date": r.complaint_raise_date,
+        "Attend Date": r.attend_date, "Close Date": r.complaint_close_date,
+        "Attend Penalty": r.attend_penalty, "Delay Penalty": r.delay_penalty,
+        "Total Penalty": r.total_penalty, "Per Day": r.total_per_day,
+        "Penalty Days": r.penalty_down_days, "DI": r.di_name,
+        "Coordinator": r.coordinator_name, "Zone": r.zone_name,
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Live Penalty");
+      XLSX.writeFile(wb, `Penalty_Audit_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.dismiss(tid);
+      toast.success(`Exported ${rows.length} records!`);
+    } catch {
+      toast.dismiss(tid);
+      toast.error("Export failed.");
+    }
+  };
 
-  // Multi-Filtered Records
-  const filteredRecords = useMemo(() => {
-    return records.filter(r => {
-      const q = searchQuery.toLowerCase();
-      const matchesQuery = !q ||
-        r.complaint_id.toLowerCase().includes(q) ||
-        r.bar_code.toLowerCase().includes(q) ||
-        (r.hospital_name || "").toLowerCase().includes(q) ||
-        (r.equipment_name || "").toLowerCase().includes(q);
+  const kpis = summary?.kpis;
+  const districts = [...(summary?.districts || [])].sort((a, b) =>
+    distSort === "penalty" ? b.total_penalty - a.total_penalty :
+    distSort === "perday"  ? b.per_day_penalty - a.per_day_penalty :
+    b.open_tickets - a.open_tickets
+  );
+  const maxDistPenalty = Math.max(...districts.map(d => d.total_penalty), 1);
+  const maxDistPerDay  = Math.max(...districts.map(d => d.per_day_penalty), 1);
+  const distBarData = districts.slice(0, 12).map(d => ({
+    name: d.district.length > 10 ? d.district.slice(0, 10) + "\u2026" : d.district,
+    amount: d.total_penalty,
+  }));
+  const zoneDonutData = (summary?.zones || []).map(z => ({
+    name: z.zone || "Unassigned", value: z.total_penalty,
+  }));
+  const coordList = [...(summary?.coordinators || [])].sort((a, b) => b.total_penalty - a.total_penalty).slice(0, 8);
+  const maxCoord = Math.max(...coordList.map(c => c.total_penalty), 1);
 
-      const matchesMonth = selectedMonth === "all" || (r.complaint_raise_date || "").toLowerCase().includes(selectedMonth.toLowerCase());
-      const matchesZone = selectedZone === "all" || (r.zone_name || r.district_name || "").toLowerCase().includes(selectedZone.toLowerCase());
-      const matchesDistrict = selectedDistrict === "all" || r.district_name === selectedDistrict;
-      const matchesDI = selectedDI === "all" || (r.attended_engineer_name === selectedDI || r.di_name === selectedDI);
-      const matchesHospital = selectedHospital === "all" || r.hospital_name === selectedHospital;
-      const matchesEquipment = selectedEquipment === "all" || r.equipment_name === selectedEquipment;
-      const matchesStatus = selectedStatus === "all" || (r.status || "").toLowerCase().includes(selectedStatus.toLowerCase());
-
-      const matchesSubTab = subTab === "all" ||
-        (subTab === "medical" && (r.hospital_type || "").toLowerCase().includes("medical")) ||
-        (subTab === "dh" && (r.hospital_type || "").toLowerCase().includes("dh")) ||
-        (subTab === "chc" && ((r.hospital_type || "").toLowerCase().includes("chc") || (r.hospital_type || "").toLowerCase().includes("phc")));
-
-      return matchesQuery && matchesMonth && matchesZone && matchesDistrict && matchesDI && matchesHospital && matchesEquipment && matchesStatus && matchesSubTab;
+  const toggleRep = (key: string) => {
+    setExpandedRepeaters(prev => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key); else n.add(key);
+      return n;
     });
-  }, [records, searchQuery, selectedMonth, selectedZone, selectedDistrict, selectedDI, selectedHospital, selectedEquipment, selectedStatus, subTab]);
+  };
 
-  // KPI Computations
-  const totalAuditedPenalty = useMemo(() => filteredRecords.reduce((sum, r) => sum + (r.total_penalty || 0), 0), [filteredRecords]);
-  const totalDowntimeDays = useMemo(() => filteredRecords.reduce((sum, r) => sum + (r.total_downtime || 0), 0), [filteredRecords]);
-  const standbyExemptedCount = useMemo(() => filteredRecords.filter(r => (r.standby_status || "").toLowerCase().includes("provided")).length, [filteredRecords]);
-  const partMissingCount = useMemo(() => filteredRecords.filter(r => (r.exemption_reason || "").toLowerCase().includes("part")).length, [filteredRecords]);
-  const criticalCount = useMemo(() => filteredRecords.filter(r => (r.equipment_type || "").toLowerCase().includes("critical")).length, [filteredRecords]);
-  const criticalPenalty = useMemo(() => filteredRecords.filter(r => (r.equipment_type || "").toLowerCase().includes("critical")).reduce((sum, r) => sum + (r.total_penalty || 0), 0), [filteredRecords]);
-
-  // Analytics Chart Data Computations
-  const districtChartData = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredRecords.forEach(r => {
-      const d = r.district_name || "Unassigned District";
-      map[d] = (map[d] || 0) + (r.total_penalty || 0);
-    });
-    return Object.keys(map).map(k => ({ name: k, amount: map[k] }));
-  }, [filteredRecords]);
-
-  const zoneChartData = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredRecords.forEach(r => {
-      const z = r.zone_name || (r.district_name ? `${r.district_name} Zone` : "Unassigned Zone");
-      map[z] = (map[z] || 0) + (r.total_penalty || 0);
-    });
-    return Object.keys(map).map(k => ({ name: k, value: map[k] }));
-  }, [filteredRecords]);
-
-  const equipmentChartData = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredRecords.forEach(r => {
-      const eq = r.equipment_name || "Unspecified Equipment";
-      map[eq] = (map[eq] || 0) + (r.total_penalty || 0);
-    });
-    return Object.keys(map).slice(0, 10).map(k => ({ name: k, amount: map[k] }));
-  }, [filteredRecords]);
-
-  const hospitalChartData = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredRecords.forEach(r => {
-      const h = r.hospital_name || "Unspecified Hospital";
-      map[h] = (map[h] || 0) + (r.total_penalty || 0);
-    });
-    return Object.keys(map).slice(0, 10).map(k => ({ name: k, amount: map[k] }));
-  }, [filteredRecords]);
-
-  const diChartData = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredRecords.forEach(r => {
-      const di = r.attended_engineer_name || r.di_name || "Unassigned DI";
-      map[di] = (map[di] || 0) + (r.total_penalty || 0);
-    });
-    return Object.keys(map).map(k => ({ name: k, amount: map[k] }));
-  }, [filteredRecords]);
-
-  const dayTrendData = useMemo(() => {
-    const map: Record<string, { amount: number; count: number }> = {};
-    filteredRecords.forEach(r => {
-      const dayStr = (r.complaint_raise_date || "").slice(0, 11) || "Date";
-      if (!map[dayStr]) map[dayStr] = { amount: 0, count: 0 };
-      map[dayStr].amount += r.total_penalty || 0;
-      map[dayStr].count += 1;
-    });
-    return Object.keys(map).map(k => ({ x: k, y: map[k].amount, count: map[k].count }));
-  }, [filteredRecords]);
-
-  // Repeated Calls Frequency Data
-  const repeatedBarcodeData = useMemo(() => {
-    const map: Record<string, { barcode: string; equipment: string; hospital: string; district: string; count: number; totalPenalty: number; complaints: string[] }> = {};
-    filteredRecords.forEach(r => {
-      const bc = r.bar_code || "N/A";
-      if (!map[bc]) {
-        map[bc] = {
-          barcode: bc,
-          equipment: r.equipment_name || "-",
-          hospital: r.hospital_name || "-",
-          district: r.district_name || "-",
-          count: 0,
-          totalPenalty: 0,
-          complaints: []
-        };
-      }
-      map[bc].count += 1;
-      map[bc].totalPenalty += r.total_penalty || 0;
-      map[bc].complaints.push(r.complaint_id);
-    });
-
-    return Object.values(map).sort((a, b) => b.count - a.count);
-  }, [filteredRecords]);
+  const StatusBadge = ({ s }: { s: string }) => {
+    const lc = s.toLowerCase();
+    const cls =
+      lc.includes("engineer closed") ? "bg-emerald-100 text-emerald-800 border-emerald-200" :
+      lc.includes("final")           ? "bg-slate-100 text-slate-700 border-slate-200" :
+      lc.includes("open") || lc.includes("pending") ? "bg-rose-100 text-rose-700 border-rose-200" :
+      lc.includes("re-open")         ? "bg-amber-100 text-amber-800 border-amber-200" :
+      "bg-blue-100 text-blue-800 border-blue-200";
+    return <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase border rounded-none ${cls}`}>{s}</span>;
+  };
 
   return (
     <div className="space-y-4 animate-fadeIn text-slate-800 font-sans p-3 sm:p-4 bg-slate-100 min-h-screen">
-      
-      {/* 1. TOP GREETING BANNER (Matching Overview / Expense Page Aesthetic) */}
-      <div className="bg-[#486581] text-white px-4 py-2.5 rounded-none shadow-xs flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-full bg-slate-300 text-slate-800 font-extrabold flex items-center justify-center text-xs">
-            S
-          </div>
-          <span className="text-xs font-extrabold tracking-wide">
-            Good Evening, System Administrator 👋 <span className="opacity-75 font-normal">(Admin)</span>
-          </span>
-        </div>
 
+      {/* ── HEADER ── */}
+      <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2d5986] text-white px-4 py-3 rounded-xl shadow-xl flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-rose-500/20 rounded-lg">
+            <ShieldAlert className="w-6 h-6 text-rose-300" />
+          </div>
+          <div>
+            <h1 className="text-sm font-black tracking-wide">PENALTY AUDIT</h1>
+            <p className="text-[10px] text-blue-200 font-medium">
+              NIB-825 Live Engine · Real-time BEMMP Contract Penalty
+              {lastRefresh && ` · ${lastRefresh.toLocaleTimeString("en-IN")}`}
+            </p>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleDownloadCSVTemplate}
-            className="flex items-center gap-1 px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-none font-bold text-[11px] border border-white/20 transition-all"
-          >
-            <FileText className="w-3.5 h-3.5" /> CSV Template
+          <button onClick={handleRefresh} disabled={loadingSummary}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg font-bold text-xs border border-white/20 transition-all disabled:opacity-50">
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingSummary ? "animate-spin" : ""}`} />
+            Refresh
           </button>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-none font-bold text-[11px] shadow-2xs transition-all"
-          >
-            <Upload className="w-3.5 h-3.5" /> High-Speed Import
-          </button>
-          <button
-            onClick={() => setShowManualModal(true)}
-            className="flex items-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-none font-bold text-[11px] shadow-2xs transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add Entry
-          </button>
-          <button
-            onClick={() => handleExportExcel("23_columns")}
-            className="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-none font-bold text-[11px] transition-all"
-          >
-            <Download className="w-3.5 h-3.5" /> 23-Col Export
-          </button>
-          <button
-            onClick={() => handleExportExcel("53_columns")}
-            className="flex items-center gap-1 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-none font-bold text-[11px] transition-all"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" /> 53-Col Export
+          <button onClick={handleExport}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs shadow transition-all">
+            <Download className="w-3.5 h-3.5" /> Export
           </button>
         </div>
       </div>
 
-      {/* 2. SUMMARY STRIP HEADER (Matching Overview / Expense Page Header) */}
-      <div className="bg-[#345168] text-white px-4 py-2 rounded-none flex items-center justify-between">
-        <span className="text-xs font-black uppercase tracking-wider">
-          CONTRACT PENALTY AUDIT SUMMARY
-        </span>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">MONTH:</span>
-          <div className="bg-white text-slate-800 px-2.5 py-0.5 rounded-none text-xs font-bold flex items-center gap-1">
-            <span>August, 2026</span>
-            <Calendar className="w-3.5 h-3.5 text-slate-500" />
+      {/* ── KPI CARDS ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {[
+          { label: "Total Penalty",  val: kpis ? fmtINR(kpis.total_accumulated_penalty) : "…", sub: kpis ? `${kpis.total_complaints.toLocaleString()} complaints` : "Loading…", icon: <Flame className="w-4 h-4 opacity-60"/>, grad: "from-rose-600 to-rose-800", span: true },
+          { label: "Per Day Burn",   val: kpis ? fmtINR(kpis.total_per_day_penalty) : "…",     sub: "/day live rate",                                                               icon: <TrendingUp className="w-4 h-4 opacity-60"/>, grad: "from-amber-500 to-orange-600" },
+          { label: "Open Tickets",   val: kpis?.open_tickets?.toLocaleString() ?? "…",          sub: kpis ? `${kpis.open_penalty_tickets.toLocaleString()} with penalty` : "Loading…", icon: <Activity className="w-4 h-4 opacity-60"/>, grad: "from-blue-600 to-blue-800" },
+          { label: "Critical Open",  val: kpis?.critical_open_count?.toLocaleString() ?? "…",   sub: "+10% surcharge",                                                              icon: <Star className="w-4 h-4 opacity-60"/>, grad: "from-purple-600 to-purple-800" },
+          { label: "MCH / Day",      val: kpis ? fmtINR(kpis.mch_per_day_penalty) : "…",        sub: kpis ? `${kpis.mch_open_count} open` : "Loading…",                            icon: <Zap className="w-4 h-4 opacity-60"/>, grad: "from-emerald-600 to-teal-700" },
+          { label: "Others / Day",   val: kpis ? fmtINR(kpis.others_per_day_penalty) : "…",     sub: kpis ? `${kpis.others_open_count} open` : "Loading…",                         icon: <Building2 className="w-4 h-4 opacity-60"/>, grad: "from-indigo-600 to-indigo-800" },
+        ].map((c, i) => (
+          <div key={i} className={`bg-gradient-to-br ${c.grad} text-white rounded-xl p-4 shadow-lg flex flex-col justify-between min-h-[100px] ${c.span ? "col-span-2 sm:col-span-1" : ""}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-black uppercase tracking-wider opacity-80">{c.label}</span>
+              {c.icon}
+            </div>
+            <div>
+              <div className="text-xl font-black font-mono mt-1 leading-tight">{c.val}</div>
+              <div className="text-[10px] opacity-70 mt-0.5">{c.sub}</div>
+            </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* 3. 6 SIDE-BY-SIDE COMPACT DATA CARDS (Exact Replica of Overview Expense Cards) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        {/* Card 1: Total Audited Penalty */}
-        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">TOTAL AUDITED PENALTY</span>
-            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-slate-100 text-slate-600 border border-slate-200">
-              {filteredRecords.length} Calls
-            </span>
+      {/* ── CHARTS ROW ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-rose-500" /> District-Wise Penalty (Top 12)
+            </h2>
+            {loadingSummary && <RefreshCw className="w-3.5 h-3.5 animate-spin text-slate-400" />}
           </div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="p-1.5 bg-blue-600 text-white rounded-none shrink-0">
-              <DollarSign className="w-4 h-4" />
-            </div>
-            <span className="text-base font-black text-slate-900 font-mono tracking-tight truncate">
-              ₹{totalAuditedPenalty.toLocaleString("en-IN")}
-            </span>
-          </div>
+          {distBarData.length > 0
+            ? <SaaSBarChart data={distBarData} height={220} />
+            : <div className="h-[220px] flex items-center justify-center text-slate-400 text-xs font-bold">{loadingSummary ? "Loading…" : "No data"}</div>}
         </div>
-
-        {/* Card 2: Total Downtime */}
-        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">TOTAL DOWNTIME</span>
+        <div className="flex flex-col gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h2 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-3">
+              <Target className="w-4 h-4 text-indigo-500" /> Zone Distribution
+            </h2>
+            {zoneDonutData.length > 0
+              ? <SaaSDonutChart data={zoneDonutData} height={140} />
+              : <div className="h-[140px] flex items-center justify-center text-slate-400 text-xs font-bold">{loadingSummary ? "Loading…" : "No data"}</div>}
           </div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="p-1.5 bg-amber-500 text-white rounded-none shrink-0">
-              <Clock className="w-4 h-4" />
-            </div>
-            <span className="text-base font-black text-slate-900 font-mono tracking-tight truncate">
-              {totalDowntimeDays} DAYS
-            </span>
-          </div>
-        </div>
-
-        {/* Card 3: Standby Exempted */}
-        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">STANDBY EXEMPTED</span>
-            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-purple-100 text-purple-700 border border-purple-200">
-              {standbyExemptedCount} Calls
-            </span>
-          </div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="p-1.5 bg-purple-600 text-white rounded-none shrink-0">
-              <ShieldAlert className="w-4 h-4" />
-            </div>
-            <span className="text-base font-black text-purple-700 font-mono tracking-tight truncate">
-              ₹0 PENALTY
-            </span>
-          </div>
-        </div>
-
-        {/* Card 4: Part Missing Free */}
-        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">PART MISSING FREE</span>
-            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-emerald-100 text-emerald-700 border border-emerald-200">
-              {partMissingCount} Claims
-            </span>
-          </div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="p-1.5 bg-emerald-600 text-white rounded-none shrink-0">
-              <ApprovedIcon className="w-4 h-4" />
-            </div>
-            <span className="text-base font-black text-emerald-600 font-mono tracking-tight truncate">
-              ₹0 PENALTY
-            </span>
-          </div>
-        </div>
-
-        {/* Card 5: Critical Surcharges */}
-        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">CRITICAL SURCHARGED</span>
-            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-amber-100 text-amber-800 border border-amber-200">
-              {criticalCount} Calls
-            </span>
-          </div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="p-1.5 bg-amber-600 text-white rounded-none shrink-0">
-              <AlertCircle className="w-4 h-4" />
-            </div>
-            <span className="text-base font-black text-amber-700 font-mono tracking-tight truncate">
-              ₹{criticalPenalty.toLocaleString("en-IN")}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 6: Net Audited SLA Cap */}
-        <div className="bg-white rounded-none p-3 border border-slate-200 shadow-2xs relative">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider">NET PAYABLE PENALTY</span>
-            <span className="px-1.5 py-0.5 text-[8.5px] font-bold rounded-none bg-rose-100 text-rose-700 border border-rose-200">
-              Capped
-            </span>
-          </div>
-          <div className="flex items-center gap-2 mt-1.5">
-            <div className="p-1.5 bg-rose-600 text-white rounded-none shrink-0">
-              <XCircle className="w-4 h-4" />
-            </div>
-            <span className="text-base font-black text-rose-600 font-mono tracking-tight truncate">
-              ₹{totalAuditedPenalty.toLocaleString("en-IN")}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. SUB-TAB PILL BUTTONS (Matching Overview Claims Switcher) */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => setSubTab("all")}
-          className={`px-4 py-1.5 text-xs font-black transition-all ${
-            subTab === "all" ? "bg-[#345168] text-white shadow-2xs" : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
-          }`}
-        >
-          All Complaints ({records.length})
-        </button>
-
-        <button
-          onClick={() => setSubTab("medical")}
-          className={`px-4 py-1.5 text-xs font-bold transition-all ${
-            subTab === "medical" ? "bg-[#345168] text-white shadow-2xs" : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
-          }`}
-        >
-          Medical Colleges (12h SLA)
-        </button>
-
-        <button
-          onClick={() => setSubTab("dh")}
-          className={`px-4 py-1.5 text-xs font-bold transition-all ${
-            subTab === "dh" ? "bg-[#345168] text-white shadow-2xs" : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
-          }`}
-        >
-          DH / SDH (24h SLA)
-        </button>
-
-        <button
-          onClick={() => setSubTab("chc")}
-          className={`px-4 py-1.5 text-xs font-bold transition-all ${
-            subTab === "chc" ? "bg-[#345168] text-white shadow-2xs" : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
-          }`}
-        >
-          CHC / PHC (24h SLA)
-        </button>
-      </div>
-
-      {/* 5. DARK SLATE BLUE FILTER BAR (Exact Replica of Overview Filter Container) */}
-      <div className="bg-[#345168] p-3 rounded-none text-white space-y-2 shadow-2xs">
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2">
-          {/* Month */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">MONTH</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            >
-              <option value="Aug 2026">Aug 2026</option>
-              <option value="Jul 2026">Jul 2026</option>
-              <option value="Jun 2026">Jun 2026</option>
-              <option value="all">All Months</option>
-            </select>
-          </div>
-
-          {/* From Date */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">FROM DATE</label>
-            <input
-              type="text"
-              placeholder="dd-mm-yyyy"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            />
-          </div>
-
-          {/* To Date */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">TO DATE</label>
-            <input
-              type="text"
-              placeholder="dd-mm-yyyy"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            />
-          </div>
-
-          {/* Search Complaint ID */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">SEARCH COMPLAINT ID</label>
-            <input
-              type="text"
-              placeholder="Search RJ-08 / Claim..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            />
-          </div>
-
-          {/* Zone */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">ZONE</label>
-            <select
-              value={selectedZone}
-              onChange={(e) => setSelectedZone(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            >
-              <option value="all">All Zones</option>
-              <option value="Ajmer">Ajmer Zone</option>
-              <option value="Jaipur">Jaipur Zone</option>
-              <option value="Jodhpur">Jodhpur Zone</option>
-              <option value="Udaipur">Udaipur Zone</option>
-              <option value="Kota">Kota Zone</option>
-              <option value="Bikaner">Bikaner Zone</option>
-            </select>
-          </div>
-
-          {/* District */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">DISTRICT</label>
-            <select
-              value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            >
-              <option value="all">All Districts</option>
-              {filterOptions.districts.map(d => (
-                <option key={d} value={d}>{d}</option>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex-1">
+            <h2 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-2 mb-3">
+              <Users className="w-4 h-4 text-blue-500" /> Top Coordinators
+            </h2>
+            <div className="space-y-2">
+              {coordList.map((c, i) => (
+                <div key={c.coordinator} className="space-y-0.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-700 truncate max-w-[130px]">
+                      <span className="text-slate-400 font-mono mr-1">#{i + 1}</span>{c.coordinator}
+                    </span>
+                    <span className="text-[10px] font-black text-rose-600 font-mono">{fmtINR(c.total_penalty)}</span>
+                  </div>
+                  <MiniBar value={c.total_penalty} max={maxCoord} color="#e11d48" />
+                </div>
               ))}
-            </select>
-          </div>
-
-          {/* Engineer / DI */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">ENGINEER / DI</label>
-            <select
-              value={selectedDI}
-              onChange={(e) => setSelectedDI(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            >
-              <option value="all">All Engineers</option>
-              {filterOptions.dis.map(di => (
-                <option key={di} value={di}>{di}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">STATUS</label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            >
-              <option value="all">All Statuses</option>
-              <option value="Assessed">Assessed</option>
-              <option value="Final Closed">Final Closed</option>
-            </select>
-          </div>
-
-          {/* Hospital */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">HOSPITAL</label>
-            <select
-              value={selectedHospital}
-              onChange={(e) => setSelectedHospital(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            >
-              <option value="all">All Hospitals</option>
-              {filterOptions.hospitals.map(h => (
-                <option key={h} value={h}>{h}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Equipment */}
-          <div>
-            <label className="block text-[9px] font-black uppercase tracking-wider text-slate-300 mb-0.5">EQUIPMENT</label>
-            <select
-              value={selectedEquipment}
-              onChange={(e) => setSelectedEquipment(e.target.value)}
-              className="w-full px-2 py-1 bg-white text-slate-800 text-xs font-bold rounded-none focus:outline-none"
-            >
-              <option value="all">All Equipment</option>
-              {filterOptions.equipmentList.map(eq => (
-                <option key={eq} value={eq}>{eq}</option>
-              ))}
-            </select>
+              {coordList.length === 0 && <div className="text-xs text-slate-400 font-bold text-center py-4">{loadingSummary ? "Loading…" : "No data"}</div>}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 6. MAIN CONTENT TABLE & CHARTS SWITCHER */}
-      <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
-        {/* Table View Tab Header */}
-        <div className="bg-slate-200 px-4 py-2 border-b border-slate-300 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveTab("monthly")}
-              className={`px-3 py-1 text-xs font-black uppercase tracking-wider transition-all ${
-                activeTab === "monthly" ? "bg-[#345168] text-white" : "bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              Monthly Penalty Audit Table
-            </button>
-            <button
-              onClick={() => setActiveTab("dashboard")}
-              className={`px-3 py-1 text-xs font-black uppercase tracking-wider transition-all ${
-                activeTab === "dashboard" ? "bg-[#345168] text-white" : "bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              Analytics & Charts
-            </button>
-            <button
-              onClick={() => setActiveTab("daily")}
-              className={`px-3 py-1 text-xs font-black uppercase tracking-wider transition-all ${
-                activeTab === "daily" ? "bg-[#345168] text-white" : "bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              Per-Day Breakdown
-            </button>
-            <button
-              onClick={() => setActiveTab("repeated")}
-              className={`px-3 py-1 text-xs font-black uppercase tracking-wider transition-all ${
-                activeTab === "repeated" ? "bg-[#345168] text-white" : "bg-white text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              Repeated Calls Audit
-            </button>
+      {/* ── DISTRICT TABLE ── */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 flex items-center justify-between">
+          <h2 className="text-xs font-black text-white uppercase tracking-wide flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-blue-300" /> District Performance Table
+          </h2>
+          <div className="flex items-center gap-1">
+            {(["penalty","perday","calls"] as const).map(s => (
+              <button key={s} onClick={() => setDistSort(s)}
+                className={`px-2.5 py-1 text-[10px] font-black rounded transition-all ${distSort===s ? "bg-white text-slate-900" : "bg-white/10 text-white/70 hover:bg-white/20"}`}>
+                {s==="penalty" ? "By Penalty" : s==="perday" ? "By /Day" : "By Calls"}
+              </button>
+            ))}
           </div>
-
-          <span className="text-[11px] font-bold text-slate-600">
-            Showing <span className="font-extrabold text-slate-900">{filteredRecords.length}</span> Records
-          </span>
         </div>
-
-        {/* TAB 1: MONTHLY AUDIT TABLE (Exact Replica of Overview Expense Table) */}
-        {activeTab === "monthly" && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#345168] text-white text-[10.5px] uppercase font-extrabold tracking-wider">
-                  <th className="py-2.5 px-3">ENGINEER / DI</th>
-                  <th className="py-2.5 px-3">COMPLAINT ID</th>
-                  <th className="py-2.5 px-3">RAISE DATE</th>
-                  <th className="py-2.5 px-3">HOSPITAL & DISTRICT</th>
-                  <th className="py-2.5 px-3">BARCODE & EQUIPMENT</th>
-                  <th className="py-2.5 px-3">DOWNTIME</th>
-                  <th className="py-2.5 px-3 text-right">SLAB AMOUNT</th>
-                  <th className="py-2.5 px-3">EXEMPTION</th>
-                  <th className="py-2.5 px-3 text-right">TOTAL PENALTY</th>
-                  <th className="py-2.5 px-3 text-center">STATUS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 text-xs font-semibold text-slate-800">
-                {filteredRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-12 text-center text-slate-400 font-bold">
-                      No penalty records found matching selected filters.
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                <th className="py-2.5 px-3">#</th>
+                <th className="py-2.5 px-3">District</th>
+                <th className="py-2.5 px-3">Zone</th>
+                <th className="py-2.5 px-3">Coordinator</th>
+                <th className="py-2.5 px-3 text-center">Open</th>
+                <th className="py-2.5 px-3 text-center">Pen.Calls</th>
+                <th className="py-2.5 px-3 text-right">MCH/Day</th>
+                <th className="py-2.5 px-3 text-right">Others/Day</th>
+                <th className="py-2.5 px-3 text-right">Total Penalty</th>
+                <th className="py-2.5 px-3 text-right">Per Day</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
+              {districts.length === 0
+                ? <tr><td colSpan={10} className="py-10 text-center text-slate-400 font-bold">{loadingSummary ? "Loading…" : "No district data"}</td></tr>
+                : districts.map((d: DistrictPenaltyStat, idx) => (
+                  <tr key={d.district} className="hover:bg-rose-50/30 transition-colors">
+                    <td className="py-2.5 px-3 font-black text-slate-400 text-[10px]">{idx+1}</td>
+                    <td className="py-2.5 px-3 font-black text-slate-900">{d.district}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[9px] font-black rounded">{d.zone||"—"}</span>
                     </td>
+                    <td className="py-2.5 px-3 text-slate-600 font-medium truncate max-w-[120px]">{d.coordinator||d.di_name||"—"}</td>
+                    <td className="py-2.5 px-3 text-center font-black" style={{color: d.open_tickets>0?"#e11d48":"#94a3b8"}}>{d.open_tickets}</td>
+                    <td className="py-2.5 px-3 text-center font-bold text-amber-600">{d.open_penalty_tickets}</td>
+                    <td className="py-2.5 px-3 text-right">
+                      <div className="font-mono font-bold text-emerald-600">{fmtINR(d.mch_per_day)}</div>
+                      <MiniBar value={d.mch_per_day} max={maxDistPerDay} color="#059669"/>
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <div className="font-mono font-bold text-blue-600">{fmtINR(d.others_per_day)}</div>
+                      <MiniBar value={d.others_per_day} max={maxDistPerDay} color="#2563eb"/>
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono font-black text-rose-600">
+                      {fmtINR(d.total_penalty)}
+                      <MiniBar value={d.total_penalty} max={maxDistPenalty} color="#e11d48"/>
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-mono font-black text-amber-600">{fmtINR(d.per_day_penalty)}</td>
                   </tr>
-                ) : (
-                  filteredRecords.map((r, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                      {/* Engineer / DI */}
-                      <td className="py-2.5 px-3">
-                        <span className="font-extrabold text-slate-900 block">{r.attended_engineer_name || r.di_name || "Unassigned DI"}</span>
-                        <span className="text-[10px] text-slate-400 block font-normal">{r.coordinator_name || "Cyrix Engineer"}</span>
-                      </td>
+                ))
+              }
+            </tbody>
+            {districts.length > 0 && (
+              <tfoot className="bg-slate-800 text-white text-xs font-black">
+                <tr>
+                  <td className="py-2.5 px-3" colSpan={4}>TOTAL ({districts.length} Districts)</td>
+                  <td className="py-2.5 px-3 text-center">{districts.reduce((s,d)=>s+d.open_tickets,0).toLocaleString()}</td>
+                  <td className="py-2.5 px-3 text-center">{districts.reduce((s,d)=>s+d.open_penalty_tickets,0).toLocaleString()}</td>
+                  <td className="py-2.5 px-3 text-right font-mono text-emerald-300">{fmtINR(districts.reduce((s,d)=>s+d.mch_per_day,0))}</td>
+                  <td className="py-2.5 px-3 text-right font-mono text-blue-300">{fmtINR(districts.reduce((s,d)=>s+d.others_per_day,0))}</td>
+                  <td className="py-2.5 px-3 text-right font-mono text-rose-300">{fmtINR(kpis?.total_accumulated_penalty??0)}</td>
+                  <td className="py-2.5 px-3 text-right font-mono text-amber-300">{fmtINR(kpis?.total_per_day_penalty??0)}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
 
-                      {/* Complaint ID */}
+      {/* ── REPEATER CALLS ── */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-rose-700 to-rose-900 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-xs font-black text-white uppercase tracking-wide flex items-center gap-2">
+            <Repeat2 className="w-4 h-4 text-rose-300" /> Repeater Calls — Barcode Grouped
+          </h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1">
+              <span className="text-[9px] text-rose-200 font-black uppercase">Min:</span>
+              {[2,3,5,10].map(n => (
+                <button key={n} onClick={()=>setRepMinCount(n)}
+                  className={`px-2 py-0.5 text-[10px] font-black rounded transition-all ${repMinCount===n?"bg-white text-rose-800":"bg-white/15 text-white/80 hover:bg-white/25"}`}>
+                  {n}+
+                </button>
+              ))}
+            </div>
+            <select value={repDistrict} onChange={e=>setRepDistrict(e.target.value)}
+              className="px-2 py-1 text-[10px] font-bold bg-white/10 text-white border border-white/20 rounded focus:outline-none">
+              <option value="">All Districts</option>
+              {districts.map(d=><option key={d.district} value={d.district}>{d.district}</option>)}
+            </select>
+          </div>
+        </div>
+        {repeaters?.summary && (
+          <div className="grid grid-cols-2 sm:grid-cols-5 border-b border-slate-200">
+            {[
+              {label:"Groups",   val:repeaters.summary.total_repeater_groups.toLocaleString(),       color:"text-rose-600"},
+              {label:"Complaints",val:repeaters.summary.total_repeater_complaints.toLocaleString(),   color:"text-amber-600"},
+              {label:"Active",   val:repeaters.summary.active_repeaters.toLocaleString(),             color:"text-blue-600"},
+              {label:"Penalty",  val:fmtINR(repeaters.summary.total_repeater_penalty),               color:"text-rose-600"},
+              {label:"Per Day",  val:fmtINR(repeaters.summary.total_repeater_per_day),               color:"text-orange-600"},
+            ].map(item=>(
+              <div key={item.label} className="py-2.5 px-4 text-center border-r border-slate-100 last:border-0">
+                <div className={`text-base font-black font-mono ${item.color}`}>{item.val}</div>
+                <div className="text-[9px] font-black uppercase text-slate-400 tracking-wide">{item.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="divide-y divide-slate-100">
+          {loadingRepeaters
+            ? <div className="py-10 text-center text-slate-400 text-xs font-bold">Loading repeater data…</div>
+            : (repeaters?.repeaters||[]).length===0
+            ? <div className="py-10 text-center text-slate-400 text-xs font-bold">No repeater calls with {repMinCount}+ complaints{repDistrict?` in ${repDistrict}`:""}</div>
+            : (repeaters?.repeaters||[]).map((item:RepeaterCallEntry)=>{
+              const isExp = expandedRepeaters.has(item.group_key);
+              const badge = item.complaint_count>=10?"bg-rose-600 text-white":item.complaint_count>=5?"bg-amber-500 text-white":"bg-slate-200 text-slate-700";
+              return (
+                <div key={item.group_key} className="hover:bg-slate-50/60 transition-colors">
+                  <button className="w-full text-left px-4 py-3 flex items-center gap-3" onClick={()=>toggleRep(item.group_key)}>
+                    <span className={`px-2 py-0.5 text-[10px] font-black rounded-full shrink-0 ${badge}`}>{item.complaint_count}x</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-black text-slate-900 text-xs">{item.equipment_name}</span>
+                        <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 border border-slate-200 text-slate-600">{item.bar_code}</span>
+                        {item.is_critical&&<span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-200 text-[9px] font-black">CRITICAL</span>}
+                        <span className="text-[10px] text-slate-500">{item.hospital_name}</span>
+                        <span className="text-[10px] text-slate-400">· {item.district_name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-0.5">
+                        <span className="text-[10px] text-rose-600 font-bold">{fmtINR(item.total_penalty)} total</span>
+                        {item.per_day_penalty>0&&<span className="text-[10px] text-amber-600 font-bold">{fmtINR(item.per_day_penalty)}/day</span>}
+                        <span className="text-[10px] text-slate-400">{item.open_count} open · {item.closed_count} closed</span>
+                      </div>
+                    </div>
+                    {isExp?<ChevronUp className="w-4 h-4 text-slate-400 shrink-0"/>:<ChevronDown className="w-4 h-4 text-slate-400 shrink-0"/>}
+                  </button>
+                  {isExp&&(
+                    <div className="px-4 pb-3 bg-rose-50/40 border-t border-rose-100">
+                      <p className="text-[9px] font-black uppercase text-slate-400 mt-2 mb-1.5">Recent Complaints</p>
+                      <div className="space-y-1">
+                        {item.recent_complaints.map(rc=>(
+                          <div key={rc.complaint_id} className="flex items-center gap-3 text-[10px] bg-white px-3 py-1.5 border border-slate-200">
+                            <span className="font-mono font-bold text-blue-600">{rc.complaint_id}</span>
+                            <StatusBadge s={rc.status}/>
+                            <span className="text-slate-400">{rc.raise_date?.slice(0,11)}</span>
+                            <span className="font-black text-rose-600 ml-auto">{fmtFull(rc.total_penalty)}</span>
+                            {rc.per_day>0&&<span className="text-amber-600 font-bold">{fmtINR(rc.per_day)}/d</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          }
+        </div>
+      </div>
+
+      {/* ── COMPLAINT RECORDS ── */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-gradient-to-r from-slate-700 to-slate-600 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-xs font-black text-white uppercase tracking-wide flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-300"/> Complaint Records
+            {records&&<span className="bg-white/20 px-2 py-0.5 rounded text-white text-[10px]">{records.total_records.toLocaleString()} total</span>}
+          </h2>
+          {loadingRecords&&<RefreshCw className="w-3.5 h-3.5 animate-spin text-white/60"/>}
+        </div>
+        <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-slate-400"/>
+            <input type="text" placeholder="Search complaint / barcode…" value={recSearch}
+              onChange={e=>setRecSearch(e.target.value)} onKeyDown={e=>e.key==="Enter"&&fetchRecords(1)}
+              className="pl-7 pr-3 py-1.5 text-xs font-medium border border-slate-300 rounded focus:outline-none focus:border-blue-400 w-52"/>
+          </div>
+          <select value={recDistrict} onChange={e=>setRecDistrict(e.target.value)} className="px-2 py-1.5 text-xs font-bold border border-slate-300 rounded focus:outline-none w-36">
+            <option value="">All Districts</option>
+            {districts.map(d=><option key={d.district} value={d.district}>{d.district}</option>)}
+          </select>
+          <select value={recStatus} onChange={e=>setRecStatus(e.target.value as any)} className="px-2 py-1.5 text-xs font-bold border border-slate-300 rounded focus:outline-none">
+            <option value="">All Status</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+          <select value={recCritical} onChange={e=>setRecCritical(e.target.value as any)} className="px-2 py-1.5 text-xs font-bold border border-slate-300 rounded focus:outline-none">
+            <option value="">All Equipment</option>
+            <option value="yes">Critical Only</option>
+            <option value="no">Non-Critical</option>
+          </select>
+          <label className="flex items-center gap-1.5 text-xs font-bold text-slate-600 cursor-pointer">
+            <input type="checkbox" checked={recOnlyPenalty} onChange={e=>setRecOnlyPenalty(e.target.checked)} className="rounded"/>
+            Penalty &gt; 0
+          </label>
+          <button onClick={()=>fetchRecords(1)}
+            className="px-3 py-1.5 bg-slate-800 text-white text-xs font-black rounded hover:bg-slate-900 transition-colors flex items-center gap-1">
+            <Search className="w-3 h-3"/> Apply
+          </button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                <th className="py-2.5 px-3">#</th>
+                <th className="py-2.5 px-3">Complaint ID</th>
+                <th className="py-2.5 px-3">Raise Date</th>
+                <th className="py-2.5 px-3">Hospital · District</th>
+                <th className="py-2.5 px-3">Equipment · Barcode</th>
+                <th className="py-2.5 px-3 text-center">Status</th>
+                <th className="py-2.5 px-3 text-center">Crit</th>
+                <th className="py-2.5 px-3 text-right">Attend</th>
+                <th className="py-2.5 px-3 text-right">Delay</th>
+                <th className="py-2.5 px-3 text-right">Total Penalty</th>
+                <th className="py-2.5 px-3 text-right">Per Day</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-800">
+              {loadingRecords
+                ? <tr><td colSpan={11} className="py-10 text-center text-slate-400 font-bold">Loading…</td></tr>
+                : (records?.records||[]).length===0
+                ? <tr><td colSpan={11} className="py-10 text-center text-slate-400 font-bold">No records found.</td></tr>
+                : (records?.records||[]).map((r,idx)=>{
+                  const rowNum=((recPage-1)*REC_LIMIT)+idx+1;
+                  return (
+                    <tr key={r.complaint_id} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="py-2.5 px-3 text-slate-400 font-mono text-[10px]">{rowNum}</td>
                       <td className="py-2.5 px-3">
-                        <span className="font-mono font-bold text-blue-600 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                        <span className="font-mono font-black text-blue-600 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"/>
                           {r.complaint_id}
                         </span>
                       </td>
-
-                      {/* Raise Date */}
-                      <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
-                        {r.complaint_raise_date}
-                      </td>
-
-                      {/* Hospital & District */}
+                      <td className="py-2.5 px-3 font-mono text-[10px] text-slate-500">{r.complaint_raise_date?.slice(0,11)}</td>
                       <td className="py-2.5 px-3">
-                        <span className="font-bold text-slate-900 block truncate max-w-[200px]">{r.hospital_name || "-"}</span>
-                        <span className="text-[10px] font-bold text-slate-500 block uppercase">
-                          {r.district_name || "-"} ({r.hospital_type || "CHC"})
-                        </span>
+                        <div className="font-bold text-slate-900 truncate max-w-[160px]">{r.hospital_name}</div>
+                        <div className="text-[10px] text-slate-400 uppercase font-bold">{r.district_name}</div>
                       </td>
-
-                      {/* Barcode & Equipment */}
                       <td className="py-2.5 px-3">
-                        <span className="font-bold text-slate-900 block">{r.equipment_name || "-"}</span>
-                        <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-none border border-slate-200 inline-block">
-                          {r.bar_code}
-                        </span>
+                        <div className="font-bold text-slate-800 truncate max-w-[140px]">{r.equipment_name}</div>
+                        <span className="font-mono text-[10px] bg-slate-100 px-1 border border-slate-200 text-slate-600">{r.bar_code}</span>
                       </td>
-
-                      {/* Downtime */}
-                      <td className="py-2.5 px-3 font-mono text-slate-700 font-bold">
-                        {r.chargeable_days || 0} Days
-                      </td>
-
-                      {/* Slab Amount */}
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800 text-right">
-                        ₹{r.penalty_slab_amount || 0}
-                      </td>
-
-                      {/* Exemption */}
-                      <td className="py-2.5 px-3">
-                        <span className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded-none bg-amber-100 text-amber-800 border border-amber-200">
-                          {r.exemption_reason || "None"}
-                        </span>
-                      </td>
-
-                      {/* Total Penalty */}
-                      <td className="py-2.5 px-3 font-mono font-black text-rose-600 text-base text-right">
-                        ₹{(r.total_penalty || 0).toLocaleString("en-IN")}
-                      </td>
-
-                      {/* Status */}
+                      <td className="py-2.5 px-3 text-center"><StatusBadge s={r.complaint_status}/></td>
                       <td className="py-2.5 px-3 text-center">
-                        <span className="px-2 py-0.5 text-[9.5px] font-black uppercase rounded-none bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          {r.status || "Final Closed"}
+                        {r.is_critical&&<span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-200 text-[9px] font-black">CRIT</span>}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">{r.attend_penalty>0?fmtFull(r.attend_penalty):"—"}</td>
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">{r.delay_penalty>0?fmtFull(r.delay_penalty):"—"}</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <span className={`font-mono font-black ${r.total_penalty>0?"text-rose-600":"text-slate-400"}`}>
+                          {r.total_penalty>0?fmtFull(r.total_penalty):`${INR}0`}
                         </span>
                       </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* TAB 2: ANALYTICS & CHARTS */}
-        {activeTab === "dashboard" && (
-          <div className="p-4 space-y-4 bg-slate-50">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white p-4 border border-slate-300">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-blue-600" /> District-Wise Penalty Assessed
-                </h3>
-                <SaaSBarChart data={districtChartData} height={250} />
-              </div>
-
-              <div className="bg-white p-4 border border-slate-300">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                  <PieChart className="w-4 h-4 text-emerald-600" /> Zone-Wise Penalty Distribution
-                </h3>
-                <SaaSDonutChart data={zoneChartData} height={250} />
-              </div>
-
-              <div className="bg-white p-4 border border-slate-300">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-purple-600" /> Top 10 Equipment-Wise Penalty
-                </h3>
-                <SaaSHorizontalBarChart data={equipmentChartData} height={260} />
-              </div>
-
-              <div className="bg-white p-4 border border-slate-300">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-indigo-600" /> DI-Wise (Engineer) Penalty Summary
-                </h3>
-                <SaaSBarChart data={diChartData} height={260} />
-              </div>
-
-              <div className="bg-white p-4 border border-slate-300">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                  <Building2 className="w-4 h-4 text-cyan-600" /> Top 10 Hospital-Wise Penalty
-                </h3>
-                <SaaSHorizontalBarChart data={hospitalChartData} height={260} />
-              </div>
-            </div>
-
-            <div className="bg-white p-4 border border-slate-300">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <TrendingDown className="w-4 h-4 text-rose-600" /> Day-Wise Penalty Trajectory
-              </h3>
-              <SaaS3DHybridTrendChart data={dayTrendData} height={280} />
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: PER-DAY BREAKDOWN */}
-        {activeTab === "daily" && (
-          <div className="p-4 space-y-3 bg-slate-50">
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-slate-600 uppercase">Select Complaint ID:</span>
-              <select
-                value={selectedComplaintId}
-                onChange={(e) => setSelectedComplaintId(e.target.value)}
-                className="px-3 py-1 bg-white border border-slate-300 text-xs font-bold text-slate-800"
-              >
-                <option value="">-- All Complaints --</option>
-                {records.map(r => (
-                  <option key={r.complaint_id} value={r.complaint_id}>
-                    {r.complaint_id} - Barcode #{r.bar_code} ({r.hospital_name || "Hospital"})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="overflow-x-auto border border-slate-300 bg-white">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#345168] text-white text-[10.5px] uppercase font-extrabold tracking-wider">
-                    <th className="py-2.5 px-3">Day #</th>
-                    <th className="py-2.5 px-3">Complaint ID</th>
-                    <th className="py-2.5 px-3">Barcode</th>
-                    <th className="py-2.5 px-3">Call Status</th>
-                    <th className="py-2.5 px-3">Exemption Reason</th>
-                    <th className="py-2.5 px-3 text-right">Daily Charge Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-xs font-semibold text-slate-800">
-                  {dailyRecords.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-10 text-center text-slate-400 font-bold">
-                        Select a specific complaint above to view its per-day penalty breakdown.
+                      <td className="py-2.5 px-3 text-right">
+                        {r.total_per_day>0
+                          ?<span className="font-mono font-black text-amber-600 flex items-center justify-end gap-0.5"><ArrowUpRight className="w-3 h-3"/>{fmtINR(r.total_per_day)}</span>
+                          :<span className="text-slate-300 font-mono">—</span>
+                        }
                       </td>
                     </tr>
-                  ) : (
-                    dailyRecords.map((d, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="py-2.5 px-3 font-bold text-slate-900">Day {d.day_number}</td>
-                        <td className="py-2.5 px-3 font-mono font-bold text-blue-600">{d.complaint_id}</td>
-                        <td className="py-2.5 px-3 font-mono text-slate-600">{d.barcode}</td>
-                        <td className="py-2.5 px-3">{d.call_status}</td>
-                        <td className="py-2.5 px-3">
-                          {d.is_exempted ? (
-                            <span className="px-2 py-0.5 text-[9.5px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                              ✓ {d.exemption_reason}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 text-[9.5px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                              Chargeable Day
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 font-black text-slate-900 text-right">₹{d.daily_penalty_amount.toLocaleString("en-IN")}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 4: REPEATED CALLS AUDIT */}
-        {activeTab === "repeated" && (
-          <div className="p-4 space-y-3 bg-slate-50">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                <Repeat className="w-4 h-4 text-rose-600" />
-                Repeated Barcode Call Log Frequency (Asset Degradation Audit)
-              </h3>
-            </div>
-
-            <div className="overflow-x-auto border border-slate-300 bg-white">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#345168] text-white text-[10.5px] uppercase font-extrabold tracking-wider">
-                    <th className="py-2.5 px-3">Barcode</th>
-                    <th className="py-2.5 px-3">Equipment Name</th>
-                    <th className="py-2.5 px-3">Hospital Name</th>
-                    <th className="py-2.5 px-3">District</th>
-                    <th className="py-2.5 px-3">Total Calls Logged</th>
-                    <th className="py-2.5 px-3">Associated Complaint IDs</th>
-                    <th className="py-2.5 px-3 text-right">Total Penalty</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-xs font-semibold text-slate-800">
-                  {repeatedBarcodeData.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-10 text-center text-slate-400 font-bold">
-                        No repeat calls found in the current selection.
-                      </td>
-                    </tr>
-                  ) : (
-                    repeatedBarcodeData.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900">
-                          {item.barcode}
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900">{item.equipment}</td>
-                        <td className="py-2.5 px-3 font-medium text-slate-800">{item.hospital}</td>
-                        <td className="py-2.5 px-3">{item.district}</td>
-                        <td className="py-2.5 px-3">
-                          <span className={`px-2 py-0.5 text-[9.5px] font-black ${
-                            item.count > 1 ? "bg-rose-100 text-rose-800 border border-rose-200" : "bg-slate-100 text-slate-700"
-                          }`}>
-                            {item.count} Calls Logged
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-[10px] text-blue-600 truncate max-w-xs">
-                          {item.complaints.join(", ")}
-                        </td>
-                        <td className="py-2.5 px-3 font-black text-rose-600 text-right">
-                          ₹{item.totalPenalty.toLocaleString("en-IN")}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                  );
+                })
+              }
+            </tbody>
+          </table>
+        </div>
+        {records&&records.total_pages>1&&(
+          <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-xs text-slate-500 font-medium">
+              Page <span className="font-black text-slate-900">{recPage}</span> of <span className="font-black text-slate-900">{records.total_pages}</span>
+              {" "}· {records.total_records.toLocaleString()} records
+            </span>
+            <div className="flex items-center gap-1">
+              <button onClick={()=>fetchRecords(recPage-1)} disabled={recPage<=1||loadingRecords}
+                className="p-1.5 rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-40">
+                <ChevronLeft className="w-3.5 h-3.5"/>
+              </button>
+              {Array.from({length:Math.min(5,records.total_pages)},(_,i)=>{
+                const pg=Math.max(1,recPage-2)+i;
+                if(pg>records.total_pages) return null;
+                return (
+                  <button key={pg} onClick={()=>fetchRecords(pg)} disabled={loadingRecords}
+                    className={`px-2.5 py-1 text-xs font-bold rounded border transition-all ${pg===recPage?"bg-slate-800 text-white border-slate-800":"border-slate-300 hover:bg-slate-100 text-slate-700"}`}>
+                    {pg}
+                  </button>
+                );
+              })}
+              <button onClick={()=>fetchRecords(recPage+1)} disabled={recPage>=records.total_pages||loadingRecords}
+                className="p-1.5 rounded border border-slate-300 hover:bg-slate-100 disabled:opacity-40">
+                <ChevronRight className="w-3.5 h-3.5"/>
+              </button>
             </div>
           </div>
         )}
       </div>
-
-      {/* HIGH-SPEED CSV IMPORT MODAL */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-none shadow-2xl max-w-xl w-full border border-slate-300 overflow-hidden">
-            <div className="bg-[#345168] p-4 text-white flex items-center justify-between">
-              <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
-                <Zap className="w-5 h-5 text-amber-400" />
-                Ultra-Fast Complaint CSV Import Engine
-              </h3>
-              {!uploading && (
-                <button onClick={() => setShowUploadModal(false)} className="text-slate-300 hover:text-white">
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-
-            <div className="p-5 space-y-4">
-              {!uploading && !uploadReport && (
-                <div className="border-2 border-dashed border-slate-300 rounded-none p-6 text-center hover:bg-slate-50 transition-colors">
-                  <Upload className="w-10 h-10 text-blue-600 mx-auto mb-2" />
-                  <p className="text-xs font-black text-slate-800 mb-1">
-                    Upload filled CSV file matching standard format
-                  </p>
-                  <p className="text-[11px] text-slate-500 mb-3">
-                    (Complaint ID, Barcode, Hospital Type, Raise Date, Attend Date, Close Date, Final Close Date, Standby, Part Miss)
-                  </p>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                    className="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:text-xs file:font-black file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                </div>
-              )}
-
-              {/* LIVE ANIMATED UPLOAD PROGRESS BAR */}
-              {uploading && (
-                <div className="p-4 bg-slate-50 border border-slate-300 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                      <span className="text-xs font-black text-slate-900 uppercase">
-                        Importing Batch {uploadProgress.currentChunk} of {uploadProgress.totalChunks}...
-                      </span>
-                    </div>
-                    <span className="text-sm font-mono font-black text-blue-600">
-                      {uploadProgress.percentage}%
-                    </span>
-                  </div>
-
-                  <div className="w-full bg-slate-200 h-3 rounded-none overflow-hidden p-0.5">
-                    <div
-                      className="bg-blue-600 h-full rounded-none transition-all duration-200"
-                      style={{ width: `${uploadProgress.percentage}%` }}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-                    <div className="bg-white p-2 border border-slate-300">
-                      <span className="text-[9px] font-black uppercase text-slate-400 block">Processed</span>
-                      <span className="text-sm font-mono font-black text-slate-800">
-                        {uploadProgress.processedRows.toLocaleString()} / {uploadProgress.totalRows.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2 border border-slate-300">
-                      <span className="text-[9px] font-black uppercase text-slate-400 block">Final Closed Skipped</span>
-                      <span className="text-sm font-mono font-black text-amber-600 flex items-center justify-center gap-1">
-                        <Lock className="w-3 h-3" /> {uploadProgress.skippedClosedRows.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2 border border-slate-300">
-                      <span className="text-[9px] font-black uppercase text-slate-400 block">Speed & Time</span>
-                      <span className="text-sm font-mono font-black text-emerald-600">
-                        {uploadProgress.elapsedSeconds}s
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* UPLOAD REPORT SUMMARY */}
-              {uploadReport && !uploading && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 space-y-3">
-                  <div className="flex items-center justify-between text-xs font-black text-emerald-900">
-                    <span className="flex items-center gap-1.5">
-                      <ApprovedIcon className="w-4 h-4 text-emerald-600" />
-                      Upload Complete in {uploadReport.elapsedSeconds} seconds!
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center pt-1">
-                    <div className="bg-white p-2 border border-emerald-200">
-                      <span className="text-[9px] font-black uppercase text-slate-400 block">Total Saved</span>
-                      <span className="text-sm font-mono font-black text-emerald-700">
-                        {uploadReport.savedRows.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2 border border-emerald-200">
-                      <span className="text-[9px] font-black uppercase text-slate-400 block">Final Closed Skipped</span>
-                      <span className="text-sm font-mono font-black text-amber-600">
-                        {uploadReport.skippedClosedRows.toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="bg-white p-2 border border-emerald-200">
-                      <span className="text-[9px] font-black uppercase text-slate-400 block">Errors</span>
-                      <span className={uploadReport.errorsCount > 0 ? "text-sm font-mono font-black text-rose-600" : "text-sm font-mono font-black text-slate-700"}>
-                        {uploadReport.errorsCount}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={handleDownloadCSVTemplate}
-                  disabled={uploading}
-                  className="flex items-center gap-1.5 text-xs font-black text-blue-600 hover:underline disabled:opacity-50"
-                >
-                  <FileText className="w-4 h-4" /> Download Sample CSV Template
-                </button>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUploadModal(false);
-                      setUploadReport(null);
-                    }}
-                    disabled={uploading}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-none"
-                  >
-                    Close
-                  </button>
-                  {!uploadReport && (
-                    <button
-                      type="button"
-                      onClick={handleCSVImportUpload}
-                      disabled={uploading || !uploadFile}
-                      className="px-5 py-2 bg-[#345168] hover:bg-[#283e50] disabled:opacity-50 text-white font-black text-xs rounded-none shadow-2xs"
-                    >
-                      {uploading ? "Processing..." : "Process & Import CSV"}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Manual Entry Modal */}
-      {showManualModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-none shadow-2xl max-w-2xl w-full border border-slate-300 overflow-hidden">
-            <div className="bg-[#345168] p-4 text-white flex items-center justify-between">
-              <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-rose-400" />
-                Add Complaint & Calculate SLA Penalty
-              </h3>
-              <button onClick={() => setShowManualModal(false)} className="text-slate-300 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleManualSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
-                    Barcode (QR) <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="e.g. 75043156"
-                      value={formData.barcode}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setFormData({ ...formData, barcode: val });
-                        handleVerifyBarcodeLive(val);
-                      }}
-                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
-                    />
-                    {verifyingBarcode && (
-                      <span className="absolute right-3 top-2 text-[10px] font-bold text-blue-600 animate-pulse">
-                        Verifying...
-                      </span>
-                    )}
-                  </div>
-
-                  {barcodeVerified === true && (
-                    <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-800">
-                      ✓ Verified: {barcodeAssetInfo?.equipment_name} ({barcodeAssetInfo?.hospital_name})
-                    </div>
-                  )}
-
-                  {barcodeVerified === false && (
-                    <div className="mt-1.5 p-2 bg-rose-50 border border-rose-200 text-[10px] font-bold text-rose-800">
-                      ❌ Error: Barcode #{formData.barcode} not found in database Asset Inventory! Entry Rejected.
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
-                    Complaint ID <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 13126072-800091"
-                    value={formData.complaint_id}
-                    onChange={(e) => setFormData({ ...formData, complaint_id: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
-                    Hospital Type (SLA Period)
-                  </label>
-                  <select
-                    value={formData.hospital_type}
-                    onChange={(e) => setFormData({ ...formData, hospital_type: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-bold text-slate-800 focus:outline-none"
-                  >
-                    <option value="Medical College">Medical College & Associated Hospital (12h Period, SLA 1h/6h)</option>
-                    <option value="DH">DH / SDH / SH (24h Period, SLA 24h/48h)</option>
-                    <option value="CHC">CHC / PHC (24h Period, SLA 24h/72h)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
-                    Equipment Asset Value (₹)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="500000"
-                    value={formData.asset_value}
-                    onChange={(e) => setFormData({ ...formData, asset_value: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-bold text-slate-800 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 flex items-center justify-between">
-                    <span>Raise Date (IST)</span>
-                    <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="21-Jan-2025 16:30:47"
-                    value={formData.complaint_raise_date}
-                    onChange={(e) => setFormData({ ...formData, complaint_raise_date: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-medium text-slate-800 font-mono focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 flex items-center justify-between">
-                    <span>Attend Date (IST)</span>
-                    <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="23-Jan-2025 18:30:47"
-                    value={formData.attend_date}
-                    onChange={(e) => setFormData({ ...formData, attend_date: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-medium text-slate-800 font-mono focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 flex items-center justify-between">
-                    <span>Close Date (IST)</span>
-                    <span className="text-blue-600 font-bold">DD-MMM-YYYY HH:mm:ss</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="15-May-2025 16:30:47"
-                    value={formData.close_date}
-                    onChange={(e) => setFormData({ ...formData, close_date: e.target.value, final_close_date: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-medium text-slate-800 font-mono focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
-                    Condemnation Date (Optional - Penalty Stops)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="10-May-2025 12:00:00"
-                    value={formData.condemnation_date}
-                    onChange={(e) => setFormData({ ...formData, condemnation_date: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-none text-xs font-medium text-slate-800 font-mono focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Exemption & Critical Checkboxes */}
-              <div className="bg-slate-50 p-3.5 border border-slate-200 space-y-2.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-600 block">
-                  Contract SLA Exemption Rules & Criticality
-                </span>
-                
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_part_missing}
-                    onChange={(e) => setFormData({ ...formData, is_part_missing: e.target.checked })}
-                    className="rounded-none text-blue-600"
-                  />
-                  <span>Part Missing / Spare Pending (₹0 Penalty for part missing days)</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_standby_provided}
-                    onChange={(e) => setFormData({ ...formData, is_standby_provided: e.target.checked })}
-                    className="rounded-none text-blue-600"
-                  />
-                  <span>Standby Machine Provided (First 90 Days EXEMPTED - ₹0 Penalty)</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_critical}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setFormData({ ...formData, is_critical: checked, equipment_type: checked ? "Critical" : "Non-Critical" });
-                    }}
-                    className="rounded-none text-rose-600"
-                  />
-                  <span className="text-rose-700 font-extrabold">Critical Equipment (110% Surcharge applies if SLA missed)</span>
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowManualModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs rounded-none"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || barcodeVerified === false}
-                  className="px-5 py-2 bg-[#345168] hover:bg-[#283e50] disabled:bg-slate-400 text-white font-extrabold text-xs rounded-none shadow-2xs"
-                >
-                  {loading ? "Calculating..." : "Calculate & Save Audit Record"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
