@@ -1,5 +1,6 @@
 import api from "./api";
 
+// ─── KPI Summary ──────────────────────────────────────────────────────────────
 export interface LivePenaltyKPIs {
   total_complaints: number;
   total_accumulated_penalty: number;
@@ -54,6 +55,7 @@ export interface LivePenaltySummaryResponse {
   zones: ZonePenaltyStat[];
 }
 
+// ─── Complaint Records ────────────────────────────────────────────────────────
 export interface ComplaintPenaltyRecord {
   complaint_id: string;
   district_name: string;
@@ -94,6 +96,59 @@ export interface LivePenaltyRecordsResponse {
   records: ComplaintPenaltyRecord[];
 }
 
+// ─── Repeater Calls ───────────────────────────────────────────────────────────
+export interface RepeaterCallEntry {
+  group_key: string;
+  bar_code: string;
+  equipment_name: string;
+  equipment_model: string;
+  hospital_name: string;
+  district_name: string;
+  hospital_type: "MCH" | "Others";
+  is_critical: boolean;
+  di_name: string;
+  coordinator_name: string;
+  zone_name: string;
+  complaint_count: number;
+  open_count: number;
+  closed_count: number;
+  total_penalty: number;
+  per_day_penalty: number;
+  total_downtime_days: number;
+  last_complaint_date: string | null;
+  recent_complaints: {
+    complaint_id: string;
+    status: string;
+    raise_date: string;
+    close_date: string;
+    total_penalty: number;
+    per_day: number;
+    downtime_days: number;
+  }[];
+}
+
+export interface RepeaterSummary {
+  total_repeater_groups: number;
+  total_repeater_complaints: number;
+  total_repeater_penalty: number;
+  total_repeater_per_day: number;
+  active_repeaters: number;
+}
+
+export interface LivePenaltyRepeatersResponse {
+  status: string;
+  live_timestamp: string;
+  group_by: string;
+  min_count: number;
+  summary: RepeaterSummary;
+  page: number;
+  limit: number;
+  total_records: number;
+  total_pages: number;
+  repeaters: RepeaterCallEntry[];
+}
+
+// ─── Service ──────────────────────────────────────────────────────────────────
 export const penaltyLiveService = {
   async getSummary(): Promise<LivePenaltySummaryResponse> {
     const res = await api.get("/complaints/live-penalty/summary");
@@ -110,6 +165,17 @@ export const penaltyLiveService = {
     only_penalty?: boolean;
   }): Promise<LivePenaltyRecordsResponse> {
     const res = await api.get("/complaints/live-penalty/records", { params });
+    return res.data;
+  },
+
+  async getRepeaters(params: {
+    page?: number;
+    limit?: number;
+    group_by?: "equipment" | "hospital";
+    min_count?: number;
+    district?: string;
+  }): Promise<LivePenaltyRepeatersResponse> {
+    const res = await api.get("/complaints/live-penalty/repeaters", { params });
     return res.data;
   }
 };

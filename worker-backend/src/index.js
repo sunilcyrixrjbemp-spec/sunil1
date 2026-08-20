@@ -115,7 +115,8 @@ import {
 // Live Contract Penalty Engine handlers
 import {
   handleLivePenaltySummary,
-  handleLivePenaltyRecords
+  handleLivePenaltyRecords,
+  handleLivePenaltyRepeaters
 } from "./routes/penaltyLive.js";
 
 // Attendance handlers
@@ -467,6 +468,7 @@ router.get("/api/complaints/upload-jobs/:job_id", handleGetComplaintJobStatus, t
 // ─── Live Contract Penalty Engine Endpoints ─────────────────────────────────
 router.get("/api/complaints/live-penalty/summary", handleLivePenaltySummary, true);
 router.get("/api/complaints/live-penalty/records", handleLivePenaltyRecords, true);
+router.get("/api/complaints/live-penalty/repeaters", handleLivePenaltyRepeaters, true);
 
 // ─── Reports Endpoints ────────────────────────────────────────────────────────
 router.get("/api/reports/mis-dashboard", handleGetMisDashboard, true);

@@ -502,4 +502,151 @@ export async function handleLivePenaltyRecords(request, env, params, query, user
     console.error("handleLivePenaltyRecords error:", err);
     return errorResponse(err.message || "Failed to fetch live penalty records", 500);
   }
+}/**
+ * GET /api/complaints/live-penalty/repeaters
+ * Equipment / Hospital combinations with 2+ complaints (Repeater Calls)
+ */
+export async function handleLivePenaltyRepeaters(request, env, params, query, user) {
+  try {
+    const masters = await getPenaltyMasters(env);
+    const nowMs = Date.now();
+
+    const page = Math.max(parseInt(query?.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(query?.limit, 10) || 50, 5), 200);
+    const offset = (page - 1) * limit;
+    const groupBy = (query?.group_by || "equipment").toLowerCase(); // "equipment" | "hospital"
+    const minCount = Math.max(parseInt(query?.min_count, 10) || 2, 2);
+    const districtFilter = (query?.district || "").trim().toLowerCase();
+
+    let sql = `
+      SELECT 
+        complaint_id, district_name, hospital_type, hospital_name, bar_code,
+        equipment_name, equipment_model, complaint_raise_date, complaint_close_date,
+        complaint_status, total_downtime, estimated_cost, penalty_days,
+        complaint_final_close, attend_date, is_under_warranty
+      FROM complaints
+    `;
+    const whereClauses = [];
+    const binds = [];
+
+    if (districtFilter) {
+      whereClauses.push("LOWER(district_name) = ?");
+      binds.push(districtFilter);
+    }
+    if (whereClauses.length > 0) {
+      sql += " WHERE " + whereClauses.join(" AND ");
+    }
+
+    const { results } = await env.DB.prepare(sql).bind(...binds).all();
+
+    // Group complaints into repeater groups
+    const groupMap = new Map();
+
+    for (const c of (results || [])) {
+      const calc = computeComplaintPenalty(c, masters, nowMs);
+
+      let key;
+      if (groupBy === "hospital") {
+        key = `${(c.hospital_name || "").trim()}|||${(c.district_name || "").trim()}`;
+      } else {
+        // Default: group by barcode (same physical asset)
+        key = `${(c.bar_code || "").trim()}|||${(c.equipment_name || "").trim()}|||${(c.hospital_name || "").trim()}`;
+      }
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          group_key: key,
+          bar_code: c.bar_code || "",
+          equipment_name: c.equipment_name || "",
+          equipment_model: c.equipment_model || "",
+          hospital_name: c.hospital_name || "",
+          district_name: c.district_name || calc.district_name || "",
+          hospital_type: calc.hospital_type,
+          is_critical: calc.is_critical,
+          di_name: calc.di_name,
+          coordinator_name: calc.coordinator_name,
+          zone_name: calc.zone_name,
+          complaint_count: 0,
+          open_count: 0,
+          closed_count: 0,
+          total_penalty: 0,
+          per_day_penalty: 0,
+          total_downtime_days: 0,
+          last_complaint_date: null,
+          complaints: []
+        });
+      }
+
+      const grp = groupMap.get(key);
+      grp.complaint_count++;
+      grp.total_penalty += calc.total_penalty;
+      grp.total_downtime_days += calc.penalty_down_days || 0;
+
+      if (calc.status === "Open") {
+        grp.open_count++;
+        grp.per_day_penalty += calc.total_per_day;
+      } else {
+        grp.closed_count++;
+      }
+
+      const rd = c.complaint_raise_date;
+      if (rd && (!grp.last_complaint_date || rd > grp.last_complaint_date)) {
+        grp.last_complaint_date = rd;
+      }
+
+      grp.complaints.push({
+        complaint_id: c.complaint_id,
+        status: calc.complaint_status,
+        raise_date: c.complaint_raise_date || "",
+        close_date: c.complaint_close_date || "",
+        total_penalty: calc.total_penalty,
+        per_day: calc.total_per_day,
+        downtime_days: calc.penalty_down_days
+      });
+    }
+
+    // Filter only repeaters (≥ minCount)
+    let repeaters = Array.from(groupMap.values()).filter(g => g.complaint_count >= minCount);
+
+    // Sort by total complaints desc, then total penalty desc
+    repeaters.sort((a, b) => b.complaint_count - a.complaint_count || b.total_penalty - a.total_penalty);
+
+    // Summary KPIs
+    const totalRepeaterGroups = repeaters.length;
+    const totalRepeaterComplaints = repeaters.reduce((s, r) => s + r.complaint_count, 0);
+    const totalRepeaterPenalty = repeaters.reduce((s, r) => s + r.total_penalty, 0);
+    const totalRepeaterPerDay = repeaters.reduce((s, r) => s + r.per_day_penalty, 0);
+    const activeRepeaters = repeaters.filter(r => r.open_count > 0).length;
+
+    const totalPages = Math.ceil(repeaters.length / limit);
+    const paged = repeaters.slice(offset, offset + limit);
+
+    // Remove heavy `complaints` array from paged results to keep response light
+    const pagedLight = paged.map(({ complaints, ...rest }) => ({ 
+      ...rest,
+      recent_complaints: complaints.slice(0, 5)
+    }));
+
+    return jsonResponse({
+      status: "success",
+      live_timestamp: new Date(nowMs).toISOString(),
+      group_by: groupBy,
+      min_count: minCount,
+      summary: {
+        total_repeater_groups: totalRepeaterGroups,
+        total_repeater_complaints: totalRepeaterComplaints,
+        total_repeater_penalty: totalRepeaterPenalty,
+        total_repeater_per_day: totalRepeaterPerDay,
+        active_repeaters: activeRepeaters
+      },
+      page,
+      limit,
+      total_records: repeaters.length,
+      total_pages: totalPages,
+      repeaters: pagedLight
+    });
+  } catch (err) {
+    console.error("handleLivePenaltyRepeaters error:", err);
+    return errorResponse(err.message || "Failed to fetch repeater calls", 500);
+  }
 }
