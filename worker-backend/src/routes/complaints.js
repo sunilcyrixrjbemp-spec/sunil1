@@ -314,106 +314,110 @@ export async function handleTogglePermission(request, env, params, query, user) 
 
 /**
  * POST /api/complaints/upload/chunk
- * Path A: Synchronous batch processing of row chunks (2,000–5,000 rows)
+ * Path A: Synchronous batch processing of row chunks
  */
 export async function handleUploadChunk(request, env, params, query, user) {
-  const hasAccess = await checkComplaintUploadAccess(env, user);
-  if (!hasAccess) {
-    return forbiddenResponse("You do not have permission to upload complaint data");
-  }
-
-  let body;
   try {
-    body = await request.json();
-  } catch (e) {
-    return errorResponse("Invalid JSON payload", 400);
-  }
-
-  const rows = body.rows;
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return errorResponse("rows array is required and cannot be empty", 400);
-  }
-
-  const uploaderId = String(user.user_id || user.e_code || user.id || "unknown");
-  
-  // 1. Filter and validate incoming rows
-  const validRowParams = [];
-  const validComplaintIds = [];
-  let skippedInvalid = 0;
-
-  for (const r of rows) {
-    const params = mapRowToComplaintParams(r, uploaderId);
-    if (!params) {
-      skippedInvalid++;
-    } else {
-      validRowParams.push(params);
-      validComplaintIds.push(params[0]); // complaint_id is index 0
+    const hasAccess = await checkComplaintUploadAccess(env, user);
+    if (!hasAccess) {
+      return forbiddenResponse("You do not have permission to upload complaint data");
     }
-  }
 
-  if (validRowParams.length === 0) {
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return errorResponse("Invalid JSON payload", 400);
+    }
+
+    const rows = body.rows;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return errorResponse("rows array is required and cannot be empty", 400);
+    }
+
+    const uploaderId = String(user.user_id || user.e_code || user.id || "unknown");
+    
+    // 1. Filter and validate incoming rows
+    const validRowParams = [];
+    const validComplaintIds = [];
+    let skippedInvalid = 0;
+
+    for (const r of rows) {
+      const p = mapRowToComplaintParams(r, uploaderId);
+      if (!p) {
+        skippedInvalid++;
+      } else {
+        validRowParams.push(p);
+        validComplaintIds.push(p[0]); // complaint_id is index 0
+      }
+    }
+
+    if (validRowParams.length === 0) {
+      return jsonResponse({
+        status: "success",
+        total_rows: rows.length,
+        inserted: 0,
+        updated: 0,
+        skipped_final_closed: 0,
+        skipped_invalid: skippedInvalid
+      });
+    }
+
+    // 2. Query existing status of unique complaint IDs in DB in safe slices of 100
+    const uniqueIds = Array.from(new Set(validComplaintIds));
+    const existingMap = new Map();
+    for (let i = 0; i < uniqueIds.length; i += 100) {
+      const idSlice = uniqueIds.slice(i, i + 100);
+      const placeholders = idSlice.map(() => "?").join(",");
+      const existingRows = await env.DB.prepare(`
+        SELECT complaint_id, complaint_status FROM complaints WHERE complaint_id IN (${placeholders})
+      `).bind(...idSlice).all();
+
+      for (const er of (existingRows.results || [])) {
+        existingMap.set(String(er.complaint_id), String(er.complaint_status || "").trim());
+      }
+    }
+
+    let insertedCount = 0;
+    let updatedCount = 0;
+    let skippedFinalClosed = 0;
+
+    for (const p of validRowParams) {
+      const cId = p[0];
+      if (existingMap.has(cId)) {
+        const currentDbStatus = existingMap.get(cId);
+        if (currentDbStatus === "Final Closed") {
+          skippedFinalClosed++;
+        } else {
+          updatedCount++;
+        }
+      } else {
+        insertedCount++;
+      }
+    }
+
+    // 3. Execute batched parameter upsert statements with fresh prepared statements
+    // Cloudflare D1 batch size is limited to <= 100 statements
+    const D1_BATCH_SIZE = 50;
+
+    for (let i = 0; i < validRowParams.length; i += D1_BATCH_SIZE) {
+      const batchSlice = validRowParams.slice(i, i + D1_BATCH_SIZE);
+      const batchStatements = batchSlice.map(p => env.DB.prepare(LOCKED_COMPLAINT_UPSERT_SQL).bind(...p));
+      await env.DB.batch(batchStatements);
+    }
+
     return jsonResponse({
       status: "success",
       total_rows: rows.length,
-      inserted: 0,
-      updated: 0,
-      skipped_final_closed: 0,
+      inserted: insertedCount,
+      updated: updatedCount,
+      skipped_final_closed: skippedFinalClosed,
       skipped_invalid: skippedInvalid
     });
+  } catch (err) {
+    console.error("handleUploadChunk execution error:", err);
+    return errorResponse(err.message || "Failed to process complaint chunk", 500);
   }
-
-  // 2. Query existing status of valid complaint IDs in DB to accurately calculate metrics
-  // SQLite supports up to 999 variables per query; chunk ID lookups into slices of 500
-  const existingMap = new Map();
-  for (let i = 0; i < validComplaintIds.length; i += 500) {
-    const idSlice = validComplaintIds.slice(i, i + 500);
-    const placeholders = idSlice.map(() => "?").join(",");
-    const existingRows = await env.DB.prepare(`
-      SELECT complaint_id, complaint_status FROM complaints WHERE complaint_id IN (${placeholders})
-    `).bind(...idSlice).all();
-
-    for (const er of (existingRows.results || [])) {
-      existingMap.set(String(er.complaint_id), String(er.complaint_status || "").trim());
-    }
-  }
-
-  let insertedCount = 0;
-  let updatedCount = 0;
-  let skippedFinalClosed = 0;
-
-  for (const params of validRowParams) {
-    const cId = params[0];
-    if (existingMap.has(cId)) {
-      const currentDbStatus = existingMap.get(cId);
-      if (currentDbStatus === "Final Closed") {
-        skippedFinalClosed++;
-      } else {
-        updatedCount++;
-      }
-    } else {
-      insertedCount++;
-    }
-  }
-
-  // 3. Execute batched parameter upsert statements
-  // Chunk into sub-batches of 500 statements for optimal D1 throughput
-  const D1_BATCH_SIZE = 500;
-  const stmtTemplate = env.DB.prepare(LOCKED_COMPLAINT_UPSERT_SQL);
-
-  for (let i = 0; i < validRowParams.length; i += D1_BATCH_SIZE) {
-    const batchSlice = validRowParams.slice(i, i + D1_BATCH_SIZE);
-    const batchStatements = batchSlice.map(p => stmtTemplate.bind(...p));
-    await env.DB.batch(batchStatements);
-  }
-
-  return jsonResponse({
-    status: "success",
-    total_rows: rows.length,
-    inserted: insertedCount,
-    updated: updatedCount,
-    skipped_final_closed: skippedFinalClosed,
-    skipped_invalid: skippedInvalid
-  });
 }
 
 /**

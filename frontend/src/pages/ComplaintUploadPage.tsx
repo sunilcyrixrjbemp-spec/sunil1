@@ -26,7 +26,7 @@ import {
 
 // Configurable threshold for Path A vs Path B
 const PATH_B_ROW_THRESHOLD = 75000;
-const CHUNK_SIZE = 3000;
+const CHUNK_SIZE = 500;
 
 export default function ComplaintUploadPage() {
   const [checkingPermission, setCheckingPermission] = useState(true);
