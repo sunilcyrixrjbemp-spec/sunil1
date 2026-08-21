@@ -24,7 +24,8 @@ import {
   ChevronLeft,
   LayoutGrid,
   UploadCloud,
-  RotateCcw
+  RotateCcw,
+  Wrench
 } from "lucide-react";
 import ProgressLoader from "../common/ProgressLoader";
 import Badge from "../common/Badge";
@@ -42,6 +43,7 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   { id: "home", name: "Overview", path: "/home", roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "Travel Desk", "MIS", "VP"], icon: Home, gradientFrom: "from-blue-500", gradientTo: "to-indigo-600", shadowColor: "rgba(37, 99, 235, 0.35)" },
+  { id: "trc_repair", name: "TRC Repair Hub", path: "/trc-repair", icon: Wrench, roles: ["Admin", "Engineer", "Manager", "Division Manager", "Coordinator", "Project Head", "MIS", "VP", "Accountant"], gradientFrom: "from-blue-600", gradientTo: "to-cyan-600", shadowColor: "rgba(37, 99, 235, 0.35)" },
   { id: "new_dashboard", name: "Executive Dashboard", path: "/new-dashboard", icon: TrendingUp, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "MIS", "VP", "Accountant", "Travel Desk"], gradientFrom: "from-violet-500", gradientTo: "to-purple-600", shadowColor: "rgba(124, 58, 237, 0.35)" },
   { id: "admin", name: "Admin Panel", path: "/admin", icon: Settings, roles: ["Admin"], gradientFrom: "from-slate-600", gradientTo: "to-slate-800", shadowColor: "rgba(100, 116, 139, 0.35)" },
   { id: "approval", name: "Approval Center", path: "/approval-center", icon: CheckSquare, roles: ["Admin", "Manager", "Division Manager", "Coordinator", "Accountant", "HR", "Project Head", "VP", "Travel Desk", "MIS"], gradientFrom: "from-amber-500", gradientTo: "to-orange-600", shadowColor: "rgba(245, 158, 11, 0.35)" },
@@ -61,7 +63,7 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 const SIDEBAR_SECTIONS = [
-  { label: "Workspace", ids: ["home", "new_dashboard"] },
+  { label: "Workspace & TRC", ids: ["home", "trc_repair", "new_dashboard"] },
   { label: "Claims & Approvals", ids: ["expense", "approval"] },
   { label: "Reports & Analytics", ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report"] },
   { label: "Administration", ids: ["admin", "claim_level_reset", "complaint_upload", "asset_upload"] },

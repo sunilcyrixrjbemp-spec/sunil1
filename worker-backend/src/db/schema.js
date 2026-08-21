@@ -566,3 +566,202 @@ export const approvalTokens = sqliteTable("approval_tokens", {
   approverIdx: index("idx_approval_tokens_approver").on(table.approverId),
 }));
 
+// 31. TRC Machine Receive Table
+export const trcMachineReceive = sqliteTable("trc_machine_receive", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcNumber: text("trc_number").unique().notNull(),
+  district: text("district").notNull(),
+  zone: text("zone"),
+  hospitalName: text("hospital_name").notNull(),
+  equipmentName: text("equipment_name").notNull(),
+  equipmentModel: text("equipment_model"),
+  barcode: text("barcode").notNull(),
+  serialNumber: text("serial_number"),
+  complaintId: text("complaint_id"),
+  diName: text("di_name"),
+  coordinatorName: text("coordinator_name"),
+  dmName: text("dm_name"),
+  complaintDate: text("complaint_date"),
+  oemName: text("oem_name"),
+  machineStatusPrior: text("machine_status_prior"),
+  receiveDate: text("receive_date").notNull(),
+  receiveTime: text("receive_time").notNull(),
+  receivedById: text("received_by_id").notNull(),
+  receivedByName: text("received_by_name").notNull(),
+  conditionReceived: text("condition_received").default("Good"),
+  accessoriesReceived: text("accessories_received"),
+  receiveNotes: text("receive_notes"),
+  videoUrl: text("video_url"),
+  frontPhotoUrl: text("front_photo_url"),
+  backPhotoUrl: text("back_photo_url"),
+  damagePhotoUrl: text("damage_photo_url"),
+  currentStatus: text("current_status").default("Machine Received in TRC"),
+  assignedEngineerId: text("assigned_engineer_id"),
+  assignedEngineerName: text("assigned_engineer_name"),
+  assignedDate: text("assigned_date"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (table) => ({
+  trcNumberIdx: index("idx_trc_rec_num").on(table.trcNumber),
+  barcodeIdx: index("idx_trc_rec_barcode").on(table.barcode),
+  districtIdx: index("idx_trc_rec_district").on(table.district),
+  statusIdx: index("idx_trc_rec_status").on(table.currentStatus),
+  assignedEngIdx: index("idx_trc_rec_assigned").on(table.assignedEngineerId),
+}));
+
+// 32. TRC Assignment Table
+export const trcAssignment = sqliteTable("trc_assignment", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcId: integer("trc_id").notNull(),
+  trcNumber: text("trc_number").notNull(),
+  assignedEngineerId: text("assigned_engineer_id").notNull(),
+  assignedEngineerName: text("assigned_engineer_name").notNull(),
+  assignedById: text("assigned_by_id").notNull(),
+  assignedByName: text("assigned_by_name").notNull(),
+  assignDate: text("assign_date").notNull(),
+  assignTime: text("assign_time").notNull(),
+  notes: text("notes"),
+  status: text("status").default("Assigned"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// 33. TRC Diagnosis Table
+export const trcDiagnosis = sqliteTable("trc_diagnosis", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcId: integer("trc_id").notNull(),
+  trcNumber: text("trc_number").notNull(),
+  diagnosisDate: text("diagnosis_date").notNull(),
+  diagnosisTime: text("diagnosis_time").notNull(),
+  issueCategory: text("issue_category").notNull(),
+  rootCause: text("root_cause").notNull(),
+  issueDescription: text("issue_description").notNull(),
+  repairable: text("repairable").default("Yes"),
+  severity: text("severity").default("Medium"),
+  diagnosisVideoUrl: text("diagnosis_video_url"),
+  diagnosisPhotos: text("diagnosis_photos"),
+  diagnosedById: text("diagnosed_by_id").notNull(),
+  diagnosedByName: text("diagnosed_by_name").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// 34. TRC Spare Requests Table
+export const trcSpareRequests = sqliteTable("trc_spare_requests", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcId: integer("trc_id").notNull(),
+  trcNumber: text("trc_number").notNull(),
+  spareRequired: text("spare_required").default("Yes"),
+  partName: text("part_name").notNull(),
+  partNumber: text("part_number"),
+  quantity: integer("quantity").default(1),
+  partPhotoUrl: text("part_photo_url"),
+  damagedPartPhotoUrl: text("damaged_part_photo_url"),
+  remarks: text("remarks"),
+  status: text("status").default("Pending"),
+  emailSent: integer("email_sent").default(0),
+  emailRecipients: text("email_recipients"),
+  emailSentAt: text("email_sent_at"),
+  requestedById: text("requested_by_id").notNull(),
+  requestedByName: text("requested_by_name").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// 35. TRC Repairs Table
+export const trcRepairs = sqliteTable("trc_repairs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcId: integer("trc_id").notNull(),
+  trcNumber: text("trc_number").notNull(),
+  repairStartDate: text("repair_start_date").notNull(),
+  repairStartTime: text("repair_start_time"),
+  repairEndDate: text("repair_end_date").notNull(),
+  repairEndTime: text("repair_end_time"),
+  activityDescription: text("activity_description").notNull(),
+  partsUsed: text("parts_used"),
+  calibrationDone: text("calibration_done").default("No"),
+  testingDone: text("testing_done").default("No"),
+  repairSummary: text("repair_summary").notNull(),
+  repairVideoUrl: text("repair_video_url"),
+  repairPhotos: text("repair_photos"),
+  repairedById: text("repaired_by_id").notNull(),
+  repairedByName: text("repaired_by_name").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// 36. TRC Quality Check Table
+export const trcQc = sqliteTable("trc_qc", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcId: integer("trc_id").notNull(),
+  trcNumber: text("trc_number").notNull(),
+  powerOn: integer("power_on").default(0),
+  selfTestPassed: integer("self_test_passed").default(0),
+  calibrationPassed: integer("calibration_passed").default(0),
+  displayOk: integer("display_ok").default(0),
+  accessoriesWorking: integer("accessories_working").default(0),
+  finalFunctionalTest: integer("final_functional_test").default(0),
+  allChecksPassed: integer("all_checks_passed").default(0),
+  qcVideoUrl: text("qc_video_url"),
+  qcRemarks: text("qc_remarks"),
+  qcById: text("qc_by_id").notNull(),
+  qcByName: text("qc_by_name").notNull(),
+  qcDate: text("qc_date").notNull(),
+  qcTime: text("qc_time").notNull(),
+  status: text("status").default("Passed"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// 37. TRC Media Table
+export const trcMedia = sqliteTable("trc_media", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcId: integer("trc_id").notNull(),
+  trcNumber: text("trc_number"),
+  stage: text("stage").notNull(),
+  mediaType: text("media_type").notNull(),
+  mediaLabel: text("media_label"),
+  fileUrl: text("file_url").notNull(),
+  r2Key: text("r2_key"),
+  originalFilename: text("original_filename"),
+  fileSize: integer("file_size"),
+  contentType: text("content_type"),
+  createdBy: text("created_by").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// 38. TRC Status History Table
+export const trcStatusHistory = sqliteTable("trc_status_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcId: integer("trc_id").notNull(),
+  trcNumber: text("trc_number"),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status").notNull(),
+  stageName: text("stage_name"),
+  remarks: text("remarks"),
+  changedById: text("changed_by_id").notNull(),
+  changedByName: text("changed_by_name").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// 39. TRC Email Logs Table
+export const trcEmailLogs = sqliteTable("trc_email_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trcId: integer("trc_id").notNull(),
+  trcNumber: text("trc_number"),
+  subject: text("subject").notNull(),
+  recipients: text("recipients").notNull(),
+  emailType: text("email_type").notNull(),
+  bodyHtml: text("body_html"),
+  status: text("status").default("sent"),
+  sentById: text("sent_by_id").notNull(),
+  sentByName: text("sent_by_name").notNull(),
+  sentAt: text("sent_at").notNull(),
+});
+

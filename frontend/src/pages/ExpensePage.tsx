@@ -201,6 +201,7 @@ interface ItineraryLeg {
     type: string;
     status: string;
     spare_replaced?: string;
+    spare_name?: string;
     spare_estimated_value?: number;
     asset_details: any;
     photo_url?: string;
@@ -2765,6 +2766,16 @@ export default function ExpensePage() {
           });
           return false;
         }
+        // Check all added calls have a valid complaint id
+        const callsWithoutComplaint = (leg.calls_list || []).filter(c => !c.complaint_id || !c.complaint_id.trim());
+        if (callsWithoutComplaint.length > 0) {
+          setValidationModal({
+            show: true,
+            title: `Visit ${legNum}: Missing Complaint ID`,
+            message: `You have added ${callsWithoutComplaint.length} call entry(s) in Visit ${legNum} that are missing the Complaint ID / Call ID.\n\nPlease enter the Complaint ID for each Call in the list.`
+          });
+          return false;
+        }
       }
 
       if (acts.includes("PMS")) {
@@ -2990,8 +3001,8 @@ export default function ExpensePage() {
       const itinerariesData = activeItineraries.map((leg, index) => {
         const legNum = index + 1;
         const rawActs = leg.selected_activities || [];
-        const callsList = leg.calls_list || [];
-        const pmsList = leg.pms_list || [];
+        const callsList = (leg.calls_list || []).filter((c: any) => c && c.barcode && String(c.barcode).trim() !== "");
+        const pmsList = (leg.pms_list || []).filter((p: any) => p && p.barcode && String(p.barcode).trim() !== "");
         const assetsList = leg.assets_list || [];
         const calibCount = parseInt(leg.calibration_count || "0") || 0;
         const mobCount = parseInt(leg.mobilise_asset_count || "0") || 0;
@@ -3012,21 +3023,29 @@ export default function ExpensePage() {
         const ws_pms = pmsList.filter((p: any) => p.barcode || p.status === "Close" || p.status === "Attended").length;
         const ws_asset = assetsList.reduce((sum: number, item: any) => sum + (parseInt(item.quantity || "0") || 0), 0);
 
+        const primaryCall = callsList.length > 0 ? callsList[0] : null;
+        const primaryPms = pmsList.length > 0 ? pmsList[0] : null;
+
         const detailsObj = {
           state: leg.state || "Rajasthan",
           dest_state: leg.dest_state || "Rajasthan",
           is_out_of_state: leg.travel_type === "Out of State" || (leg.dest_state && leg.dest_state !== leg.state),
           travel_type: leg.travel_type,
           selected_activities: acts,
-          calls_barcode: leg.calls_barcode || "",
-          calls_verified: !!leg.calls_verified,
-          calls_asset_details: leg.calls_asset_details || null,
-          calls_type: leg.calls_type || "Support Call",
-          calls_status: leg.calls_status || "Attend",
-          pms_barcode: leg.pms_barcode || "",
-          pms_verified: !!leg.pms_verified,
-          pms_asset_details: leg.pms_asset_details || null,
-          pms_frequency: leg.pms_frequency || "3 month",
+          calls_barcode: primaryCall ? (primaryCall.barcode || "") : "",
+          calls_verified: !!primaryCall,
+          calls_asset_details: primaryCall ? (primaryCall.asset_details || null) : null,
+          calls_type: primaryCall ? (primaryCall.type || "Support Call") : "",
+          calls_status: primaryCall ? (primaryCall.status || "Attend") : "",
+          calls_complaint_id: primaryCall ? (primaryCall.complaint_id || "") : "",
+          calls_action_taken: primaryCall ? (primaryCall.action_taken || "") : "",
+          calls_spare_replaced: primaryCall ? (primaryCall.spare_replaced || "No") : "No",
+          calls_spare_name: primaryCall ? (primaryCall.spare_name || "") : "",
+          calls_spare_estimated_value: primaryCall ? (primaryCall.spare_estimated_value || 0) : 0,
+          pms_barcode: primaryPms ? (primaryPms.barcode || "") : "",
+          pms_verified: !!primaryPms,
+          pms_asset_details: primaryPms ? (primaryPms.asset_details || null) : null,
+          pms_frequency: primaryPms ? (primaryPms.frequency || "3 month") : "",
           asset_tagging_equipment: leg.asset_tagging_equipment || "",
           asset_tagging_quantity: leg.asset_tagging_quantity || "0",
           mobilise_asset_count: mobCount.toString(),

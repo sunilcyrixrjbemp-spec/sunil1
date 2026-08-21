@@ -164,6 +164,29 @@ import {
 // KPI DB Migration
 import { runMigrationsKpi, checkKpiTableStatus } from "./utils/db-migrate-kpi.js";
 
+// TRC Module handlers (TRC ERP v3.0)
+import {
+  handleTrcVerifyBarcode,
+  handleTrcReceiveMachine,
+  handleTrcListMachines,
+  handleTrcGetMachineDetails,
+  handleTrcAssignMachine,
+  handleTrcSaveDiagnosis,
+  handleTrcCreateSpareRequest,
+  handleTrcUpdateSpareStatus,
+  handleTrcSaveRepair,
+  handleTrcSaveQC,
+  handleTrcDispatchMachine,
+  handleTrcCloseMachine,
+  handleTrcGetEngineers,
+  handleTrcGetStats,
+  handleTrcUploadMedia,
+  handleTrcGetDistricts,
+} from "./routes/trc.js";
+
+// TRC DB Migration
+import { runMigrationsTrc, checkTrcTableStatus } from "./utils/db-migrate-trc.js";
+
 // ─── Router — O(1) Method-Grouped Hash Map Router ────────────────────────────
 class Router {
   constructor() {
@@ -574,6 +597,49 @@ router.get("/api/admin/migration-status-kpi", async (req, env, params, query, us
     return jsonResponse({ success: true, kpi_status: status });
   } catch (e) {
     return errorResponse("KPI status check error: " + e.message, 500);
+  }
+}, true, ["Admin"]);
+
+// ─── TRC ERP v3.0 Endpoints ──────────────────────────────────────────────────
+router.post("/api/trc/verify-barcode", handleTrcVerifyBarcode, true);
+router.post("/api/trc/receive", handleTrcReceiveMachine, true);
+router.get("/api/trc/machines", handleTrcListMachines, true);
+router.get("/api/trc/machines/:id", handleTrcGetMachineDetails, true);
+router.post("/api/trc/assign", handleTrcAssignMachine, true);
+router.post("/api/trc/diagnosis", handleTrcSaveDiagnosis, true);
+router.post("/api/trc/spare-request", handleTrcCreateSpareRequest, true);
+router.post("/api/trc/spare-status", handleTrcUpdateSpareStatus, true);
+router.post("/api/trc/repair", handleTrcSaveRepair, true);
+router.post("/api/trc/qc", handleTrcSaveQC, true);
+router.post("/api/trc/dispatch", handleTrcDispatchMachine, true);
+router.post("/api/trc/close", handleTrcCloseMachine, true);
+router.get("/api/trc/engineers", handleTrcGetEngineers, true);
+router.get("/api/trc/districts", handleTrcGetDistricts, true);
+router.get("/api/trc/stats", handleTrcGetStats, true);
+router.post("/api/trc/upload-media", handleTrcUploadMedia, true);
+
+// TRC DB Migration
+router.post("/api/admin/run-migrations-trc", async (req, env, params, query, user) => {
+  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
+  try {
+    const result = await runMigrationsTrc(env.DB);
+    return jsonResponse({
+      success: result.errors.length === 0,
+      message: `TRC Migrations complete — ${result.applied.length} applied, ${result.errors.length} errors`,
+      applied: result.applied,
+      errors: result.errors
+    });
+  } catch (e) {
+    return errorResponse("TRC Migration error: " + e.message, 500);
+  }
+}, true, ["Admin"]);
+router.get("/api/admin/migration-status-trc", async (req, env, params, query, user) => {
+  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
+  try {
+    const status = await checkTrcTableStatus(env.DB);
+    return jsonResponse({ success: true, trc_status: status });
+  } catch (e) {
+    return errorResponse("TRC status check error: " + e.message, 500);
   }
 }, true, ["Admin"]);
 

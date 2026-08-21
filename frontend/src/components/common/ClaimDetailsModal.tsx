@@ -494,8 +494,18 @@ const LegDetailCard = ({
         ? leg.calls_list
         : (Array.isArray(leg.calls) && leg.calls.length > 0 ? leg.calls : []));
 
-  const validCallsInList = callsFromAct.length;
+  const validCallsInList = callsFromAct.filter((c: any) => c && (c.barcode || c.calls_barcode || c.complaint_id || c.calls_complaint_id)).length;
   
+  const isCallsSelectedInActivity = Array.isArray(act.parsed?.selected_activities)
+    ? act.parsed.selected_activities.includes("Calls")
+    : (Array.isArray(leg.selected_activities) ? leg.selected_activities.includes("Calls") : true);
+
+  const hasLegacyCall = validCallsInList === 0 && isCallsSelectedInActivity && (
+    isValidText(act.parsed?.calls_complaint_id) ||
+    isValidText(leg.calls_complaint_id) ||
+    parseInt(leg.ws_closed || leg.calls_count || leg.calls_closed || leg.ws_assigned || "0", 10) > 0
+  ) && (isValidText(act.callsBarcode) || isValidText(leg.calls_barcode));
+
   const calculatedDeduction = (legDeductionAmt > 0)
     ? legDeductionAmt
     : ((submittedLegAmt > netLegAmt) ? (submittedLegAmt - netLegAmt) : 0);
@@ -512,7 +522,7 @@ const LegDetailCard = ({
   // Work Metrics
   const callsClosed = validCallsInList > 0 
     ? validCallsInList 
-    : (parseInt(leg.ws_closed || leg.calls_count || leg.calls_closed || leg.ws_assigned || "0", 10) || (isValidText(act.callsBarcode) || isValidText(leg.calls_barcode) ? 1 : 0));
+    : (hasLegacyCall ? 1 : 0);
   const pmsCount = leg.pms_count || leg.ws_pms || 0;
   const calibCount = leg.calibration_count || 0;
   const mobiCount = leg.mobilise_count || leg.mobilise_asset_count || 0;
@@ -675,13 +685,18 @@ const LegDetailCard = ({
   const otherBillUrl = getLegOtherBillUrl();
 
   // Construct Effective Calls List for Excel Table Format
-  const effectiveCallsList = callsFromAct.length > 0 ? callsFromAct : (
-    (callsClosed > 0 || isValidText(act.callsBarcode) || isValidText(leg.calls_barcode) || isValidText(act.callsType) || isValidText(act.callsStatus)) ? [{
+  const effectiveCallsList = validCallsInList > 0 ? callsFromAct : (
+    hasLegacyCall ? [{
+      complaint_id: act.parsed?.calls_complaint_id || leg.calls_complaint_id || act.parsed?.complaint_id || leg.complaint_id || "—",
       barcode: act.callsBarcode || leg.calls_barcode || barcode || "—",
       equipment: act.equipmentName || leg.equipment_name || equipmentName || "—",
       hospital: act.parsed?.calls_asset_details?.hospital_name || leg.hospital_name || act.hospitalName || hospitalName || "—",
       call_type: act.callsType || leg.calls_type || "Service Call",
       status: act.callsStatus || leg.calls_status || "Attended & Closed",
+      action_taken: act.parsed?.calls_action_taken || leg.calls_action_taken || "—",
+      spare_replaced: act.parsed?.calls_spare_replaced || leg.calls_spare_replaced || "No",
+      spare_name: act.parsed?.calls_spare_name || leg.calls_spare_name || "",
+      spare_estimated_value: act.parsed?.calls_spare_estimated_value || leg.calls_spare_estimated_value || 0,
       attachment_url: act.attachmentUrl || leg.calls_photo_url || travelTaBillUrl || ""
     }] : []
   );

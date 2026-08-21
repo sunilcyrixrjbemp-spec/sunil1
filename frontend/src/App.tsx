@@ -36,6 +36,7 @@ import AdminEnterprisePage from "./pages/AdminEnterprisePage";
 import ComplaintUploadPage from "./pages/ComplaintUploadPage";
 import ComplaintUploadAccessAdmin from "./pages/ComplaintUploadAccessAdmin";
 import ClaimLevelResetPage from "./pages/ClaimLevelResetPage";
+import TRCModulePage from "./pages/TRCModulePage";
 
 import ProgressLoader from "./components/common/ProgressLoader";
 import InstallAppPrompt from "./components/common/InstallAppPrompt";
@@ -317,6 +318,9 @@ function App() {
                 <Route path="/complaint-upload" element={<ComplaintUploadPage />} />
                 <Route path="/admin/complaint-upload-access" element={<ComplaintUploadAccessAdmin />} />
                 <Route path="/admin/claim-level-reset" element={<ClaimLevelResetPage />} />
+                <Route path="/trc-repair" element={<TRCModulePage />} />
+                <Route path="/trc-module" element={<TRCModulePage />} />
+                <Route path="/receive-machine" element={<TRCModulePage />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
                 <Route path="/admin/enterprise" element={<AdminEnterprisePage />} />
                 <Route path="/db-monitor" element={<DBMonitoringPage />} />
