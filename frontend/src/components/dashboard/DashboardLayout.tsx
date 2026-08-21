@@ -144,24 +144,21 @@ export default function DashboardLayout() {
     allowedWindows = ["home", "expense", "help", "profile"];
   }
 
+  const roleLower = (user?.role || user?.designation || "").trim().toLowerCase();
+  const isAdmin = roleLower === "admin" || user?.role === "Admin";
+
   const allowedMenuItems = MENU_ITEMS.filter((item) => {
     if (isMobileScreen && ["report", "consolidated_report", "mis_report"].includes(item.id.toLowerCase())) {
       return false;
     }
     const idLower = item.id.toLowerCase();
-    const roleLower = (user?.role || user?.designation || "").trim().toLowerCase();
 
     // 🔒 Admin sees ALL pages by default without exception
-    if (roleLower === "admin" || user?.role === "Admin") {
+    if (isAdmin) {
       return true;
     }
 
-    // Role-based allowance
-    const itemRoles = (item.roles || []).map((r: string) => r.toLowerCase());
-    if (itemRoles.includes(roleLower)) {
-      return true;
-    }
-
+    // Strictly check user's assigned allowed_windows
     return allowedWindows.includes(idLower);
   });
 
@@ -180,14 +177,10 @@ export default function DashboardLayout() {
       return location.pathname === item.path || location.pathname.startsWith(item.path + "/");
     });
 
-  const roleLower = (user?.role || user?.designation || "").trim().toLowerCase();
-  const isAdmin = roleLower === "admin" || user?.role === "Admin";
-
   const hasAccess =
     isAdmin ||
     !currentActiveItem ||
-    allowedWindows.includes(currentActiveItem.id.toLowerCase()) ||
-    (currentActiveItem.roles && currentActiveItem.roles.map((r: string) => r.toLowerCase()).includes(roleLower));
+    allowedWindows.includes(currentActiveItem.id.toLowerCase());
   const initials = user?.name ? user.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() : "U";
 
   return (
@@ -446,7 +439,7 @@ export default function DashboardLayout() {
 
         {/* Mobile Bottom Navigation Bar - Replaces 3-Line Top Hamburger Menu */}
         <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1 px-2 flex items-center justify-around lg:hidden shadow-lg">
-          {allowedWindows.includes("home") && (
+          {(isAdmin || allowedWindows.includes("home")) && (
             <Link
               to="/home"
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
@@ -460,7 +453,7 @@ export default function DashboardLayout() {
             </Link>
           )}
 
-          {allowedWindows.includes("expense") && (
+          {(isAdmin || allowedWindows.includes("expense")) && (
             <Link
               to="/submit-expense"
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
@@ -474,7 +467,7 @@ export default function DashboardLayout() {
             </Link>
           )}
 
-          {allowedWindows.includes("approval") && (
+          {(isAdmin || allowedWindows.includes("approval")) && (
             <Link
               to="/approval-center"
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
@@ -488,7 +481,7 @@ export default function DashboardLayout() {
             </Link>
           )}
 
-          {allowedWindows.includes("profile") && (
+          {(isAdmin || allowedWindows.includes("profile")) && (
             <Link
               to="/profile"
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${

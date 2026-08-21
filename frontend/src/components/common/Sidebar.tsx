@@ -105,6 +105,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
 
   const currentUser = authService.getCurrentUser();
+  const roleLower = (currentUser?.role || userRole || "").trim().toLowerCase();
+  const isAdmin = roleLower === "admin";
+
   let allowedWindows: string[] = ["home", "expense", "help", "profile"];
   if (currentUser?.allowed_windows !== undefined && currentUser?.allowed_windows !== null) {
     if (Array.isArray(currentUser.allowed_windows)) {
@@ -123,8 +126,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     } catch (e) {}
   }
 
-  // Strictly map accessible menu items to user's assigned allowed_windows. No role fallback or auto-grant.
+  // Strictly map accessible menu items to user's assigned allowed_windows. Admin sees all.
   const accessibleItems = MENU_ITEMS.filter((item) => {
+    if (isAdmin) return true;
     return allowedWindows.includes(item.id.toLowerCase());
   });
 

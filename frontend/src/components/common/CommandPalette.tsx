@@ -18,6 +18,7 @@ import {
   X,
   ArrowRight,
 } from "lucide-react";
+import { authService } from "../../services/authService";
 
 export interface CommandItem {
   id: string;
@@ -70,7 +71,25 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  const filteredCommands = COMMANDS.filter(
+  const currentUser = authService.getCurrentUser();
+  const roleLower = (currentUser?.role || "").trim().toLowerCase();
+  const isAdmin = roleLower === "admin";
+
+  let allowedWindows: string[] = ["home", "expense", "help", "profile"];
+  if (currentUser?.allowed_windows !== undefined && currentUser?.allowed_windows !== null) {
+    if (Array.isArray(currentUser.allowed_windows)) {
+      allowedWindows = currentUser.allowed_windows.map((w: any) => String(w).trim().toLowerCase()).filter(Boolean);
+    } else if (typeof currentUser.allowed_windows === "string") {
+      allowedWindows = currentUser.allowed_windows.split(",").map((w: string) => w.trim().toLowerCase()).filter(Boolean);
+    }
+  }
+
+  const accessibleCommands = COMMANDS.filter((cmd) => {
+    if (isAdmin) return true;
+    return allowedWindows.includes(cmd.id.toLowerCase());
+  });
+
+  const filteredCommands = accessibleCommands.filter(
     (cmd) =>
       cmd.name.toLowerCase().includes(query.toLowerCase()) ||
       cmd.category.toLowerCase().includes(query.toLowerCase())
