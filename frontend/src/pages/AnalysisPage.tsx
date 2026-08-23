@@ -28,8 +28,6 @@ import {
   ToolOutlined,
   ExperimentOutlined,
   SwapOutlined,
-  ThunderboltOutlined,
-  SafetyCertificateOutlined,
   AuditOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
@@ -49,6 +47,30 @@ const ALL_RAJASTHAN_DISTRICTS = [
 
 export default function AnalysisPage() {
   const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
+
+  const parseCallsDetails = (e: any): any[] => {
+    if (Array.isArray(e.calls_details)) return e.calls_details;
+    if (typeof e.calls_details === "string" && e.calls_details.trim().startsWith("[")) {
+      try {
+        const parsed = JSON.parse(e.calls_details);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (_) {}
+    }
+    if (Array.isArray(e.activity_details)) return e.activity_details;
+    if (typeof e.activity_details === "string" && e.activity_details.trim().startsWith("[")) {
+      try {
+        const parsed = JSON.parse(e.activity_details);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (_) {}
+    }
+    return [];
+  };
+
+  const extractComplaintId = (c: any): string => {
+    if (!c) return "";
+    const raw = c.complaint_id || c.calls_complaint_id || c.complaint_no || c.complaintId || c.call_number || c.call_no || c.ticket_no || c.ticket_id || c.c_id || "";
+    return String(raw).trim().toLowerCase();
+  };
 
   const parseFlexibleComplaintDate = (raw: any): Date | null => {
     if (!raw) return null;
@@ -822,215 +844,115 @@ export default function AnalysisPage() {
       .sort((a, b) => b.count - a.count);
   }, [activeExpenses, user?.district]);
 
-  // H. District-wise First Time Fix Rate (FTFR - 24 Hours Resolution from Complaint / Penalty Data)
-  const districtFtfrData = useMemo(() => {
-    const map: Record<string, { totalCalls: number; closed24h: number }> = {};
-
-    // 1. Primary Source: Uploaded Complaint Database (Same DB as Penalty Engine)
-    const monthlyComplaints = complaintRecords.filter(r => {
-      const raiseDate = parseFlexibleComplaintDate(r.complaint_raise_date || r.attend_date);
-      if (!raiseDate) return false;
-      return raiseDate.getMonth() === selectedMonth && raiseDate.getFullYear() === selectedYear;
-    });
-
-    if (monthlyComplaints.length > 0) {
-      monthlyComplaints.forEach(r => {
-        const rawDist = (r.district_name || "").trim();
-        if (!rawDist || rawDist.toLowerCase() === "all" || rawDist.toLowerCase() === "undefined") return;
-        const cleanDist = rawDist.charAt(0).toUpperCase() + rawDist.slice(1);
-        if (!map[cleanDist]) map[cleanDist] = { totalCalls: 0, closed24h: 0 };
-
-        map[cleanDist].totalCalls += 1;
-        
-        const hoursDiff = Number(r.attend_hour_diff || r.total_downtime_hours || 0);
-        let is24h = false;
-        
-        if (hoursDiff > 0 && hoursDiff <= 24) {
-          is24h = true;
-        } else if (r.complaint_raise_date && r.complaint_close_date) {
-          const raise = parseFlexibleComplaintDate(r.complaint_raise_date);
-          const close = parseFlexibleComplaintDate(r.complaint_close_date);
-          if (raise && close) {
-            const diffMs = close.getTime() - raise.getTime();
-            if (diffMs >= 0 && diffMs <= 24 * 3600 * 1000) {
-              is24h = true;
-            }
-          }
-        } else if (r.status === "Closed" || (r.complaint_status || "").toLowerCase().includes("close") || (r.complaint_status || "").toLowerCase().includes("resolve")) {
-          if (!r.attend_hour_diff || Number(r.attend_hour_diff) <= 24) {
-            is24h = true;
-          }
-        }
-
-        if (is24h) {
-          map[cleanDist].closed24h += 1;
-        }
-      });
-    } else {
-      // 2. Fallback: activeExpenses logged calls if no standalone penalty records exist for this month
-      activeExpenses.forEach(e => {
-        const rawDist = (e.district || e.facility_district || user?.district || "").trim();
-        if (!rawDist || rawDist.toLowerCase() === "all" || rawDist.toLowerCase() === "undefined") return;
-        const cleanDist = rawDist.charAt(0).toUpperCase() + rawDist.slice(1);
-        if (!map[cleanDist]) map[cleanDist] = { totalCalls: 0, closed24h: 0 };
-
-        if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
-          e.calls_details.forEach((c: any) => {
-            map[cleanDist].totalCalls += 1;
-            const isClosed = c.call_status === "Resolved" || c.call_status === "Completed" || c.status === "Closed" || c.status === "Resolved";
-            const is24h = c.tat_hours <= 24 || c.is_ftfr || isClosed;
-            if (is24h) {
-              map[cleanDist].closed24h += 1;
-            }
-          });
-        } else {
-          const assigned = parseSanitizedCount(e.calls_assigned);
-          const completed = parseSanitizedCount(e.calls_completed);
-          if (assigned > 0 || completed > 0) {
-            const tot = Math.max(assigned, completed);
-            map[cleanDist].totalCalls += tot;
-            map[cleanDist].closed24h += completed;
-          }
-        }
-      });
-    }
-
-    let overallTotal = 0;
-    let overall24h = 0;
-
-    const list = Object.entries(map)
-      .filter(([name, stat]) => stat.totalCalls > 0 && name.toLowerCase() !== "all")
-      .map(([name, stat]) => {
-        overallTotal += stat.totalCalls;
-        overall24h += stat.closed24h;
-        const rate = stat.totalCalls > 0 ? Math.round((stat.closed24h / stat.totalCalls) * 100) : 0;
-        return {
-          name,
-          totalCalls: stat.totalCalls,
-          closed24h: stat.closed24h,
-          rate,
-          amount: rate
-        };
-      })
-      .sort((a, b) => {
-        if (b.totalCalls !== a.totalCalls) return b.totalCalls - a.totalCalls;
-        return b.rate - a.rate;
-      });
-
-    const overallRate = overallTotal > 0 ? ((overall24h / overallTotal) * 100).toFixed(1) : "100.0";
-
-    return {
-      list,
-      overallTotal,
-      overall24h,
-      overallRate,
-      isLivePenaltySource: monthlyComplaints.length > 0
-    };
-  }, [complaintRecords, selectedMonth, selectedYear, activeExpenses, user?.district]);
-
-  // I. Online Calls vs Support Calls Breakdown (DISTRICT-WISE)
-  const callTypeBreakdown = useMemo(() => {
-    let onlineTotal = 0;
-    let supportTotal = 0;
-    const districtMap: Record<string, { online: number; support: number }> = {};
-
-    activeExpenses.forEach(e => {
-      const rawDist = (e.district || e.facility_district || user?.district || "Other").trim();
-      const distName = rawDist ? rawDist.charAt(0).toUpperCase() + rawDist.slice(1) : "Other";
-      if (!districtMap[distName]) districtMap[distName] = { online: 0, support: 0 };
-
-      if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
-        e.calls_details.forEach((c: any) => {
-          const typeStr = String(c.type || c.call_type || c.calls_type || "").toLowerCase();
-          const cId = String(c.complaint_id || c.calls_complaint_id || "").trim();
-          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
-
-          if (isSupport) {
-            supportTotal += 1;
-            districtMap[distName].support += 1;
-          } else {
-            onlineTotal += 1;
-            districtMap[distName].online += 1;
-          }
-        });
-      } else {
-        const completed = parseSanitizedCount(e.calls_completed) || parseSanitizedCount(e.calls_assigned);
-        if (completed > 0) {
-          const typeStr = String(e.calls_type || e.call_type || "").toLowerCase();
-          const cId = String(e.complaint_id || e.calls_complaint_id || "").trim();
-          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
-
-          if (isSupport) {
-            supportTotal += completed;
-            districtMap[distName].support += completed;
-          } else {
-            onlineTotal += completed;
-            districtMap[distName].online += completed;
-          }
-        }
-      }
-    });
-
-    const districtList = Object.entries(districtMap)
-      .map(([name, data]) => ({
-        name,
-        online: data.online,
-        support: data.support,
-        total: data.online + data.support
-      }))
-      .filter(d => d.total > 0)
-      .sort((a, b) => b.total - a.total);
-
-    return {
-      onlineTotal,
-      supportTotal,
-      totalCalls: onlineTotal + supportTotal,
-      districtList
-    };
-  }, [activeExpenses, user?.district]);
-
-  // J. Online Calls Portal Verification & Match Analysis (True cross-referencing against uploaded complaints DB)
-  const portalMatchAnalysis = useMemo(() => {
-    let totalOnline = 0;
-    let matchedOnline = 0;
-    const districtMap: Record<string, { totalOnline: number; matched: number; unmatched: number }> = {};
-
-    // 1. Build fast lookup Set of all verified Complaint IDs from uploaded complaints DB
+  // H. Unified 6-Pillar Analysis: Portal Complaints, Expenses (Online vs Support), Match Audit & FTFR
+  const comprehensiveCallAnalysis = useMemo(() => {
+    // A. Build verified Complaint IDs Set & District Portal Stats for selected month
     const verifiedComplaintSet = new Set<string>();
+    const portalByDistrict: Record<string, { total: number; closed24h: number }> = {};
+
     (complaintRecords || []).forEach(r => {
       const cid = String(r.complaint_id || "").trim().toLowerCase();
       if (cid) {
         verifiedComplaintSet.add(cid);
-        const cleanAlphaNum = cid.replace(/[^a-z0-9]/gi, "");
-        if (cleanAlphaNum) verifiedComplaintSet.add(cleanAlphaNum);
+        const cleanAlpha = cid.replace(/[^a-z0-9]/gi, "");
+        if (cleanAlpha) verifiedComplaintSet.add(cleanAlpha);
+      }
+
+      // Filter by selected month/year for district portal stats & FTFR
+      const raiseDate = parseFlexibleComplaintDate(r.complaint_raise_date || r.attend_date);
+      if (raiseDate && raiseDate.getMonth() === selectedMonth && raiseDate.getFullYear() === selectedYear) {
+        const rawDist = (r.district_name || "").trim();
+        if (rawDist && rawDist.toLowerCase() !== "all" && rawDist.toLowerCase() !== "undefined") {
+          const distName = rawDist.charAt(0).toUpperCase() + rawDist.slice(1);
+          if (!portalByDistrict[distName]) portalByDistrict[distName] = { total: 0, closed24h: 0 };
+          portalByDistrict[distName].total += 1;
+
+          const hoursDiff = Number(r.attend_hour_diff || r.total_downtime_hours || 0);
+          let is24h = false;
+          if (hoursDiff > 0 && hoursDiff <= 24) {
+            is24h = true;
+          } else if (r.complaint_raise_date && r.complaint_close_date) {
+            const closeDate = parseFlexibleComplaintDate(r.complaint_close_date);
+            if (closeDate) {
+              const diffMs = closeDate.getTime() - raiseDate.getTime();
+              if (diffMs >= 0 && diffMs <= 24 * 3600 * 1000) is24h = true;
+            }
+          } else if (r.status === "Closed" || (r.complaint_status || "").toLowerCase().includes("close") || (r.complaint_status || "").toLowerCase().includes("resolve")) {
+            if (!r.attend_hour_diff || Number(r.attend_hour_diff) <= 24) is24h = true;
+          }
+
+          if (is24h) {
+            portalByDistrict[distName].closed24h += 1;
+          }
+        }
       }
     });
 
-    // 2. Cross-reference engineer submitted expense calls against verifiedComplaintSet
+    // B. Build comprehensive district matrix
+    const districtMap: Record<string, {
+      name: string;
+      portalLogged: number;
+      portalClosed24h: number;
+      ftfrRate: number;
+      expenseTotal: number;
+      expenseOnline: number;
+      expenseSupport: number;
+      onlineMatched: number;
+      onlineUnmatched: number;
+      matchRate: number;
+    }> = {};
+
+    const getOrCreateDist = (name: string) => {
+      const clean = name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
+      if (!districtMap[clean]) {
+        districtMap[clean] = {
+          name: clean,
+          portalLogged: 0,
+          portalClosed24h: 0,
+          ftfrRate: 0,
+          expenseTotal: 0,
+          expenseOnline: 0,
+          expenseSupport: 0,
+          onlineMatched: 0,
+          onlineUnmatched: 0,
+          matchRate: 0
+        };
+      }
+      return districtMap[clean];
+    };
+
+    // Populate from Portal DB
+    Object.entries(portalByDistrict).forEach(([dist, stat]) => {
+      const d = getOrCreateDist(dist);
+      d.portalLogged = stat.total;
+      d.portalClosed24h = stat.closed24h;
+      d.ftfrRate = stat.total > 0 ? Math.round((stat.closed24h / stat.total) * 100) : 0;
+    });
+
+    // Populate from Expense Submissions
     activeExpenses.forEach(e => {
       const rawDist = (e.district || e.facility_district || user?.district || "").trim();
       if (!rawDist || rawDist.toLowerCase() === "all" || rawDist.toLowerCase() === "undefined") return;
-      const cleanDist = rawDist.charAt(0).toUpperCase() + rawDist.slice(1);
-      if (!districtMap[cleanDist]) districtMap[cleanDist] = { totalOnline: 0, matched: 0, unmatched: 0 };
+      const d = getOrCreateDist(rawDist);
 
-      if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
-        e.calls_details.forEach((c: any) => {
+      const calls = parseCallsDetails(e);
+      if (calls.length > 0) {
+        calls.forEach((c: any) => {
           const typeStr = String(c.type || c.call_type || c.calls_type || "").toLowerCase();
-          const cId = String(c.complaint_id || c.calls_complaint_id || c.call_number || c.ticket_no || "").trim().toLowerCase();
-          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
+          const cid = extractComplaintId(c);
+          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cid);
 
-          if (!isSupport) {
-            totalOnline += 1;
-            districtMap[cleanDist].totalOnline += 1;
-
-            const cleanCId = cId.replace(/[^a-z0-9]/gi, "");
-            const isMatched = (cId && verifiedComplaintSet.has(cId)) || (cleanCId && verifiedComplaintSet.has(cleanCId));
-            
+          d.expenseTotal += 1;
+          if (isSupport) {
+            d.expenseSupport += 1;
+          } else {
+            d.expenseOnline += 1;
+            const cleanCid = cid.replace(/[^a-z0-9]/gi, "");
+            const isMatched = (cid && verifiedComplaintSet.has(cid)) || (cleanCid && verifiedComplaintSet.has(cleanCid));
             if (isMatched) {
-              matchedOnline += 1;
-              districtMap[cleanDist].matched += 1;
+              d.onlineMatched += 1;
             } else {
-              districtMap[cleanDist].unmatched += 1;
+              d.onlineUnmatched += 1;
             }
           }
         });
@@ -1038,51 +960,70 @@ export default function AnalysisPage() {
         const completed = parseSanitizedCount(e.calls_completed) || parseSanitizedCount(e.calls_assigned);
         if (completed > 0) {
           const typeStr = String(e.calls_type || e.call_type || "").toLowerCase();
-          const cId = String(e.complaint_id || e.calls_complaint_id || e.ticket_no || "").trim().toLowerCase();
-          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
+          const cid = extractComplaintId(e);
+          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cid);
 
-          if (!isSupport) {
-            totalOnline += completed;
-            districtMap[cleanDist].totalOnline += completed;
-
-            const cleanCId = cId.replace(/[^a-z0-9]/gi, "");
-            const isMatched = (cId && verifiedComplaintSet.has(cId)) || (cleanCId && verifiedComplaintSet.has(cleanCId));
-
+          d.expenseTotal += completed;
+          if (isSupport) {
+            d.expenseSupport += completed;
+          } else {
+            d.expenseOnline += completed;
+            const cleanCid = cid.replace(/[^a-z0-9]/gi, "");
+            const isMatched = (cid && verifiedComplaintSet.has(cid)) || (cleanCid && verifiedComplaintSet.has(cleanCid));
             if (isMatched) {
-              matchedOnline += completed;
-              districtMap[cleanDist].matched += completed;
+              d.onlineMatched += completed;
             } else {
-              districtMap[cleanDist].unmatched += completed;
+              d.onlineUnmatched += completed;
             }
           }
         }
       }
     });
 
-    const matchRate = totalOnline > 0 ? ((matchedOnline / totalOnline) * 100).toFixed(1) : "0.0";
-    const districtList = Object.entries(districtMap)
-      .filter(([name, data]) => data.totalOnline > 0 && name.toLowerCase() !== "all")
-      .map(([name, data]) => {
-        const rate = data.totalOnline > 0 ? Math.round((data.matched / data.totalOnline) * 100) : 0;
-        return {
-          name,
-          totalOnline: data.totalOnline,
-          matched: data.matched,
-          unmatched: Math.max(0, data.totalOnline - data.matched),
-          rate
-        };
+    // Calculate rates and overall aggregates
+    let totalPortalLogged = 0;
+    let totalPortalClosed24h = 0;
+    let totalExpenseCalls = 0;
+    let totalExpenseOnline = 0;
+    let totalExpenseSupport = 0;
+    let totalOnlineMatched = 0;
+    let totalOnlineUnmatched = 0;
+
+    const list = Object.values(districtMap)
+      .filter(d => (d.portalLogged > 0 || d.expenseTotal > 0) && d.name.toLowerCase() !== "all")
+      .map(d => {
+        d.ftfrRate = d.portalLogged > 0 ? Math.round((d.portalClosed24h / d.portalLogged) * 100) : (d.expenseTotal > 0 ? 100 : 0);
+        d.matchRate = d.expenseOnline > 0 ? Math.round((d.onlineMatched / d.expenseOnline) * 100) : 0;
+
+        totalPortalLogged += d.portalLogged;
+        totalPortalClosed24h += d.portalClosed24h;
+        totalExpenseCalls += d.expenseTotal;
+        totalExpenseOnline += d.expenseOnline;
+        totalExpenseSupport += d.expenseSupport;
+        totalOnlineMatched += d.onlineMatched;
+        totalOnlineUnmatched += d.onlineUnmatched;
+
+        return d;
       })
-      .sort((a, b) => b.totalOnline - a.totalOnline);
+      .sort((a, b) => (b.portalLogged + b.expenseTotal) - (a.portalLogged + a.expenseTotal));
+
+    const overallFtfrRate = totalPortalLogged > 0 ? ((totalPortalClosed24h / totalPortalLogged) * 100).toFixed(1) : "100.0";
+    const overallMatchRate = totalExpenseOnline > 0 ? ((totalOnlineMatched / totalExpenseOnline) * 100).toFixed(1) : "0.0";
 
     return {
-      totalOnline,
-      matchedOnline,
-      unmatchedOnline: Math.max(0, totalOnline - matchedOnline),
-      matchRate,
-      districtList,
+      list,
+      totalPortalLogged,
+      totalPortalClosed24h,
+      overallFtfrRate,
+      totalExpenseCalls,
+      totalExpenseOnline,
+      totalExpenseSupport,
+      totalOnlineMatched,
+      totalOnlineUnmatched,
+      overallMatchRate,
       totalVerifiedDBComplaints: verifiedComplaintSet.size
     };
-  }, [activeExpenses, complaintRecords, user?.district]);
+  }, [complaintRecords, activeExpenses, selectedMonth, selectedYear, user?.district]);
 
   // Selected KPI Card Highlight State (No modals)
   const [selectedKpi, setSelectedKpi] = useState<string>("all");
@@ -2117,247 +2058,212 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          {/* Row 7: District-wise FTFR (24h SLA) & District-wise Online vs Support Calls */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-            {/* District-wise FTFR Rate Card (col-span-6) */}
-            <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
-              <div className="bg-[#1E1B4B] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <ThunderboltOutlined style={{ fontSize: 13 }} className="text-amber-400" />
-                  DISTRICT-WISE FIRST TIME FIX RATE (FTFR - 24H RESOLUTION)
-                </span>
-                <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-[3px]">
-                  {districtFtfrData.overallRate}% FTFR ({districtFtfrData.overall24h}/{districtFtfrData.overallTotal} &lt;24h)
-                </span>
-              </div>
-              <div className="p-3 overflow-y-auto custom-scrollbar" style={{ height: 310 }}>
-                {districtFtfrData.list.length > 0 ? (
-                  <div className="space-y-2">
-                    {districtFtfrData.list.map((item, idx) => {
-                      const isHigh = item.rate >= 80;
-                      const isMed = item.rate >= 50 && item.rate < 80;
-                      const barColor = isHigh ? "#10b981" : (isMed ? "#f59e0b" : "#ef4444");
-
-                      return (
-                        <div key={idx} className="bg-slate-50 border border-slate-200/70 p-2 flex flex-col space-y-1 hover:bg-slate-100/70 transition-all">
-                          <div className="flex items-center justify-between gap-2 text-xs">
-                            <span className="font-bold text-slate-900 truncate max-w-[170px] leading-tight">
-                              {item.name}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] font-mono font-bold text-slate-500">
-                                {item.closed24h}/{item.totalCalls} (&lt;24h)
-                              </span>
-                              <span className={`font-mono font-black px-1.5 py-0.5 rounded-none text-[11px] border ${
-                                isHigh
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : isMed
-                                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                                  : "bg-rose-50 text-rose-700 border-rose-200"
-                              }`}>
-                                {item.rate}% FTFR
-                              </span>
-                            </div>
-                          </div>
-                          {/* Progress bar directly representing FTFR % */}
-                          <div className="w-full bg-slate-200/80 h-2 overflow-hidden relative">
-                            <div
-                              className="h-full transition-all duration-500"
-                              style={{
-                                width: `${Math.max(4, Math.min(100, item.rate))}%`,
-                                backgroundColor: barColor
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
-                    No complaint records found for this period
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Online Calls vs Support Calls Breakdown Card (col-span-6) */}
-            <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
-              <div className="bg-[#1E1B4B] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <SafetyCertificateOutlined style={{ fontSize: 13 }} className="text-cyan-400" />
-                  ONLINE VS SUPPORT CALLS (DISTRICT-WISE)
-                </span>
-                <span className="text-[10px] font-mono font-bold text-white/80 bg-white/10 px-2 py-0.5 rounded-[3px]">
-                  {callTypeBreakdown.onlineTotal} Online / {callTypeBreakdown.supportTotal} Support
-                </span>
-              </div>
-              <div className="p-3 overflow-y-auto custom-scrollbar" style={{ height: 310 }}>
-                {callTypeBreakdown.districtList.length > 0 ? (
-                  <div className="space-y-2">
-                    {callTypeBreakdown.districtList.map((item, idx) => {
-                      const onlinePct = item.total > 0 ? Math.round((item.online / item.total) * 100) : 0;
-                      const supportPct = item.total > 0 ? 100 - onlinePct : 0;
-
-                      return (
-                        <div key={idx} className="bg-slate-50 border border-slate-200/70 p-2 text-xs flex flex-col space-y-1 hover:bg-slate-100/70 transition-all">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="font-bold text-slate-900 truncate max-w-[150px]">{item.name}</span>
-                            <div className="flex items-center gap-2 font-mono text-[10px]">
-                              <span className="text-cyan-700 font-bold bg-cyan-50 px-1 py-0.5 border border-cyan-200">Online: {item.online}</span>
-                              <span className="text-indigo-700 font-bold bg-indigo-50 px-1 py-0.5 border border-indigo-200">Support: {item.support}</span>
-                              <span className="text-slate-800 font-black bg-white px-1.5 py-0.5 border border-slate-300">{item.total} Total</span>
-                            </div>
-                          </div>
-                          {/* Dual segment bar */}
-                          <div className="w-full bg-slate-200 h-2 flex overflow-hidden">
-                            <div style={{ width: `${onlinePct}%` }} className="bg-cyan-500 h-full" title={`Online: ${item.online} (${onlinePct}%)`} />
-                            <div style={{ width: `${supportPct}%` }} className="bg-indigo-600 h-full" title={`Support: ${item.support} (${supportPct}%)`} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
-                    No district call distribution records
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Row 8: Online Calls Portal Match & Verification Analysis (col-span-12) */}
+          {/* Row 7 & 8: Comprehensive Complaint Portal vs Expense Calls Analysis */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
             <div className="lg:col-span-12 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
-              <div className="bg-[#1E1B4B] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <AuditOutlined style={{ fontSize: 13 }} className="text-emerald-400" />
-                  ONLINE CALLS PORTAL MATCH & VERIFICATION ANALYSIS
-                </span>
-                <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-[3px]">
-                  {portalMatchAnalysis.matchRate}% Portal Verified ({portalMatchAnalysis.matchedOnline}/{portalMatchAnalysis.totalOnline} Calls)
-                </span>
+              <div className="bg-[#1E1B4B] text-white px-3.5 py-2.5 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AuditOutlined style={{ fontSize: 14 }} className="text-emerald-400" />
+                  <span className="text-xs font-bold uppercase tracking-wide text-white">
+                    COMPLAINT PORTAL VS EXPENSE CALLS & FTFR AUDIT MATRIX
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2 py-0.5 rounded-[3px]">
+                    ⚡ {comprehensiveCallAnalysis.overallFtfrRate}% FTFR ({comprehensiveCallAnalysis.totalPortalClosed24h}/{comprehensiveCallAnalysis.totalPortalLogged} &lt;24h)
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-[3px]">
+                    🎯 {comprehensiveCallAnalysis.overallMatchRate}% Portal Matched ({comprehensiveCallAnalysis.totalOnlineMatched}/{comprehensiveCallAnalysis.totalExpenseOnline} Online)
+                  </span>
+                </div>
               </div>
+
               <div className="p-3.5">
-                {/* 3 Metric Header Summary Tiles */}
+                {/* 3 Master Summary Stat Tiles */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                  <div className="bg-slate-50 border border-slate-200 p-3 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block font-sans">
-                        TOTAL ONLINE CALLS LOGGED
+                  {/* Portal Complaints Card */}
+                  <div className="bg-slate-50 border border-slate-200 p-3 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block">
+                        PORTAL COMPLAINTS LOGGED
                       </span>
-                      <span className="text-xl font-bold font-mono text-slate-900 mt-0.5 block">
-                        {portalMatchAnalysis.totalOnline} Calls
-                      </span>
-                    </div>
-                    <div className="w-9 h-9 bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center font-bold">
-                      <RocketOutlined style={{ fontSize: 16 }} />
-                    </div>
-                  </div>
-
-                  <div className="bg-emerald-50/70 border border-emerald-200 p-3 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block font-sans">
-                        PORTAL MATCHED (VERIFIED)
-                      </span>
-                      <span className="text-xl font-bold font-mono text-emerald-800 mt-0.5 block">
-                        {portalMatchAnalysis.matchedOnline} Calls
+                      <span className="text-[10px] font-mono font-bold text-amber-700 bg-amber-100/70 border border-amber-300 px-1.5 py-0.5">
+                        {comprehensiveCallAnalysis.overallFtfrRate}% FTFR
                       </span>
                     </div>
-                    <div className="w-9 h-9 bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center justify-center font-bold">
-                      <AuditOutlined style={{ fontSize: 16 }} />
+                    <div className="mt-2">
+                      <span className="text-2xl font-bold font-mono text-slate-900 leading-none">
+                        {comprehensiveCallAnalysis.totalPortalLogged}
+                      </span>
+                      <span className="text-xs font-medium text-slate-500 ml-1.5 font-sans">
+                        Complaints ({comprehensiveCallAnalysis.totalPortalClosed24h} Closed &lt;24h)
+                      </span>
                     </div>
                   </div>
 
-                  <div className="bg-indigo-50/70 border border-indigo-200 p-3 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-800 block font-sans">
-                        PORTAL MATCH ACCURACY
+                  {/* Expense Calls Card */}
+                  <div className="bg-cyan-50/50 border border-cyan-200 p-3 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-900 block">
+                        EXPENSE CALLS SUBMITTED
                       </span>
-                      <span className="text-xl font-bold font-mono text-indigo-900 mt-0.5 block">
-                        {portalMatchAnalysis.matchRate}%
+                      <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                        <span className="text-cyan-800 font-bold bg-cyan-100 px-1 border border-cyan-300">{comprehensiveCallAnalysis.totalExpenseOnline} Online</span>
+                        <span className="text-indigo-800 font-bold bg-indigo-100 px-1 border border-indigo-300">{comprehensiveCallAnalysis.totalExpenseSupport} Support</span>
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-2xl font-bold font-mono text-cyan-950 leading-none">
+                        {comprehensiveCallAnalysis.totalExpenseCalls}
+                      </span>
+                      <span className="text-xs font-medium text-cyan-700 ml-1.5 font-sans">
+                        Total Calls Logged in Expenses
                       </span>
                     </div>
-                    <div className="w-9 h-9 bg-indigo-100 text-indigo-700 border border-indigo-300 flex items-center justify-center font-bold">
-                      <FundOutlined style={{ fontSize: 16 }} />
+                  </div>
+
+                  {/* Online Match Verification Card */}
+                  <div className="bg-emerald-50/60 border border-emerald-200 p-3 flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-900 block">
+                        ONLINE CALLS PORTAL MATCH
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1.5 py-0.5">
+                        {comprehensiveCallAnalysis.overallMatchRate}% Accuracy
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-baseline justify-between">
+                      <div>
+                        <span className="text-2xl font-bold font-mono text-emerald-900 leading-none">
+                          {comprehensiveCallAnalysis.totalOnlineMatched}
+                        </span>
+                        <span className="text-xs font-medium text-emerald-700 ml-1.5 font-sans">
+                          Matched ({comprehensiveCallAnalysis.totalOnlineUnmatched} Unmatched)
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* District-wise Verification High-Density Table with Visual Progress Bar */}
-                <div className="border border-slate-200/90 overflow-hidden">
-                  <div className="bg-slate-100/90 px-3 py-2 border-b border-slate-200 flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                      DISTRICT-WISE PORTAL MATCH AUDIT ({portalMatchAnalysis.districtList.length} DISTRICTS)
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-500 font-bold">
-                      VERIFIED VIA COMPLAINT PORTAL
-                    </span>
-                  </div>
+                {/* High-Density District Audit Table */}
+                <div className="border border-slate-200 overflow-hidden">
+                  <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold text-[11px]">
+                          <th className="py-2.5 px-3"># DISTRICT</th>
+                          <th className="py-2.5 px-3 text-center">PORTAL LOGGED</th>
+                          <th className="py-2.5 px-3 text-center">FTFR RATE (&lt;24H)</th>
+                          <th className="py-2.5 px-3 text-center">EXPENSE CALLS</th>
+                          <th className="py-2.5 px-3 text-center">ONLINE VS SUPPORT</th>
+                          <th className="py-2.5 px-3 text-center">PORTAL MATCH AUDIT</th>
+                          <th className="py-2.5 px-3 text-right">MATCH ACCURACY</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-sans">
+                        {comprehensiveCallAnalysis.list.length > 0 ? (
+                          comprehensiveCallAnalysis.list.map((d, idx) => {
+                            const isHighFtfr = d.ftfrRate >= 80;
+                            const isMedFtfr = d.ftfrRate >= 50 && d.ftfrRate < 80;
+                            const isFullMatch = d.matchRate === 100 && d.expenseOnline > 0;
+                            const isHighMatch = d.matchRate >= 80;
 
-                  <div className="max-h-[340px] overflow-y-auto custom-scrollbar divide-y divide-slate-100">
-                    {portalMatchAnalysis.districtList.length > 0 ? (
-                      portalMatchAnalysis.districtList.map((d, idx) => {
-                        const isFull = d.rate === 100;
-                        const isHigh = d.rate >= 80;
-                        const barColor = isFull ? "#10b981" : (isHigh ? "#059669" : "#f59e0b");
-
-                        return (
-                          <div key={idx} className="p-2.5 px-3 bg-white hover:bg-slate-50/80 transition-all flex flex-col space-y-1.5">
-                            <div className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-[10px] text-slate-400 w-5 font-bold">
-                                  #{idx + 1}
-                                </span>
-                                <span className="font-bold text-slate-900 text-xs">
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                                {/* District Name */}
+                                <td className="py-2.5 px-3 font-bold text-slate-900 whitespace-nowrap">
+                                  <span className="font-mono text-slate-400 text-[10px] mr-1.5">#{idx + 1}</span>
                                   {d.name}
-                                </span>
-                              </div>
+                                </td>
 
-                              <div className="flex items-center gap-3 font-mono text-[11px]">
-                                <span className="text-slate-600">
-                                  Logged: <strong className="text-slate-900">{d.totalOnline}</strong>
-                                </span>
-                                <span className="text-slate-300">|</span>
-                                <span className="text-emerald-700 font-bold">
-                                  Matched: {d.matched}
-                                </span>
-                                {d.unmatched > 0 && (
-                                  <>
-                                    <span className="text-slate-300">|</span>
-                                    <span className="text-rose-600 font-bold bg-rose-50 px-1 py-0.5 border border-rose-200">
-                                      Unmatched: {d.unmatched}
+                                {/* Portal Logged */}
+                                <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 whitespace-nowrap">
+                                  {d.portalLogged > 0 ? `${d.portalLogged} Complaints` : <span className="text-slate-400 font-normal">0</span>}
+                                </td>
+
+                                {/* FTFR Rate */}
+                                <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                                  {d.portalLogged > 0 ? (
+                                    <div className="inline-flex items-center gap-1.5">
+                                      <span className={`font-mono font-bold text-[11px] px-1.5 py-0.5 border ${
+                                        isHighFtfr
+                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                          : isMedFtfr
+                                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                                          : "bg-rose-50 text-rose-700 border-rose-200"
+                                      }`}>
+                                        {d.ftfrRate}% FTFR
+                                      </span>
+                                      <span className="text-[10px] font-mono text-slate-500">
+                                        ({d.portalClosed24h}/{d.portalLogged})
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-400 font-mono text-[10px]">--</span>
+                                  )}
+                                </td>
+
+                                {/* Expense Total Calls */}
+                                <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-900 whitespace-nowrap">
+                                  {d.expenseTotal} Calls
+                                </td>
+
+                                {/* Online vs Support */}
+                                <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-1.5 font-mono text-[10px]">
+                                    <span className="text-cyan-800 bg-cyan-50 px-1.5 py-0.5 border border-cyan-200 font-bold">
+                                      Online: {d.expenseOnline}
                                     </span>
-                                  </>
-                                )}
-                                <span className={`font-bold px-1.5 py-0.5 border ${
-                                  isFull
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                    : isHigh
-                                    ? "bg-teal-50 text-teal-700 border-teal-200"
-                                    : "bg-amber-50 text-amber-700 border-amber-200"
-                                }`}>
-                                  {d.rate}% Matched
-                                </span>
-                              </div>
-                            </div>
+                                    <span className="text-indigo-800 bg-indigo-50 px-1.5 py-0.5 border border-indigo-200 font-bold">
+                                      Support: {d.expenseSupport}
+                                    </span>
+                                  </div>
+                                </td>
 
-                            {/* Clean Accuracy Progress Bar */}
-                            <div className="w-full bg-slate-100 h-1.5 overflow-hidden border border-slate-200/50">
-                              <div
-                                style={{ width: `${Math.max(2, d.rate)}%`, backgroundColor: barColor }}
-                                className="h-full transition-all duration-500"
-                              />
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="p-8 text-center text-slate-400 text-xs font-bold">
-                        No online portal calls recorded for this selection
-                      </div>
-                    )}
+                                {/* Portal Match Audit */}
+                                <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                                  <div className="inline-flex items-center gap-1.5 font-mono text-[10px]">
+                                    <span className="text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 border border-emerald-200">
+                                      Matched: {d.onlineMatched}
+                                    </span>
+                                    {d.onlineUnmatched > 0 ? (
+                                      <span className="text-rose-700 font-bold bg-rose-50 px-1.5 py-0.5 border border-rose-200">
+                                        Unmatched: {d.onlineUnmatched}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400 font-normal">0 Unmatched</span>
+                                    )}
+                                  </div>
+                                </td>
+
+                                {/* Match Accuracy */}
+                                <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                                  {d.expenseOnline > 0 ? (
+                                    <span className={`font-mono font-bold text-[11px] px-1.5 py-0.5 border ${
+                                      isFullMatch
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : isHighMatch
+                                        ? "bg-teal-50 text-teal-700 border-teal-200"
+                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                    }`}>
+                                      {d.matchRate}%
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 font-mono text-[10px]">N/A</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={7} className="py-8 text-center text-slate-400 font-bold">
+                              No complaint or expense call data recorded for this selection
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
