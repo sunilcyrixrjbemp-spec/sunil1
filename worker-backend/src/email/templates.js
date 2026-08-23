@@ -76,7 +76,7 @@ const emailWrapper = (content, previewText = "") => `<!DOCTYPE html>
                 Cyrix HealthCare Private Limited
               </p>
               <p style="margin:0;color:#94a3b8;font-size:11px;" class="dm-label">
-                This is an automated notification. For further support, contact <a href="mailto:support@indrae.in" style="color:#2563eb;text-decoration:none;font-weight:600;">support@indrae.in</a>
+                This is an automated notification. For further support, contact <a href="mailto:rjbemp-bikaner@cyrix.in" style="color:#2563eb;text-decoration:none;font-weight:600;">rjbemp-bikaner@cyrix.in</a>
               </p>
             </td>
           </tr>
@@ -117,7 +117,7 @@ export function otpTemplate({ name, otp, userId, purpose = "Account Unlock", exp
     </div>
 
     <p style="margin:20px 0 0 0;font-size:13px;color:#94a3b8;line-height:1.6;border-top:1px solid #e2e8f0;padding-top:16px;">
-      Do not share this code with anyone. If you did not make this request or need assistance, please contact <a href="mailto:support@indrae.in" style="color:#2563eb;font-weight:600;">support@indrae.in</a> immediately.
+      Do not share this code with anyone. If you did not make this request or need assistance, please contact <a href="mailto:rjbemp-bikaner@cyrix.in" style="color:#2563eb;font-weight:600;">rjbemp-bikaner@cyrix.in</a> immediately.
     </p>
 
     <p style="margin:20px 0 0 0;font-size:14px;color:#1e293b;line-height:1.6;">
@@ -126,7 +126,7 @@ export function otpTemplate({ name, otp, userId, purpose = "Account Unlock", exp
     </p>
   `;
 
-  const textPlain = `Dear ${name || "User"},\n\nWe have received a request for ${purpose} on your Cyrix Field Connect account.\n\nYour Verification Code (OTP): ${otp}\nValid for: ${expiryMinutes} minutes\n\nIf you cannot find this email in your Inbox, please check your Junk / Spam folder.\nDo not share this code with anyone. If you did not make this request, contact support@indrae.in immediately.\n\nThanks,\nCyrix HealthCare Team`;
+  const textPlain = `Dear ${name || "User"},\n\nWe have received a request for ${purpose} on your Cyrix Field Connect account.\n\nYour Verification Code (OTP): ${otp}\nValid for: ${expiryMinutes} minutes\n\nIf you cannot find this email in your Inbox, please check your Junk / Spam folder.\nDo not share this code with anyone. If you did not make this request, contact rjbemp-bikaner@cyrix.in immediately.\n\nThanks,\nCyrix HealthCare Team`;
 
   return {
     subject: `Verification Code for ${purpose} - Cyrix HealthCare`,
@@ -160,7 +160,7 @@ export function passwordResetTemplate({ name, otp, userId, expiryMinutes = 10 })
     </div>
 
     <p style="margin:20px 0 0 0;font-size:13px;color:#94a3b8;line-height:1.6;border-top:1px solid #e2e8f0;padding-top:16px;">
-      If you did not request a password reset, please ignore this email and contact <a href="mailto:support@indrae.in" style="color:#ea580c;font-weight:600;">support@indrae.in</a> immediately.
+      If you did not request a password reset, please ignore this email and contact <a href="mailto:rjbemp-bikaner@cyrix.in" style="color:#ea580c;font-weight:600;">rjbemp-bikaner@cyrix.in</a> immediately.
     </p>
 
     <p style="margin:20px 0 0 0;font-size:14px;color:#1e293b;line-height:1.6;">
@@ -231,7 +231,7 @@ export function expenseSubmittedTemplate({ employeeName, expenseCode, totalAmoun
       <tr><td style="padding:6px 0;"><strong style="color:${BRAND_COLOR};">Total Amount:</strong></td><td style="color:#333;font-weight:bold;">₹${(totalAmount || 0).toLocaleString("en-IN")}</td></tr>
       <tr><td style="padding:6px 0;"><strong style="color:${BRAND_COLOR};">Submitted At:</strong></td><td style="color:#333;">${submittedAt}</td></tr>
     </table>
-    <p style="color:#555;font-size:13px;">You will receive another email once your claim is approved or returned. For further support, contact <a href="mailto:support@indrae.in" style="color:#2563eb;font-weight:600;">support@indrae.in</a>.</p>
+    <p style="color:#555;font-size:13px;">You will receive another email once your claim is approved or returned. For further support, contact <a href="mailto:rjbemp-bikaner@cyrix.in" style="color:#2563eb;font-weight:600;">rjbemp-bikaner@cyrix.in</a>.</p>
   `;
   return {
     subject: `Expense Submitted: ${expenseCode} — ₹${(totalAmount || 0).toLocaleString("en-IN")}`,
@@ -252,7 +252,7 @@ export function expenseApprovedTemplate({ employeeName, expenseCode, totalAmount
       <tr><td style="padding:6px 0;"><strong>Approved By:</strong></td><td>${approverName}</td></tr>
       <tr><td style="padding:6px 0;"><strong>Approved At:</strong></td><td>${approvedAt}</td></tr>
     </table>
-    <p style="color:#555;font-size:13px;">Your reimbursement will be processed as per your company's payment cycle. For further support, contact <a href="mailto:support@indrae.in" style="color:#2563eb;font-weight:600;">support@indrae.in</a>.</p>
+    <p style="color:#555;font-size:13px;">Your reimbursement will be processed as per your company's payment cycle. For further support, contact <a href="mailto:rjbemp-bikaner@cyrix.in" style="color:#2563eb;font-weight:600;">rjbemp-bikaner@cyrix.in</a>.</p>
   `;
   return {
     subject: `✓ Approved: ${expenseCode} — ₹${(totalAmount || 0).toLocaleString("en-IN")}`,
@@ -416,7 +416,7 @@ export function expenseRejectedTemplate({
         Please review the rejection reason carefully and contact
         <strong class="dm-val">${approverName || "your reporting manager"}</strong> for further guidance.
         For any questions or further support, please reach out to <strong>Sunil Vishnoi</strong> at
-        <a href="mailto:support@indrae.in" style="color:#1d4ed8;font-weight:700;text-decoration:underline;">support@indrae.in</a>.
+        <a href="mailto:rjbemp-bikaner@cyrix.in" style="color:#1d4ed8;font-weight:700;text-decoration:underline;">rjbemp-bikaner@cyrix.in</a>.
       </div>
     </div>
 
@@ -587,10 +587,10 @@ export function submissionReminderTemplate({
       If you were on approved leave, official weekly off, or did not perform field operations on any of the listed dates below, please log in to the Cyrix FieldOps portal and mark those specific dates as <strong>"On Leave"</strong>. Marking a date as leave immediately clears it from your overdue submission count and prevents compliance escalations.
     </div>
 
-    <!-- Submission Policy & Cutoff Warning Box -->
+    <!-- Submission Policy & Past-Day Limit Notice Box -->
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:#92400e;line-height:1.5;">
-      ⏰ <strong>Financial Cutoff & Policy Notice:</strong><br/>
-      In accordance with company expense policy, retrospective claims can be submitted within your active retrospective window (up to allowed back days / 3rd of the following month cutoff). Claims submitted after cutoff cannot be processed without executive management override.
+      ⏰ <strong>Expense Submission Window & Policy Notice:</strong><br/>
+      In accordance with company expense policy, retrospective claims can only be submitted within your active past-day logging window (<strong>up to 25 days from today</strong>). Submissions for dates older than the 25-day limit are locked and cannot be processed without administrative approval.
     </div>
 
     <!-- Missing Dates Section -->
