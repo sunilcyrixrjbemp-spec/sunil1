@@ -1,3 +1,4 @@
+import { generateEngineerVectorPdf, generateBulkZipFast } from "../utils/fastVectorPdfGenerator";
 import { useEffect, useState, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 import { expenseService } from "../services/expenseService";
@@ -1015,150 +1016,39 @@ export default function MonthSummaryPage() {
     fetchData(f);
   };
 
-  const loadScript = (src: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (document.querySelector(`script[src="${src}"]`)) {
-        resolve();
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = src;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-      document.head.appendChild(script);
-    });
-  };
 
-  // Renders a full HTML document inside a hidden iframe, captures all pages (summary sheet + bill attachments),
-  // converts with html2canvas + jsPDF, and returns a genuine multi-page A4 Landscape PDF Blob.
-  const renderHTMLToPDFBlob = async (html: string): Promise<Blob> => {
-    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
-    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
 
-    const { jsPDF } = (window as any).jspdf;
-    const h2c = (window as any).html2canvas;
 
-    const A4_W_CSS = 1122; // A4 landscape width at 96dpi
-    const SCALE = 1.5; // Fast rendering scale
-
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.top = "0";
-    iframe.style.left = "0";
-    iframe.style.width = `${A4_W_CSS}px`;
-    iframe.style.height = "10000px";
-    iframe.style.opacity = "0";
-    iframe.style.pointerEvents = "none";
-    iframe.style.border = "none";
-    iframe.style.zIndex = "-9999";
-    document.body.appendChild(iframe);
-
-    const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iDoc) {
-      if (document.body.contains(iframe)) document.body.removeChild(iframe);
-      throw new Error("No iframe document available for PDF rendering");
-    }
-
-    iDoc.open();
-    iDoc.write(html);
-    iDoc.close();
-
-    // Fast image load check with 2.5s fallback timeout
-    await new Promise<void>((resolve) => {
-      const imgs = Array.from(iDoc.getElementsByTagName("img"));
-      if (imgs.length === 0) { setTimeout(resolve, 100); return; }
-      let loadedCount = 0;
-      let failedCount = 0;
-      let isResolved = false;
-
-      const finish = () => {
-        if (!isResolved) {
-          isResolved = true;
-          setTimeout(resolve, 100);
-        }
-      };
-
-      const check = () => {
-        if (loadedCount + failedCount >= imgs.length) {
-          finish();
-        }
-      };
-
-      imgs.forEach((img) => {
-        const imageEl = img as HTMLImageElement;
-        if (imageEl.complete) {
-          loadedCount++;
-          check();
-        } else {
-          imageEl.addEventListener("load", () => {
-            loadedCount++;
-            check();
-          });
-          imageEl.addEventListener("error", () => {
-            failedCount++;
-            check();
-          });
-        }
-      });
-
-      // 2.5 second fallback timeout per rendering run for speed
-      setTimeout(() => {
-        if (!isResolved) {
-          finish();
-        }
-      }, 2500);
-    });
-
-    const pagesToRender: HTMLElement[] = [];
-    const summaryPages = Array.from(iDoc.querySelectorAll(".summary-page, .wrap")) as HTMLElement[];
-    const uniqueSummaryPages = Array.from(new Set(summaryPages));
-    pagesToRender.push(...uniqueSummaryPages);
-
-    const attPages = Array.from(iDoc.querySelectorAll(".attachment-page")) as HTMLElement[];
-    const uniqueAttPages = Array.from(new Set(attPages)).filter(el => !pagesToRender.includes(el));
-    pagesToRender.push(...uniqueAttPages);
-
-    const pdf = new jsPDF({
-      orientation: "landscape",
-      unit: "mm",
-      format: "a4",
-      compress: true
-    });
-
-    const pdfWidth = pdf.internal.pageSize.getWidth();   // 297 mm
-    const pdfHeight = pdf.internal.pageSize.getHeight(); // 210 mm
-
-    for (let i = 0; i < pagesToRender.length; i++) {
-      const el = pagesToRender[i];
-      const canvas = await h2c(el, {
-        scale: SCALE,
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        width: A4_W_CSS,
-        height: el.offsetHeight || 793,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: A4_W_CSS,
-        windowHeight: el.offsetHeight || 793,
-      });
-
-      const imgData = canvas.toDataURL("image/jpeg", 0.90);
-      if (i > 0) {
-        pdf.addPage("a4", "landscape");
-      }
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
-    }
-
-    if (document.body.contains(iframe)) {
-      document.body.removeChild(iframe);
-    }
-
-    return pdf.output("blob");
-  };
 
   const handleDownloadSingle = async (row: any) => {
-    await handlePDF(row);
+    const key = `${row.user_id}-${row.month}-${row.year}`;
+    setPdfLoadingId(key);
+    try {
+      const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
+      const userObj = res.user || row;
+      const claims = res.claims || [];
+      if (claims.length === 0) {
+        toast.error("No approved claim data found");
+        return;
+      }
+
+      const pdfBlob = await generateEngineerVectorPdf(userObj, claims, row.advance_amount || 0, true);
+      const safeName = (userObj.name || "Staff").replace(/[^a-zA-Z0-9]/g, "_");
+      const filename = `${safeName}_${userObj.e_code || row.e_code || "E"}_${row.month}_${row.year}.pdf`;
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(pdfBlob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("PDF downloaded instantly!");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setPdfLoadingId(null);
+    }
   };
 
   const handleOpenAdvanceModal = (r: any) => {
@@ -1226,106 +1116,6 @@ export default function MonthSummaryPage() {
       toast.error("Print preview failed");
     } finally {
       setPdfLoadingId(null);
-    }
-  };
-
-  const handlePDF = async (row: any) => {
-    const key = `${row.user_id}-${row.month}-${row.year}`;
-    setPdfLoadingId(key);
-    const tid = toast.loading("Checking advance details...");
-    
-    let savedAdvance = 0;
-    let exists = false;
-    try {
-      const resAdv = await expenseService.getEngineerAdvance(row.user_id, row.month, row.year);
-      if (resAdv && resAdv.success) {
-        savedAdvance = resAdv.advance_amount || 0;
-        exists = !!resAdv.exists;
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      toast.dismiss(tid);
-      setPdfLoadingId(null);
-    }
-
-    const downloadPDFFile = async (amount: number) => {
-      setPdfLoadingId(key);
-      const downloadTid = toast.loading(`Generating PDF Document for ${row.name}...`);
-      try {
-        const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
-        const userObj = res.user || row;
-        const claims = res.claims || [];
-        if (claims.length === 0) {
-          toast.error("No approved claim data found");
-          return;
-        }
-
-        await Promise.all(
-          claims.map(async (claim: any) => {
-            try {
-              const details = await expenseService.getExpenseDetails(claim.expense_code);
-              if (details) {
-                if (details.attachments && Array.isArray(details.attachments)) {
-                  claim.attachments = details.attachments;
-                }
-                if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
-                  claim.attachments_detailed = details.attachments_detailed;
-                }
-              }
-            } catch (e) {
-              // Ignore individual fetch errors
-            }
-          })
-        );
-
-        const attachments = await prepareConvertedAttachments(claims);
-
-        const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
-        const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Expense_Summary_${row.month}_${row.year}.pdf`;
-        const pdfBlob = await renderHTMLToPDFBlob(html);
-
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(pdfBlob);
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success(`PDF document downloaded successfully!`);
-      } catch (err) {
-        toast.error("PDF generation failed");
-        console.error(err);
-      } finally {
-        toast.dismiss(downloadTid);
-        setPdfLoadingId(null);
-      }
-    };
-
-    if (exists || !isAllowedAdvance) {
-      await downloadPDFFile(savedAdvance);
-    } else {
-      setAdvanceAmountInput("0");
-      setAdvanceModalConfig({
-        title: "Set Monthly Advance",
-        description: `Enter Advance Amount (₹) for ${row.name} for ${row.month} ${row.year}. This will be saved to the database and won't prompt again.`,
-        initialValue: 0,
-        userCode: row.user_id,
-        month: row.month,
-        year: row.year,
-        onSave: async (amount: number) => {
-          const saveTid = toast.loading("Saving advance amount...");
-          try {
-            await expenseService.saveEngineerAdvance(row.user_id, row.month, row.year, amount);
-            toast.success("Advance saved to database");
-          } catch (err: any) {
-            toast.error(err?.response?.data?.detail || "Failed to save advance");
-          } finally {
-            toast.dismiss(saveTid);
-          }
-          await downloadPDFFile(amount);
-        }
-      });
-      setShowAdvanceModal(true);
     }
   };
 
@@ -1594,99 +1384,26 @@ export default function MonthSummaryPage() {
     toast("ZIP generation cancelled", { icon: "ℹ️" });
   };
 
-  const generateZIPBlob = async (fetched: any[], advancesMap: Record<string, number>) => {
-    const totalEngineers = fetched.length;
-    setZipProgress({
-      active: true,
-      stage: "rendering",
-      current: 0,
-      total: totalEngineers,
-      currentName: "Starting PDF generation...",
-      percent: 30,
-      message: `Preparing to render ${totalEngineers} report PDFs...`
-    });
+
+
+  const handleBulkDownloadZIP = async () => {
+    if (selectedKeys.length === 0) return;
+    cancelZipRef.current = false;
+
+    const selectedRows = filtered.filter((r: any) =>
+      selectedKeys.includes(`${r.user_id}-${r.month}-${r.year}`)
+    );
 
     try {
-      const zip = new (window as any).JSZip();
-      let completedPdfs = 0;
-      
-      for (let i = 0; i < fetched.length; i++) {
-        if (cancelZipRef.current) {
-          setZipProgress(null);
-          toast("ZIP generation cancelled", { icon: "ℹ️" });
-          return;
-        }
-
-        const item = fetched[i];
-        const userObj = item.res.user || item.row;
-        const claims = item.res.claims || [];
-        const attachments = item.res.attachments || [];
-        if (claims.length === 0) continue;
-
-        const engName = userObj.name || "Engineer";
-        const engCode = userObj.e_code || userObj.user_id || "";
-        const renderPct = 30 + Math.round(((i + 1) / totalEngineers) * 55);
-
-        setZipProgress({
-          active: true,
-          stage: "rendering",
-          current: i + 1,
-          total: totalEngineers,
-          currentName: `${engName} (${engCode})`,
-          percent: renderPct,
-          message: `Rendering PDF ${i + 1} of ${totalEngineers}: ${engName}`
-        });
-
-        const key = `${item.row.user_id}-${item.row.month}-${item.row.year}`;
-        const advance = advancesMap[key] || 0;
-
-        const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
-        const safeName = engName.replace(/[^a-zA-Z0-9]/g, "_");
-        const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
-        const fileName = `${safeName}_${engCode}_${safeMonth}_${userObj.year}.pdf`;
-        const pdfBlob = await renderHTMLToPDFBlob(html);
-        zip.file(fileName, pdfBlob);
-        completedPdfs++;
-      }
-
-      if (cancelZipRef.current) {
-        setZipProgress(null);
-        toast("ZIP generation cancelled", { icon: "ℹ️" });
-        return;
-      }
-
-      setZipProgress({
-        active: true,
-        stage: "compressing",
-        current: totalEngineers,
-        total: totalEngineers,
-        currentName: "Packaging ZIP archive...",
-        percent: 85,
-        message: "Compressing PDFs into ZIP package..."
-      });
-
-      const zipBlob = await zip.generateAsync(
-        { type: "blob" },
-        (metadata: any) => {
-          if (cancelZipRef.current) return;
-          const compPercent = 85 + Math.round((metadata.percent / 100) * 15);
-          setZipProgress({
-            active: true,
-            stage: "compressing",
-            current: totalEngineers,
-            total: totalEngineers,
-            currentName: metadata.currentFile ? `Compressing ${metadata.currentFile}` : "Finalizing ZIP file...",
-            percent: Math.min(compPercent, 99),
-            message: `Compressing ZIP file (${Math.round(metadata.percent)}%)...`
-          });
-        }
+      const zipBlob = await generateBulkZipFast(
+        selectedRows,
+        appliedFilters.month || "Selected",
+        appliedFilters.year || 2026,
+        (progress) => {
+          setZipProgress(progress);
+        },
+        () => cancelZipRef.current
       );
-
-      if (cancelZipRef.current) {
-        setZipProgress(null);
-        toast("ZIP generation cancelled", { icon: "ℹ️" });
-        return;
-      }
 
       const link = document.createElement("a");
       link.href = URL.createObjectURL(zipBlob);
@@ -1695,119 +1412,19 @@ export default function MonthSummaryPage() {
       link.click();
       document.body.removeChild(link);
 
-      setZipProgress({
-        active: true,
-        stage: "complete",
-        current: totalEngineers,
-        total: totalEngineers,
-        currentName: "Download Ready",
-        percent: 100,
-        message: `ZIP folder containing ${completedPdfs} reports downloaded successfully!`
-      });
-
-      toast.success(`ZIP package downloaded (${completedPdfs} reports)!`);
-
+      toast.success(`ZIP archive with ${selectedRows.length} reports downloaded!`);
       setTimeout(() => {
         setZipProgress(null);
       }, 2500);
-
-    } catch (e) {
+    } catch (e: any) {
       if (cancelZipRef.current) {
         setZipProgress(null);
         toast("ZIP generation cancelled", { icon: "ℹ️" });
         return;
       }
-      setZipProgress({
-        active: true,
-        stage: "error",
-        current: 0,
-        total: totalEngineers,
-        currentName: "Failed",
-        percent: 0,
-        message: "Failed to generate ZIP package."
-      });
-      toast.error("Failed to generate ZIP");
       console.error(e);
-      setTimeout(() => setZipProgress(null), 3000);
-    }
-  };
-
-  const handleBulkDownloadZIP = async () => {
-    if (selectedKeys.length === 0) return;
-    cancelZipRef.current = false;
-
-    setZipProgress({
-      active: true,
-      stage: "fetching",
-      current: 0,
-      total: selectedKeys.length,
-      currentName: "Starting data fetch...",
-      percent: 5,
-      message: `Fetching claim records for ${selectedKeys.length} selected engineers...`
-    });
-
-    try {
-      await Promise.all([
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js")
-      ]);
-
-      const fetched: any[] = [];
-      const advancesMap: Record<string, number> = {};
-
-      let completedFetch = 0;
-      for (const key of selectedKeys) {
-        if (cancelZipRef.current) {
-          setZipProgress(null);
-          toast("ZIP generation cancelled", { icon: "ℹ️" });
-          return;
-        }
-
-        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
-        if (row) {
-          completedFetch++;
-          const fetchPercent = Math.round((completedFetch / selectedKeys.length) * 25);
-          const engName = row.name || row.user_id || "Engineer";
-
-          setZipProgress({
-            active: true,
-            stage: "fetching",
-            current: completedFetch,
-            total: selectedKeys.length,
-            currentName: engName,
-            percent: fetchPercent,
-            message: `Fetched data for ${engName} (${completedFetch}/${selectedKeys.length})`
-          });
-
-          try {
-            const [claimRes, advRes] = await Promise.all([
-              expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
-              expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
-            ]);
-            fetched.push({ row, res: claimRes });
-            advancesMap[key] = advRes?.advance_amount || 0;
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      }
-
-      if (cancelZipRef.current) {
-        setZipProgress(null);
-        toast("ZIP generation cancelled", { icon: "ℹ️" });
-        return;
-      }
-
-      if (fetched.length === 0) {
-        setZipProgress(null);
-        toast.error("Failed to load claims for selected engineers");
-        return;
-      }
-
-      generateZIPBlob(fetched, advancesMap);
-    } catch (err) {
+      toast.error("ZIP generation failed");
       setZipProgress(null);
-      toast.error("Bulk ZIP generation failed");
     }
   };
 

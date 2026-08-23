@@ -15,7 +15,6 @@ import {
   TrendingDown,
   ArrowUpRight,
 } from "lucide-react";
-import toast from "react-hot-toast";
 import ExcelJS from "exceljs";
 import { expenseService } from "../services/expenseService";
 
@@ -78,19 +77,13 @@ export default function ConsolidatedReportPage() {
 
   const fetchReport = async () => {
     setLoading(true);
-    const tid = toast.loading("Fetching consolidated report data...");
     try {
       const res = await expenseService.getConsolidatedReport(month, year);
-      toast.dismiss(tid);
       if (res && res.success) {
         setData(res.data || []);
-        toast.success(`Loaded ${res.data?.length || 0} consolidated records!`);
-      } else {
-        toast.error("Failed to load report data");
       }
     } catch (err: any) {
-      toast.dismiss(tid);
-      toast.error(err?.response?.data?.detail || "Failed to fetch report data");
+      console.error("Failed to fetch report data", err);
     } finally {
       setLoading(false);
     }
@@ -154,11 +147,8 @@ export default function ConsolidatedReportPage() {
 
   const downloadExcel = async () => {
     if (data.length === 0) {
-      toast.error("No data available to download");
       return;
     }
-
-    const tid = toast.loading("Generating styled Excel report with cell notes...");
 
     try {
       const workbook = new ExcelJS.Workbook();
@@ -306,12 +296,8 @@ export default function ConsolidatedReportPage() {
       anchor.download = `Consolidated_Report_${month}_${year}.xlsx`;
       anchor.click();
       window.URL.revokeObjectURL(url);
-
-      toast.dismiss(tid);
-      toast.success("Excel report exported successfully!");
     } catch (err: any) {
-      toast.dismiss(tid);
-      toast.error("Failed to generate Excel: " + (err.message || ""));
+      console.error("Failed to generate Excel", err);
     }
   };
 
