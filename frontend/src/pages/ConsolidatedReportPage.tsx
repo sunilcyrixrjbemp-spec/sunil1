@@ -161,76 +161,76 @@ export default function ConsolidatedReportPage() {
         views: [{ state: "frozen", ySplit: 1 }],
       });
 
-      worksheet.columns = [
+      const columns = [
         { header: "Sl No", key: "sl_no", width: 8 },
-        { header: "Submitted Date", key: "submitted_date", width: 16 },
+        { header: "Submitted Date", key: "submitted_date", width: 15 },
         { header: "Mail / Hard Copy", key: "mail_hard_copy", width: 16 },
         { header: "EE Code", key: "ee_code", width: 12 },
         { header: "Grade", key: "grade", width: 10 },
-        { header: "Designation", key: "designation", width: 28 },
-        { header: "CC", key: "cc", width: 12 },
-        { header: "EE Name", key: "ee_name", width: 22 },
-        { header: "5314101 - Exp Travelling Expense - Private Transport (Bike and personal car)", key: "private_transport", width: 32 },
-        { header: "5314101 - Exp Travelling Expense - public Transport (Bus, Train, Auto, uber, Rapido etc)", key: "public_transport", width: 32 },
-        { header: "5314102 - Exp Daily Allowances", key: "da_allowance", width: 22 },
-        { header: "5314108 - Exp Spare Purchase Cost - Non GST", key: "spare_purchase", width: 25 },
-        { header: "5314103 - Exp Courier Charges", key: "courier_charges", width: 20 },
-        { header: "5314104 - Exp Boarding & Lodging", key: "boarding_lodging", width: 25 },
-        { header: "5314105 - Exp Printing & Stationery", key: "printing_stationery", width: 24 },
-        { header: "5314106 - Exp Miscellaneous Expenses", key: "misc_expenses", width: 24 },
-        { header: "5314107 - Exp Fuel Expenses", key: "fuel", width: 18 },
-        { header: "Total", key: "total_approved", width: 18 },
-        { header: "Advances", key: "advance", width: 15 },
-        { header: "Net Payable", key: "net_payable", width: 18 },
+        { header: "Designation", key: "designation", width: 26 },
+        { header: "CC", key: "cc", width: 14 },
+        { header: "EE Name", key: "ee_name", width: 28 },
+        { header: "5314101 - Exp Travelling Expense - Private Transport (Bike and personal car)", key: "pvt_travel", width: 24 },
+        { header: "5314101 - Exp Travelling Expense - public Transport (Bus, Train, Auto, uber, Rapido etc)", key: "pub_travel", width: 24 },
+        { header: "5314102 - Exp Daily Allowances", key: "da_allowance", width: 18 },
+        { header: "5314108 - Exp Spare Purchase Cost - Non GST", key: "spare_purchase", width: 22 },
+        { header: "5314103 - Exp Courier Charges", key: "courier_charges", width: 18 },
+        { header: "5314104 - Exp Boarding & Lodging", key: "boarding_lodging", width: 20 },
+        { header: "5314105 - Exp Printing & Stationery", key: "printing_stationery", width: 20 },
+        { header: "5314106 - Exp Miscellaneous Expenses", key: "misc_expenses", width: 20 },
+        { header: "5314107 - Exp Fuel Expenses", key: "fuel", width: 16 },
+        { header: "Total", key: "total", width: 16 },
+        { header: "Advances", key: "advance", width: 14 },
+        { header: "Net Payable", key: "net_payable", width: 16 },
         { header: "GST Bills", key: "gst_bills", width: 12 },
-        { header: "Status", key: "status", width: 14 },
+        { header: "Status", key: "status", width: 12 },
         { header: "Reason for deduction", key: "deduction_reason", width: 45 },
-        { header: "Month", key: "month", width: 16 },
-        { header: "Hold Reson", key: "hold_reason", width: 14 },
-        { header: "Remarks", key: "remarks", width: 28 },
-        { header: "Manager", key: "manager", width: 24 },
-        { header: "State", key: "state", width: 16 },
-        { header: "total claimed amount", key: "claimed_amount", width: 22 },
-        { header: "differenece", key: "difference", width: 18 },
+        { header: "Month", key: "month", width: 14 },
+        { header: "Hold Reson", key: "hold_reason", width: 12 },
+        { header: "Remarks", key: "remarks", width: 20 },
+        { header: "Manager", key: "manager", width: 22 },
+        { header: "State", key: "state", width: 14 },
+        { header: "total claimed amount", key: "claimed_amount", width: 20 },
+        { header: "differenece", key: "diff", width: 16 },
       ];
 
+      worksheet.columns = columns;
+
+      // 1. Style Header Row (Dark Green Theme matching July Month Final.xlsx)
       const headerRow = worksheet.getRow(1);
-      headerRow.height = 28;
+      headerRow.height = 30;
       headerRow.eachCell((cell) => {
         cell.fill = {
           type: "pattern",
           pattern: "solid",
-          fgColor: { argb: "FF1E1B4B" },
+          fgColor: { argb: "FF1B5E20" },
         };
         cell.font = {
+          name: "Segoe UI",
+          size: 10,
           bold: true,
           color: { argb: "FFFFFFFF" },
-          size: 10,
-          name: "Segoe UI",
         };
-        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+        cell.alignment = {
+          vertical: "middle",
+          horizontal: "center",
+          wrapText: true,
+        };
         cell.border = {
-          top: { style: "thin", color: { argb: "FF4338CA" } },
-          bottom: { style: "medium", color: { argb: "FF4338CA" } },
-          left: { style: "thin", color: { argb: "FF4338CA" } },
-          right: { style: "thin", color: { argb: "FF4338CA" } },
+          top: { style: "thin", color: { argb: "FF1B5E20" } },
+          bottom: { style: "thin", color: { argb: "FF1B5E20" } },
+          left: { style: "thin", color: { argb: "FF1B5E20" } },
+          right: { style: "thin", color: { argb: "FF1B5E20" } },
         };
       });
 
+      // 2. Add Data Rows with Formulas, Borders, Colors and Hover Notes
       data.forEach((r, idx) => {
-        const privateTravel = (r.bike_km || 0) * 4.5 + (r.car_km || 0) * 9.0;
-        const publicTravel = (r.auto_amount || 0) + (r.train_bus_amount || 0);
-        const rowTotal =
-          privateTravel +
-          publicTravel +
-          (r.da_allowance || 0) +
-          (r.spare_purchase || 0) +
-          (r.courier_charges || 0) +
-          (r.boarding_lodging || 0) +
-          (r.printing_stationery || 0) +
-          (r.misc_expenses || 0);
-        const rowNet = rowTotal - (r.advance || 0);
-        const rowDiff = (r.claimed_amount || 0) - rowTotal;
+        const rowNum = idx + 2;
+        const bikeKm = parseFloat(r.bike_km || 0);
+        const carKm = parseFloat(r.car_km || 0);
+        const autoAmt = parseFloat(r.auto_amount || 0);
+        const trainBusAmt = parseFloat(r.train_bus_amount || 0);
 
         const row = worksheet.addRow({
           sl_no: idx + 1,
@@ -241,8 +241,8 @@ export default function ConsolidatedReportPage() {
           designation: r.designation || "",
           cc: r.cc || "",
           ee_name: r.ee_name || "",
-          private_transport: privateTravel,
-          public_transport: publicTravel,
+          pvt_travel: { formula: `(${bikeKm.toFixed(2)}*4.5)+(${carKm.toFixed(2)}*9)` },
+          pub_travel: { formula: `${autoAmt.toFixed(2)}+${trainBusAmt.toFixed(2)}` },
           da_allowance: r.da_allowance || 0,
           spare_purchase: r.spare_purchase || 0,
           courier_charges: r.courier_charges || 0,
@@ -250,9 +250,9 @@ export default function ConsolidatedReportPage() {
           printing_stationery: r.printing_stationery || 0,
           misc_expenses: r.misc_expenses || 0,
           fuel: 0,
-          total_approved: rowTotal,
+          total: { formula: `SUM(I${rowNum}:Q${rowNum})` },
           advance: r.advance || 0,
-          net_payable: rowNet,
+          net_payable: { formula: `R${rowNum}-S${rowNum}` },
           gst_bills: "",
           status: "Approved",
           deduction_reason: r.deduction_reason || "",
@@ -262,28 +262,90 @@ export default function ConsolidatedReportPage() {
           manager: r.manager || "",
           state: r.state || "Rajasthan",
           claimed_amount: r.claimed_amount || 0,
-          difference: rowDiff,
+          diff: { formula: `AC${rowNum}-R${rowNum}` },
         });
 
-        row.eachCell((cell, colNum) => {
+        row.height = 20;
+
+        // Formatting per cell
+        row.eachCell((cell, colNumber) => {
           cell.font = { name: "Segoe UI", size: 9.5 };
-          cell.alignment = { vertical: "middle" };
           cell.border = {
-            top: { style: "thin", color: { argb: "FFE2E8F0" } },
-            bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
-            left: { style: "thin", color: { argb: "FFE2E8F0" } },
-            right: { style: "thin", color: { argb: "FFE2E8F0" } },
+            top: { style: "thin", color: { argb: "FFC8E6C9" } },
+            bottom: { style: "thin", color: { argb: "FFC8E6C9" } },
+            left: { style: "thin", color: { argb: "FFC8E6C9" } },
+            right: { style: "thin", color: { argb: "FFC8E6C9" } },
           };
 
-          if (colNum >= 9 && colNum <= 20) {
-            cell.numFmt = "₹#,##0.00";
-            cell.alignment = { vertical: "middle", horizontal: "right" };
+          // Currency number formatting
+          if ([9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 29, 30].includes(colNumber)) {
+            cell.numFmt = "#,##0.00";
+            cell.alignment = { horizontal: "right", vertical: "middle" };
+          } else if (colNumber === 1 || colNumber === 4 || colNumber === 5) {
+            cell.alignment = { horizontal: "center", vertical: "middle" };
+          } else {
+            cell.alignment = { horizontal: "left", vertical: "middle" };
           }
-          if (colNum >= 29 && colNum <= 30) {
-            cell.numFmt = "₹#,##0.00";
-            cell.alignment = { vertical: "middle", horizontal: "right" };
+
+          // Specific Column Typography
+          if (colNumber === 18) {
+            cell.font = { name: "Segoe UI", size: 9.5, bold: true };
+          } else if (colNumber === 19) {
+            cell.font = { name: "Segoe UI", size: 9.5, color: { argb: "FFD32F2F" } }; // Red advances
+          } else if (colNumber === 20) {
+            cell.font = { name: "Segoe UI", size: 9.5, bold: true, color: { argb: "FF2E7D32" } }; // Green net payable
+          } else if (colNumber === 30) {
+            cell.font = { name: "Segoe UI", size: 9.5, bold: true, color: { argb: "FFD32F2F" } }; // Red diff
           }
         });
+
+        // Attach Native Excel Hover Notes on Misc cell (Column P / col 16) if available
+        if (r.miscItemList && Array.isArray(r.miscItemList) && r.miscItemList.length > 0) {
+          const miscCell = row.getCell(16);
+          miscCell.note = r.miscItemList.map((m: any) => `${m.date}: ₹${m.amount} (${m.desc})`).join("\n");
+        }
+      });
+
+      // 3. Add Grand Total Summary Row
+      const grandTotalRowNum = data.length + 2;
+      const grandTotalRow = worksheet.addRow({
+        sl_no: "GRAND TOTAL",
+        pvt_travel: { formula: `SUM(I2:I${grandTotalRowNum - 1})` },
+        pub_travel: { formula: `SUM(J2:J${grandTotalRowNum - 1})` },
+        da_allowance: { formula: `SUM(K2:K${grandTotalRowNum - 1})` },
+        spare_purchase: { formula: `SUM(L2:L${grandTotalRowNum - 1})` },
+        courier_charges: { formula: `SUM(M2:M${grandTotalRowNum - 1})` },
+        boarding_lodging: { formula: `SUM(N2:N${grandTotalRowNum - 1})` },
+        printing_stationery: { formula: `SUM(O2:O${grandTotalRowNum - 1})` },
+        misc_expenses: { formula: `SUM(P2:P${grandTotalRowNum - 1})` },
+        fuel: { formula: `SUM(Q2:Q${grandTotalRowNum - 1})` },
+        total: { formula: `SUM(R2:R${grandTotalRowNum - 1})` },
+        advance: { formula: `SUM(S2:S${grandTotalRowNum - 1})` },
+        net_payable: { formula: `SUM(T2:T${grandTotalRowNum - 1})` },
+        claimed_amount: { formula: `SUM(AC2:AC${grandTotalRowNum - 1})` },
+        diff: { formula: `SUM(AD2:AD${grandTotalRowNum - 1})` },
+      });
+
+      worksheet.mergeCells(`A${grandTotalRowNum}:H${grandTotalRowNum}`);
+      grandTotalRow.height = 24;
+
+      grandTotalRow.eachCell((cell, colNumber) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FFE8F5E9" }, // Light Green background
+        };
+        cell.font = { name: "Segoe UI", size: 10, bold: true, color: { argb: "FF1B5E20" } };
+        cell.border = {
+          top: { style: "medium", color: { argb: "FF1B5E20" } },
+          bottom: { style: "medium", color: { argb: "FF1B5E20" } },
+        };
+        if (colNumber >= 9) {
+          cell.numFmt = "#,##0.00";
+          cell.alignment = { horizontal: "right", vertical: "middle" };
+        } else {
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+        }
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
