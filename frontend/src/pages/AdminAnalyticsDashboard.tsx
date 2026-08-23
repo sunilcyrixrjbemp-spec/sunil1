@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Activity, Mail, Clock,
-  RefreshCw, Zap, IndianRupee, Users, Database, HardDrive,
+  Mail,
+  RefreshCw, Zap, IndianRupee, Database, HardDrive,
   ShieldCheck, CreditCard, Globe, Wifi, Cpu, Search, CheckCircle2,
-  XCircle, Eye, X, Send, Inbox, ChevronLeft, ChevronRight
+  XCircle, Eye, X, Inbox, ChevronLeft, ChevronRight
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -345,29 +345,27 @@ export default function AdminAnalyticsDashboard() {
     return filteredEmails.slice(start, start + pageSize);
   }, [filteredEmails, currentPage, pageSize]);
 
-  const totalCount = cfData?.email?.sent || 144;
-
   return (
     <div className="min-h-screen bg-[var(--canvas,#FAFAF9)] p-4 sm:p-6 text-ink-900 font-sans">
       
-      {/* ── Top Header Toolbar ── */}
-      <div className="bg-white rounded-xl border border-line p-5 shadow-xs mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white rounded-xl flex items-center justify-center shadow-xs">
-            <Globe className="w-5.5 h-5.5" />
+      {/* ── Top Header Toolbar (HomePage Parity) ── */}
+      <div className="bg-white rounded-xl border border-line p-3.5 shadow-xs mb-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8.5 h-8.5 rounded-lg bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
+            <Globe className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-lg font-black text-ink-900 tracking-tight font-display m-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-bold text-ink-900 tracking-tight font-display m-0">
                 Cloudflare Analytics &amp; Infrastructure
               </h1>
-              <span className="text-2xs font-bold text-accent-700 bg-accent-50 px-2.5 py-0.5 rounded-full border border-accent-200 flex items-center gap-1">
+              <span className="text-2xs font-bold text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
                 Workers Paid Plan ($5/mo)
               </span>
             </div>
-            <p className="text-2xs text-ink-500 mt-1 m-0">
+            <p className="text-2xs text-ink-500 font-sans mt-0.5 m-0 font-medium">
               Direct Cloudflare Analytics · GraphQL Engine · D1 Database · R2 Storage · KV Rate Limiter · Email Routing
-              {refreshTs && ` · Last updated ${refreshTs.toLocaleTimeString("en-IN")}`}
+              {refreshTs && ` · Synced ${refreshTs.toLocaleTimeString("en-IN")}`}
             </p>
           </div>
         </div>
@@ -376,7 +374,7 @@ export default function AdminAnalyticsDashboard() {
           type="button"
           onClick={() => loadData(true)}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E1B4B] hover:bg-[#2D286B] active:bg-[#1E1B4B] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer border border-[#1E1B4B]"
+          className="inline-flex items-center gap-1.5 px-3.5 h-8 bg-[#1E1B4B] hover:bg-[#2D286B] text-white text-xs font-bold rounded-lg shadow-xs transition-all cursor-pointer border-0 shrink-0 disabled:opacity-60"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           <span>{loading ? "Refreshing..." : "Refresh Usage Data"}</span>
@@ -384,7 +382,7 @@ export default function AdminAnalyticsDashboard() {
       </div>
 
       {/* ── Segmented Navigation Tabs ── */}
-      <div className="flex items-center gap-1.5 bg-surface-sunken/60 p-1.5 rounded-xl w-fit mb-6 text-xs font-bold overflow-x-auto max-w-full border border-line shadow-xs">
+      <div className="flex items-center gap-1 bg-white p-1 rounded-xl w-fit mb-4 text-xs font-semibold overflow-x-auto max-w-full border border-line shadow-xs">
         {TABS.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.id;
@@ -396,13 +394,13 @@ export default function AdminAnalyticsDashboard() {
                 setTab(t.id);
                 setCurrentPage(1);
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer border ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer border ${
                 isActive
-                  ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
-                  : "bg-transparent text-ink-600 hover:text-ink-900 border-transparent hover:bg-surface"
+                  ? "bg-[#1E1B4B] text-white border-transparent shadow-xs"
+                  : "bg-transparent text-ink-600 hover:text-ink-900 border-transparent hover:bg-surface-sunken"
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="w-3.5 h-3.5" />
               <span>{t.label}</span>
             </button>
           );
@@ -692,55 +690,7 @@ export default function AdminAnalyticsDashboard() {
           TAB 2: CLOUDFLARE EMAIL ROUTING & DELIVERY LOG
           ══════════════════════════════════════════════════════════════════════ */}
       {tab === "overview" && (
-        <div className="space-y-6 animate-fadeIn">
-          
-          {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl border border-line p-4 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                <Send className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Total Emails Dispatched</div>
-                <div className="text-2xl font-black text-ink-900 mt-0.5">{totalCount}</div>
-                <div className="text-2xs text-emerald-600 font-bold">Cloudflare Email Worker</div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-line p-4 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 border border-violet-100">
-                <Zap className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Today API Calls</div>
-                <div className="text-2xl font-black text-ink-900 mt-0.5">{fmtNum(analytics?.analytics?.todayEvents ?? 0)}</div>
-                <div className="text-2xs text-ink-400">Edge events</div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-line p-4 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                <Users className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Active Users Today</div>
-                <div className="text-2xl font-black text-ink-900 mt-0.5">{analytics?.analytics?.activeUsersToday ?? 0}</div>
-                <div className="text-2xs text-ink-400">Unique today</div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-line p-4 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100">
-                <Clock className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Avg Latency</div>
-                <div className="text-2xl font-black text-ink-900 mt-0.5">{analytics?.analytics?.avgResponseTimeMs ?? 0}ms</div>
-                <div className="text-2xs text-ink-400">Response time</div>
-              </div>
-            </div>
-          </div>
-
+        <div className="space-y-4 animate-fadeIn">
           {/* Cloudflare Email Delivery Log Console */}
           <div className="bg-white rounded-xl border border-line overflow-hidden shadow-xs">
             {/* Header & Filter Toolbar */}
@@ -763,9 +713,9 @@ export default function AdminAnalyticsDashboard() {
               </div>
 
               {/* Search & Status Filters */}
-              <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <div className="relative flex-1 sm:w-64">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" />
                   <input
                     type="text"
                     value={emailSearch}
@@ -774,22 +724,23 @@ export default function AdminAnalyticsDashboard() {
                       setCurrentPage(1);
                     }}
                     placeholder="Search recipient or subject..."
-                    className="w-full pl-8.5 pr-3 py-1.5 bg-white border border-line rounded-xl text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 transition-colors"
+                    className="w-full pl-9 pr-8 h-8 bg-white border border-line rounded-lg text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs font-medium"
                   />
                   {emailSearch && (
                     <button
+                      type="button"
                       onClick={() => {
                         setEmailSearch("");
                         setCurrentPage(1);
                       }}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 cursor-pointer"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 cursor-pointer border-0 bg-transparent p-0"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
-                <div className="flex items-center bg-white border border-line rounded-xl p-0.5 text-2xs font-bold">
+                <div className="flex items-center bg-white border border-line rounded-lg p-0.5 text-xs font-bold shadow-2xs">
                   {["all", "sent", "failed"].map((st) => (
                     <button
                       key={st}
@@ -798,10 +749,10 @@ export default function AdminAnalyticsDashboard() {
                         setEmailFilter(st);
                         setCurrentPage(1);
                       }}
-                      className={`px-3 py-1.5 rounded-lg capitalize transition-all cursor-pointer ${
+                      className={`px-3 h-7 rounded-md capitalize transition-all cursor-pointer border-0 ${
                         emailFilter === st
                           ? "bg-[#1E1B4B] text-white shadow-xs"
-                          : "text-ink-600 hover:text-ink-900"
+                          : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface-sunken"
                       }`}
                     >
                       {st}
@@ -972,64 +923,7 @@ export default function AdminAnalyticsDashboard() {
             )}
           </div>
 
-          {/* Other Events & Weekly Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl border border-line p-5 shadow-xs">
-              <div className="flex items-center gap-2 text-sm font-bold text-ink-900 mb-4 pb-3 border-b border-line font-display">
-                <Activity className="w-4 h-4 text-violet-600" />
-                <span>Edge Events by Type (7 Days)</span>
-              </div>
-              {!analytics?.weeklyEventsByType?.length ? (
-                <p className="text-xs text-ink-400 italic">No event data recorded.</p>
-              ) : (
-                <div className="space-y-3">
-                  {analytics.weeklyEventsByType.map((e: any) => (
-                    <div key={e.event_type} className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-ink-700">{e.event_type}</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-28 bg-surface-sunken rounded-full h-2 overflow-hidden border border-line/40">
-                          <div
-                            className="bg-violet-600 h-full rounded-full"
-                            style={{
-                              width: `${Math.min(100, (e.cnt / (analytics.weeklyEventsByType[0]?.cnt || 1)) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="font-bold text-ink-900 w-10 text-right">{fmtNum(e.cnt)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            <div className="bg-white rounded-xl border border-line p-5 shadow-xs">
-              <div className="flex items-center gap-2 text-sm font-bold text-ink-900 mb-4 pb-3 border-b border-line font-display">
-                <Mail className="w-4 h-4 text-emerald-600" />
-                <span>Email Delivery Status Summary</span>
-              </div>
-              {!analytics?.emailStats?.length ? (
-                <div className="p-4 bg-surface-sunken rounded-xl text-center text-xs text-ink-400">
-                  Total {totalCount} emails processed via Cloudflare Email Routing.
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {analytics.emailStats.map((e: any) => (
-                    <div
-                      key={e.status}
-                      className="flex items-center justify-between p-3 bg-surface-sunken rounded-xl border border-line text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${e.status === 'failed' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-                        <span className="font-bold text-ink-800 capitalize">{e.status}</span>
-                      </div>
-                      <span className="font-mono font-bold text-ink-900 text-sm">{e.cnt}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
 
         </div>
       )}
