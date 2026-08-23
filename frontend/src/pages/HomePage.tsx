@@ -17,6 +17,7 @@ import { ZohoCategoryChart } from "../components/home/ZohoCategoryChart";
 import { ZohoPendingTasks } from "../components/home/ZohoPendingTasks";
 import { ZohoRecentExpenses } from "../components/home/ZohoRecentExpenses";
 import { ZohoExecutiveComparison } from "../components/home/ZohoExecutiveComparison";
+import { ZohoSubmissionComplianceWidget } from "../components/home/ZohoSubmissionComplianceWidget";
 import { getStatusBadgeClass, getStatusLabel, renderAntdStatusTag } from "../components/home/claimsColumns";
 
 const ClaimDetailsModal = React.lazy(() => import("../components/common/ClaimDetailsModal"));
@@ -293,6 +294,18 @@ export default function HomePage() {
             />
           </div>
         </div>
+
+        {/* ── 6.5 Engineer Daily Submission Compliance & Defaulter Tracker ── */}
+        {isComparativeExpenseAllowed && (
+          <ZohoSubmissionComplianceWidget
+            expenses={activeTab === "team-claims" ? safeTeamExpenses : safeTeamExpenses.length > 0 ? safeTeamExpenses : activeClaims}
+            selectMonth={selectMonth}
+            filterZone={filterZone}
+            filterDistrict={filterDistrict}
+            filterEmployee={filterEmployee}
+            uniqueEmployees={uniqueEmployees}
+          />
+        )}
 
         {/* ── 7. Compact Ledger Banner ────────────────────────────────── */}
         <div
