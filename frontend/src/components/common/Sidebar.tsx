@@ -147,10 +147,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const isItemVisible = (item: NavItem) => {
     if (isAdmin) return true;
-    // Core essential items are universally accessible to all employees by default
-    if (item.id === "help" || item.id === "profile" || item.id === "notifications") {
+    
+    // Core essential items universally accessible to EVERY employee by default:
+    // Overview (Home), Expense Claims (₹), My Profile, Notifications, Help & Support
+    const DEFAULT_UNIVERSAL_ITEMS = ["home", "expense", "profile", "notifications", "help"];
+    if (DEFAULT_UNIVERSAL_ITEMS.includes(item.id.toLowerCase())) {
       return true;
     }
+
+    // All other modules require assigned role or explicit window permission
     if (item.roles && !item.roles.map((r) => r.toLowerCase()).includes(roleLower)) {
       return false;
     }

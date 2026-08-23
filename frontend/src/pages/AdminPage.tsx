@@ -54,10 +54,8 @@ import {
   Calendar,
   DollarSign,
   Sparkles,
-  Key,
   History,
   Activity,
-  ShieldAlert,
   Clock,
   Save,
   LucideIcon
@@ -73,8 +71,7 @@ import { SaaSDonutChart } from "../components/common/SaaSCharts";
 
 import { 
   EditOutlined, 
-  LogoutOutlined, 
-  PieChartOutlined
+  LogoutOutlined
 } from "@ant-design/icons";
 
 const LteSpinner = () => (
@@ -239,10 +236,13 @@ const getInitials = (name: string) => {
 const LEDGER_CHART_COLORS = ["#4338CA", "#0F7A4C", "#B7791F", "#7C3AED", "#0E7490", "#B3261E", "#3B82F6"];
 
 const ALL_WINDOWS = [
-  { id: "home", name: "Home" },
-  { id: "admin", name: "Admin Panel" },
+  { id: "home", name: "Home (Default)" },
+  { id: "expense", name: "Submit Expense (Default)" },
+  { id: "notifications", name: "Notifications (Default)" },
+  { id: "profile", name: "Profile (Default)" },
+  { id: "help", name: "Help Center (Default)" },
   { id: "approval", name: "Approval Center" },
-  { id: "expense", name: "Submit Expense" },
+  { id: "admin", name: "Admin Panel" },
   { id: "attendance", name: "Attendance Roster" },
   { id: "analysis", name: "Analysis" },
   { id: "report", name: "Month Report" },
@@ -253,11 +253,9 @@ const ALL_WINDOWS = [
   { id: "asset_upload", name: "Asset Inventory" },
   { id: "penalty_report", name: "Penalty Report" },
   { id: "consolidated_report", name: "Consolidated Report" },
-  { id: "help", name: "Help Center" },
-  { id: "profile", name: "Profile" }
 ];
 
-type AdminTab = "users" | "approvals" | "permissions" | "analytics" | "settings" | "facilities" | "audit";
+type AdminTab = "users" | "approvals" | "analytics" | "settings" | "facilities" | "audit";
 
 interface NavItemConfig {
   id: AdminTab;
@@ -281,13 +279,6 @@ const NAV_ITEMS: NavItemConfig[] = [
     icon: ShieldCheck,
     title: "Team Hierarchy & Approval Sequences",
     subtitle: "Configure team approval sequences, requester bindings, and multi-tier routing lines."
-  },
-  { 
-    id: "permissions", 
-    label: "Roles & Permissions", 
-    icon: Key,
-    title: "System Roles & Access Privileges Matrix",
-    subtitle: "Comprehensive matrix of system privileges, authorization levels, and role capabilities."
   },
   { 
     id: "analytics", 
@@ -318,6 +309,8 @@ const NAV_ITEMS: NavItemConfig[] = [
     subtitle: "Real-time chronological ledger of administrative events, roster updates, and policy changes."
   },
 ];
+
+
 
 export default function AdminPage() {
   const [adminUserPageSize, setAdminUserPageSize] = useState(25);
@@ -594,7 +587,7 @@ export default function AdminPage() {
   const [eUpkaranId, setEUpkaranId] = useState("");
   const [baseReportingLocation, setBaseReportingLocation] = useState("");
   const [allowedWindows, setAllowedWindows] = useState<string[]>([
-    "home", "expense", "help", "profile"
+    "home", "expense", "profile", "notifications", "help"
   ]);
   const [singleUserLoading, setSingleUserLoading] = useState(false);
   const [singleUserError, setSingleUserError] = useState<string | null>(null);
@@ -1839,63 +1832,65 @@ export default function AdminPage() {
       .map(u => u.district?.trim()).filter(Boolean))
   ).sort((a, b) => a!.localeCompare(b!));
 
-  const groupTopItems = (list: { name: string; value: number }[], topN: number = 6) => {
-    if (list.length <= topN) return list;
-    const top = list.slice(0, topN);
-    const rest = list.slice(topN);
-    const othersVal = rest.reduce((sum, item) => sum + item.value, 0);
-    if (othersVal > 0) {
-      top.push({ name: "Others", value: othersVal });
-    }
-    return top;
+  const groupTopItems = (list: { name: string; value: number }[], topN: number = 8) => {
+    // Return top N distinct items WITHOUT appending an "Others" category
+    return list.slice(0, topN);
   };
 
   const getDistrictData = () => {
     const counts: Record<string, number> = {};
     getFilteredUsersForCharts().forEach(u => {
-      const dist = u.district?.trim() || "N/A";
-      counts[dist] = (counts[dist] || 0) + 1;
+      const dist = u.district?.trim();
+      if (dist && dist !== "N/A" && dist.toLowerCase() !== "other" && dist.toLowerCase() !== "others" && dist.toLowerCase() !== "undefined") {
+        counts[dist] = (counts[dist] || 0) + 1;
+      }
     });
     const sorted = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-    return groupTopItems(sorted, 6);
+    return groupTopItems(sorted, 8);
   };
 
   const getDesignationData = () => {
     const counts: Record<string, number> = {};
     getFilteredUsersForCharts().forEach(u => {
-      const desg = u.designation?.trim() || "N/A";
-      counts[desg] = (counts[desg] || 0) + 1;
+      const desg = u.designation?.trim() || u.role?.trim();
+      if (desg && desg !== "N/A" && desg.toLowerCase() !== "other" && desg.toLowerCase() !== "others" && desg.toLowerCase() !== "undefined") {
+        counts[desg] = (counts[desg] || 0) + 1;
+      }
     });
     const sorted = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-    return groupTopItems(sorted, 6);
+    return groupTopItems(sorted, 8);
   };
 
   const getZoneData = () => {
     const counts: Record<string, number> = {};
     getFilteredUsersForCharts().forEach(u => {
-      const zone = u.zone?.trim() || "N/A";
-      counts[zone] = (counts[zone] || 0) + 1;
+      const zone = u.zone?.trim();
+      if (zone && zone !== "N/A" && zone.toLowerCase() !== "other" && zone.toLowerCase() !== "others" && zone.toLowerCase() !== "undefined") {
+        counts[zone] = (counts[zone] || 0) + 1;
+      }
     });
     const sorted = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-    return groupTopItems(sorted, 6);
+    return groupTopItems(sorted, 8);
   };
 
   const getManagerData = () => {
     const counts: Record<string, number> = {};
     getFilteredUsersForCharts().forEach(u => {
-      const mng = u.manager?.trim() || "N/A";
-      counts[mng] = (counts[mng] || 0) + 1;
+      const mng = u.manager?.trim();
+      if (mng && mng !== "N/A" && mng.toLowerCase() !== "other" && mng.toLowerCase() !== "others" && mng.toLowerCase() !== "undefined") {
+        counts[mng] = (counts[mng] || 0) + 1;
+      }
     });
     const sorted = Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-    return groupTopItems(sorted, 6);
+    return groupTopItems(sorted, 8);
   };
 
   const mList = getEligibleManagers();
@@ -2612,89 +2607,154 @@ export default function AdminPage() {
             {/* ================= SECTION 3: ANALYTICS DASHBOARD ================= */}
             {activeTab === "analytics" && (
               <div className="space-y-4 animate-fadeIn">
-                {/* 4 KPI Governance Stat Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-surface border border-line rounded-lg p-3.5">
-                    <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 block">Total Employees</span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-2xl font-bold font-mono text-ink-900 tabular-nums">{users.length}</span>
-                      <span className="badge-status badge-approved text-2xs">
-                        {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active
+                
+                {/* ── 4 Zoho-Style Hero KPI Cards (Home Page Parity) ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  
+                  {/* Card 1: Total Employees */}
+                  <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
+                        Total Workforce
+                      </span>
+                      <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-bold border border-accent-200 shadow-2xs">
+                        <Users className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-2.5 mt-2">
+                      <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
+                        {users.length}
+                      </span>
+                      <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active ({Math.round(((users.filter(u => u.user_status === 'active' || !u.user_status).length) / (users.length || 1)) * 100)}%)
                       </span>
                     </div>
-                  </div>
-
-                  <div className="bg-surface border border-line rounded-lg p-3.5">
-                    <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 block">Role Breakdown</span>
-                    <div className="flex items-center gap-1.5 mt-1.5 text-xs font-bold font-mono text-ink-700">
-                      <span className="text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60">
-                        {users.filter(u => u.role?.toLowerCase().includes('engineer')).length} Eng
-                      </span>
+                    <div className="mt-2 text-2xs text-ink-400 font-medium flex items-center gap-1.5">
+                      <span>{users.filter(u => u.user_status === 'inactive').length} Inactive</span>
                       <span>·</span>
-                      <span className="text-accent-700 bg-accent-50 px-1.5 py-0.5 rounded border border-accent-200/60">
-                        {users.filter(u => u.role?.toLowerCase().includes('manager')).length} Mng
-                      </span>
-                      <span>·</span>
-                      <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
-                        {users.filter(u => u.role?.toLowerCase().includes('admin')).length} Adm
-                      </span>
+                      <span>{users.filter(u => u.user_type === 'Employee').length} Permanent Staff</span>
                     </div>
                   </div>
 
-                  <div className="bg-surface border border-line rounded-lg p-3.5">
-                    <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 block">Regional Matrix</span>
-                    <div className="flex items-baseline gap-1.5 mt-1">
-                      <span className="text-2xl font-bold font-mono text-ink-900 tabular-nums">{availableUserZones.length}</span>
-                      <span className="text-xs text-ink-500 font-medium">Zones ({availableUserDistricts.length} Districts)</span>
+                  {/* Card 2: Field vs Management */}
+                  <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
+                        Role Breakdown
+                      </span>
+                      <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold border border-teal-200 shadow-2xs">
+                        <BarChart3 className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                      <span className="text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                        {users.filter(u => u.role?.toLowerCase().includes('engineer')).length} Engineers
+                      </span>
+                      <span className="text-xs font-bold text-accent-800 bg-accent-50 px-2 py-0.5 rounded-lg border border-accent-200">
+                        {users.filter(u => u.role?.toLowerCase().includes('manager')).length} Managers
+                      </span>
+                      <span className="text-xs font-bold text-purple-800 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">
+                        {users.filter(u => u.role?.toLowerCase().includes('admin')).length} Admin
+                      </span>
+                    </div>
+                    <div className="mt-2 text-2xs text-ink-400 font-medium">
+                      <span>Across 8 standard organizational levels</span>
                     </div>
                   </div>
 
-                  <div className="bg-surface border border-line rounded-lg p-3.5">
-                    <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 block">Hierarchy Rules</span>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-2xl font-bold font-mono text-ink-900 tabular-nums">{hierarchies.length}</span>
+                  {/* Card 3: Regional Footprint */}
+                  <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
+                        Regional Coverage
+                      </span>
+                      <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold border border-amber-200 shadow-2xs">
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-2 mt-2">
+                      <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
+                        {availableUserZones.length}
+                      </span>
+                      <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        Zones Active
+                      </span>
+                    </div>
+                    <div className="mt-2 text-2xs text-ink-400 font-medium flex items-center gap-1.5">
+                      <span className="font-bold text-ink-700 font-mono">{availableUserDistricts.length}</span>
+                      <span>Assigned Districts across state</span>
+                    </div>
+                  </div>
+
+                  {/* Card 4: Hierarchy Health */}
+                  <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
+                        Hierarchy Routing
+                      </span>
+                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200 shadow-2xs">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-2 mt-2">
+                      <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
+                        {hierarchies.length}
+                      </span>
                       {users.filter(u => !u.manager || u.manager === 'N/A').length > 0 ? (
-                        <span className="badge-status badge-pending text-2xs">
-                          {users.filter(u => !u.manager || u.manager === 'N/A').length} Pending
+                        <span className="text-2xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                          {users.filter(u => !u.manager || u.manager === 'N/A').length} Unmapped
                         </span>
                       ) : (
-                        <span className="badge-status badge-approved text-2xs">100% Mapped</span>
+                        <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          100% Mapped
+                        </span>
                       )}
                     </div>
+                    <div className="mt-2 text-2xs text-ink-400 font-medium">
+                      <span>Multi-tier approval sequences active</span>
+                    </div>
                   </div>
+
                 </div>
 
-                {/* Filters Bar */}
-                <div className="bg-surface border border-line rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-none">
+                {/* ── Filter Toolbar ── */}
+                <div className="bg-surface border border-line rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                   <div>
-                    <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0">Dashboard Charts &amp; Analytics</h4>
-                    <p className="text-ink-500 text-2xs mt-0.5 font-medium">Interactive distribution charts with real-time zone &amp; role filtering.</p>
+                    <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0 font-display flex items-center gap-2">
+                      <BarChart3 className="w-3.5 h-3.5 text-accent-600" />
+                      <span>Workforce Analytics &amp; Visual Distributions</span>
+                    </h4>
+                    <p className="text-ink-500 text-2xs mt-0.5 font-medium m-0">
+                      Real-time interactive distribution breakdown filtered by role, zone, and district.
+                    </p>
                   </div>
                   
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Role Filter */}
-                    <div className="flex items-center gap-1.5">
-                      <label className="text-2xs font-bold uppercase text-ink-600">Role:</label>
+                    <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
+                      <label className="text-2xs font-bold uppercase text-ink-500">Role:</label>
                       <select
                         value={chartRoleFilter}
                         onChange={(e) => setChartRoleFilter(e.target.value)}
-                        className="input-lte h-8 text-xs py-0.5 px-2 cursor-pointer"
+                        className="bg-transparent text-xs font-bold text-ink-800 outline-none cursor-pointer"
                       >
                         <option value="all">All Roles</option>
                         <option value="engineer">Engineer</option>
                         <option value="manager">Manager</option>
                         <option value="admin">Admin</option>
                         <option value="coordinator">Coordinator</option>
+                        <option value="accountant">Accountant</option>
+                        <option value="mis">MIS</option>
                       </select>
                     </div>
 
                     {/* Zone Filter */}
-                    <div className="flex items-center gap-1.5">
-                      <label className="text-2xs font-bold uppercase text-ink-600">Zone:</label>
+                    <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
+                      <label className="text-2xs font-bold uppercase text-ink-500">Zone:</label>
                       <select
                         value={chartZoneFilter}
                         onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
-                        className="input-lte h-8 text-xs py-0.5 px-2 cursor-pointer"
+                        className="bg-transparent text-xs font-bold text-ink-800 outline-none cursor-pointer"
                       >
                         <option value="all">All Zones</option>
                         {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
@@ -2703,15 +2763,15 @@ export default function AdminPage() {
                       </select>
                     </div>
 
-                    {/* District Filter (dependent on Zone) */}
-                    <div className="flex items-center gap-1.5">
-                      <label className="text-2xs font-bold uppercase text-ink-600">District:</label>
+                    {/* District Filter */}
+                    <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
+                      <label className="text-2xs font-bold uppercase text-ink-500">District:</label>
                       <select
                         value={chartDistrictFilter}
                         onChange={(e) => setChartDistrictFilter(e.target.value)}
                         disabled={chartZoneFilter === "all"}
-                        className={`input-lte h-8 text-xs py-0.5 px-2 ${
-                          chartZoneFilter === "all" ? "text-ink-300 cursor-not-allowed opacity-60" : "text-ink-900 cursor-pointer"
+                        className={`bg-transparent text-xs font-bold outline-none ${
+                          chartZoneFilter === "all" ? "text-ink-400 cursor-not-allowed opacity-60" : "text-ink-800 cursor-pointer"
                         }`}
                       >
                         <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
@@ -2720,115 +2780,252 @@ export default function AdminPage() {
                         ))}
                       </select>
                     </div>
+
+                    {(chartRoleFilter !== "all" || chartZoneFilter !== "all" || chartDistrictFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => { setChartRoleFilter("all"); setChartZoneFilter("all"); setChartDistrictFilter("all"); }}
+                        className="text-2xs font-bold text-accent-700 hover:text-accent-800 bg-accent-50 px-2.5 py-1 rounded-xl border border-accent-200 cursor-pointer transition-all"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* 4 Donut Charts */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Zone Distribution */}
-                  <div className="bg-surface border border-line rounded-lg shadow-none overflow-hidden">
-                    <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
-                        <PieChartOutlined className="text-accent-600" />
-                        ZONE DISTRIBUTION
-                      </span>
-                      <span className="text-2xs font-mono font-bold bg-surface-sunken px-2 py-0.5 rounded border border-line text-ink-700">
-                        {getZoneData().reduce((s, x) => s + x.value, 0)} Total
+                {/* ── 4 Modern Analytics Chart Cards (No "Others" Category) ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  
+                  {/* Chart 1: Zone Distribution */}
+                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                    <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-accent-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                          Zone Workforce Distribution
+                        </span>
+                      </div>
+                      <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                        {getZoneData().reduce((s, x) => s + x.value, 0)} Total Employees
                       </span>
                     </div>
-                    <div className="p-4 flex flex-col justify-between" style={{ minHeight: 310 }}>
-                      <SaaSDonutChart
-                        data={getZoneData().map((z, i) => ({
-                          name: z.name,
-                          value: z.value,
-                          count: z.value,
-                          color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                        }))}
-                        height={280}
-                        centerTitle="Total Users"
-                        valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                      />
+
+                    <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
+                        <SaaSDonutChart
+                          data={getZoneData().map((z, i) => ({
+                            name: z.name,
+                            value: z.value,
+                            count: z.value,
+                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                          }))}
+                          height={240}
+                          centerTitle="Zone Users"
+                          valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                        />
+                      </div>
+
+                      {/* Rank List breakdown */}
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {getZoneData().map((z, i) => {
+                          const total = getZoneData().reduce((s, x) => s + x.value, 0) || 1;
+                          const pct = Math.round((z.value / total) * 100);
+                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+
+                          return (
+                            <div key={z.name} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                  <span className="truncate">{z.name}</span>
+                                </span>
+                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                  {z.value} ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
-                  {/* District Distribution */}
-                  <div className="bg-surface border border-line rounded-lg shadow-none overflow-hidden">
-                    <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
-                        <PieChartOutlined className="text-accent-600" />
-                        DISTRICT DISTRIBUTION
-                      </span>
-                      <span className="text-2xs font-mono font-bold bg-surface-sunken px-2 py-0.5 rounded border border-line text-ink-700">
-                        {getDistrictData().reduce((s, x) => s + x.value, 0)} Total
+                  {/* Chart 2: District Distribution */}
+                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                    <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-teal-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                          Top Districts Distribution
+                        </span>
+                      </div>
+                      <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                        {getDistrictData().reduce((s, x) => s + x.value, 0)} Total Employees
                       </span>
                     </div>
-                    <div className="p-4 flex flex-col justify-between" style={{ minHeight: 310 }}>
-                      <SaaSDonutChart
-                        data={getDistrictData().map((d, i) => ({
-                          name: d.name,
-                          value: d.value,
-                          count: d.value,
-                          color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                        }))}
-                        height={280}
-                        centerTitle="Total Users"
-                        valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                      />
+
+                    <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
+                        <SaaSDonutChart
+                          data={getDistrictData().map((d, i) => ({
+                            name: d.name,
+                            value: d.value,
+                            count: d.value,
+                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                          }))}
+                          height={240}
+                          centerTitle="District Users"
+                          valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                        />
+                      </div>
+
+                      {/* Rank List breakdown */}
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {getDistrictData().map((d, i) => {
+                          const total = getDistrictData().reduce((s, x) => s + x.value, 0) || 1;
+                          const pct = Math.round((d.value / total) * 100);
+                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+
+                          return (
+                            <div key={d.name} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                  <span className="truncate">{d.name}</span>
+                                </span>
+                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                  {d.value} ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Manager Distribution */}
-                  <div className="bg-surface border border-line rounded-lg shadow-none overflow-hidden">
-                    <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
-                        <PieChartOutlined className="text-accent-600" />
-                        MANAGER DISTRIBUTION
-                      </span>
-                      <span className="text-2xs font-mono font-bold bg-surface-sunken px-2 py-0.5 rounded border border-line text-ink-700">
-                        {getManagerData().reduce((s, x) => s + x.value, 0)} Total
+                  {/* Chart 3: Manager Team Load */}
+                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                    <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                          Manager Reporting Distribution
+                        </span>
+                      </div>
+                      <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                        {getManagerData().reduce((s, x) => s + x.value, 0)} Mapped Members
                       </span>
                     </div>
-                    <div className="p-4 flex flex-col justify-between" style={{ minHeight: 310 }}>
-                      <SaaSDonutChart
-                        data={getManagerData().map((m, i) => ({
-                          name: m.name,
-                          value: m.value,
-                          count: m.value,
-                          color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                        }))}
-                        height={280}
-                        centerTitle="Total Users"
-                        valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                      />
+
+                    <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
+                        <SaaSDonutChart
+                          data={getManagerData().map((m, i) => ({
+                            name: m.name,
+                            value: m.value,
+                            count: m.value,
+                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                          }))}
+                          height={240}
+                          centerTitle="Team Load"
+                          valueFormatter={(v) => `${v.toLocaleString()} Staff`}
+                        />
+                      </div>
+
+                      {/* Rank List breakdown */}
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {getManagerData().map((m, i) => {
+                          const total = getManagerData().reduce((s, x) => s + x.value, 0) || 1;
+                          const pct = Math.round((m.value / total) * 100);
+                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+
+                          return (
+                            <div key={m.name} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                  <span className="truncate">{m.name}</span>
+                                </span>
+                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                  {m.value} staff ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Designation Distribution */}
-                  <div className="bg-surface border border-line rounded-lg shadow-none overflow-hidden">
-                    <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
-                        <PieChartOutlined className="text-accent-600" />
-                        DESIGNATION DISTRIBUTION
-                      </span>
-                      <span className="text-2xs font-mono font-bold bg-surface-sunken px-2 py-0.5 rounded border border-line text-ink-700">
-                        {getDesignationData().reduce((s, x) => s + x.value, 0)} Total
+                  {/* Chart 4: Designation & Role Allocation */}
+                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                    <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-purple-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                          Designation &amp; Role Allocation
+                        </span>
+                      </div>
+                      <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                        {getDesignationData().reduce((s, x) => s + x.value, 0)} Total Roles
                       </span>
                     </div>
-                    <div className="p-4 flex flex-col justify-between" style={{ minHeight: 310 }}>
-                      <SaaSDonutChart
-                        data={getDesignationData().map((d, i) => ({
-                          name: d.name,
-                          value: d.value,
-                          count: d.value,
-                          color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                        }))}
-                        height={280}
-                        centerTitle="Total Users"
-                        valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                      />
+
+                    <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
+                        <SaaSDonutChart
+                          data={getDesignationData().map((d, i) => ({
+                            name: d.name,
+                            value: d.value,
+                            count: d.value,
+                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                          }))}
+                          height={240}
+                          centerTitle="Designations"
+                          valueFormatter={(v) => `${v.toLocaleString()} Roles`}
+                        />
+                      </div>
+
+                      {/* Rank List breakdown */}
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {getDesignationData().map((d, i) => {
+                          const total = getDesignationData().reduce((s, x) => s + x.value, 0) || 1;
+                          const pct = Math.round((d.value / total) * 100);
+                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+
+                          return (
+                            <div key={d.name} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                  <span className="truncate">{d.name}</span>
+                                </span>
+                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                  {d.value} ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
+
                 </div>
+
               </div>
             )}
 
@@ -3536,272 +3733,6 @@ export default function AdminPage() {
                 )}
               </div>
             )}
-
-            {/* ================= SECTION: ROLES & PERMISSIONS MATRIX ================= */}
-            {activeTab === "permissions" && (
-              <div className="space-y-4 animate-fadeIn">
-                {/* Header Overview Banner */}
-                <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-black shrink-0 border border-accent-200 shadow-xs">
-                      <Key className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-accent-600 text-white text-2xs font-mono font-bold uppercase px-2 py-0.5 rounded-full tracking-wider">
-                          SYSTEM SECURITY GOVERNANCE
-                        </span>
-                        <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 border border-approved-border rounded-full flex items-center gap-1">
-                          <ShieldCheck className="w-3 h-3" /> 8 ENFORCED ROLES
-                        </span>
-                      </div>
-                      <h3 className="text-base font-bold text-ink-900 mt-1.5 mb-0 font-display">
-                        Roles &amp; Permissions Authorization Matrix
-                      </h3>
-                      <p className="text-xs text-ink-500 font-medium m-0 mt-0.5">
-                        Documented system capabilities, route-level authorization guards, and administrative access privileges configured across Cyrix FieldOps.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-surface-sunken border border-line p-3 rounded-xl text-right shrink-0">
-                    <span className="text-2xs font-mono font-bold text-ink-500 uppercase tracking-wider block">ACCESS ENFORCEMENT</span>
-                    <span className="text-xs font-mono font-bold text-accent-700 flex items-center gap-1.5 justify-end mt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-accent-600 animate-pulse" />
-                      STRICT JWT &amp; D1 ROUTE GUARDS
-                    </span>
-                  </div>
-                </div>
-
-                {/* Matrix Table Card */}
-                <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs">
-                  <div className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white px-5 py-3.5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <ShieldAlert className="w-4 h-4 text-accent-200" />
-                      <span className="text-xs font-bold uppercase tracking-wider font-mono">
-                        System Roles & Permissions Matrix
-                      </span>
-                    </div>
-                    <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-accent-100 font-bold border border-white/10">
-                      8 Standard System Roles
-                    </span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
-                          <th className="py-3 px-4 min-w-[200px]">System Capability / Module</th>
-                          <th className="py-3 px-3 text-center min-w-[90px]">Admin</th>
-                          <th className="py-3 px-3 text-center min-w-[90px]">Project Head</th>
-                          <th className="py-3 px-3 text-center min-w-[90px]">Div Manager</th>
-                          <th className="py-3 px-3 text-center min-w-[90px]">Manager</th>
-                          <th className="py-3 px-3 text-center min-w-[90px]">Coordinator</th>
-                          <th className="py-3 px-3 text-center min-w-[90px]">MIS</th>
-                          <th className="py-3 px-3 text-center min-w-[90px]">Accountant</th>
-                          <th className="py-3 px-3 text-center min-w-[90px]">Engineer</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-line text-ink-900 font-medium">
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">📝 Submit Daily Expense Claims</div>
-                            <div className="text-2xs text-ink-500 font-normal">Log daily claims, meal DA, travel legs and receipts</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">🚗 Vehicle Odometer Logs</div>
-                            <div className="text-2xs text-ink-500 font-normal">Record opening &amp; closing km with meter photo proofs</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">🔍 L1 Claim Review &amp; Policy Checks</div>
-                            <div className="text-2xs text-ink-500 font-normal">Review first-tier team claims and verify attachments</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">🛡️ L2 / L3 Multi-Tier Approval</div>
-                            <div className="text-2xs text-ink-500 font-normal">Grant executive second and third tier approvals</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">⚡ Bulk Claim Approvals</div>
-                            <div className="text-2xs text-ink-500 font-normal">One-click batch approve claims for assigned sub-teams</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">🏥 Facilities &amp; No TA/DA Master</div>
-                            <div className="text-2xs text-ink-500 font-normal">Add, edit, or delete expense facilities and hospital exceptions</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">⚙️ System Cutoffs &amp; Allowance Rates</div>
-                            <div className="text-2xs text-ink-500 font-normal">Configure monthly cutoff dates, past-days limits, and TA/DA rates</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">🔑 Unlock Sensitive Fields &amp; Reset Credentials</div>
-                            <div className="text-2xs text-ink-500 font-normal">Authorize sensitive vehicle edits, unlock locked submissions, and reset passwords</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">📊 MIS Reports &amp; Data Export</div>
-                            <div className="text-2xs text-ink-500 font-normal">Access financial summaries, month reports, and download Excel ledgers</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                        </tr>
-
-                        <tr className="hover:bg-accent-50/30 transition-colors">
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-ink-900">🎫 Help Center Ticket Handling</div>
-                            <div className="text-2xs text-ink-500 font-normal">Resolve employee complaints, assign tickets, and close support queries</div>
-                          </td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Role Responsibility Scope Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-                  <div className="bg-surface border border-line rounded-xl p-4 shadow-xs space-y-1.5">
-                    <span className="px-2 py-0.5 bg-accent-50 text-accent-700 font-bold text-2xs uppercase rounded-full font-mono border border-accent-100">
-                      ADMIN / SUPER ADMIN
-                    </span>
-                    <h4 className="text-xs font-bold text-ink-900 m-0">Full Console Authority</h4>
-                    <p className="text-2xs text-ink-500 font-medium m-0 leading-relaxed">
-                      Complete administrative access across roster CRUD, security parameters, system-wide cutoffs, and D1 database migrations.
-                    </p>
-                  </div>
-
-                  <div className="bg-surface border border-line rounded-xl p-4 shadow-xs space-y-1.5">
-                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 font-bold text-2xs uppercase rounded-full font-mono border border-indigo-100">
-                      PROJECT HEAD &amp; DM
-                    </span>
-                    <h4 className="text-xs font-bold text-ink-900 m-0">Regional Governance</h4>
-                    <p className="text-2xs text-ink-500 font-medium m-0 leading-relaxed">
-                      Multi-tier approval authority (L2/L3), bulk approval permissions, and zone-level expenditure monitoring.
-                    </p>
-                  </div>
-
-                  <div className="bg-surface border border-line rounded-xl p-4 shadow-xs space-y-1.5">
-                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold text-2xs uppercase rounded-full font-mono border border-emerald-100">
-                      MIS &amp; ACCOUNTANT
-                    </span>
-                    <h4 className="text-xs font-bold text-ink-900 m-0">Financial Controllers</h4>
-                    <p className="text-2xs text-ink-500 font-medium m-0 leading-relaxed">
-                      Auditing expense claims, checking policy deviations, verifying hotel tariffs, and exporting monthly financial disbursements.
-                    </p>
-                  </div>
-
-                  <div className="bg-surface border border-line rounded-xl p-4 shadow-xs space-y-1.5">
-                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 font-bold text-2xs uppercase rounded-full font-mono border border-amber-100">
-                      COORDINATOR &amp; ENGINEER
-                    </span>
-                    <h4 className="text-xs font-bold text-ink-900 m-0">Field Operations</h4>
-                    <p className="text-2xs text-ink-500 font-medium m-0 leading-relaxed">
-                      Daily field asset maintenance, hospital visits, odometer logging, and initial receipt submissions.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
 
             {/* ================= SECTION: ACTIVITY & AUDIT LOG ================= */}
             {activeTab === "audit" && (

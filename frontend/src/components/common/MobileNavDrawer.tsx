@@ -56,6 +56,10 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
 
   const isItemVisible = (item: NavItem) => {
     if (isAdmin) return true;
+    const DEFAULT_UNIVERSAL_ITEMS = ["home", "expense", "profile", "notifications", "help"];
+    if (DEFAULT_UNIVERSAL_ITEMS.includes(item.id.toLowerCase())) {
+      return true;
+    }
     if (item.roles && !item.roles.map((r) => r.toLowerCase()).includes(roleLower)) {
       return false;
     }

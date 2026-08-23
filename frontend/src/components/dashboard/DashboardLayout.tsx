@@ -141,6 +141,13 @@ export default function DashboardLayout() {
   const hasAccess = useMemo(() => {
     if (isAdmin) return true;
     if (!currentActiveItem) return true;
+
+    // Core essential items universally accessible to EVERY employee by default
+    const DEFAULT_UNIVERSAL_ITEMS = ["home", "expense", "profile", "notifications", "help"];
+    if (DEFAULT_UNIVERSAL_ITEMS.includes(currentActiveItem.id.toLowerCase())) {
+      return true;
+    }
+
     if (currentActiveItem.roles && !currentActiveItem.roles.map((r) => r.toLowerCase()).includes(roleLower)) {
       return false;
     }

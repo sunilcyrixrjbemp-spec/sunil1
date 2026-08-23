@@ -84,6 +84,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
 
   const accessibleCommands = COMMANDS.filter((cmd) => {
     if (isAdmin) return true;
+    const DEFAULT_UNIVERSAL = ["home", "expense", "profile", "notifications", "help"];
+    if (DEFAULT_UNIVERSAL.includes(cmd.id.toLowerCase())) return true;
     return allowedWindows.includes(cmd.id.toLowerCase());
   });
 

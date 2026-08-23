@@ -64,6 +64,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const visibleTabs = tabs.filter((tab) => {
     if (isAdmin) return true;
     if (tab.id === "menu") return true;
+    const DEFAULT_UNIVERSAL_TABS = ["home", "expense", "profile", "notifications", "help"];
+    if (DEFAULT_UNIVERSAL_TABS.includes(tab.id.toLowerCase())) return true;
     return allowedWindows.map((w) => w.toLowerCase()).includes(tab.id.toLowerCase());
   });
 
