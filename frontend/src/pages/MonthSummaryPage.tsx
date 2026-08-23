@@ -635,26 +635,24 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     }).join("\n");
 
     summaryPagesHtml += `
-    <div class="wrap summary-page" style="width:1122px;min-height:793px;padding:4mm;background:#fff;box-sizing:border-box;page-break-after:always;">
-      {/* Top Banner Header */}
-      <table style="margin-bottom:0;">
+    <div class="wrap summary-page" style="width:1122px;min-height:780px;padding:3mm 4mm;background:#fff;box-sizing:border-box;page-break-after:always;">
+      <table style="margin-bottom:0;width:100%;">
         <colgroup><col style="width:12%;"><col style="width:68%;"><col style="width:20%;"></colgroup>
         <tr>
-          <td style="background:#fff!important;border:2px solid #1E1B4B;padding:2px;text-align:center;vertical-align:middle;height:36px;">
-            <img src="${window.location.origin}/brand.png" style="height:100%;max-height:32px;width:auto;object-fit:contain;display:block;margin:0 auto;" alt="Logo" />
+          <td style="background:#fff!important;border:1.5px solid #1E1B4B;padding:2px;text-align:center;vertical-align:middle;height:34px;">
+            <img src="${window.location.origin}/brand.png" style="height:100%;max-height:30px;width:auto;object-fit:contain;display:block;margin:0 auto;" alt="Logo" />
           </td>
           <td class="main-hdr">
             CYRIX HEALTHCARE &mdash; EXPENSES REIMBURSEMENT FORM ${numPages > 1 ? `(PAGE ${pageIdx + 1} OF ${numPages})` : ""}
           </td>
-          <td style="background:#1E1B4B!important;color:#fff!important;border:2px solid #1E1B4B;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;vertical-align:middle;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">
+          <td style="background:#1E1B4B!important;color:#fff!important;border:1.5px solid #1E1B4B;padding:3px 6px;font-size:7.5pt;font-weight:bold;text-align:center;vertical-align:middle;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">
             <div>PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0,3)} ${user.year || "2026"}</div>
           </td>
         </tr>
       </table>
 
-      {/* Staff Metadata Grid */}
-      <table class="info-tbl">
-        <colgroup><col style="width:7%;"><col style="width:23%;"><col style="width:7%;"><col style="width:13%;"><col style="width:8%;"><col style="width:12%;"><col style="width:10%;"><col style="width:20%;"></colgroup>
+      <table class="info-tbl" style="width:100%;">
+        <colgroup><col style="width:7%;"><col style="width:23%;"><col style="width:8%;"><col style="width:12%;"><col style="width:8%;"><col style="width:12%;"><col style="width:10%;"><col style="width:20%;"></colgroup>
         <tr>
           <td class="info-lbl">NAME :</td><td class="info-val">${user.name || "—"}</td>
           <td class="info-lbl">EE CODE:</td><td class="info-val">${user.e_code || "—"}</td>
@@ -663,8 +661,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         </tr>
       </table>
 
-      {/* Main Expense Ledger Table */}
-      <table style="margin-bottom:0;border-top:none;border-bottom:none;">
+      <table style="margin-bottom:0;width:100%;border-top:none;border-bottom:none;">
         <colgroup>
           <col style="width:5%;">
           <col style="width:7%;">
@@ -712,7 +709,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
           </tr>
         </thead>
         <tbody>
-          ${pageRowsHtml || `<tr><td colspan="18" style="text-align:center;padding:14px;color:#888;font-style:italic;font-size:8pt;">No expense records found.</td></tr>`}
+          ${pageRowsHtml || `<tr><td colspan="18" style="text-align:center;padding:12px;color:#888;font-style:italic;font-size:7.5pt;">No expense records found.</td></tr>`}
         </tbody>
         ${isLastPage ? `
         <tfoot>
@@ -726,24 +723,24 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
             <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gDA > 0 ? gDA.toFixed(2) : "0.00"}</td>
             <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gLocal > 0 ? gLocal.toFixed(2) : "0.00"}</td>
             <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gHotel > 0 ? gHotel.toFixed(2) : "0.00"}</td>
-            <td class="tot-lbl" style="text-align:center;font-size:7pt;border:1.5px solid #1E1B4B!important;">Total</td>
+            <td class="tot-lbl" style="text-align:center;font-size:6.5pt;border:1.5px solid #1E1B4B!important;">Total</td>
             <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gOther > 0 ? gOther.toFixed(2) : "0.00"}</td>
             <td class="tot-num" style="background:#FFF9C4!important;font-weight:900;text-align:right;border:1.5px solid #1E1B4B!important;color:#1E1B4B;">₹${gTotal.toFixed(2)}</td>
             <td class="tot-lbl" style="border:1.5px solid #1E1B4B!important;"></td>
-            <td class="tot-lbl" style="border:1.5px solid #1E1B4B!important;font-size:7pt!important;text-align:center;font-weight:bold;">
+            <td class="tot-lbl" style="border:1.5px solid #1E1B4B!important;font-size:6.5pt!important;text-align:center;font-weight:bold;">
               ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN')}` : "—"}
             </td>
             <td class="tot-num" style="border:1.5px solid #1E1B4B!important;text-align:center;font-weight:bold;">${gPMSCalib}</td>
             <td class="tot-num" style="border:1.5px solid #1E1B4B!important;text-align:center;font-weight:bold;">${gCallsC}/${gCallsA}</td>
           </tr>
           <tr>
-            <td colspan="13" style="border:1.5px solid #1E1B4B!important;background:#fff!important;font-weight:bold;text-align:center;padding:4px 6px;font-size:8pt;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">LESS: MONTHLY ADVANCE DEDUCTION</td>
-            <td style="border:1.5px solid #1E1B4B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:8.5pt!important;color:#b91c1c;">₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
+            <td colspan="13" style="border:1.5px solid #1E1B4B!important;background:#fff!important;font-weight:bold;text-align:center;padding:3px 5px;font-size:7.5pt;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">LESS: MONTHLY ADVANCE DEDUCTION</td>
+            <td style="border:1.5px solid #1E1B4B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:8pt!important;color:#b91c1c;">₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
             <td colspan="4" style="border:1.5px solid #1E1B4B!important;background:#fff!important;"></td>
           </tr>
           <tr style="background:#EEF0FF!important;">
-            <td class="net-lbl" colspan="13" style="border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;color:#1E1B4B;font-size:8.5pt;font-weight:bold;">NET PAYABLE AMOUNT</td>
-            <td class="net-val" style="font-weight:900;font-size:9pt!important;border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;color:#1E1B4B;text-align:center;">₹${Math.round(gTotal - advance).toFixed(2)}</td>
+            <td class="net-lbl" colspan="13" style="border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;color:#1E1B4B;font-size:8pt;font-weight:bold;">NET PAYABLE AMOUNT</td>
+            <td class="net-val" style="font-weight:900;font-size:8.5pt!important;border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;color:#1E1B4B;text-align:center;">₹${Math.round(gTotal - advance).toFixed(2)}</td>
             <td colspan="4" style="border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;"></td>
           </tr>
         </tfoot>
@@ -753,7 +750,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       ${isLastPage ? `
         <div class="awords-box">Amount in words: <strong style="color:#1E1B4B;">${amountWords(gTotal - advance).toUpperCase()}</strong></div>
         <div class="remarks-box">REMARKS: AUDITED &amp; APPROVED BY CYRIX MANAGEMENT</div>
-        <table class="sig-tbl">
+        <table class="sig-tbl" style="width:100%;">
           <colgroup><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"></colgroup>
           <tr>
             <td class="sig-lbl">Claimed By:<br><strong>${user.name}</strong></td>
@@ -769,7 +766,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
           </tr>
         </table>
       ` : `
-        <div style="font-size:8pt;font-weight:bold;text-align:center;padding:6px;color:#444;font-style:italic;">
+        <div style="font-size:7.5pt;font-weight:bold;text-align:center;padding:4px;color:#444;font-style:italic;">
           Summary continued on Page ${pageIdx + 2} of ${numPages} ...
         </div>
       `}
