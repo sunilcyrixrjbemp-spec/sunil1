@@ -1549,6 +1549,99 @@ export default function AdminPage() {
   const [hierarchySearch, setHierarchySearch] = useState("");
   const [hierarchyUnmappedOnly, setHierarchyUnmappedOnly] = useState(false);
 
+  // State for Bulk Facilities Upsert Import
+  const [isBulkFacilityModalOpen, setIsBulkFacilityModalOpen] = useState(false);
+  const [bulkFacilityLoading, setBulkFacilityLoading] = useState(false);
+  const [bulkFacilityPreview, setBulkFacilityPreview] = useState<any[]>([]);
+  const [bulkFacilityFileName, setBulkFacilityFileName] = useState("");
+
+  const handleDownloadFacilityTemplate = () => {
+    const templateData = [
+      {
+        "Facility Name": "Govt District Hospital Bikaner",
+        "District": "Bikaner",
+        "Zone": "Bikaner",
+        "Facility Type": "District Hospital",
+        "Facility Incharge": "Dr. Ramesh Sharma",
+        "Divisional Manager": "Aminur Rahaman Molla",
+        "Coordinator": "Sunil Bishnoi"
+      },
+      {
+        "Facility Name": "Community Health Center Nokha",
+        "District": "Bikaner",
+        "Zone": "Bikaner",
+        "Facility Type": "CHC",
+        "Facility Incharge": "Dr. Sunita Verma",
+        "Divisional Manager": "Aminur Rahaman Molla",
+        "Coordinator": "Sunil Bishnoi"
+      },
+      {
+        "Facility Name": "Govt City Dispensary Jodhpur",
+        "District": "Jodhpur",
+        "Zone": "Jodhpur",
+        "Facility Type": "Dispensary",
+        "Facility Incharge": "Dr. Arvind Purohit",
+        "Divisional Manager": "Kailash Chand",
+        "Coordinator": "Rajendra Meena"
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Facilities_Master");
+    XLSX.writeFile(workbook, "facilities_bulk_import_template.xlsx");
+    toast.success("Sample facilities import template downloaded!");
+  };
+
+  const handleBulkFacilityFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkFacilityFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        const data: any[] = XLSX.utils.sheet_to_json(ws);
+        if (data.length === 0) {
+          toast.error("File is empty or contains no rows!");
+          return;
+        }
+        setBulkFacilityPreview(data);
+        toast.success(`Loaded ${data.length} facilities ready for import!`);
+      } catch (err: any) {
+        toast.error("Failed to parse file: " + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const handleBulkFacilitySubmit = async () => {
+    if (bulkFacilityPreview.length === 0) {
+      toast.error("Please select a file containing facilities first.");
+      return;
+    }
+    setBulkFacilityLoading(true);
+    try {
+      const res = await adminService.bulkImportFacilities(bulkFacilityPreview);
+      if (res.success) {
+        toast.success(res.message || "Facilities bulk import completed successfully!");
+        setIsBulkFacilityModalOpen(false);
+        setBulkFacilityPreview([]);
+        setBulkFacilityFileName("");
+        fetchInitialData();
+      } else {
+        toast.error(res.error || "Bulk import failed");
+      }
+    } catch (err: any) {
+      toast.error("Bulk import failed: " + (err.response?.data?.error || err.message));
+    } finally {
+      setBulkFacilityLoading(false);
+    }
+  };
+
   const filteredHierarchies = useMemo(() => {
     return safeHierarchies.filter(hq => {
       if (hierarchyUnmappedOnly && hq.requesters.length > 0) return false;
@@ -4008,7 +4101,7 @@ export default function AdminPage() {
           {/* Footer attribution matching HomePage */}
           <footer className="pt-8 pb-4 border-t border-line text-center text-xs text-ink-500 font-medium">
             <p className="m-0 flex items-center justify-center gap-1">
-              <span>Cyrix Field Operations &amp; Expense Governance Suite • Designed &amp; Developed by</span>
+              <span>Designed &amp; Developed by</span>
               <a
                 href="https://sunilbishnoi.co.in/"
                 target="_blank"
@@ -4021,6 +4114,170 @@ export default function AdminPage() {
           </footer>
         </div>
       </div>
+
+      
+      {/* ================= MODAL: BULK FACILITIES UPSERT IMPORT ================= */}
+      {isBulkFacilityModalOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-surface border border-line rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-scale-up flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="bg-surface border-b border-line px-5 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200">
+                  <UploadCloud className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-ink-900 text-sm m-0">Bulk Import Facilities (Smart Upsert)</h3>
+                  <p className="text-2xs text-ink-500 m-0">Upload Excel (.xlsx) or CSV file to add or update facilities in bulk</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBulkFacilityModalOpen(false);
+                  setBulkFacilityPreview([]);
+                  setBulkFacilityFileName("");
+                }}
+                className="text-ink-400 hover:text-ink-700 p-1.5 rounded-lg border-0 bg-transparent cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              {/* Smart Upsert Banner */}
+              <div className="bg-[#EEF0FF] border border-[#DEE1FF] rounded-xl p-3.5 flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-[#4338CA] shrink-0 mt-0.5" />
+                <div className="text-xs text-[#1E1B4B] leading-relaxed">
+                  <strong className="font-bold block mb-0.5 text-[#362FA0]">Unique Facility Name Rule (Auto-Update):</strong>
+                  If a <code>Facility Name</code> in your file matches an existing hospital/facility in the database, its details (Incharge, Divisional Manager, Coordinator, Zone, District) will be <strong>automatically updated</strong>. If it is a new facility, it will be <strong>created</strong>.
+                </div>
+              </div>
+
+              {/* Sample Template Download */}
+              <div className="flex items-center justify-between bg-surface-sunken border border-line rounded-xl p-3">
+                <div>
+                  <div className="text-xs font-bold text-ink-900">Need the correct Excel format?</div>
+                  <div className="text-2xs text-ink-500">Download the official pre-formatted template with sample rows.</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadFacilityTemplate}
+                  className="bg-white hover:bg-surface-sunken text-accent-700 border border-accent-200 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Download Sample Template</span>
+                </button>
+              </div>
+
+              {/* Upload Dropzone */}
+              <div className="border-2 border-dashed border-line hover:border-accent-400 rounded-xl p-6 text-center bg-surface transition-colors cursor-pointer relative">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleBulkFacilityFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-accent-50 text-accent-600 flex items-center justify-center">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-accent-700 hover:underline">Click to upload Excel / CSV</span>
+                    <span className="text-xs text-ink-500"> or drag and drop</span>
+                  </div>
+                  <p className="text-2xs text-ink-400 m-0">Supports .xlsx, .xls, and .csv files</p>
+                  {bulkFacilityFileName && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-accent-50 text-accent-800 rounded-full text-xs font-mono font-bold border border-accent-200">
+                      <span>📄 {bulkFacilityFileName}</span>
+                      <span className="text-accent-600">({bulkFacilityPreview.length} rows)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview Table */}
+              {bulkFacilityPreview.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-ink-900">
+                      Previewing first {Math.min(5, bulkFacilityPreview.length)} of {bulkFacilityPreview.length} rows:
+                    </span>
+                    <span className="text-2xs font-mono text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      ✓ Ready to Process
+                    </span>
+                  </div>
+                  <div className="border border-line rounded-xl overflow-x-auto max-h-48 text-xs">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-surface-sunken text-2xs uppercase text-ink-600 font-bold">
+                        <tr>
+                          <th className="p-2 border-b border-line">Facility Name</th>
+                          <th className="p-2 border-b border-line">District</th>
+                          <th className="p-2 border-b border-line">Facility Incharge</th>
+                          <th className="p-2 border-b border-line">Divisional Manager</th>
+                          <th className="p-2 border-b border-line">Coordinator</th>
+                          <th className="p-2 border-b border-line">Zone</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line text-ink-800">
+                        {bulkFacilityPreview.slice(0, 5).map((row, idx) => (
+                          <tr key={idx} className="hover:bg-surface-sunken">
+                            <td className="p-2 font-bold text-ink-900">{row["Facility Name"] || row.facility_name || "—"}</td>
+                            <td className="p-2">{row["District"] || row.district_name || "—"}</td>
+                            <td className="p-2">{row["Facility Incharge"] || row.facility_incharge || "—"}</td>
+                            <td className="p-2">{row["Divisional Manager"] || row["DM Name"] || row.dm_name || "—"}</td>
+                            <td className="p-2">{row["Coordinator"] || row.coordinator_name || "—"}</td>
+                            <td className="p-2">{row["Zone"] || row.zone_name || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-surface-sunken border-t border-line px-5 py-3.5 flex items-center justify-between shrink-0">
+              <span className="text-xs text-ink-500 font-medium">
+                {bulkFacilityPreview.length > 0 ? `${bulkFacilityPreview.length} facilities to process` : "No file selected"}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsBulkFacilityModalOpen(false);
+                    setBulkFacilityPreview([]);
+                    setBulkFacilityFileName("");
+                  }}
+                  className="bg-white hover:bg-surface-sunken text-ink-700 border border-line text-xs font-semibold px-4 h-8.5 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkFacilitySubmit}
+                  disabled={bulkFacilityLoading || bulkFacilityPreview.length === 0}
+                  className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-5 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0"
+                >
+                  {bulkFacilityLoading ? (
+                    <>
+                      <LteSpinner />
+                      <span>Importing &amp; Syncing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Start Bulk Import ({bulkFacilityPreview.length})</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= MODAL: ADD FACILITY / NO TA DA HOSPITAL ================= */}
       {isAddFacilityModalOpen && (

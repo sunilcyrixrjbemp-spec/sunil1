@@ -2518,3 +2518,108 @@ export async function handleGetAdminAuditLogs(request, env, params, query, user)
   }
 }
 
+
+export async function handleBulkImportFacilities(request, env, params, query, adminUser) {
+  try {
+    const body = await request.json();
+    const facilities = body.facilities || body.data || [];
+    if (!Array.isArray(facilities) || facilities.length === 0) {
+      return jsonResponse({ success: false, error: "Invalid or empty facilities list" }, 400);
+    }
+
+    let insertedCount = 0;
+    let updatedCount = 0;
+    const errors = [];
+
+    // Fetch existing facilities in facility_details
+    const existingRes = await env.DB.prepare("SELECT ROWID as id, facility_name FROM facility_details").all().catch(() => ({ results: [] }));
+    const existingMap = new Map();
+    for (const row of (existingRes.results || [])) {
+      if (row.facility_name) {
+        existingMap.set(row.facility_name.trim().toLowerCase(), row.id);
+      }
+    }
+
+    const statements = [];
+
+    for (let i = 0; i < facilities.length; i++) {
+      const f = facilities[i];
+      const facilityName = (f.facility_name || f["Facility Name"] || f.name || "").trim();
+      const districtName = (f.district_name || f["District"] || f.district || "").trim() || "General";
+      const facilityIncharge = (f.facility_incharge || f["Facility Incharge"] || f.incharge || "").trim() || "";
+      const dmName = (f.dm_name || f["Divisional Manager"] || f["DM Name"] || f.manager || "").trim() || "";
+      const coordinatorName = (f.coordinator_name || f["Coordinator"] || "").trim() || "";
+      const facilityType = (f.facility_type || f["Facility Type"] || f.type || "").trim() || "Hospital";
+      const zoneName = (f.zone_name || f["Zone"] || f.zone || "").trim() || "Rajasthan";
+
+      if (!facilityName) {
+        errors.push(`Row ${i + 1}: Facility Name is required`);
+        continue;
+      }
+
+      const key = facilityName.toLowerCase();
+      if (existingMap.has(key)) {
+        // UPDATE existing facility (Keep facility name unique, update other fields)
+        const existingId = existingMap.get(key);
+        statements.push(
+          env.DB.prepare(
+            "UPDATE facility_details SET district_name = ?, facility_incharge = ?, dm_name = ?, coordinator_name = ?, facility_type = ?, zone_name = ? WHERE ROWID = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))"
+          ).bind(districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName, existingId, facilityName)
+        );
+        updatedCount++;
+      } else {
+        // INSERT new facility
+        statements.push(
+          env.DB.prepare(
+            "INSERT INTO facility_details (facility_name, district_name, facility_incharge, dm_name, coordinator_name, facility_type, zone_name) VALUES (?, ?, ?, ?, ?, ?, ?)"
+          ).bind(facilityName, districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName)
+        );
+        insertedCount++;
+        // Update local map to avoid duplicate inserts within same batch
+        existingMap.set(key, true);
+      }
+    }
+
+    // Execute in batches of 50
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < statements.length; i += BATCH_SIZE) {
+      const batch = statements.slice(i, i + BATCH_SIZE);
+      await env.DB.batch(batch);
+    }
+
+    // Invalidate KV caches for Expense & Auth dropdowns
+    try {
+      if (env.OTPS_KV) {
+        await env.OTPS_KV.delete("cache:ref:facilities_dict:v1");
+        await env.OTPS_KV.delete("cache:auth:dropdowns:v1");
+      }
+    } catch (kvErr) {
+      console.warn("KV bust error:", kvErr);
+    }
+
+    // Audit log
+    try {
+      await env.DB.prepare(
+        "INSERT INTO audit_logs (action, entity_type, performed_by_name, performed_by_role, new_value, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
+      ).bind(
+        "BULK_FACILITIES_UPSERT",
+        "FACILITIES",
+        adminUser?.name || "Admin",
+        adminUser?.role || "Admin",
+        JSON.stringify({ inserted: insertedCount, updated: updatedCount, totalProcessed: statements.length })
+      ).run();
+    } catch (e) {}
+
+    return jsonResponse({
+      success: true,
+      message: `Bulk facilities import completed: ${insertedCount} new added, ${updatedCount} updated.`,
+      insertedCount,
+      updatedCount,
+      totalProcessed: statements.length,
+      errors: errors.length > 0 ? errors.slice(0, 10) : []
+    });
+  } catch (error) {
+    console.error("handleBulkImportFacilities error:", error);
+    return jsonResponse({ success: false, error: "Failed to process bulk facilities import: " + error.message }, 500);
+  }
+}

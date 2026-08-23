@@ -237,6 +237,11 @@ export const adminService = {
     return response.data;
   },
 
+  bulkImportFacilities: async (facilities: any[]): Promise<any> => {
+    const response = await api.post("/admin/facilities/bulk", { facilities });
+    return response.data;
+  },
+
   getWhatsappStatus: async (): Promise<any> => {
     const response = await api.get("/whatsapp/status");
     return response.data;
