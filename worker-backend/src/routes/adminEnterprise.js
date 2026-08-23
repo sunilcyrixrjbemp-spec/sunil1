@@ -64,6 +64,11 @@ export async function handleAnalyticsDashboard(request, env, params, query, user
       SELECT status, COUNT(*) as cnt FROM email_logs
       WHERE created_at >= ? GROUP BY status
     `).bind(sevenDaysAgo).all(),
+    // Recent detailed email logs (last 50 for Cloudflare Email Log viewer)
+    env.DB.prepare(`
+      SELECT id, recipient_email, recipient_name, subject, template_name, status, sent_at, created_at, error_message, related_entity_type, related_entity_id
+      FROM email_logs ORDER BY id DESC LIMIT 50
+    `).all().catch(() => ({ results: [] })),
     // Recent audit log
     env.DB.prepare(`
       SELECT action, entity_type, performed_by_name, created_at
@@ -83,6 +88,7 @@ export async function handleAnalyticsDashboard(request, env, params, query, user
     weeklyEventsByType: safe(weeklyEvents, { results: [] })?.results || [],
     topEventNames: safe(topEventNames, { results: [] })?.results || [],
     emailStats: safe(emailStats, { results: [] })?.results || [],
+    recentEmailLogs: safe(recentEmailLogs, { results: [] })?.results || [],
     recentAuditLog: safe(recentAudit, { results: [] })?.results || [],
     generatedAt: nowISO(),
   });

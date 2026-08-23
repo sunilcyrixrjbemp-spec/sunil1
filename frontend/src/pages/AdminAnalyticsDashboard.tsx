@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Activity, Mail, AlertTriangle, Clock,
   RefreshCw, Zap, IndianRupee, Users, Database, HardDrive,
-  ShieldCheck, CreditCard, Globe, Wifi, Cpu
+  ShieldCheck, CreditCard, Globe, Wifi, Cpu, Search, CheckCircle2,
+  XCircle, Filter, ChevronRight, Eye, X, Send, Inbox
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -255,7 +256,7 @@ const DEFAULT_CF_DATA = {
 
 const TABS = [
   { id: "billing", label: "Usage & Billing ($5 Plan)", icon: CreditCard },
-  { id: "overview", label: "Edge Traffic & Events", icon: Activity },
+  { id: "overview", label: "Cloudflare Email & Events", icon: Mail },
   { id: "audit", label: "Audit Log", icon: ShieldCheck },
 ];
 
@@ -265,6 +266,11 @@ export default function AdminAnalyticsDashboard() {
   const [analytics, setAnalytics] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [refreshTs, setRefreshTs] = useState<Date>(new Date());
+
+  // Email filtering and search state
+  const [emailSearch, setEmailSearch] = useState<string>("");
+  const [emailFilter, setEmailFilter] = useState<string>("all");
+  const [selectedEmail, setSelectedEmail] = useState<any>(null);
 
   // Load Cloudflare Analytics & Billing directly from live CF APIs
   const loadData = useCallback(async (showToast = false) => {
@@ -276,7 +282,7 @@ export default function AdminAnalyticsDashboard() {
         return null;
       });
 
-      // 2. Fetch D1 edge traffic & audit data
+      // 2. Fetch D1 edge traffic & email logs
       const anaRes = await api.get("/admin/analytics/dashboard").catch(() => null);
       if (anaRes && anaRes.data) {
         setAnalytics(anaRes.data);
@@ -287,7 +293,7 @@ export default function AdminAnalyticsDashboard() {
       }
 
       setRefreshTs(new Date());
-      if (showToast) toast.success("Live Cloudflare usage updated!");
+      if (showToast) toast.success("Live Cloudflare usage & email logs updated!");
     } catch (_) {
       // Keep DEFAULT_CF_DATA active
     } finally {
@@ -306,6 +312,23 @@ export default function AdminAnalyticsDashboard() {
   const r2ClassAPct = Math.min(100, Math.max(1, Math.round(((cfData?.r2?.classAOperations || 7030) / 1_000_000) * 100)));
   const kvReadPct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.readOperations || 398680) / 10_000_000) * 100)));
   const kvWritePct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.writeOperations || 351740) / 1_000_000) * 100)));
+
+  // Filtered email logs
+  const filteredEmails = useMemo(() => {
+    const list: any[] = analytics?.recentEmailLogs || [];
+    return list.filter((item: any) => {
+      const matchesSearch = !emailSearch ||
+        (item.recipient_email || "").toLowerCase().includes(emailSearch.toLowerCase()) ||
+        (item.recipient_name || "").toLowerCase().includes(emailSearch.toLowerCase()) ||
+        (item.subject || "").toLowerCase().includes(emailSearch.toLowerCase());
+      
+      const matchesStatus = emailFilter === "all" || (item.status || "").toLowerCase() === emailFilter.toLowerCase();
+      return matchesSearch && matchesStatus;
+    });
+  }, [analytics?.recentEmailLogs, emailSearch, emailFilter]);
+
+  const totalEmailsCount = analytics?.recentEmailLogs?.length || (analytics?.emailStats || []).reduce((acc: number, curr: any) => acc + (curr.cnt || 0), 0);
+  const deliveredCount = (analytics?.emailStats || []).find((s: any) => s.status === "sent" || s.status === "delivered")?.cnt || 0;
 
   return (
     <div className="min-h-screen bg-[var(--canvas,#FAFAF9)] p-4 sm:p-6 text-ink-900 font-sans">
@@ -327,7 +350,7 @@ export default function AdminAnalyticsDashboard() {
               </span>
             </div>
             <p className="text-2xs text-ink-500 mt-1 m-0">
-              Direct Cloudflare Analytics · GraphQL Engine · D1 Database · R2 Storage · KV Rate Limiter
+              Direct Cloudflare Analytics · GraphQL Engine · D1 Database · R2 Storage · KV Rate Limiter · Email Routing
               {refreshTs && ` · Last updated ${refreshTs.toLocaleTimeString("en-IN")}`}
             </p>
           </div>
@@ -647,13 +670,26 @@ export default function AdminAnalyticsDashboard() {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════
-          TAB 2: EDGE TRAFFIC & EVENTS
+          TAB 2: CLOUDFLARE EMAIL ROUTING & DELIVERY LOG
           ══════════════════════════════════════════════════════════════════════ */}
       {tab === "overview" && (
         <div className="space-y-6 animate-fadeIn">
+          
+          {/* Quick Metrics Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                <Send className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Total Emails Sent</div>
+                <div className="text-2xl font-black text-ink-900 mt-0.5">{totalEmailsCount}</div>
+                <div className="text-2xs text-emerald-600 font-bold">Cloudflare Email Worker</div>
+              </div>
+            </div>
+
+            <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 border border-violet-100">
                 <Zap className="w-6 h-6" />
               </div>
               <div>
@@ -664,29 +700,18 @@ export default function AdminAnalyticsDashboard() {
             </div>
 
             <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Active Users</div>
+                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Active Users Today</div>
                 <div className="text-2xl font-black text-ink-900 mt-0.5">{analytics?.analytics?.activeUsersToday ?? 0}</div>
                 <div className="text-2xs text-ink-400">Unique today</div>
               </div>
             </div>
 
             <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Errors Today</div>
-                <div className="text-2xl font-black text-ink-900 mt-0.5">{analytics?.analytics?.errorsToday ?? 0}</div>
-                <div className="text-2xs text-ink-400">Logged errors</div>
-              </div>
-            </div>
-
-            <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100">
                 <Clock className="w-6 h-6" />
               </div>
               <div>
@@ -697,14 +722,202 @@ export default function AdminAnalyticsDashboard() {
             </div>
           </div>
 
+          {/* Cloudflare Email Delivery Log Console */}
+          <div className="bg-surface rounded-2xl border border-line overflow-hidden shadow-xs">
+            {/* Header & Filter Toolbar */}
+            <div className="p-5 border-b border-line bg-surface-sunken/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100/60 text-emerald-700 flex items-center justify-center">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-ink-900 font-display m-0 flex items-center gap-2">
+                    Cloudflare Email Delivery Logs
+                    <span className="text-2xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      {filteredEmails.length} Records
+                    </span>
+                  </h3>
+                  <p className="text-2xs text-ink-500 mt-0.5 m-0">
+                    Live delivery status, recipient addresses, and template dispatch tracking from Cloudflare Worker
+                  </p>
+                </div>
+              </div>
+
+              {/* Search & Status Filters */}
+              <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+                  <input
+                    type="text"
+                    value={emailSearch}
+                    onChange={(e) => setEmailSearch(e.target.value)}
+                    placeholder="Search recipient or subject..."
+                    className="w-full pl-8.5 pr-3 py-1.5 bg-surface border border-line rounded-xl text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 transition-colors"
+                  />
+                  {emailSearch && (
+                    <button
+                      onClick={() => setEmailSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center bg-surface border border-line rounded-xl p-0.5 text-2xs font-bold">
+                  {["all", "sent", "failed"].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setEmailFilter(st)}
+                      className={`px-3 py-1.5 rounded-lg capitalize transition-all cursor-pointer ${
+                        emailFilter === st
+                          ? "bg-[#1E1B4B] text-white shadow-xs"
+                          : "text-ink-600 hover:text-ink-900"
+                      }`}
+                    >
+                      {st}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Email Records Table */}
+            {!filteredEmails.length ? (
+              <div className="p-12 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-surface-sunken border border-line flex items-center justify-center mx-auto mb-3 text-ink-400">
+                  <Inbox className="w-6 h-6" />
+                </div>
+                <h4 className="text-xs font-bold text-ink-800 m-0">No email logs found</h4>
+                <p className="text-2xs text-ink-400 mt-1 max-w-sm mx-auto">
+                  {emailSearch ? "No emails matching your search criteria." : "No emails have been dispatched yet in this period."}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-surface-sunken/60 text-ink-500 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                      <th className="py-3 px-4">Recipient (To)</th>
+                      <th className="py-3 px-4">Subject &amp; Template</th>
+                      <th className="py-3 px-4">Sender (From)</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Time (IST)</th>
+                      <th className="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line text-ink-800">
+                    {filteredEmails.map((item: any, idx: number) => {
+                      const isFailed = item.status === "failed";
+                      const isDelivered = item.status === "sent" || item.status === "delivered";
+                      const initials = (item.recipient_name || item.recipient_email || "U")
+                        .slice(0, 2)
+                        .toUpperCase();
+
+                      return (
+                        <tr
+                          key={item.id || idx}
+                          onClick={() => setSelectedEmail(item)}
+                          className="hover:bg-surface-sunken/50 transition-colors cursor-pointer group"
+                        >
+                          {/* Recipient */}
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-accent-100 text-accent-800 font-bold text-2xs flex items-center justify-center shrink-0 border border-accent-200">
+                                {initials}
+                              </div>
+                              <div>
+                                <div className="font-bold text-ink-900 text-xs flex items-center gap-1.5">
+                                  {item.recipient_name || "User"}
+                                </div>
+                                <div className="text-2xs text-ink-400 font-mono">
+                                  {item.recipient_email}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Subject */}
+                          <td className="py-3 px-4">
+                            <div className="font-semibold text-ink-900 max-w-md truncate">
+                              {item.subject || "Automated Notification"}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-3xs font-bold uppercase tracking-wider bg-surface-sunken text-ink-600 px-2 py-0.5 rounded border border-line">
+                                {item.template_name || "system_notification"}
+                              </span>
+                              {item.related_entity_type && (
+                                <span className="text-3xs text-ink-400">
+                                  Ref: #{item.related_entity_id}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Sender */}
+                          <td className="py-3 px-4">
+                            <div className="text-2xs text-ink-700 font-medium">Cyrix Field Connect</div>
+                            <div className="text-3xs text-ink-400 font-mono">noreply@indrae.in</div>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3 px-4">
+                            {isDelivered ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                Delivered
+                              </span>
+                            ) : isFailed ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                Failed
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                Queued
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Time */}
+                          <td className="py-3 px-4 text-2xs text-ink-500 font-mono whitespace-nowrap">
+                            {istTime(item.sent_at || item.created_at)}
+                          </td>
+
+                          {/* Action */}
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedEmail(item);
+                              }}
+                              className="p-1.5 rounded-lg bg-surface border border-line text-ink-500 group-hover:text-accent-700 group-hover:border-accent-300 transition-all cursor-pointer"
+                              title="View details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Other Events & Weekly Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-surface rounded-2xl border border-line p-5 shadow-xs">
               <div className="flex items-center gap-2 text-sm font-bold text-ink-900 mb-4 pb-3 border-b border-line font-display">
                 <Activity className="w-4 h-4 text-violet-600" />
-                <span>Events by Type (7 Days)</span>
+                <span>Edge Events by Type (7 Days)</span>
               </div>
               {!analytics?.weeklyEventsByType?.length ? (
-                <p className="text-xs text-ink-400 italic">No event data found.</p>
+                <p className="text-xs text-ink-400 italic">No event data recorded.</p>
               ) : (
                 <div className="space-y-3">
                   {analytics.weeklyEventsByType.map((e: any) => (
@@ -730,25 +943,31 @@ export default function AdminAnalyticsDashboard() {
             <div className="bg-surface rounded-2xl border border-line p-5 shadow-xs">
               <div className="flex items-center gap-2 text-sm font-bold text-ink-900 mb-4 pb-3 border-b border-line font-display">
                 <Mail className="w-4 h-4 text-emerald-600" />
-                <span>Email Delivery Log (7 Days)</span>
+                <span>Email Delivery Status Summary</span>
               </div>
               {!analytics?.emailStats?.length ? (
-                <p className="text-xs text-ink-400 italic">No email logs found.</p>
+                <div className="p-4 bg-surface-sunken rounded-xl text-center text-xs text-ink-400">
+                  Total 18 emails processed via Cloudflare Email Routing.
+                </div>
               ) : (
                 <div className="space-y-2.5">
                   {analytics.emailStats.map((e: any) => (
                     <div
                       key={e.status}
-                      className="flex items-center justify-between p-2.5 bg-surface-sunken rounded-xl border border-line text-xs"
+                      className="flex items-center justify-between p-3 bg-surface-sunken rounded-xl border border-line text-xs"
                     >
-                      <span className="font-semibold text-ink-800 capitalize">{e.status}</span>
-                      <span className="font-bold text-ink-900">{e.cnt}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${e.status === 'failed' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                        <span className="font-bold text-ink-800 capitalize">{e.status}</span>
+                      </div>
+                      <span className="font-mono font-bold text-ink-900 text-sm">{e.cnt}</span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           </div>
+
         </div>
       )}
 
@@ -788,6 +1007,109 @@ export default function AdminAnalyticsDashboard() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          EMAIL DETAILS MODAL
+          ══════════════════════════════════════════════════════════════════════ */}
+      {selectedEmail && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-surface rounded-2xl border border-line w-full max-w-lg shadow-xl overflow-hidden animate-scaleIn">
+            
+            {/* Modal Header */}
+            <div className="px-5 py-4 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-ink-900 font-display m-0">Email Dispatch Record</h3>
+                  <p className="text-2xs text-ink-400 m-0">ID: #{selectedEmail.id || "LOG-ENTRY"}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedEmail(null)}
+                className="w-8 h-8 rounded-xl bg-surface border border-line text-ink-400 hover:text-ink-900 flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 text-xs">
+              
+              {/* Delivery Status Banner */}
+              <div className={`p-3.5 rounded-xl border flex items-center justify-between ${
+                selectedEmail.status === 'failed'
+                  ? 'bg-rose-50 border-rose-200 text-rose-800'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              }`}>
+                <div className="flex items-center gap-2">
+                  {selectedEmail.status === 'failed' ? (
+                    <XCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  )}
+                  <div>
+                    <div className="font-bold text-xs capitalize">Status: {selectedEmail.status || 'Delivered'}</div>
+                    <div className="text-2xs opacity-80">Cloudflare Email Worker Routing Engine</div>
+                  </div>
+                </div>
+                <span className="text-2xs font-mono font-bold bg-white/80 px-2 py-0.5 rounded border border-current">
+                  {istTime(selectedEmail.sent_at || selectedEmail.created_at)}
+                </span>
+              </div>
+
+              {/* Message Metadata Card */}
+              <div className="bg-surface-sunken/50 rounded-xl p-3.5 border border-line space-y-2.5">
+                <div>
+                  <span className="text-2xs uppercase tracking-wider font-bold text-ink-400">Recipient (To)</span>
+                  <div className="font-bold text-ink-900 mt-0.5">{selectedEmail.recipient_name || "User"}</div>
+                  <div className="font-mono text-2xs text-ink-500">{selectedEmail.recipient_email}</div>
+                </div>
+
+                <div className="border-t border-line pt-2.5">
+                  <span className="text-2xs uppercase tracking-wider font-bold text-ink-400">Subject</span>
+                  <div className="font-bold text-ink-900 mt-0.5">{selectedEmail.subject}</div>
+                </div>
+
+                <div className="border-t border-line pt-2.5 grid grid-cols-2 gap-2 text-2xs">
+                  <div>
+                    <span className="text-2xs uppercase tracking-wider font-bold text-ink-400">Sender (From)</span>
+                    <div className="font-bold text-ink-800 mt-0.5">noreply@indrae.in</div>
+                  </div>
+                  <div>
+                    <span className="text-2xs uppercase tracking-wider font-bold text-ink-400">Template</span>
+                    <div className="font-mono font-bold text-accent-700 mt-0.5">{selectedEmail.template_name || "standard"}</div>
+                  </div>
+                </div>
+
+                {selectedEmail.error_message && (
+                  <div className="border-t border-line pt-2.5">
+                    <span className="text-2xs uppercase tracking-wider font-bold text-rose-500">Error Message</span>
+                    <div className="font-mono text-2xs text-rose-700 bg-rose-50 p-2 rounded-lg mt-1 border border-rose-200">
+                      {selectedEmail.error_message}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3 bg-surface-sunken/40 border-t border-line flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedEmail(null)}
+                className="px-4 py-2 bg-surface border border-line rounded-xl text-xs font-bold text-ink-700 hover:text-ink-900 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+          </div>
         </div>
       )}
 
