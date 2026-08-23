@@ -533,20 +533,27 @@ export function submissionReminderTemplate({
   monthName,
   year,
 }) {
+  // Clean formatted month/period string (avoid duplicate year e.g. "Aug 2026 2026")
+  const periodLabel = monthName && monthName.includes(String(year)) ? monthName : `${monthName} ${year}`;
+
   const missingListHtml = (missingDates || [])
-    .map(d => '<li style="padding:3px 0;color:#b91c1c;font-weight:600;font-family:Consolas,monaco,monospace;">' + d + '</li>')
+    .map(dStr => {
+      const d = new Date(dStr);
+      const dayName = !isNaN(d.getTime()) ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()] : "";
+      return `<li style="padding:3px 0;color:#b91c1c;font-weight:600;font-family:Consolas,monaco,monospace;">${dStr} (${dayName})</li>`;
+    })
     .join("");
 
   const content = `
     <div style="padding-bottom:16px;border-bottom:1px solid #e2e8f0;margin-bottom:20px;">
       <span style="background-color:#fef2f2;color:#dc2626;font-weight:700;font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid #fecaca;text-transform:uppercase;letter-spacing:0.5px;">
-        Action Required • Overdue Expense Submission
+        Action Required • Pending Expense Claim Submission
       </span>
       <h2 style="margin:12px 0 4px 0;font-size:20px;color:#0f172a;font-weight:800;letter-spacing:-0.2px;">
-        Field Expense Submission Notice
+        Daily Expense Submission Reminder
       </h2>
       <p style="margin:0;color:#64748b;font-size:13px;">
-        Billing Period: <strong>${monthName} ${year}</strong> (Sundays & Approved Leaves Excluded)
+        Billing Period: <strong>${periodLabel}</strong> (Sundays & Approved Leaves Excluded)
       </p>
     </div>
 
@@ -555,19 +562,18 @@ export function submissionReminderTemplate({
     </p>
 
     <p style="margin:0 0 16px 0;font-size:13.5px;color:#334155;line-height:1.6;">
-      This is an automated operational notification regarding your daily field expense records. 
-      According to our system records, you currently have <strong><span style="color:#dc2626;font-weight:700;">${pendingDays} working day(s)</span></strong> with missing or unsubmitted expense entries for the period of <strong>${monthName} ${year}</strong>.
+      This is an automated operational notification regarding your daily field expense records. According to our system records, you currently have <strong><span style="color:#dc2626;font-weight:700;">${pendingDays} working day(s)</span></strong> with missing or unsubmitted expense entries for the period of <strong>${periodLabel}</strong>.
     </p>
 
     <!-- Details Summary Card -->
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:18px;">
       <tr>
-        <td style="padding:5px 0;font-size:13px;color:#64748b;width:38%;"><strong>Field Engineer:</strong></td>
+        <td style="padding:5px 0;font-size:13px;color:#64748b;width:32%;"><strong>Name:</strong></td>
         <td style="padding:5px 0;font-size:13px;color:#0f172a;font-weight:700;">${employeeName} (${employeeCode})</td>
       </tr>
       <tr>
-        <td style="padding:5px 0;font-size:13px;color:#64748b;"><strong>Assigned Territory:</strong></td>
-        <td style="padding:5px 0;font-size:13px;color:#0f172a;font-weight:600;">${district || "Rajasthan"}, ${zone || "HQ"} Zone</td>
+        <td style="padding:5px 0;font-size:13px;color:#64748b;"><strong>District Name:</strong></td>
+        <td style="padding:5px 0;font-size:13px;color:#0f172a;font-weight:600;">${district || "Rajasthan"}</td>
       </tr>
       <tr>
         <td style="padding:5px 0;font-size:13px;color:#64748b;"><strong>Overdue Submissions:</strong></td>
@@ -584,7 +590,7 @@ export function submissionReminderTemplate({
     <!-- Submission Policy & Cutoff Warning Box -->
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:#92400e;line-height:1.5;">
       ⏰ <strong>Financial Cutoff & Policy Notice:</strong><br/>
-      In accordance with company expense policy, all retrospective claims must be submitted prior to the monthly financial cutoff (<strong>3rd of each following month</strong>). Retrospective claims submitted after the cutoff cannot be processed without executive management override.
+      In accordance with company expense policy, retrospective claims can be submitted within your active retrospective window (up to allowed back days / 3rd of the following month cutoff). Claims submitted after cutoff cannot be processed without executive management override.
     </div>
 
     <!-- Missing Dates Section -->
@@ -592,7 +598,7 @@ export function submissionReminderTemplate({
       <p style="margin:0 0 8px 0;font-size:13px;color:#0f172a;font-weight:700;">
         Pending Working Dates (${missingDates.length} days):
       </p>
-      <div style="background:#ffffff;border:1px solid #fecaca;border-radius:6px;padding:12px 16px;max-height:150px;overflow-y:auto;">
+      <div style="background:#ffffff;border:1px solid #fecaca;border-radius:6px;padding:12px 16px;max-height:160px;overflow-y:auto;">
         <ul style="margin:0;padding-left:20px;font-size:12.5px;">
           ${missingListHtml}
         </ul>
@@ -617,11 +623,11 @@ export function submissionReminderTemplate({
     </p>
   `;
 
-  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou currently have ${pendingDays} working day(s) with missing expense claims for ${monthName} ${year}.\n\nPending Dates:\n${(missingDates || []).join("\n")}\n\nNotice: If you were on approved leave or absent on any of these dates, please log in to Cyrix FieldOps (https://indrae.in) and mark those specific dates as 'On Leave' to clear your overdue status.\n\nPlease submit your pending daily claims or record your leaves today.\n\nSincerely,\nCyrix Field Operations Team`;
+  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou currently have ${pendingDays} working day(s) with missing expense claims for ${periodLabel}.\n\nPending Dates:\n${(missingDates || []).join("\n")}\n\nNotice: If you were on approved leave or absent on any of these dates, please log in to Cyrix FieldOps (https://indrae.in) and mark those specific dates as 'On Leave' to clear your overdue status.\n\nPlease submit your pending daily claims or record your leaves today.\n\nSincerely,\nCyrix Field Operations Team`;
 
   return {
-    subject: `[Action Required] ${pendingDays} Working Days Expense Submission Pending - ${employeeName} (${monthName} ${year})`,
-    html: emailWrapper(content, `Expense submission notice: ${pendingDays} days pending`),
+    subject: `[Action Required] ${pendingDays} Working Days Expense Submission Pending - ${employeeName} (${periodLabel})`,
+    html: emailWrapper(content, `Expense submission reminder: ${pendingDays} days pending`),
     text: textPlain,
   };
 }

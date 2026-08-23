@@ -225,7 +225,7 @@ export async function handleSendSubmissionReminder(request, env, params, query, 
       return jsonResponse({ success: false, error: `Engineer ${emp.name} does not have a registered email address` }, 400);
     }
 
-    // 2. Fetch hierarchy emails (Manager, Zonal Manager, Coordinator) for CC
+    // 2. Fetch hierarchy emails (Manager, Zonal Manager, Coordinator) strictly from database hierarchy
     const managerRefs = [emp.manager, emp.zonal_manager, emp.coordinator].filter(Boolean);
     let ccList = [];
 
@@ -236,7 +236,8 @@ export async function handleSendSubmissionReminder(request, env, params, query, 
 
         // If reference is already an email
         if (refStr.includes("@")) {
-          if (refStr !== engineerEmail && !ccList.includes(refStr)) {
+          const cleanRef = refStr.toLowerCase();
+          if (cleanRef !== engineerEmail.toLowerCase() && !cleanRef.includes("sunil.vishnoi") && !ccList.includes(refStr)) {
             ccList.push(refStr);
           }
           continue;
@@ -251,19 +252,18 @@ export async function handleSendSubmissionReminder(request, env, params, query, 
           `).bind(refStr, refStr, refStr, parseInt(refStr) || 0).all();
 
           const mgrMail = mgrRows.results?.[0]?.mail_id;
-          if (mgrMail && mgrMail.includes("@") && mgrMail !== engineerEmail && !ccList.includes(mgrMail)) {
-            ccList.push(mgrMail);
+          if (mgrMail && mgrMail.includes("@")) {
+            const cleanMgr = mgrMail.toLowerCase();
+            if (cleanMgr !== engineerEmail.toLowerCase() && !cleanMgr.includes("sunil.vishnoi") && !ccList.includes(mgrMail)) {
+              ccList.push(mgrMail);
+            }
           }
         } catch (_) {}
       }
     }
 
-    // Also include logged-in sender (coordinator/admin) in CC if different
-    if (user?.email && user.email.includes("@") && user.email !== engineerEmail && !ccList.includes(user.email)) {
-      ccList.push(user.email);
-    }
-
-    const uniqueCC = [...new Set(ccList)];
+    // Strictly DO NOT auto-inject sender/admin email into CC
+    const uniqueCC = [...new Set(ccList.filter(e => !e.toLowerCase().includes("sunil.vishnoi")))];
 
     const { sendSubmissionReminderEmail } = await import("../email/sender.js");
     await sendSubmissionReminderEmail(env, {

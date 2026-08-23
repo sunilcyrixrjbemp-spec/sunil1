@@ -169,20 +169,38 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       leaves: Record<string, { leave_type: string; reason: string }>;
     }> = {};
 
-    // 1. Seed unique employees
-    uniqueEmployees.forEach((u) => {
-      const code = String(u.code || "").trim().toUpperCase();
-      if (!code) return;
-      empMap[code] = {
-        name: u.name || code,
-        code,
-        district: "Rajasthan",
-        zone: "HQ",
-        dates: new Set(),
-        amountByDate: {},
-        leaves: {},
-      };
-    });
+    // 1. Seed employees:
+    // If on "My Claims" tab, strictly seed ONLY the logged-in user (NO team members seeded!)
+    if (activeTab === "my-claims" && user) {
+      const myCode = String(user.user_id || user.e_code || user.id || "").trim().toUpperCase();
+      const myName = user.name || myCode || "Me";
+      if (myCode) {
+        empMap[myCode] = {
+          name: myName,
+          code: myCode,
+          district: user.district || "Rajasthan",
+          zone: user.zone || "HQ",
+          dates: new Set(),
+          amountByDate: {},
+          leaves: {},
+        };
+      }
+    } else {
+      // On Team Claims tab: Seed unique employees
+      uniqueEmployees.forEach((u) => {
+        const code = String(u.code || "").trim().toUpperCase();
+        if (!code) return;
+        empMap[code] = {
+          name: u.name || code,
+          code,
+          district: "Rajasthan",
+          zone: "HQ",
+          dates: new Set(),
+          amountByDate: {},
+          leaves: {},
+        };
+      });
+    }
 
     // 2. Map claims
     expenses.forEach((claim) => {
@@ -918,8 +936,9 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                               return (
                                 <div
                                   key={d.dayNum}
-                                  className="w-3.5 h-3.5 rounded-[2px] bg-rose-500 text-white text-[7.5px] font-bold flex items-center justify-center shrink-0 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
-                                  title={`Day ${d.dayNum}: Missing Claim (${d.dateStr})`}
+                                  onClick={() => handleOpenLeaveModal(r, d.dateStr)}
+                                  className="w-3.5 h-3.5 rounded-[2px] bg-rose-500 text-white text-[7.5px] font-bold flex items-center justify-center shrink-0 shadow-2xs cursor-pointer hover:scale-125 transition-transform hover:ring-2 hover:ring-amber-400"
+                                  title={`Day ${d.dayNum}: Missing Claim (${d.dateStr}) — Click to Mark as Leave`}
                                 >
                                   ✕
                                 </div>
@@ -951,7 +970,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                                 type="button"
                                 onClick={() => handleOpenLeaveModal(r)}
                                 className="inline-flex items-center justify-center p-1 rounded-[3px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer"
-                                title="Mark missing dates as On Leave / Absent (Zero Due)"
+                                title="Mark Leave / Absent"
                               >
                                 <Palmtree className="w-2.5 h-2.5" />
                               </button>

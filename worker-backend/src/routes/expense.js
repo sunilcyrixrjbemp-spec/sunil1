@@ -2715,6 +2715,24 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     description = getFormVal("description") || "";
   }
 
+  // ── Block Expense Submission if Engineer has marked this date as On Leave / Absent ──
+  try {
+    const submitterCode = user.user_id || user.e_code || user.id;
+    const leaveCheck = await env.DB.prepare(`
+      SELECT date, leave_type FROM engineer_leaves 
+      WHERE (user_id = ? OR employee_code = ? OR user_id = ?) AND date = ?
+      LIMIT 1
+    `).bind(String(submitterCode), String(submitterCode), String(user.id || ""), String(date)).first();
+
+    if (leaveCheck) {
+      return jsonResponse({
+        error: `Cannot submit claim for ${date}: This date is already marked as "${leaveCheck.leave_type || 'On Leave'}". Please revoke your leave first if you worked on this day.`
+      }, 400);
+    }
+  } catch (err) {
+    console.warn("Leave check warning:", err.message);
+  }
+
   // STRICT RULE: Minimum 2 visits/legs required for expense submission
   if (!Array.isArray(itineraries) || itineraries.length < 2) {
     return jsonResponse({ error: "Submission policy violation: Minimum 2 visits/legs are required to submit an expense claim." }, 400);
