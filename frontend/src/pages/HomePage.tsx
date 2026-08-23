@@ -16,6 +16,7 @@ import { ZohoSpendChart } from "../components/home/ZohoSpendChart";
 import { ZohoCategoryChart } from "../components/home/ZohoCategoryChart";
 import { ZohoPendingTasks } from "../components/home/ZohoPendingTasks";
 import { ZohoRecentExpenses } from "../components/home/ZohoRecentExpenses";
+import { ZohoExecutiveComparison } from "../components/home/ZohoExecutiveComparison";
 import { getStatusBadgeClass, getStatusLabel, renderAntdStatusTag } from "../components/home/claimsColumns";
 
 const ClaimDetailsModal = React.lazy(() => import("../components/common/ClaimDetailsModal"));
@@ -151,6 +152,21 @@ export default function HomePage() {
     };
   }, [lightboxImage]);
 
+    const isComparativeExpenseAllowed = React.useMemo(() => {
+    const r = (user?.role || "").toLowerCase();
+    return (
+      r.includes("coordinator") ||
+      r.includes("admin") ||
+      r.includes("account") ||
+      r.includes("travel") ||
+      r.includes("mis") ||
+      r.includes("director") ||
+      r.includes("vp") ||
+      r.includes("project head") ||
+      r.includes("project_head")
+    );
+  }, [user?.role]);
+
   const activeClaims = activeTab === "my-claims" ? filteredPersonalExpenses : filteredTeamExpenses;
   const isPageLoading = (activeTab === "my-claims" ? loadingMyExpenses : loadingTeamExpenses) &&
     (activeTab === "my-claims" ? (safeMyExpenses?.length || 0) === 0 : (safeTeamExpenses?.length || 0) === 0);
@@ -234,6 +250,20 @@ export default function HomePage() {
           statsRejectedClaims={statsRejectedClaims}
           onOpenModal={handleOpenStatsModal}
         />
+
+        {/* ── 2.5 Executive Comparative Analytics (Last Month vs Current Month) ── */}
+        {isComparativeExpenseAllowed && (
+          <ZohoExecutiveComparison
+            currentClaims={activeClaims}
+            user={user}
+            isReviewerRole={isReviewerRole}
+            activeTab={activeTab}
+            selectMonth={selectMonth}
+            filterZone={filterZone}
+            filterDistrict={filterDistrict}
+            filterEmployee={filterEmployee}
+          />
+        )}
 
         {/* ── 3 & 4. Analytics Widgets (Spend Trend + Category Donut) ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
