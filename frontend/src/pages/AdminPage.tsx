@@ -3287,15 +3287,15 @@ export default function AdminPage() {
             {activeTab === "facilities" && (
               <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs animate-fadeIn">
                 {/* Clean Integrated Header Bar: Sub-Tabs + Filters + Quick Actions */}
-                <div className="p-3 border-b border-line bg-surface flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
-                  {/* Left: Clean Segmented Sub-Tab Switcher (1 line) */}
+                <div className="p-3 sm:p-3.5 border-b border-line bg-surface flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5">
+                  {/* Left: Clean Segmented Sub-Tab Switcher */}
                   <div className="bg-surface-sunken p-1 rounded-xl flex items-center gap-1 border border-line shrink-0">
                     <button
                       type="button"
                       onClick={() => setFacilitySubTab("expense")}
                       className={`py-1.5 px-3 text-xs font-bold border-0 cursor-pointer transition-all rounded-lg flex items-center gap-1.5 whitespace-nowrap ${
                         facilitySubTab === "expense"
-                          ? "bg-surface text-accent-700 shadow-2xs border border-line"
+                          ? "bg-white text-accent-700 shadow-xs border border-line"
                           : "bg-transparent text-ink-600 hover:text-ink-900"
                       }`}
                     >
@@ -3311,7 +3311,7 @@ export default function AdminPage() {
                       onClick={() => setFacilitySubTab("notada")}
                       className={`py-1.5 px-3 text-xs font-bold border-0 cursor-pointer transition-all rounded-lg flex items-center gap-1.5 whitespace-nowrap ${
                         facilitySubTab === "notada"
-                          ? "bg-surface text-rose-700 shadow-2xs border border-line"
+                          ? "bg-white text-rose-700 shadow-xs border border-line"
                           : "bg-transparent text-ink-600 hover:text-ink-900"
                       }`}
                     >
@@ -3323,16 +3323,17 @@ export default function AdminPage() {
                     </button>
                   </div>
 
-                  {/* Right: Search & Filters in the exact same single row */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="relative w-48 sm:w-56 lg:w-64">
+                  {/* Right: Search & Filters with proper flex layout */}
+                  <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                    {/* Flexible Search Box */}
+                    <div className="relative flex-1 min-w-[150px] max-w-[280px]">
                       <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Search name, district, manager..."
+                        placeholder="Search facility, incharge, manager..."
                         value={facilitySearch}
                         onChange={(e) => setFacilitySearch(e.target.value)}
-                        className="input-lte pl-8 h-8 text-xs w-full rounded-xl bg-white"
+                        className="input-lte pl-8 h-8 text-xs w-full rounded-xl bg-white border border-line focus:border-accent-400"
                       />
                       {facilitySearch && (
                         <button
@@ -3345,10 +3346,11 @@ export default function AdminPage() {
                       )}
                     </div>
 
+                    {/* Zone Dropdown */}
                     <select
                       value={facilityZoneFilter}
                       onChange={(e) => setFacilityZoneFilter(e.target.value)}
-                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-32 bg-white shrink-0"
+                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-28 sm:w-32 bg-white shrink-0 border border-line"
                     >
                       <option value="all">All Zones ({availableFacilityZones.length})</option>
                       {availableFacilityZones.map((z: string) => (
@@ -3356,10 +3358,11 @@ export default function AdminPage() {
                       ))}
                     </select>
 
+                    {/* District Dropdown */}
                     <select
                       value={facilityDistrictFilter}
                       onChange={(e) => setFacilityDistrictFilter(e.target.value)}
-                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-36 bg-white shrink-0"
+                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-32 sm:w-36 bg-white shrink-0 border border-line"
                     >
                       <option value="all">All Districts ({availableFacilityDistricts.length})</option>
                       {availableFacilityDistricts.map((d: string) => (
@@ -3367,6 +3370,7 @@ export default function AdminPage() {
                       ))}
                     </select>
 
+                    {/* Reset Button */}
                     {(facilitySearch || facilityZoneFilter !== "all" || facilityDistrictFilter !== "all") && (
                       <button
                         type="button"
