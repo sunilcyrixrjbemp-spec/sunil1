@@ -1,3 +1,4 @@
+import { generateCyrixVectorPdf } from "../utils/cyrixVectorPdfEngine";
 // High-Speed In-Memory PDF Cache
 const pdfBlobCache = new Map<string, Blob>();
 import { useEffect, useState, useRef, useMemo } from "react";
@@ -1160,27 +1161,16 @@ export default function MonthSummaryPage() {
         return;
       }
 
-      await Promise.all(
-        claims.map(async (claim: any) => {
-          try {
-            const details = await expenseService.getExpenseDetails(claim.expense_code);
-            if (details) {
-              if (details.attachments && Array.isArray(details.attachments)) {
-                claim.attachments = details.attachments;
-              }
-              if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
-                claim.attachments_detailed = details.attachments_detailed;
-              }
-            }
-          } catch (e) {}
-        })
-      );
-
       let pdfBlob = pdfBlobCache.get(key);
       if (!pdfBlob) {
         const attachments = await prepareConvertedAttachments(claims);
-        const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
-        pdfBlob = await renderHTMLToPDFBlob(html);
+        try {
+          pdfBlob = await generateCyrixVectorPdf(userObj, claims, attachments, row.advance_amount || 0);
+        } catch (vErr) {
+          console.warn("Vector PDF fallback to canvas:", vErr);
+          const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
+          pdfBlob = await renderHTMLToPDFBlob(html);
+        }
         pdfBlobCache.set(key, pdfBlob);
       }
 
@@ -1193,7 +1183,7 @@ export default function MonthSummaryPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast.success("PDF downloaded successfully!");
+      toast.success("PDF downloaded instantly!");
     } catch (e) {
       console.error(e);
       toast.error("Failed to generate PDF");
@@ -1390,24 +1380,18 @@ export default function MonthSummaryPage() {
       stage: "fetching",
       current: 0,
       total: selectedRows.length,
-      currentName: "Starting parallel data fetch...",
+      currentName: "Starting fast vector PDF export...",
       percent: 5,
-      message: `Fetching claim records and attachments for ${selectedRows.length} engineers...`
+      message: `Generating vector PDF reports for ${selectedRows.length} engineers...`
     });
 
     try {
-      await Promise.all([
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js")
-      ]);
-
       const zip = new (window as any).JSZip();
       const total = selectedRows.length;
       let completedPdfs = 0;
 
-      // 4-Worker Parallel Concurrency Queue (Exact original PDF format)
-      const CONCURRENCY = 8;
+      // 12-Worker Parallel Pipeline
+      const CONCURRENCY = 12;
       for (let i = 0; i < total; i += CONCURRENCY) {
         if (cancelZipRef.current) break;
 
@@ -1421,30 +1405,16 @@ export default function MonthSummaryPage() {
               const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
               const userObj = res.user || row;
               const claims = res.claims || [];
-              if (claims.length === 0) return;
-
-              await Promise.all(
-                claims.map(async (claim: any) => {
-                  try {
-                    const details = await expenseService.getExpenseDetails(claim.expense_code);
-                    if (details) {
-                      if (details.attachments && Array.isArray(details.attachments)) {
-                        claim.attachments = details.attachments;
-                      }
-                      if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
-                        claim.attachments_detailed = details.attachments_detailed;
-                      }
-                    }
-                  } catch (e) {}
-                })
-              );
+              if (claims.length === 0) {
+                completedPdfs++;
+                return;
+              }
 
               const cacheKey = `${row.user_id}-${row.month}-${row.year}`;
               let pdfBlob = pdfBlobCache.get(cacheKey);
               if (!pdfBlob) {
                 const attachments = await prepareConvertedAttachments(claims);
-                const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
-                pdfBlob = await renderHTMLToPDFBlob(html);
+                pdfBlob = await generateCyrixVectorPdf(userObj, claims, attachments, row.advance_amount || 0);
                 pdfBlobCache.set(cacheKey, pdfBlob);
               }
 
@@ -1453,7 +1423,7 @@ export default function MonthSummaryPage() {
               zip.file(filename, pdfBlob);
 
               completedPdfs++;
-              const percent = 10 + Math.round((completedPdfs / total) * 75);
+              const percent = 10 + Math.round((completedPdfs / total) * 78);
 
               setZipProgress({
                 active: true,
@@ -1461,11 +1431,11 @@ export default function MonthSummaryPage() {
                 current: completedPdfs,
                 total,
                 currentName: `Generated PDF for ${engName}`,
-                percent: Math.min(percent, 85),
-                message: `Generated ${completedPdfs} / ${total} PDFs (${Math.round((completedPdfs / total) * 100)}%)...`
+                percent: Math.min(percent, 88),
+                message: `Generated ${completedPdfs} / ${total} Vector PDFs (${Math.round((completedPdfs / total) * 100)}%)...`
               });
             } catch (err) {
-              console.error(`Error rendering PDF for ${engName}`, err);
+              console.error(`Error rendering vector PDF for ${engName}`, err);
               completedPdfs++;
             }
           })
@@ -1484,14 +1454,14 @@ export default function MonthSummaryPage() {
         current: total,
         total,
         currentName: "Packaging ZIP archive...",
-        percent: 88,
-        message: "Packing all original PDFs into ZIP package..."
+        percent: 90,
+        message: "Finalizing ZIP package..."
       });
 
       const zipBlob = await zip.generateAsync(
-        { type: "blob", compression: "DEFLATE", compressionOptions: { level: 4 } },
+        { type: "blob", compression: "DEFLATE", compressionOptions: { level: 2 } },
         (metadata: any) => {
-          const compPercent = 88 + Math.round((metadata.percent / 100) * 11);
+          const compPercent = 90 + Math.round((metadata.percent / 100) * 9);
           setZipProgress({
             active: true,
             stage: "compressing",
@@ -1526,14 +1496,14 @@ export default function MonthSummaryPage() {
         setZipProgress(null);
       }, 2500);
 
-    } catch (e) {
+    } catch (e: any) {
       if (cancelZipRef.current) {
         setZipProgress(null);
         toast("ZIP generation cancelled", { icon: "ℹ️" });
         return;
       }
       console.error(e);
-      toast.error("Failed to generate ZIP");
+      toast.error("ZIP generation failed");
       setZipProgress(null);
     }
   };
