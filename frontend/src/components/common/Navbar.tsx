@@ -159,15 +159,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-14 md:h-16 bg-white border-b border-line px-3.5 md:px-6 flex items-center justify-between gap-3 shadow-none pt-[env(safe-area-inset-top)]">
-        {/* Left Section: Mobile Brand Mark / Desktop Sidebar Toggle + Page Title */}
-        <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
-          {/* Mobile Logo Mark (Clean 28px emblem, no embedded text) */}
+      <header className="sticky top-0 z-30 h-14 md:h-16 bg-white border-b border-line px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2.5 sm:gap-4 shadow-none pt-[env(safe-area-inset-top)] select-none">
+        {/* Left Section: Mobile Logo / Desktop Sidebar Toggle + Dynamic Page Title */}
+        <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 flex-1 min-w-0">
+          {/* Mobile Logo Mark (Clean 28px/32px emblem, no embedded text) */}
           <Link to="/home" className="lg:hidden flex items-center shrink-0">
             <img
               src="/apple-touch-icon.png"
               alt="Cyrix"
-              className="h-7 w-7 rounded-lg object-contain shrink-0"
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg object-contain shrink-0"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = "none";
               }}
@@ -179,7 +179,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onToggleSidebar}
-              className="hidden lg:flex p-1.5 text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer focus:outline-none border border-transparent hover:border-line"
+              className="hidden lg:flex items-center justify-center p-1.5 text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer focus:outline-none border border-transparent hover:border-line shrink-0"
               title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
@@ -191,9 +191,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Dynamic Page Title in font-display (Inter Tight) */}
-          <div className="flex items-center min-w-0">
-            <h1 className="font-display text-sm md:text-base font-bold text-ink-900 tracking-tight truncate">
+          {/* Dynamic Page Title in font-display (Inter Tight) with Ellipsis Truncation */}
+          <div className="flex items-center min-w-0 flex-1">
+            <h1 className="font-display text-sm sm:text-base md:text-lg font-bold text-ink-900 tracking-tight truncate min-w-0 leading-none">
               {pageTitle}
             </h1>
           </div>
@@ -203,7 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           type="button"
           onClick={() => setIsCmdOpen(true)}
-          className="hidden md:flex items-center justify-between gap-3 px-3 py-1.5 bg-surface-sunken hover:bg-[#EAE8E4] border border-line rounded-lg text-xs text-ink-500 transition-all cursor-pointer w-56 lg:w-72 shadow-none group focus:outline-none focus:ring-1 focus:ring-accent-600"
+          className="hidden md:flex items-center justify-between gap-3 px-3 py-1.5 bg-surface-sunken hover:bg-[#EAE8E4] border border-line rounded-lg text-xs text-ink-500 transition-all cursor-pointer w-52 lg:w-64 xl:w-72 shadow-none group focus:outline-none focus:ring-1 focus:ring-accent-600 shrink-0"
           title="Open command palette (Ctrl+K)"
         >
           <div className="flex items-center gap-2 min-w-0 truncate">
@@ -218,16 +218,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         {/* Right Section: Mobile Search, PWA Install (Desktop only), Notifications, User Profile */}
-        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
+        <div className="flex items-center gap-2 xs:gap-2.5 sm:gap-3 md:gap-3.5 shrink-0">
           {/* Mobile Command Palette Search Trigger */}
           <button
             type="button"
             onClick={() => setIsCmdOpen(true)}
-            className="md:hidden p-1.5 sm:p-2 text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+            className="md:hidden w-8 h-8 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer shrink-0"
             title="Search"
             aria-label="Search"
           >
-            <Search className="w-4 h-4" />
+            <Search className="w-5 h-5" />
           </button>
 
           {/* PWA Install Button (Desktop / Tablet Only - Hidden on Mobile) */}
@@ -235,10 +235,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={handleInstallApp}
-              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-accent-700 bg-accent-50 hover:bg-accent-100 rounded-lg border border-accent-200 transition-all cursor-pointer shadow-none"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-accent-700 bg-accent-50 hover:bg-accent-100 rounded-lg border border-accent-200 transition-all cursor-pointer shadow-none shrink-0"
               title="Install Cyrix FieldOps App"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-4 h-4" />
               <span>Install App</span>
             </button>
           )}
@@ -246,28 +246,28 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Notification Bell with Unread Badge */}
           <Link
             to="/notifications"
-            className="relative p-1.5 sm:p-2 text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+            className="relative w-8 h-8 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer shrink-0"
             title="Notifications"
             aria-label="Notifications"
           >
-            <Bell className="w-4 h-4" />
+            <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-accent-600 ring-2 ring-white animate-pulse" />
             )}
           </Link>
 
-          {/* User Profile Avatar with Dropdown */}
-          <div className="relative" ref={userMenuRef}>
+          {/* User Profile Avatar with Dropdown (32px Circle) */}
+          <div className="relative ml-0.5 sm:ml-1 shrink-0" ref={userMenuRef}>
             <button
               type="button"
               onClick={() => setIsUserMenuOpen((prev) => !prev)}
-              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-surface-sunken transition-colors cursor-pointer focus:outline-none border border-transparent hover:border-line"
+              className="flex items-center gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-surface-sunken transition-colors cursor-pointer focus:outline-none border border-transparent hover:border-line shrink-0"
               title="User Account Menu"
               aria-expanded={isUserMenuOpen}
               aria-haspopup="true"
             >
-              {/* Avatar Circle: #EEF0FF bg, #4338CA text */}
-              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-accent-100 text-accent-800 font-bold text-xs flex items-center justify-center shrink-0 border border-accent-200">
+              {/* Avatar Circle: 32px diameter, #EEF0FF bg, #4338CA text */}
+              <div className="w-8 h-8 rounded-full bg-accent-100 text-accent-800 font-bold text-xs flex items-center justify-center shrink-0 border border-accent-200 leading-none">
                 {userInitials}
               </div>
 
