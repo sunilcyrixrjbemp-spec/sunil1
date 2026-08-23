@@ -2384,3 +2384,62 @@ export async function handleResetExpenseApprovalLevel(request, env, params, quer
   }
 }
 
+/**
+ * GET /api/admin/audit-logs
+ * Fetches recent administrative audit logs and system actions
+ */
+export async function handleGetAdminAuditLogs(request, env, params, query, user) {
+  if (!user || user.role !== "Admin") {
+    return jsonResponse({ error: "Admin access required" }, 403);
+  }
+
+  try {
+    const limit = parseInt(query?.get("limit") || "50", 10);
+    const search = (query?.get("search") || "").trim().toLowerCase();
+
+    let logs = [];
+    try {
+      const dbLogs = await env.DB.prepare(`
+        SELECT 
+          id, action, entity_type, entity_id, 
+          performed_by_name as actor_name, 
+          performed_by_role as actor_role, 
+          old_value, new_value, ip_address, created_at 
+        FROM audit_logs 
+        ORDER BY created_at DESC 
+        LIMIT ?
+      `).bind(limit).all();
+      logs = dbLogs.results || [];
+    } catch (_) {}
+
+    // Combine with expense audit logs if audit_logs has few entries
+    try {
+      const expLogs = await env.DB.prepare(`
+        SELECT 
+          id, action_type as action, 'expense' as entity_type, 
+          expense_code as entity_id, actor_name, actor_role, 
+          old_value, new_value, '' as ip_address, created_at
+        FROM expense_audit_logs
+        ORDER BY created_at DESC
+        LIMIT 25
+      `).all();
+      const combined = [...logs, ...(expLogs.results || [])];
+      combined.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+      logs = combined.slice(0, limit);
+    } catch (_) {}
+
+    if (search) {
+      logs = logs.filter(l => 
+        (l.action || "").toLowerCase().includes(search) ||
+        (l.actor_name || "").toLowerCase().includes(search) ||
+        (l.entity_type || "").toLowerCase().includes(search) ||
+        (l.entity_id || "").toLowerCase().includes(search)
+      );
+    }
+
+    return jsonResponse({ success: true, logs });
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.message || "Failed to fetch audit logs" }, 500);
+  }
+}
+

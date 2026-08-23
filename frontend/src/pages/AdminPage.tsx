@@ -18,7 +18,6 @@ import {
   BarChart3, 
   Settings, 
   Building2, 
-  MessageCircle, 
   ChevronRight, 
   Search, 
   RefreshCw, 
@@ -29,6 +28,17 @@ import {
   AlertTriangle, 
   X, 
   Check,
+  Info,
+  Calendar,
+  DollarSign,
+  Sliders,
+  ArrowLeft,
+  Sparkles,
+  Key,
+  History,
+  Activity,
+  ShieldAlert,
+  Clock,
   LucideIcon
 } from "lucide-react";
 import ResetApprovalLevelModal from "../components/admin/ResetApprovalLevelModal";
@@ -38,7 +48,8 @@ import {
   Alert, 
   Spin, 
   InputNumber,
-  Switch
+  Switch,
+  Tooltip
 } from "antd";
 import { SaaSDonutChart } from "../components/common/SaaSCharts";
 
@@ -229,7 +240,7 @@ const ALL_WINDOWS = [
   { id: "profile", name: "Profile" }
 ];
 
-type AdminTab = "users" | "approvals" | "analytics" | "settings" | "facilities" | "whatsapp";
+type AdminTab = "users" | "approvals" | "permissions" | "analytics" | "settings" | "facilities" | "audit";
 
 interface NavItemConfig {
   id: AdminTab;
@@ -244,15 +255,22 @@ const NAV_ITEMS: NavItemConfig[] = [
     id: "users", 
     label: "Users Directory", 
     icon: Users,
-    title: "Users Directory",
-    subtitle: "Manage employee roster, credential updates, bulk approvals, and permissions."
+    title: "Users Directory & Employee Roster",
+    subtitle: "Manage employee roster, credential updates, bulk approvals, and account access."
   },
   { 
     id: "approvals", 
-    label: "Role Mappings", 
+    label: "Team Hierarchy", 
     icon: ShieldCheck,
-    title: "Role Mappings & Approval Hierarchy",
+    title: "Team Hierarchy & Approval Sequences",
     subtitle: "Configure team approval sequences, requester bindings, and multi-tier routing lines."
+  },
+  { 
+    id: "permissions", 
+    label: "Roles & Permissions", 
+    icon: Key,
+    title: "System Roles & Access Privileges Matrix",
+    subtitle: "Comprehensive matrix of system privileges, authorization levels, and role capabilities."
   },
   { 
     id: "analytics", 
@@ -265,7 +283,7 @@ const NAV_ITEMS: NavItemConfig[] = [
     id: "settings", 
     label: "System Settings", 
     icon: Settings,
-    title: "System Settings & Allowance Master",
+    title: "System Settings & Policy Hub",
     subtitle: "Configure submission windows, monthly cutoff rules, auto-expiry logic, and TA/DA rates."
   },
   { 
@@ -276,11 +294,11 @@ const NAV_ITEMS: NavItemConfig[] = [
     subtitle: "Manage Expense Page facilities (facility_details) and No TA/DA policy exceptions (no_ta_da_hospitals)."
   },
   { 
-    id: "whatsapp", 
-    label: "WhatsApp Gateway", 
-    icon: MessageCircle,
-    title: "WhatsApp Bot & Pairing Code Console",
-    subtitle: "Connect company WhatsApp gateway with 8-digit pairing code and configure automated event dispatches."
+    id: "audit", 
+    label: "Activity & Audit Log", 
+    icon: History,
+    title: "Live System Activity & Governance Audit Trail",
+    subtitle: "Real-time chronological ledger of administrative events, roster updates, and policy changes."
   },
 ];
 
@@ -293,71 +311,46 @@ export default function AdminPage() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const [standardFacilities, setStandardFacilities] = useState<any[]>([]);
-  const [waPhoneNumber, setWaPhoneNumber] = useState("9037962828");
-  const [waPairingCode, setWaPairingCode] = useState("K8X9-4M2P");
-  const [waIsGeneratingCode, setWaIsGeneratingCode] = useState(false);
-  const [waInstanceId, setWaInstanceId] = useState("instance101");
-  const [waToken, setWaToken] = useState("token101");
-  const [waConfigSaving, setWaConfigSaving] = useState(false);
+    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditSearch, setAuditSearch] = useState("");
 
-  const handleSaveWhatsappConfigSubmit = async () => {
-    if (!waInstanceId.trim() || !waToken.trim()) {
-      toast.error("UltraMsg Instance ID and Token are required!");
-      return;
-    }
-    setWaConfigSaving(true);
+  const fetchAuditLogs = async (search?: string) => {
+    setAuditLoading(true);
     try {
-      const res = await adminService.saveWhatsappConfig(waInstanceId.trim(), waToken.trim());
-      if (res && res.status === "success") {
-        toast.success("✓ WhatsApp Gateway Instance Credentials Saved Successfully!");
-      } else {
-        throw new Error(res?.message || "Failed to save configuration");
+      const res = await adminService.getAuditLogs(search);
+      if (res && res.success) {
+        setAuditLogs(res.logs || []);
       }
     } catch (e: any) {
-      toast.error(e.message || "Error saving WhatsApp Gateway config");
+      console.error("Failed to load audit logs:", e);
     } finally {
-      setWaConfigSaving(false);
+      setAuditLoading(false);
     }
   };
 
-  const handleGeneratePairingCode = async () => {
-    if (!waPhoneNumber || waPhoneNumber.trim().length < 10) {
-      toast.error("Please enter a valid 10-digit mobile number!");
+  const handleExportFacilitiesExcel = () => {
+    const list = facilitySubTab === "expense" ? standardFacilities : noTaDaHospitals;
+    if (list.length === 0) {
+      toast.error("No facilities to export.");
       return;
     }
-    setWaIsGeneratingCode(true);
-    try {
-      let pairingCode = "";
-      try {
-        const localRes = await fetch("http://localhost:3099/pair", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phoneNumber: waPhoneNumber.trim() })
-        });
-        if (localRes.ok) {
-          const data = await localRes.json();
-          pairingCode = data.pairingCode;
-        }
-      } catch (err) {}
-
-      if (!pairingCode) {
-        const res = await adminService.generateWhatsappPairingCode(waPhoneNumber.trim());
-        if (res && res.pairing_code) {
-          pairingCode = res.pairing_code;
-        }
-      }
-
-      if (pairingCode) {
-        setWaPairingCode(pairingCode);
-        toast.success(`✓ Official WhatsApp Pairing Code Generated for +91 ${waPhoneNumber.trim()}!`);
-      } else {
-        throw new Error("Failed to generate pairing code");
-      }
-    } catch (e: any) {
-      toast.error(e.message || "Error connecting to WhatsApp Gateway");
-    } finally {
-      setWaIsGeneratingCode(false);
-    }
+    const exportData = list.map((f: any) => ({
+      "ID": f.id || "—",
+      "Facility / Hospital Name": f.facility_name || f.hospital_name || "—",
+      "District": f.district_name || "—",
+      "Type": f.facility_type || "Standard",
+      "Zone": f.zone_name || "Rajasthan",
+      "Incharge": f.facility_incharge || "N/A",
+      "DM Name": f.dm_name || "N/A",
+      "Coordinator": f.coordinator_name || "N/A",
+      "Category": facilitySubTab === "expense" ? "Expense Facility (facility_details)" : "No TA/DA Exception (no_ta_da_hospitals)"
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, facilitySubTab === "expense" ? "Expense Facilities" : "No TA DA Exceptions");
+    XLSX.writeFile(workbook, `facilities_${facilitySubTab}_${new Date().toISOString().split("T")[0]}.xlsx`);
+    toast.success("Facilities exported to Excel!");
   };
   const [noTaDaHospitals, setNoTaDaHospitals] = useState<any[]>([]);
   const [facilityLoading, setFacilityLoading] = useState(false);
@@ -435,6 +428,8 @@ export default function AdminPage() {
       fetchAllowanceRates();
     } else if (tab === "facilities") {
       fetchFacilities();
+    } else if (tab === "audit") {
+      fetchAuditLogs();
     }
   };
 
@@ -499,6 +494,7 @@ export default function AdminPage() {
     rejection_fallback_level: "creator"
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsSubTab, setSettingsSubTab] = useState<"home" | "submission" | "automation" | "allowances">("home");
 
   const [resetModalState, setResetModalState] = useState<{ isOpen: boolean; expenseId: number; expenseCode: string }>({
     isOpen: false,
@@ -616,17 +612,26 @@ export default function AdminPage() {
     }
     setError(null);
     try {
-      const [u, dd, hqs, settingsRes] = await Promise.all([
+      const [u, dd, hqs, settingsRes, facRes, ratesRes] = await Promise.all([
         adminService.getUsers(),
         authService.getDropdowns(),
         adminService.getHierarchies(),
-        adminService.getSettings()
+        adminService.getSettings(),
+        adminService.getFacilities().catch(() => null),
+        adminService.getAllowanceRates().catch(() => null)
       ]);
       setUsers(u);
       safeStorageSetItem("cache_admin_users", JSON.stringify(u));
 
       if (settingsRes && settingsRes.success) {
         setSettings(settingsRes.settings);
+      }
+      if (facRes) {
+        setStandardFacilities(facRes.standard_facilities || []);
+        setNoTaDaHospitals(facRes.no_ta_da_hospitals || []);
+      }
+      if (Array.isArray(ratesRes)) {
+        setAllowanceRates(ratesRes);
       }
       
       setDropdowns(dd);
@@ -1622,120 +1627,250 @@ export default function AdminPage() {
     if (tabId === "users") return users.length;
     if (tabId === "approvals") return hierarchies.length;
     if (tabId === "facilities") return standardFacilities.length + noTaDaHospitals.length;
+    if (tabId === "audit") return auditLogs.length || undefined;
     return undefined;
   };
 
   return (
     <>
-      <div className="min-h-screen bg-canvas text-ink-900 font-sans pb-24 sm:pb-16 lg:pb-8 animate-fadeIn">
-        {/* ================= TOP CONTEXT BAR ================= */}
-        <header className="bg-surface border-b border-line px-4 sm:px-6 py-2.5 sticky top-0 z-30 flex items-center justify-between gap-3 shadow-none">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-1.5 text-xs text-ink-500 font-medium">
-            <span className="text-ink-500 hover:text-ink-700 cursor-default">Admin Console</span>
-            <ChevronRight className="w-3.5 h-3.5 text-ink-300 shrink-0" />
-            <span className="text-ink-900 font-bold tracking-tight">{currentTabConfig.label}</span>
-          </div>
+      <div className="min-h-screen w-full relative bg-[#FAFAF9] selection:bg-accent-100 selection:text-accent-900 pb-20">
+        {/* ══════════════════════════════════════════════════════════════════
+            CLEAN SUBTLE AMBIENT CANVAS (Ditto HomePage / Login)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-25">
+          <div
+            className="absolute -top-[10%] -left-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-1"
+            style={{
+              background: "radial-gradient(circle, #4338CA 0%, rgba(67, 56, 202, 0) 70%)",
+              filter: "blur(120px)",
+            }}
+          />
+          <div
+            className="absolute -bottom-[10%] -right-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-2"
+            style={{
+              background: "radial-gradient(circle, #6366F1 0%, rgba(99, 102, 241, 0) 70%)",
+              filter: "blur(130px)",
+            }}
+          />
+        </div>
 
-          {/* Quick Filter Search & Instant D1 Synchronization */}
-          <div className="flex items-center gap-2">
-            <div className="relative hidden sm:block">
-              <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                placeholder={activeTab === "facilities" ? "Search facility / district..." : "Quick filter roster..."}
-                value={activeTab === "facilities" ? facilitySearch : userSearchTerm}
-                onChange={(e) => {
-                  if (activeTab === "facilities") setFacilitySearch(e.target.value);
-                  else setUserSearchTerm(e.target.value);
+        {/* Delicate Architectural Grid */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#12151A 1px, transparent 1px), linear-gradient(90deg, #12151A 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+
+        <div className="relative z-10 max-w-[1680px] mx-auto px-3 sm:px-6 pt-3 space-y-4 text-ink-900 font-sans antialiased">
+          
+          {/* ── 1. Compact Zoho Header: Identity + Badges + Quick Actions ─ */}
+          <div className="bg-surface border border-line rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white flex items-center justify-center font-black text-sm shadow-xs border border-white/10 shrink-0">
+                AD
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="bg-accent-50 text-accent-700 border border-accent-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-accent-600" /> Super Admin
+                  </span>
+                  <span className="bg-surface-sunken border border-line text-ink-700 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-mono">
+                    <Calendar className="w-3 h-3 text-ink-400" /> {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                  </span>
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-2xs font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> D1 Database Online
+                  </span>
+                </div>
+                <h1 className="text-lg sm:text-xl font-black text-ink-900 tracking-tight m-0 mt-1 font-display">
+                  Admin Console &amp; Control Center
+                </h1>
+              </div>
+            </div>
+
+            {/* Quick Context Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
+              <div className="relative hidden sm:block">
+                <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder={activeTab === "facilities" ? "Search facility / district..." : "Quick filter roster..."}
+                  value={activeTab === "facilities" ? facilitySearch : userSearchTerm}
+                  onChange={(e) => {
+                    if (activeTab === "facilities") setFacilitySearch(e.target.value);
+                    else setUserSearchTerm(e.target.value);
+                  }}
+                  className="input-lte pl-8 h-9 text-xs w-44 md:w-56 lg:w-60 rounded-xl"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSyncData}
+                disabled={isSyncing}
+                className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
+                title="Synchronize D1 Database"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${isSyncing ? "animate-spin" : ""}`} />
+                <span>{isSyncing ? "Syncing..." : "Sync D1"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSingleUserModal(true)}
+                className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-9 px-4 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add User</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowBulkUploadModal(true)}
+                className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
+              >
+                <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
+                <span>Bulk CSV</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setNewFacilityTargetTable("standard");
+                  setIsAddFacilityModalOpen(true);
                 }}
-                className="input-lte pl-8 h-8 text-xs w-44 md:w-56 lg:w-64"
-              />
+                className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
+              >
+                <Building2 className="w-3.5 h-3.5 text-accent-600" />
+                <span>+ Add Facility</span>
+              </button>
             </div>
+          </div>
 
-            <button
-              type="button"
-              onClick={handleSyncData}
-              disabled={isSyncing}
-              className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer"
-              title="Synchronize D1 Database"
+          {/* ── 2. Compact Zoho Summary KPI Cards Row (4 Governance Cards) ──── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Card 1: Total Users / Workforce */}
+            <div 
+              onClick={() => handleTabChange("users")}
+              className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:border-accent-400/60 transition-all cursor-pointer space-y-2 group"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${isSyncing ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">{isSyncing ? "Syncing..." : "Sync D1"}</span>
-            </button>
-          </div>
-        </header>
-
-        {/* ================= MOBILE SUB-NAVIGATION PILLS (<768px) ================= */}
-        <nav className="block md:hidden bg-surface border-b border-line p-2 overflow-x-auto no-scrollbar sticky top-[45px] z-20">
-          <div className="flex items-center gap-1.5">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              const count = getNavCount(item.id);
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleTabChange(item.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-colors cursor-pointer ${
-                    isActive
-                      ? "bg-accent-600 text-white border-accent-600 shadow-none"
-                      : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span>{item.label}</span>
-                  {count !== undefined && count > 0 && (
-                    <span className={`px-1.5 py-0.2 rounded-full text-2xs font-mono font-bold ${
-                      isActive ? "bg-white/20 text-white" : "bg-surface-sunken text-ink-600"
-                    }`}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-
-        {/* ================= MAIN TWO-COLUMN ZOHO SHELL ================= */}
-        <div className="flex flex-col md:flex-row max-w-[1680px] mx-auto">
-          {/* Tablet 56px Collapsed Icon Rail (768px–1024px) */}
-          <aside className="hidden md:block lg:hidden w-14 shrink-0 bg-surface border-r border-line py-3 sticky top-[45px] h-[calc(100vh-45px)] overflow-y-auto">
-            <div className="flex flex-col items-center gap-1.5">
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <div key={item.id} className="relative group">
-                    <button
-                      type="button"
-                      onClick={() => handleTabChange(item.id)}
-                      className={`w-10 h-10 rounded-md flex items-center justify-center transition-colors cursor-pointer border-0 ${
-                        isActive
-                          ? "bg-accent-50 text-accent-600 border-l-[3px] border-accent-600 rounded-l-none"
-                          : "bg-transparent text-ink-500 hover:bg-surface-sunken hover:text-ink-900"
-                      }`}
-                      title={item.label}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </button>
-                    <div className="absolute left-14 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 bg-ink-900 text-white text-xs font-semibold rounded-md shadow-md whitespace-nowrap hidden group-hover:block z-50 pointer-events-none">
-                      {item.label}
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="flex items-center justify-between">
+                <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono">
+                  TOTAL WORKFORCE
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-accent-50 text-accent-700 flex items-center justify-center font-bold text-xs group-hover:scale-105 transition-transform">
+                  <Users className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-black text-ink-900 font-display">
+                  {safeUsers.length}
+                </span>
+                <div className="flex items-center gap-1.5 text-2xs font-mono font-bold">
+                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    {safeUsers.filter(u => (u.user_status || "active").toLowerCase() === "active").length} Active
+                  </span>
+                </div>
+              </div>
+              <div className="text-2xs text-ink-500 font-medium">
+                {availableUserRoles.length} active employee roles configured
+              </div>
             </div>
-          </aside>
 
-          {/* Desktop 240px Persistent Sidebar (≥1024px) */}
-          <aside className="hidden lg:block w-60 shrink-0 bg-surface border-r border-line py-4 px-2.5 sticky top-[45px] h-[calc(100vh-45px)] overflow-y-auto">
-            <div className="px-3 pb-2 text-2xs font-bold uppercase tracking-wider text-ink-500">
-              Admin Console
+            {/* Card 2: Facilities Master */}
+            <div 
+              onClick={() => handleTabChange("facilities")}
+              className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:border-accent-400/60 transition-all cursor-pointer space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono">
+                  FACILITIES MASTER
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold text-xs group-hover:scale-105 transition-transform">
+                  <Building2 className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-black text-ink-900 font-display">
+                  {standardFacilities.length + noTaDaHospitals.length}
+                </span>
+                <div className="flex items-center gap-1 text-2xs font-mono font-bold">
+                  <span className="text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
+                    {standardFacilities.length} Std
+                  </span>
+                  <span className="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-full border border-rose-200">
+                    {noTaDaHospitals.length} Excp
+                  </span>
+                </div>
+              </div>
+              <div className="text-2xs text-ink-500 font-medium">
+                Expense facilities &amp; No TA/DA hospitals
+              </div>
             </div>
-            <nav className="space-y-1">
+
+            {/* Card 3: Team Hierarchies */}
+            <div 
+              onClick={() => handleTabChange("approvals")}
+              className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:border-accent-400/60 transition-all cursor-pointer space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono">
+                  TEAM HIERARCHIES
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs group-hover:scale-105 transition-transform">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-black text-ink-900 font-display">
+                  {safeHierarchies.length}
+                </span>
+                <span className="text-2xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Mapped HQs
+                </span>
+              </div>
+              <div className="text-2xs text-ink-500 font-medium">
+                Multi-tier approval sequences active
+              </div>
+            </div>
+
+            {/* Card 4: System Policies */}
+            <div 
+              onClick={() => handleTabChange("settings")}
+              className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:border-accent-400/60 transition-all cursor-pointer space-y-2 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono">
+                  POLICY ENGINE
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs group-hover:scale-105 transition-transform">
+                  <Zap className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-ink-900 font-display">
+                    {settings.past_days_limit || 15}d
+                  </span>
+                  <span className="text-xs text-ink-500 font-mono font-semibold">
+                    / Cutoff {settings.cutoff_day || 3}rd
+                  </span>
+                </div>
+                <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 rounded-full border border-approved-border flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-approved animate-pulse" /> Active
+                </span>
+              </div>
+              <div className="text-2xs text-ink-500 font-medium">
+                Auto-expiry: {settings.auto_approve_days ? `${settings.auto_approve_days} days` : "Disabled"}
+              </div>
+            </div>
+          </div>
+
+          {/* ================= MOBILE SUB-NAVIGATION PILLS (<768px) ================= */}
+          <nav className="block md:hidden bg-surface border border-line rounded-2xl p-2 overflow-x-auto no-scrollbar shadow-xs">
+            <div className="flex items-center gap-1.5">
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -1745,21 +1880,17 @@ export default function AdminPage() {
                     key={item.id}
                     type="button"
                     onClick={() => handleTabChange(item.id)}
-                    className={`w-full h-10 px-3 flex items-center justify-between text-xs font-semibold rounded-md transition-colors cursor-pointer border-0 ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-colors cursor-pointer ${
                       isActive
-                        ? "bg-[#EEF0FF] text-[#4338CA] font-semibold border-l-[3px] border-[#4338CA] rounded-l-none"
-                        : "bg-transparent text-ink-700 hover:bg-surface-sunken hover:text-ink-900 font-medium"
+                        ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
+                        : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-[#4338CA]" : "text-ink-500"}`} />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                    {count !== undefined && (
-                      <span className={`px-2 py-0.5 text-2xs font-mono font-bold rounded-full ${
-                        isActive
-                          ? "bg-accent-100 text-accent-700 border border-accent-400/30"
-                          : "bg-surface border border-line text-ink-600"
+                    <Icon className="w-3.5 h-3.5 shrink-0" />
+                    <span>{item.label}</span>
+                    {count !== undefined && count > 0 && (
+                      <span className={`px-1.5 py-0.2 rounded-full text-2xs font-mono font-bold ${
+                        isActive ? "bg-white/20 text-white" : "bg-surface-sunken text-ink-600"
                       }`}>
                         {count}
                       </span>
@@ -1767,29 +1898,100 @@ export default function AdminPage() {
                   </button>
                 );
               })}
-            </nav>
-          </aside>
+            </div>
+          </nav>
 
-          {/* Main Content Pane */}
-          <main className="flex-1 min-w-0 p-3 sm:p-5 lg:p-6 space-y-4">
-            {/* Standardized Content Pane Header */}
-            <div className="bg-surface border border-line rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-none">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center font-bold shrink-0 border border-accent-100">
-                  <CurrentSectionIcon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold font-display text-ink-900 leading-tight m-0">
-                    {currentTabConfig.title}
-                  </h2>
-                  <p className="text-xs text-ink-500 mt-0.5 font-medium m-0">
-                    {currentTabConfig.subtitle}
-                  </p>
-                </div>
+          {/* ================= MAIN TWO-COLUMN ZOHO SHELL ================= */}
+          <div className="flex flex-col md:flex-row gap-4 items-start">
+            {/* Tablet 56px Collapsed Icon Rail (768px–1024px) */}
+            <aside className="hidden md:block lg:hidden w-14 shrink-0 bg-surface border border-line rounded-2xl py-3 shadow-xs sticky top-4">
+              <div className="flex flex-col items-center gap-1.5">
+                {NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <div key={item.id} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => handleTabChange(item.id)}
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer border-0 ${
+                          isActive
+                            ? "bg-accent-50 text-accent-700 border-l-[3px] border-accent-600 rounded-l-none"
+                            : "bg-transparent text-ink-500 hover:bg-surface-sunken hover:text-ink-900"
+                        }`}
+                        title={item.label}
+                      >
+                        <Icon className="w-5 h-5" />
+                      </button>
+                      <div className="absolute left-14 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 bg-ink-900 text-white text-xs font-semibold rounded-md shadow-md whitespace-nowrap hidden group-hover:block z-50 pointer-events-none">
+                        {item.label}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+            </aside>
 
-              {/* Top-Right Contextual Primary / Secondary Actions */}
-              <div className="flex flex-wrap items-center gap-2">
+            {/* Desktop 240px Persistent Sidebar (≥1024px) */}
+            <aside className="hidden lg:block w-60 shrink-0 bg-surface border border-line rounded-2xl py-4 px-2.5 shadow-xs sticky top-4">
+              <div className="px-3 pb-2 text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono flex items-center gap-1.5">
+                <span>NAVIGATION</span>
+              </div>
+              <nav className="space-y-1">
+                {NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  const count = getNavCount(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleTabChange(item.id)}
+                      className={`w-full h-10 px-3 flex items-center justify-between text-xs font-semibold rounded-xl transition-all cursor-pointer border-0 ${
+                        isActive
+                          ? "bg-[#EEF0FF] text-[#4338CA] font-bold border-l-[3px] border-[#4338CA] rounded-l-none shadow-xs"
+                          : "bg-transparent text-ink-700 hover:bg-surface-sunken hover:text-ink-900 font-medium"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 truncate">
+                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-[#4338CA]" : "text-ink-500"}`} />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {count !== undefined && (
+                        <span className={`px-2 py-0.5 text-2xs font-mono font-bold rounded-full ${
+                          isActive
+                            ? "bg-accent-100 text-accent-700 border border-accent-400/30"
+                            : "bg-surface border border-line text-ink-600"
+                        }`}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </aside>
+
+            {/* Main Content Pane */}
+            <main className="flex-1 min-w-0 space-y-4">
+              {/* Standardized Content Pane Header */}
+              <div className="bg-surface border border-line rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-bold shrink-0 border border-accent-200">
+                    <CurrentSectionIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base sm:text-lg font-bold font-display text-ink-900 leading-tight m-0">
+                      {currentTabConfig.title}
+                    </h2>
+                    <p className="text-xs text-ink-500 mt-0.5 font-medium m-0">
+                      {currentTabConfig.subtitle}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Top-Right Contextual Primary / Secondary Actions */}
+                <div className="flex flex-wrap items-center gap-2">
                 {activeTab === "users" && (
                   <>
                     <button
@@ -2529,161 +2731,406 @@ export default function AdminPage() {
             {/* ================= SECTION 4: SYSTEM SETTINGS & ALLOWANCE MASTER ================= */}
             {activeTab === "settings" && (
               <div className="space-y-4 animate-fadeIn max-w-5xl">
-                <form onSubmit={handleSaveSettings} className="space-y-4">
-                  {/* Card 1: Expense Submission Policies */}
-                  <div className="bg-surface border border-line rounded-lg p-4 space-y-3 shadow-none">
-                    <div className="flex items-center gap-2 border-b border-line pb-2">
-                      <span className="w-5 h-5 rounded bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">1</span>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 m-0">
-                        Expense Submission Window &amp; Cutoff Policies
-                      </h4>
+                {/* Settings Sub-Navigation Header (Zoho pattern) */}
+                <div className="bg-surface border border-line rounded-xl p-1.5 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                  <div className="flex items-center gap-1.5 overflow-x-auto">
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab("home")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        settingsSubTab === "home"
+                          ? "bg-accent-600 text-white shadow-xs"
+                          : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+                      }`}
+                    >
+                      <Sliders className="w-3.5 h-3.5" />
+                      <span>Settings Overview</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab("submission")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        settingsSubTab === "submission"
+                          ? "bg-accent-600 text-white shadow-xs"
+                          : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+                      }`}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>1. Submission Policy</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab("automation")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        settingsSubTab === "automation"
+                          ? "bg-accent-600 text-white shadow-xs"
+                          : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+                      }`}
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>2. Approval Automation</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab("allowances")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        settingsSubTab === "allowances"
+                          ? "bg-accent-600 text-white shadow-xs"
+                          : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+                      }`}
+                    >
+                      <DollarSign className="w-3.5 h-3.5" />
+                      <span>3. Allowance Rates</span>
+                    </button>
+                  </div>
+                  {settingsSubTab !== "home" && (
+                    <button
+                      type="button"
+                      onClick={() => setSettingsSubTab("home")}
+                      className="text-xs text-accent-600 hover:text-accent-800 font-bold flex items-center gap-1 cursor-pointer px-2 py-1"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Overview</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* --- SUB-VIEW 0: SETTINGS HOME GRID (Landing Page) --- */}
+                {settingsSubTab === "home" && (
+                  <div className="space-y-4">
+                    {/* Settings Overview Banner */}
+                    <div className="bg-gradient-to-r from-accent-900 via-accent-800 to-accent-700 text-white rounded-xl p-5 shadow-xs border border-accent-900/20">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/10 text-white/90 text-2xs font-bold uppercase tracking-wider mb-2">
+                            <Sliders className="w-3 h-3 text-indigo-300" />
+                            Enterprise Policy Engine
+                          </div>
+                          <h3 className="text-base font-bold text-white mb-1">
+                            System Settings &amp; Financial Allowance Hub
+                          </h3>
+                          <p className="text-xs text-white/80 max-w-2xl leading-relaxed">
+                            Configure expense cutoff dates, past-day logging limits, automated approval escalations, and official TA/DA travel allowance rates across all employee grades.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xs px-3.5 py-2.5 rounded-xl border border-white/15 shrink-0">
+                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <div className="text-xs">
+                            <div className="font-bold text-white">Policies Active</div>
+                            <div className="text-2xs text-white/70 font-mono">Live Across All Workflows</div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="label-lte text-2xs block mb-1">
-                          Allowed Past Days Submission Window *
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          required
-                          value={settings.max_past_days_limit || "15"}
-                          onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
-                          className="input-lte h-8 text-xs font-mono font-bold w-full"
-                          placeholder="e.g. 15"
-                        />
-                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
-                          Past calendar days allowed for engineers to log claims.
-                        </span>
+
+                    {/* 3 Interactive Grid Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Card 1 */}
+                      <div 
+                        onClick={() => setSettingsSubTab("submission")}
+                        className="bg-surface border border-line rounded-xl p-5 hover:border-accent-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between"
+                      >
+                        <div className="space-y-3">
+                          <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent-600 flex items-center justify-center group-hover:bg-accent-600 group-hover:text-white transition-colors shadow-xs">
+                            <Calendar className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-ink-900 group-hover:text-accent-600 transition-colors flex items-center justify-between">
+                              <span>1. Submission Policy</span>
+                              <ChevronRight className="w-4 h-4 text-ink-400 group-hover:text-accent-600 group-hover:translate-x-0.5 transition-all" />
+                            </h4>
+                            <p className="text-xs text-ink-500 mt-1 leading-relaxed">
+                              Cutoffs &amp; date windows for claim submission. Controls how far back engineers can log past expenses.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-2xs font-mono">
+                          <span className="text-ink-500">Window: <strong className="text-ink-900 font-bold">{settings.max_past_days_limit || "15"} Days</strong></span>
+                          <span className="text-ink-500">Cutoff: <strong className="text-ink-900 font-bold">Day {settings.monthly_cutoff_day || "3"}</strong></span>
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="label-lte text-2xs block mb-1">
-                          Monthly Cutoff Day (of next month) *
-                        </label>
-                        <input
-                          type="number"
-                          min={1}
-                          max={28}
-                          required
-                          value={settings.monthly_cutoff_day || "3"}
-                          onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
-                          className="input-lte h-8 text-xs font-mono font-bold w-full"
-                          placeholder="e.g. 3"
-                        />
-                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
-                          Day of month after which previous month claims are blocked.
-                        </span>
+                      {/* Card 2 */}
+                      <div 
+                        onClick={() => setSettingsSubTab("automation")}
+                        className="bg-surface border border-line rounded-xl p-5 hover:border-accent-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between"
+                      >
+                        <div className="space-y-3">
+                          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors shadow-xs">
+                            <Zap className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-ink-900 group-hover:text-accent-600 transition-colors flex items-center justify-between">
+                              <span>2. Approval Automation</span>
+                              <ChevronRight className="w-4 h-4 text-ink-400 group-hover:text-accent-600 group-hover:translate-x-0.5 transition-all" />
+                            </h4>
+                            <p className="text-xs text-ink-500 mt-1 leading-relaxed">
+                              Auto-approve &amp; expiry rules when manager approval is pending beyond the threshold limit.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-2xs font-mono">
+                          <span className="text-ink-500">Threshold: <strong className="text-ink-900 font-bold">{settings.pending_auto_expiry_days || "5"} Days</strong></span>
+                          <span className="text-ink-500">Action: <strong className="text-ink-900 font-bold uppercase">{settings.pending_auto_action || "reject"}</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Card 3 */}
+                      <div 
+                        onClick={() => setSettingsSubTab("allowances")}
+                        className="bg-surface border border-line rounded-xl p-5 hover:border-accent-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between"
+                      >
+                        <div className="space-y-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors shadow-xs">
+                            <DollarSign className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-ink-900 group-hover:text-accent-600 transition-colors flex items-center justify-between">
+                              <span>3. Allowance Rates</span>
+                              <ChevronRight className="w-4 h-4 text-ink-400 group-hover:text-accent-600 group-hover:translate-x-0.5 transition-all" />
+                            </h4>
+                            <p className="text-xs text-ink-500 mt-1 leading-relaxed">
+                              TA/DA rates, vehicle mileage per km, in/out district daily allowance, and hotel caps per employee grade.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-2xs font-mono">
+                          <span className="text-ink-500">Master Tiers:</span>
+                          <span className="text-accent-700 font-bold">{allowanceRates?.length || 0} Grades Configured</span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Card 2: Auto-Expiry & Approval System Rules */}
-                  <div className="bg-surface border border-line rounded-lg p-4 space-y-3 shadow-none">
-                    <div className="flex items-center gap-2 border-b border-line pb-2">
-                      <span className="w-5 h-5 rounded bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">2</span>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 m-0">
-                        Auto-Approval / Expiry Rules &amp; Routing Levels
-                      </h4>
+                {/* --- SUB-VIEW 1: SUBMISSION POLICIES FORM --- */}
+                {(settingsSubTab === "submission" || settingsSubTab === "home") && (
+                  <form onSubmit={handleSaveSettings} className="space-y-4">
+                    <div className="bg-surface border border-line rounded-xl p-5 space-y-4 shadow-xs">
+                      <div className="border-b border-line pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">1</span>
+                          <h4 className="text-sm font-bold text-ink-900 m-0">
+                            Expense Submission Window &amp; Cutoff Policies
+                          </h4>
+                        </div>
+                        <p className="text-xs text-ink-500 mt-1 ml-8">
+                          Controls how far back employees can log expenses, and when a month closes for editing.
+                        </p>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
+                            <span>How many past days can employees log a claim for? *</span>
+                            <Tooltip title="Example: if set to 15, an employee submitting a claim today can date it back up to 15 days ago.">
+                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
+                            </Tooltip>
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            required
+                            value={settings.max_past_days_limit || "15"}
+                            onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
+                            className="input-lte h-9 text-xs font-mono font-bold w-full rounded-lg"
+                            placeholder="e.g. 15"
+                          />
+                          <span className="text-xs text-ink-500 font-medium block">
+                            Past calendar days allowed for engineers to log expenses.
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
+                            <span>Lock previous month's claims after this day *</span>
+                            <Tooltip title="Example: if set to 3, all submissions for the previous month are locked after the 3rd of the current month.">
+                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
+                            </Tooltip>
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={28}
+                            required
+                            value={settings.monthly_cutoff_day || "3"}
+                            onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
+                            className="input-lte h-9 text-xs font-mono font-bold w-full rounded-lg"
+                            placeholder="e.g. 3"
+                          />
+                          <span className="text-xs text-ink-500 font-medium block">
+                            Day of month after which previous month claims are blocked.
+                          </span>
+                        </div>
+                      </div>
+
+                      {settingsSubTab === "submission" && (
+                        <div className="flex items-center justify-between pt-3 border-t border-line">
+                          <span className="text-2xs text-ink-500 font-mono">
+                            Auto-applied globally to all employees
+                          </span>
+                          <button
+                            type="submit"
+                            disabled={savingSettings}
+                            className="btn-lte-primary text-xs h-9 px-5 flex items-center gap-2 cursor-pointer font-bold disabled:opacity-60 rounded-lg"
+                          >
+                            <Zap className="w-4 h-4" />
+                            <span>{savingSettings ? "Saving Settings..." : "Save Submission Policies"}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
+                  </form>
+                )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div>
-                        <label className="label-lte text-2xs block mb-1">
-                          Pending Days Threshold *
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          required
-                          value={settings.pending_auto_expiry_days || "5"}
-                          onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
-                          className="input-lte h-8 text-xs font-mono font-bold w-full"
-                          placeholder="e.g. 5"
-                        />
-                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
-                          Days pending before system auto-action triggers (0 = disabled).
-                        </span>
+                {/* --- SUB-VIEW 2: APPROVAL AUTOMATION FORM --- */}
+                {(settingsSubTab === "automation" || settingsSubTab === "home") && (
+                  <form onSubmit={handleSaveSettings} className="space-y-4">
+                    <div className="bg-surface border border-line rounded-xl p-5 space-y-4 shadow-xs">
+                      <div className="border-b border-line pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">2</span>
+                          <h4 className="text-sm font-bold text-ink-900 m-0">
+                            Auto-Approval / Expiry Rules &amp; Routing Levels
+                          </h4>
+                        </div>
+                        <p className="text-xs text-ink-500 mt-1 ml-8">
+                          Configures automatic escalation, forwarding, or rejection when approvers do not take action in time.
+                        </p>
                       </div>
 
-                      <div>
-                        <label className="label-lte text-2xs block mb-1">
-                          Auto-Expiry Action Type *
-                        </label>
-                        <select
-                          value={settings.pending_auto_action || "approve"}
-                          onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
-                          className="input-lte h-8 text-xs font-semibold w-full cursor-pointer py-0.5 px-2"
-                        >
-                          <option value="approve">⚡ Auto Approve Current Level</option>
-                          <option value="reject">❌ Auto Reject Claim</option>
-                          <option value="disabled">🚫 Disabled (Manual Action Only)</option>
-                        </select>
-                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
-                          System behavior when threshold days are reached without manager action.
-                        </span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
+                            <span>Auto-action after claim is pending this many days *</span>
+                            <Tooltip title="Example: if set to 5, any claim waiting for approval for more than 5 days will trigger the automatic action below (0 = disabled).">
+                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
+                            </Tooltip>
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            required
+                            value={settings.pending_auto_expiry_days || "5"}
+                            onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
+                            className="input-lte h-9 text-xs font-mono font-bold w-full rounded-lg"
+                            placeholder="e.g. 5"
+                          />
+                          <span className="text-xs text-ink-500 font-medium block">
+                            Days pending before system auto-action triggers (0 = disabled).
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
+                            <span>What happens automatically when threshold is reached? *</span>
+                            <Tooltip title="Choose whether overdue claims should be automatically approved, rejected, or left for manual review.">
+                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
+                            </Tooltip>
+                          </label>
+                          <select
+                            value={settings.pending_auto_action || "approve"}
+                            onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
+                            className="input-lte h-9 text-xs font-semibold w-full cursor-pointer py-1 px-2.5 rounded-lg"
+                          >
+                            <option value="approve">⚡ Auto Approve Current Level</option>
+                            <option value="reject">❌ Auto Reject Claim</option>
+                            <option value="disabled">🚫 Disabled (Manual Action Only)</option>
+                          </select>
+                          <span className="text-xs text-ink-500 font-medium block">
+                            System behavior when threshold days are reached without manager action.
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
+                            <span>Which approval level gets auto-approved?</span>
+                            <Tooltip title="Determines whether auto-approval advances the claim to the next manager level or completes all levels.">
+                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
+                            </Tooltip>
+                          </label>
+                          <select
+                            value={settings.auto_approve_target_level || "next_level"}
+                            onChange={(e) => setSettings({ ...settings, auto_approve_target_level: e.target.value })}
+                            className="input-lte h-9 text-xs font-semibold w-full cursor-pointer py-1 px-2.5 rounded-lg"
+                          >
+                            <option value="next_level">⏩ Forward to Next Manager Level (L1 → L2)</option>
+                            <option value="l1_only">1️⃣ Auto-Approve L1 Only</option>
+                            <option value="full_final">✅ Complete Final Auto-Approval (All Levels)</option>
+                          </select>
+                          <span className="text-xs text-ink-500 font-medium block">
+                            Target destination level when auto-approved.
+                          </span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
+                            <span>Where does a rejected claim go?</span>
+                            <Tooltip title="Defines whether a rejected claim returns to the submitter as a draft for correction or is closed permanently.">
+                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
+                            </Tooltip>
+                          </label>
+                          <select
+                            value={settings.rejection_fallback_level || "creator"}
+                            onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
+                            className="input-lte h-9 text-xs font-semibold w-full cursor-pointer py-1 px-2.5 rounded-lg"
+                          >
+                            <option value="creator">↩️ Return to Submitter / Drafts (For Edit &amp; Re-submit)</option>
+                            <option value="previous_level">◀️ Return to Previous Manager Level</option>
+                            <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
+                          </select>
+                          <span className="text-xs text-ink-500 font-medium block">
+                            Target destination when a claim is rejected.
+                          </span>
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="label-lte text-2xs block mb-1">
-                          Auto-Approve Target Routing Level
-                        </label>
-                        <select
-                          value={settings.auto_approve_target_level || "next_level"}
-                          onChange={(e) => setSettings({ ...settings, auto_approve_target_level: e.target.value })}
-                          className="input-lte h-8 text-xs font-semibold w-full cursor-pointer py-0.5 px-2"
-                        >
-                          <option value="next_level">⏩ Forward to Next Manager Level (L1 → L2)</option>
-                          <option value="l1_only">1️⃣ Auto-Approve L1 Only</option>
-                          <option value="full_final">✅ Complete Final Auto-Approval (All Levels)</option>
-                        </select>
-                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
-                          Target destination level when auto-approved.
-                        </span>
-                      </div>
-
-                      <div>
-                        <label className="label-lte text-2xs block mb-1">
-                          Rejection Fallback Routing Level
-                        </label>
-                        <select
-                          value={settings.rejection_fallback_level || "creator"}
-                          onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
-                          className="input-lte h-8 text-xs font-semibold w-full cursor-pointer py-0.5 px-2"
-                        >
-                          <option value="creator">↩️ Return to Submitter / Drafts (For Edit &amp; Re-submit)</option>
-                          <option value="previous_level">◀️ Return to Previous Manager Level</option>
-                          <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
-                        </select>
-                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
-                          Target destination when a claim is rejected.
-                        </span>
-                      </div>
+                      {settingsSubTab === "automation" && (
+                        <div className="flex items-center justify-between pt-3 border-t border-line">
+                          <span className="text-2xs text-ink-500 font-mono">
+                            Auto-applied globally across all workflows
+                          </span>
+                          <button
+                            type="submit"
+                            disabled={savingSettings}
+                            className="btn-lte-primary text-xs h-9 px-5 flex items-center gap-2 cursor-pointer font-bold disabled:opacity-60 rounded-lg"
+                          >
+                            <Zap className="w-4 h-4" />
+                            <span>{savingSettings ? "Saving Settings..." : "Save Approval Rules"}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </form>
+                )}
 
-                  {/* Card 3: Allowance Master TA/DA Rates & Hotel Caps */}
-                  <div className="bg-surface border border-line rounded-lg p-4 space-y-3 shadow-none">
-                    <div className="flex items-center justify-between border-b border-line pb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">3</span>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 m-0">
-                          Allowance Master — TA / DA Rates &amp; Hotel Caps
-                        </h4>
+                {/* --- SUB-VIEW 3: ALLOWANCE MASTER TABLE --- */}
+                {(settingsSubTab === "allowances" || settingsSubTab === "home") && (
+                  <div className="bg-surface border border-line rounded-xl p-5 space-y-4 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">3</span>
+                          <h4 className="text-sm font-bold text-ink-900 m-0">
+                            Allowance Master — TA / DA Rates &amp; Hotel Caps
+                          </h4>
+                        </div>
+                        <p className="text-xs text-ink-500 mt-1 ml-8">
+                          Master rate table for mileage, daily allowance (DA), and lodging caps configured by employee grade.
+                        </p>
                       </div>
                       <button
                         type="button"
                         disabled={savingRates}
                         onClick={handleSaveAllowanceRates}
-                        className="btn-lte-primary text-xs h-7.5 px-3 flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                        className="btn-lte-primary text-xs h-8 px-3.5 flex items-center gap-1.5 cursor-pointer disabled:opacity-60 rounded-lg shrink-0"
                       >
                         {savingRates ? <LteSpinner /> : <Check className="w-3.5 h-3.5" />}
                         <span>Save Allowance Rates</span>
                       </button>
                     </div>
 
-                    <div className="overflow-x-auto border border-line rounded-md">
+                    <div className="overflow-x-auto border border-line rounded-xl">
                       <Table
                         dataSource={allowanceRates}
                         rowKey="id"
@@ -2715,7 +3162,7 @@ export default function AdminPage() {
                                   updated[idx].vehicle_type = e.target.value;
                                   setAllowanceRates(updated);
                                 }}
-                                className="input-lte h-7.5 text-xs py-0.5 px-2 cursor-pointer"
+                                className="input-lte h-7.5 text-xs py-0.5 px-2 cursor-pointer rounded-md"
                               >
                                 <option value="Bike">Bike</option>
                                 <option value="Car">Car</option>
@@ -2737,7 +3184,7 @@ export default function AdminPage() {
                                   updated[idx].rate_per_km = val || 0;
                                   setAllowanceRates(updated);
                                 }}
-                                className="w-20 font-mono font-bold text-xs"
+                                className="w-20 font-mono font-bold text-xs rounded-md"
                               />
                             )
                           },
@@ -2754,7 +3201,7 @@ export default function AdminPage() {
                                   updated[idx].daily_in_district = val || 0;
                                   setAllowanceRates(updated);
                                 }}
-                                className="w-20 font-mono font-bold text-xs"
+                                className="w-20 font-mono font-bold text-xs rounded-md"
                               />
                             )
                           },
@@ -2771,7 +3218,7 @@ export default function AdminPage() {
                                   updated[idx].daily_out_district = val || 0;
                                   setAllowanceRates(updated);
                                 }}
-                                className="w-20 font-mono font-bold text-xs"
+                                className="w-20 font-mono font-bold text-xs rounded-md"
                               />
                             )
                           },
@@ -2788,7 +3235,7 @@ export default function AdminPage() {
                                   updated[idx].daily_hotel = val || 0;
                                   setAllowanceRates(updated);
                                 }}
-                                className="w-20 font-mono font-bold text-xs"
+                                className="w-20 font-mono font-bold text-xs rounded-md"
                               />
                             )
                           },
@@ -2807,7 +3254,7 @@ export default function AdminPage() {
                                     updated[idx].hotel_in_state_s = val || 0;
                                     setAllowanceRates(updated);
                                   }}
-                                  className="w-18 font-mono font-bold text-xs"
+                                  className="w-18 font-mono font-bold text-xs rounded-md"
                                 />
                                 <InputNumber
                                   min={0}
@@ -2819,7 +3266,7 @@ export default function AdminPage() {
                                     updated[idx].hotel_in_state_d = val || 0;
                                     setAllowanceRates(updated);
                                   }}
-                                  className="w-18 font-mono font-bold text-xs"
+                                  className="w-18 font-mono font-bold text-xs rounded-md"
                                 />
                               </div>
                             )
@@ -2837,7 +3284,7 @@ export default function AdminPage() {
                                   updated[idx].max_km_per_month = val || 0;
                                   setAllowanceRates(updated);
                                 }}
-                                className="w-20 font-mono font-bold text-xs"
+                                className="w-20 font-mono font-bold text-xs rounded-md"
                               />
                             )
                           }
@@ -2845,60 +3292,88 @@ export default function AdminPage() {
                       />
                     </div>
                   </div>
+                )}
 
-                  {/* Form Submit Action Bar */}
+                {/* Global Save Action Bar on Home view */}
+                {settingsSubTab === "home" && (
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-line">
                     <span className="text-2xs font-bold text-ink-500 flex items-center gap-1.5 font-mono">
                       <span className="h-2 w-2 rounded-full bg-approved animate-pulse" />
                       Settings Auto-Applied Globally Across All Workflows
                     </span>
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={handleSaveSettings}
                       disabled={savingSettings}
-                      className="btn-lte-primary text-xs h-9 px-5 flex items-center gap-2 cursor-pointer font-bold disabled:opacity-60"
+                      className="btn-lte-primary text-xs h-9 px-5 flex items-center gap-2 cursor-pointer font-bold disabled:opacity-60 rounded-lg shadow-xs"
                     >
                       <Zap className="w-4 h-4" />
-                      <span>{savingSettings ? "Saving Settings..." : "Save System Settings"}</span>
+                      <span>{savingSettings ? "Saving Settings..." : "Save All System Settings"}</span>
                     </button>
                   </div>
-                </form>
+                )}
               </div>
             )}
 
             {/* ================= SECTION 5: FACILITIES & NO TA/DA TAB ================= */}
             {activeTab === "facilities" && (
               <div className="space-y-3 animate-fadeIn">
-                {/* Sub-Tab Navigation Bar */}
-                <div className="bg-surface-sunken p-1 rounded-lg flex gap-1 border border-line">
-                  <button
-                    type="button"
-                    onClick={() => setFacilitySubTab("expense")}
-                    className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-md flex items-center justify-center gap-2 ${
-                      facilitySubTab === "expense"
-                        ? "bg-surface text-accent-700 shadow-none border border-line"
-                        : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
-                    }`}
-                  >
-                    <span>🏢 Expense Facilities (facility_details)</span>
-                    <span className="bg-accent-100 text-accent-700 px-2 py-0.2 rounded-full text-2xs font-mono font-bold">
-                      {standardFacilities.length}
-                    </span>
-                  </button>
+                {/* Top Action Bar with Export & Sub-Tabs */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                  <div className="bg-surface-sunken p-1 rounded-xl flex gap-1 border border-line flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setFacilitySubTab("expense")}
+                      className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-2 ${
+                        facilitySubTab === "expense"
+                          ? "bg-surface text-accent-700 shadow-xs border border-line"
+                          : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
+                      }`}
+                    >
+                      <span>🏢 Expense Facilities (facility_details)</span>
+                      <span className="bg-accent-100 text-accent-700 px-2 py-0.2 rounded-full text-2xs font-mono font-bold">
+                        {standardFacilities.length}
+                      </span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setFacilitySubTab("notada")}
-                    className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-md flex items-center justify-center gap-2 ${
-                      facilitySubTab === "notada"
-                        ? "bg-surface text-rose-700 shadow-none border border-line"
-                        : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
-                    }`}
-                  >
-                    <span>🛑 No TA / DA Exception List (no_ta_da_hospitals)</span>
-                    <span className="bg-rose-100 text-rose-700 px-2 py-0.2 rounded-full text-2xs font-mono font-bold">
-                      {noTaDaHospitals.length}
-                    </span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setFacilitySubTab("notada")}
+                      className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-2 ${
+                        facilitySubTab === "notada"
+                          ? "bg-surface text-rose-700 shadow-xs border border-line"
+                          : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
+                      }`}
+                    >
+                      <span>🛑 No TA / DA Exceptions (no_ta_da_hospitals)</span>
+                      <span className="bg-rose-100 text-rose-700 px-2 py-0.2 rounded-full text-2xs font-mono font-bold">
+                        {noTaDaHospitals.length}
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleExportFacilitiesExcel}
+                      className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white"
+                      title="Export Facilities to Excel"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Export Excel</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewFacilityTargetTable(facilitySubTab === "expense" ? "standard" : "no_ta_da");
+                        setIsAddFacilityModalOpen(true);
+                      }}
+                      className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-9 px-4 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Add Facility</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Sub-Tab 1: Standard Facilities */}
@@ -3075,197 +3550,447 @@ export default function AdminPage() {
             )}
 
             {/* ================= SECTION 6: WHATSAPP GATEWAY ================= */}
-            {activeTab === "whatsapp" && (
+            
+            {/* ================= SECTION: ROLES & PERMISSIONS MATRIX ================= */}
+            {activeTab === "permissions" && (
               <div className="space-y-4 animate-fadeIn">
-                {/* Header Banner */}
-                <div className="bg-surface border border-line rounded-lg p-4 shadow-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-accent-600 text-white text-2xs font-mono font-bold uppercase px-2 py-0.5 rounded tracking-wider">
-                        OFFICIAL AUTOMATION GATEWAY
-                      </span>
-                      <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 border border-approved-border rounded">
-                        🛡️ ANTI-BAN QUEUE ACTIVE (3.5s DELAY)
-                      </span>
+                {/* Header Overview Banner */}
+                <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-black shrink-0 border border-accent-200 shadow-xs">
+                      <Key className="w-5 h-5" />
                     </div>
-                    <h3 className="text-sm font-bold text-ink-900 uppercase tracking-wider mt-2 mb-0 font-display">
-                      WhatsApp Bot &amp; Pairing Code Console
-                    </h3>
-                    <p className="text-xs text-ink-500 font-medium m-0 mt-0.5">
-                      Connect company WhatsApp number once using 8-Digit Pairing Code (No camera QR scan needed). Automatic In-Chat Interactive Approvals enabled.
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-accent-600 text-white text-2xs font-mono font-bold uppercase px-2 py-0.5 rounded-full tracking-wider">
+                          SYSTEM SECURITY GOVERNANCE
+                        </span>
+                        <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 border border-approved-border rounded-full flex items-center gap-1">
+                          <ShieldCheck className="w-3 h-3" /> 8 ENFORCED ROLES
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-ink-900 mt-1.5 mb-0 font-display">
+                        Roles &amp; Permissions Authorization Matrix
+                      </h3>
+                      <p className="text-xs text-ink-500 font-medium m-0 mt-0.5">
+                        Documented system capabilities, route-level authorization guards, and administrative access privileges configured across Cyrix FieldOps.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="bg-surface-sunken border border-line p-3 rounded-lg text-right shrink-0">
-                    <span className="text-2xs font-mono font-bold text-ink-500 uppercase tracking-wider block">GATEWAY STATUS</span>
-                    <span className="text-xs font-mono font-bold text-approved flex items-center gap-1.5 justify-end mt-0.5">
-                      <span className="w-2 h-2 rounded-full bg-approved animate-pulse" />
-                      CONNECTED (+91 {waPhoneNumber})
+                  <div className="bg-surface-sunken border border-line p-3 rounded-xl text-right shrink-0">
+                    <span className="text-2xs font-mono font-bold text-ink-500 uppercase tracking-wider block">ACCESS ENFORCEMENT</span>
+                    <span className="text-xs font-mono font-bold text-accent-700 flex items-center gap-1.5 justify-end mt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-accent-600 animate-pulse" />
+                      STRICT JWT &amp; D1 ROUTE GUARDS
                     </span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                  {/* Left Box: 8-Digit Pairing Code Linker (7 Cols) */}
-                  <div className="lg:col-span-7 bg-surface border border-line rounded-lg shadow-none p-4 space-y-4">
-                    <div className="flex items-center justify-between border-b border-line pb-2">
-                      <span className="text-xs font-bold uppercase tracking-wider font-mono text-ink-900 flex items-center gap-2">
-                        <Zap className="w-3.5 h-3.5 text-accent-600" />
-                        1-TIME WHATSAPP PHONE NUMBER PAIRING
-                      </span>
-                      <span className="text-2xs font-mono bg-accent-50 text-accent-700 border border-accent-100 px-2 py-0.5 font-bold rounded">
-                        NO CAMERA SCAN REQUIRED
+                {/* Matrix Table Card */}
+                <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs">
+                  <div className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white px-5 py-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 text-accent-200" />
+                      <span className="text-xs font-bold uppercase tracking-wider font-mono">
+                        Enterprise Privilege Cross-Reference Matrix
                       </span>
                     </div>
-
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <div className="sm:col-span-2">
-                          <label className="label-lte text-2xs block mb-1">Company WhatsApp Phone Number *</label>
-                          <div className="flex">
-                            <span className="inline-flex items-center px-2.5 bg-surface-sunken border border-r-0 border-line text-xs font-mono font-bold text-ink-700 rounded-l-md">
-                              +91
-                            </span>
-                            <input
-                              type="text"
-                              value={waPhoneNumber}
-                              onChange={(e) => setWaPhoneNumber(e.target.value)}
-                              className="input-lte rounded-l-none h-9 text-xs font-mono font-bold w-full"
-                              placeholder="9829012001"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-end">
-                          <button
-                            type="button"
-                            onClick={handleGeneratePairingCode}
-                            disabled={waIsGeneratingCode}
-                            className="btn-lte-primary w-full h-9 px-3 text-xs uppercase tracking-wider font-bold cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
-                          >
-                            {waIsGeneratingCode ? <LteSpinner /> : <span>Get Pairing Code</span>}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* 8-Digit Pairing Code Display Box */}
-                      <div className="p-5 bg-surface-sunken border border-line rounded-lg text-center space-y-2.5">
-                        <span className="text-2xs font-mono font-bold text-ink-500 uppercase tracking-widest block">
-                          8-DIGIT WHATSAPP PAIRING CODE
-                        </span>
-                        
-                        <div className="inline-block bg-[#1E1B4B] text-emerald-400 font-mono text-2xl font-black px-6 py-2.5 rounded-lg border border-accent-700 tracking-[0.2em] shadow-inner">
-                          {waPairingCode}
-                        </div>
-
-                        <div className="text-xs font-medium text-ink-700 space-y-1 pt-1">
-                          <p className="m-0">1. Open WhatsApp on mobile phone ➔ Tap <b>Settings (⋮)</b></p>
-                          <p className="m-0">2. Tap <b>Linked Devices</b> ➔ Tap <b>Link with phone number instead</b></p>
-                          <p className="m-0 text-accent-700 font-semibold">3. Enter code <b>{waPairingCode}</b> ➔ Connection completes instantly!</p>
-                        </div>
-                      </div>
-                    </div>
+                    <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-accent-100 font-bold border border-white/10">
+                      10 Capabilities × 8 Roles
+                    </span>
                   </div>
 
-                  {/* Right Box: UltraMsg Credentials & Automatic Event Triggers (5 Cols) */}
-                  <div className="lg:col-span-5 bg-surface border border-line rounded-lg shadow-none p-4 space-y-4">
-                    <div className="flex items-center justify-between border-b border-line pb-2">
-                      <span className="text-xs font-bold uppercase tracking-wider font-mono text-ink-900">
-                        ULTRAMSG GATEWAY CREDENTIALS
-                      </span>
-                      <span className="text-2xs font-mono bg-approved-bg text-approved border border-approved-border px-2 py-0.5 font-bold rounded">
-                        SOLUTION 2 ACTIVE
-                      </span>
-                    </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                          <th className="py-3 px-4 min-w-[200px]">System Capability / Module</th>
+                          <th className="py-3 px-3 text-center min-w-[90px]">Admin</th>
+                          <th className="py-3 px-3 text-center min-w-[90px]">Project Head</th>
+                          <th className="py-3 px-3 text-center min-w-[90px]">Div Manager</th>
+                          <th className="py-3 px-3 text-center min-w-[90px]">Manager</th>
+                          <th className="py-3 px-3 text-center min-w-[90px]">Coordinator</th>
+                          <th className="py-3 px-3 text-center min-w-[90px]">MIS</th>
+                          <th className="py-3 px-3 text-center min-w-[90px]">Accountant</th>
+                          <th className="py-3 px-3 text-center min-w-[90px]">Engineer</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line text-ink-900 font-medium">
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">📝 Submit Daily Expense Claims</div>
+                            <div className="text-2xs text-ink-500 font-normal">Log daily claims, meal DA, travel legs and receipts</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                        </tr>
 
-                    <div className="space-y-2.5 text-xs font-mono">
-                      <div>
-                        <label className="label-lte text-2xs block mb-1">UltraMsg Instance ID *</label>
-                        <input
-                          type="text"
-                          value={waInstanceId}
-                          onChange={(e) => setWaInstanceId(e.target.value)}
-                          className="input-lte h-8 text-xs font-bold w-full"
-                          placeholder="instance1001"
-                        />
-                      </div>
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">🚗 Vehicle Odometer Logs</div>
+                            <div className="text-2xs text-ink-500 font-normal">Record opening &amp; closing km with meter photo proofs</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                        </tr>
 
-                      <div>
-                        <label className="label-lte text-2xs block mb-1">UltraMsg Token *</label>
-                        <input
-                          type="text"
-                          value={waToken}
-                          onChange={(e) => setWaToken(e.target.value)}
-                          className="input-lte h-8 text-xs font-bold w-full"
-                          placeholder="token_xyz123"
-                        />
-                      </div>
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">🔍 L1 Claim Review &amp; Policy Checks</div>
+                            <div className="text-2xs text-ink-500 font-normal">Review first-tier team claims and verify attachments</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                        </tr>
 
-                      <button
-                        type="button"
-                        onClick={handleSaveWhatsappConfigSubmit}
-                        disabled={waConfigSaving}
-                        className="btn-lte-primary w-full py-2 text-xs uppercase tracking-wider font-bold cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
-                      >
-                        {waConfigSaving ? <LteSpinner /> : <span>💾 Save Gateway Credentials</span>}
-                      </button>
-                    </div>
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">🛡️ L2 / L3 Multi-Tier Approval</div>
+                            <div className="text-2xs text-ink-500 font-normal">Grant executive second and third tier approvals</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                        </tr>
 
-                    <div className="border-t border-line pt-3">
-                      <span className="text-xs font-bold uppercase tracking-wider font-mono text-ink-900 block mb-2">
-                        AUTOMATIC EVENT DISPATCH SETTINGS
-                      </span>
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">⚡ Bulk Claim Approvals</div>
+                            <div className="text-2xs text-ink-500 font-normal">One-click batch approve claims for assigned sub-teams</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                        </tr>
 
-                      <div className="space-y-2 text-xs">
-                        <div className="flex items-center justify-between p-2.5 bg-surface-sunken border border-line rounded-md">
-                          <div>
-                            <span className="font-bold text-ink-900 block">Expense Claim Submission</span>
-                            <span className="text-2xs text-ink-500 font-medium">Dispatches In-Chat Card to Manager &amp; Submitter</span>
-                          </div>
-                          <Switch defaultChecked />
-                        </div>
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">🏥 Facilities &amp; No TA/DA Master</div>
+                            <div className="text-2xs text-ink-500 font-normal">Add, edit, or delete expense facilities and hospital exceptions</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                        </tr>
 
-                        <div className="flex items-center justify-between p-2.5 bg-surface-sunken border border-line rounded-md">
-                          <div>
-                            <span className="font-bold text-ink-900 block">Manager In-Chat Action Buttons</span>
-                            <span className="text-2xs text-ink-500 font-medium">Renders [✅ Approve] &amp; [❌ Reject] inside WhatsApp</span>
-                          </div>
-                          <Switch defaultChecked />
-                        </div>
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">⚙️ System Cutoffs &amp; Allowance Rates</div>
+                            <div className="text-2xs text-ink-500 font-normal">Configure monthly cutoff dates, past-days limits, and TA/DA rates</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                        </tr>
 
-                        <div className="flex items-center justify-between p-2.5 bg-surface-sunken border border-line rounded-md">
-                          <div>
-                            <span className="font-bold text-ink-900 block">Approval &amp; Rejection Alerts</span>
-                            <span className="text-2xs text-ink-500 font-medium">Notifies Engineer when manager actions claim</span>
-                          </div>
-                          <Switch defaultChecked />
-                        </div>
-                      </div>
-                    </div>
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">🔑 Unlock Sensitive Fields &amp; Reset Credentials</div>
+                            <div className="text-2xs text-ink-500 font-normal">Authorize sensitive vehicle edits, unlock locked submissions, and reset passwords</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                        </tr>
 
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const res = await adminService.testWhatsappDispatch(waPhoneNumber);
-                          if (res && res.status === "success") {
-                            toast.success(res.message);
-                          } else {
-                            toast.error(res?.message || "Test dispatch failed");
-                          }
-                        } catch (e: any) {
-                          toast.error(e.message || "Error running test dispatch");
-                        }
-                      }}
-                      className="btn-lte-secondary w-full py-2 text-xs uppercase tracking-wider font-bold cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      <span>🧪 Dispatch Test WhatsApp Alert</span>
-                    </button>
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">📊 MIS Reports &amp; Data Export</div>
+                            <div className="text-2xs text-ink-500 font-normal">Access financial summaries, month reports, and download Excel ledgers</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                        </tr>
+
+                        <tr className="hover:bg-accent-50/30 transition-colors">
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-ink-900">🎫 Help Center Ticket Handling</div>
+                            <div className="text-2xs text-ink-500 font-normal">Resolve employee complaints, assign tickets, and close support queries</div>
+                          </td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 font-bold">✓</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                          <td className="py-3 px-3 text-center"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-400 font-bold">—</span></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Role Responsibility Scope Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+                  <div className="bg-surface border border-line rounded-xl p-4 shadow-xs space-y-1.5">
+                    <span className="px-2 py-0.5 bg-accent-50 text-accent-700 font-bold text-2xs uppercase rounded-full font-mono border border-accent-100">
+                      ADMIN / SUPER ADMIN
+                    </span>
+                    <h4 className="text-xs font-bold text-ink-900 m-0">Full Console Authority</h4>
+                    <p className="text-2xs text-ink-500 font-medium m-0 leading-relaxed">
+                      Complete administrative access across roster CRUD, security parameters, system-wide cutoffs, and D1 database migrations.
+                    </p>
+                  </div>
+
+                  <div className="bg-surface border border-line rounded-xl p-4 shadow-xs space-y-1.5">
+                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 font-bold text-2xs uppercase rounded-full font-mono border border-indigo-100">
+                      PROJECT HEAD &amp; DM
+                    </span>
+                    <h4 className="text-xs font-bold text-ink-900 m-0">Regional Governance</h4>
+                    <p className="text-2xs text-ink-500 font-medium m-0 leading-relaxed">
+                      Multi-tier approval authority (L2/L3), bulk approval permissions, and zone-level expenditure monitoring.
+                    </p>
+                  </div>
+
+                  <div className="bg-surface border border-line rounded-xl p-4 shadow-xs space-y-1.5">
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-bold text-2xs uppercase rounded-full font-mono border border-emerald-100">
+                      MIS &amp; ACCOUNTANT
+                    </span>
+                    <h4 className="text-xs font-bold text-ink-900 m-0">Financial Controllers</h4>
+                    <p className="text-2xs text-ink-500 font-medium m-0 leading-relaxed">
+                      Auditing expense claims, checking policy deviations, verifying hotel tariffs, and exporting monthly financial disbursements.
+                    </p>
+                  </div>
+
+                  <div className="bg-surface border border-line rounded-xl p-4 shadow-xs space-y-1.5">
+                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 font-bold text-2xs uppercase rounded-full font-mono border border-amber-100">
+                      COORDINATOR &amp; ENGINEER
+                    </span>
+                    <h4 className="text-xs font-bold text-ink-900 m-0">Field Operations</h4>
+                    <p className="text-2xs text-ink-500 font-medium m-0 leading-relaxed">
+                      Daily field asset maintenance, hospital visits, odometer logging, and initial receipt submissions.
+                    </p>
                   </div>
                 </div>
               </div>
             )}
+
+
+            {/* ================= SECTION: ACTIVITY & AUDIT LOG ================= */}
+            {activeTab === "audit" && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Header Overview Banner */}
+                <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-black shrink-0 border border-accent-200 shadow-xs">
+                      <History className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-accent-600 text-white text-2xs font-mono font-bold uppercase px-2 py-0.5 rounded-full tracking-wider">
+                          LIVE GOVERNANCE LEDGER
+                        </span>
+                        <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 border border-approved-border rounded-full flex items-center gap-1">
+                          <Activity className="w-3 h-3 animate-pulse" /> REAL-TIME D1 AUDIT
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-ink-900 mt-1.5 mb-0 font-display">
+                        System Activity &amp; Audit Trail
+                      </h3>
+                      <p className="text-xs text-ink-500 font-medium m-0 mt-0.5">
+                        Chronological, tamper-evident record of administrative changes, user credential updates, facility edits, and approval resets.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => fetchAuditLogs(auditSearch)}
+                      disabled={auditLoading}
+                      className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-2 font-bold cursor-pointer rounded-xl bg-white"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${auditLoading ? "animate-spin" : ""}`} />
+                      <span>{auditLoading ? "Refreshing..." : "Refresh Audit Log"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Audit Toolbar */}
+                <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="w-4 h-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search by actor, action, or entity..."
+                      value={auditSearch}
+                      onChange={(e) => setAuditSearch(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && fetchAuditLogs(auditSearch)}
+                      className="input-lte pl-9 h-9 text-xs w-full rounded-xl"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 text-2xs font-mono font-bold text-ink-500">
+                    <span>Showing recent {auditLogs.length} audit trail records</span>
+                  </div>
+                </div>
+
+                {/* Audit List Table Card */}
+                <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs">
+                  <div className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white px-5 py-3.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-accent-200" />
+                      <span className="text-xs font-bold uppercase tracking-wider font-mono">
+                        Activity Events Stream
+                      </span>
+                    </div>
+                    <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-accent-100 font-bold border border-white/10">
+                      {auditLogs.length} Events Recorded
+                    </span>
+                  </div>
+
+                  {auditLoading ? (
+                    <div className="p-12 text-center text-ink-500 font-bold text-xs bg-surface flex flex-col items-center justify-center gap-3">
+                      <LteSpinner />
+                      <span>Loading governance audit trail...</span>
+                    </div>
+                  ) : auditLogs.length === 0 ? (
+                    <div className="p-12 text-center text-ink-400 font-medium bg-surface">
+                      <History className="w-8 h-8 text-ink-300 mx-auto mb-2 opacity-50" />
+                      <p className="m-0 text-xs font-bold text-ink-700">No activity audit logs recorded yet.</p>
+                      <p className="m-0 text-2xs text-ink-400 mt-1">Actions taken across the Admin Console will appear here automatically.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                            <th className="py-3 px-4 min-w-[150px]">Timestamp (IST)</th>
+                            <th className="py-3 px-4 min-w-[160px]">Actor / Performed By</th>
+                            <th className="py-3 px-3 min-w-[140px]">Action Event</th>
+                            <th className="py-3 px-3 min-w-[130px]">Target Entity</th>
+                            <th className="py-3 px-4 min-w-[220px]">Value Change / Details</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-line text-ink-900">
+                          {auditLogs.map((log: any, idx: number) => {
+                            
+                            return (
+                              <tr key={log.id || idx} className="hover:bg-accent-50/30 transition-colors">
+                                <td className="py-2.5 px-4 font-mono text-2xs font-bold text-ink-500 whitespace-nowrap">
+                                  {formatToIST(log.created_at)}
+                                </td>
+                                <td className="py-2.5 px-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-accent-100 text-accent-700 flex items-center justify-center font-bold text-2xs shrink-0">
+                                      {getInitials(log.actor_name || "Admin")}
+                                    </div>
+                                    <div>
+                                      <div className="font-bold text-ink-900 text-xs">{log.actor_name || "System Admin"}</div>
+                                      <span className="text-2xs text-accent-700 font-mono font-semibold">
+                                        {log.actor_role || "Admin"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className="px-2 py-0.5 bg-accent-50 text-accent-700 border border-accent-200 font-bold text-2xs uppercase rounded-full font-mono inline-block">
+                                    {log.action || "UPDATE"}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className="font-mono text-2xs font-bold text-ink-700">
+                                    {log.entity_type || "System"}: {log.entity_id || "—"}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-4 text-2xs text-ink-700 font-mono">
+                                  {log.old_value || log.new_value ? (
+                                    <div className="space-y-0.5">
+                                      {log.old_value && (
+                                        <div className="text-rose-600 line-through truncate max-w-xs">
+                                          Old: {String(log.old_value).slice(0, 60)}
+                                        </div>
+                                      )}
+                                      {log.new_value && (
+                                        <div className="text-emerald-700 font-semibold truncate max-w-xs">
+                                          New: {String(log.new_value).slice(0, 60)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-ink-400 italic">No value change recorded</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
           </main>
+        </div>
+
+
+          {/* Footer attribution matching HomePage */}
+          <footer className="pt-8 pb-4 border-t border-line text-center text-xs text-ink-500 font-medium">
+            <p className="m-0 flex items-center justify-center gap-1">
+              <span>Cyrix Field Operations &amp; Expense Governance Suite • Designed &amp; Developed by</span>
+              <a
+                href="https://sunilbishnoi.co.in/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent-600 hover:text-accent-800 font-bold hover:underline"
+              >
+                Sunil Bishnoi
+              </a>
+            </p>
+          </footer>
         </div>
       </div>
 

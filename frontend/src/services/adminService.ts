@@ -241,5 +241,11 @@ export const adminService = {
   testWhatsappDispatch: async (phoneNumber?: string): Promise<any> => {
     const response = await api.post("/whatsapp/test-alert", { phoneNumber });
     return response.data;
+  },
+
+  getAuditLogs: async (search?: string, limit: number = 50): Promise<any> => {
+    const response = await api.get(`/admin/audit-logs?limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
+    return response.data;
   }
 };
+

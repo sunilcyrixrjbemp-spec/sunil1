@@ -63,7 +63,8 @@ import {
   handleGetExpenseHierarchyLevels, handleResetExpenseApprovalLevel,
   handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates,
   handleTestTime, handleRevertClaimDeductions, handleBulkToggleBulkApproval,
-  handleGetFacilities, handleSaveFacility, handleDeleteFacility
+  handleGetFacilities, handleSaveFacility, handleDeleteFacility,
+  handleGetAdminAuditLogs
 } from "./routes/admin.js";
 
 // Ticket handlers
@@ -333,6 +334,7 @@ router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true, [
 router.get("/api/admin/facilities", handleGetFacilities, true, ["Admin"]);
 router.post("/api/admin/facilities", handleSaveFacility, true, ["Admin"]);
 router.delete("/api/admin/facilities/:id", handleDeleteFacility, true, ["Admin"]);
+router.get("/api/admin/audit-logs", handleGetAdminAuditLogs, true, ["Admin"]);
 
 // Penalty Module Routes
 router.post("/api/penalty/verify-barcode", handleVerifyPenaltyBarcode, true);
