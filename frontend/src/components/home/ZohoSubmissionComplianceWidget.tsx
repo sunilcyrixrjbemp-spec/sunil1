@@ -59,63 +59,30 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
 
   // Strict Admin Role Check — ONLY Genuine Admins see the Remind / Sent action button!
   const isAdmin = useMemo(() => {
-    const rawRole = String(user?.role || "").trim().toLowerCase();
-    const rawDesig = String(user?.designation || "").trim().toLowerCase();
-
-    // 1. Explicitly reject Coordinator, Manager, Field Engineer
-    if (
-      rawRole.includes("coordinator") || 
-      rawDesig.includes("coordinator") ||
-      rawRole.includes("manager") || 
-      rawDesig.includes("manager") ||
-      rawRole.includes("engineer") || 
-      rawDesig.includes("engineer")
-    ) {
-      return false;
+    let u = user;
+    if (!u) {
+      try {
+        const stored = localStorage.getItem("cyrix_user") || localStorage.getItem("user");
+        if (stored) u = JSON.parse(stored);
+      } catch (_) {}
     }
 
-    // 2. Check Admin role
-    if (
-      rawRole === "admin" || 
-      rawRole === "superadmin" || 
-      rawRole === "super_admin" || 
-      rawRole.includes("super admin") ||
-      user?.is_admin === true || 
-      user?.isAdmin === true
-    ) {
+    if (!u) return false;
+
+    // Check if role is admin
+    const r = String(u.role || "").trim().toLowerCase();
+    if (r === "admin" || r === "superadmin" || r === "super_admin" || u.is_admin === true || u.isAdmin === true) {
       return true;
     }
 
-    try {
-      const stored = localStorage.getItem("cyrix_user") || localStorage.getItem("user");
-      if (stored) {
-        const u = JSON.parse(stored);
-        const uRole = String(u.role || "").trim().toLowerCase();
-        const uDesig = String(u.designation || "").trim().toLowerCase();
-        if (
-          uRole.includes("coordinator") || 
-          uDesig.includes("coordinator") ||
-          uRole.includes("manager") || 
-          uDesig.includes("manager") ||
-          uRole.includes("engineer") || 
-          uDesig.includes("engineer")
-        ) {
-          return false;
-        }
-        if (
-          uRole === "admin" || 
-          uRole === "superadmin" || 
-          uRole === "super_admin" || 
-          uRole.includes("super admin") ||
-          u.is_admin === true || 
-          u.isAdmin === true
-        ) {
-          return true;
-        }
-      }
-    } catch (_) {}
+    // Also check designation purely for admin
+    const d = String(u.designation || "").trim().toLowerCase();
+    if (d === "admin" || d === "superadmin" || d === "super_admin") {
+      return true;
+    }
 
-    return false; // Non-admin gets strictly false!
+    // Non-admin (Coordinator, Manager, Engineer, etc.) gets false
+    return false;
   }, [user]);
 
   // Parse Year and Month
