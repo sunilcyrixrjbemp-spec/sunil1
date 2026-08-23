@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Target, FileText, History, Users, CheckSquare,
   Trash2, MessageCircle, Settings, ChevronRight, Plus, Edit3,
   Check, X, Send, AlertTriangle, TrendingUp, TrendingDown,
-  Minus, RefreshCw, Save, Clock, Award, BarChart2
+  Minus, RefreshCw, Save, Clock, Award
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -107,7 +107,6 @@ export default function KPIDashboardPage() {
     if (stored) {
       const u = JSON.parse(stored);
       setUser(u);
-      // Check manager status — if they have reportees
     }
   }, []);
 
@@ -131,7 +130,7 @@ export default function KPIDashboardPage() {
         setIsManager(hasTeam);
       }
     } catch (e) {
-      // Silent — not logged in or no KPI data yet
+      // Silent
     } finally {
       setLoading(false);
     }
@@ -196,72 +195,93 @@ export default function KPIDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center bg-[#FAFAF9]">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-gray-800" />
-          <p className="text-sm text-gray-500">Loading KPI data…</p>
+          <div className="h-8 w-8 animate-spin rounded-full border-3 border-line border-t-accent-600" />
+          <p className="text-xs font-mono font-semibold text-ink-500">Loading Performance Analytics…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ── Header ── */}
-      <div className="sticky top-0 z-20 border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="flex items-center gap-3 py-3">
-            <Award className="h-5 w-5 text-red-600 shrink-0" />
-            <h1 className="text-base font-bold text-gray-900">KPI Dashboard</h1>
-            <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-              FY {fy}
-            </span>
-            {notifCount > 0 && (
-              <span className="ml-auto flex h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-2 text-xs font-bold text-white">
-                {notifCount}
-              </span>
-            )}
+    <div className="min-h-screen bg-[#FAFAF9] text-ink-900 font-sans pb-16">
+      {/* ── Zoho Header Context Bar ── */}
+      <div className="sticky top-0 z-20 border-b border-line bg-white shadow-2xs">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+          <div className="flex items-center justify-between py-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-accent-50 border border-accent-100 flex items-center justify-center text-accent-700">
+                <Award className="h-4.5 w-4.5 shrink-0" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base sm:text-lg font-bold font-heading text-ink-900 tracking-tight">KPI Performance Scorecard</h1>
+                  <span className="rounded-full bg-accent-50 border border-accent-200 px-2.5 py-0.5 text-[10px] font-mono font-bold text-accent-700">
+                    FY {fy}
+                  </span>
+                </div>
+                <p className="text-[11px] text-ink-400 font-mono hidden sm:block">Monthly KRA Tracking, Self-Assessments & Review Console</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={loadAll}
+                className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-surface-sunken transition-all shadow-2xs cursor-pointer"
+              >
+                <RefreshCw className="h-3.5 w-3.5 text-ink-500" />
+                <span className="hidden sm:inline">Sync Data</span>
+              </button>
+              {notifCount > 0 && (
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-rose-600 px-2 text-[10px] font-bold text-white font-mono shadow-xs">
+                  {notifCount} Action{notifCount > 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Tab nav */}
-          <nav className="flex gap-0.5 overflow-x-auto pb-0 scrollbar-hide">
-            {TABS.filter((t) => !t.managerOnly || isManager).map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              const badgeCount = tab.id === "approvals"
-                ? notifications.find((n: any) => n.kind === "kpi_approvals")?.n
-                : tab.id === "deletions"
-                ? notifications.find((n: any) => n.kind === "deletion_requests")?.n
-                : tab.id === "team"
-                ? notifications.find((n: any) => n.kind === "submissions_to_score")?.n
-                : 0;
+          {/* Zoho Inset Pill Tab Nav (Matching HomePage Tabs) */}
+          <div className="pb-3 overflow-x-auto scrollbar-none">
+            <nav className="inline-flex items-center gap-1 p-1 bg-surface-sunken border border-line rounded-xl">
+              {TABS.filter((t) => !t.managerOnly || isManager).map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                const badgeCount = tab.id === "approvals"
+                  ? notifications.find((n: any) => n.kind === "kpi_approvals")?.n
+                  : tab.id === "deletions"
+                  ? notifications.find((n: any) => n.kind === "deletion_requests")?.n
+                  : tab.id === "team"
+                  ? notifications.find((n: any) => n.kind === "submissions_to_score")?.n
+                  : 0;
 
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-1.5 whitespace-nowrap px-3 py-3 text-xs font-medium transition-colors
-                    ${isActive
-                      ? "border-b-2 border-gray-900 text-gray-900"
-                      : "border-b-2 border-transparent text-gray-500 hover:text-gray-700"
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`relative flex items-center gap-2 whitespace-nowrap px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-white text-accent-700 shadow-xs border border-line font-bold"
+                        : "text-ink-500 hover:text-ink-900 hover:bg-white/50 border border-transparent font-medium"
                     }`}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  {tab.label}
-                  {badgeCount > 0 && (
-                    <span className="ml-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white leading-none">
-                      {badgeCount > 99 ? "99+" : badgeCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+                  >
+                    <Icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-accent-600" : "text-ink-400"}`} />
+                    {tab.label}
+                    {badgeCount > 0 && (
+                      <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-bold text-white font-mono leading-none">
+                        {badgeCount > 99 ? "99+" : badgeCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
         </div>
       </div>
 
-      {/* ── Content ── */}
-      <main className="mx-auto max-w-7xl px-4 py-6 pb-24">
+      {/* ── Main Workspace ── */}
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6">
         {activeTab === "dashboard" && (
           <DashboardTab
             assignment={assignment}
@@ -342,7 +362,7 @@ export default function KPIDashboardPage() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ─── Dashboard Tab ───────────────────────────────────────────────────
+// ─── Dashboard Tab (Zoho Executive Hub) ───────────────────────────────
 // ════════════════════════════════════════════════════════════════════
 function DashboardTab({ assignment, yearAnalytics, attainment, notifications: _notifications, trendPoints, trend, isManager, teamData, fy, onNavigate }: any) {
   const assignmentStatus = assignment?.status ?? null;
@@ -355,26 +375,26 @@ function DashboardTab({ assignment, yearAnalytics, attainment, notifications: _n
 
   return (
     <div className="space-y-6">
-      {/* Hero */}
+      {/* Executive Hero */}
       <ScoreHero
-        title={`Performance Overview`}
-        subtitle={`FY ${fy} · Year-to-date`}
+        title="Performance Analytics Hub"
+        subtitle={`Financial Year ${fy} · Cumulative Performance Assessment`}
         score={avgScore}
-        scoreLabel="Year Average"
+        scoreLabel="YTD Performance Score"
       >
         {trend && (
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2 text-xs font-mono">
             {trend.direction === "up" && <TrendingUp className="h-4 w-4 text-emerald-400" />}
-            {trend.direction === "down" && <TrendingDown className="h-4 w-4 text-red-400" />}
+            {trend.direction === "down" && <TrendingDown className="h-4 w-4 text-rose-400" />}
             {trend.direction === "flat" && <Minus className="h-4 w-4 text-white/40" />}
             <span className={
-              trend.direction === "up" ? "text-emerald-300" :
-              trend.direction === "down" ? "text-red-300" : "text-white/50"
+              trend.direction === "up" ? "text-emerald-300 font-bold" :
+              trend.direction === "down" ? "text-rose-300 font-bold" : "text-white/50"
             }>
-              {trend.direction === "up" ? `Improving +${trend.delta}pts` :
-               trend.direction === "down" ? `Declining ${trend.delta}pts` : "Steady"}
+              {trend.direction === "up" ? `Improving +${trend.delta} pts` :
+               trend.direction === "down" ? `Declining -${trend.delta} pts` : "Consistent Baseline"}
             </span>
-            <span className="text-white/30">over last 4 months</span>
+            <span className="text-white/40">vs prior 4 months</span>
           </div>
         )}
       </ScoreHero>
@@ -382,100 +402,121 @@ function DashboardTab({ assignment, yearAnalytics, attainment, notifications: _n
       {/* Action alerts */}
       {!assignmentStatus && (
         <ActionAlert
-          eyebrow="KPI Not Set Up"
-          title="Your KPI for this year is not in place yet"
-          body="Define your Job Role KRAs and submit for your manager's approval."
-          cta="Set Up My KPI"
+          eyebrow="Setup Required"
+          title="Your FY KPI Scorecard is not configured yet"
+          body="Define your Job Role KRAs and target weights to begin monthly submissions."
+          cta="Configure KPI Setup"
           onClick={() => onNavigate("setup")}
+          variant="info"
         />
       )}
       {assignmentStatus === "rejected" && (
         <ActionAlert
-          eyebrow="Sent Back"
-          title="Your manager returned your KPI setup"
-          body={assignment?.rejection_reason ? `"${assignment.rejection_reason}"` : "Make changes and resubmit."}
-          cta="Make Changes"
+          eyebrow="Action Required"
+          title="Your manager returned your KPI setup for revisions"
+          body={assignment?.rejection_reason ? `Manager remarks: "${assignment.rejection_reason}"` : "Please revise your weight distribution and resubmit."}
+          cta="Revise Setup"
           onClick={() => onNavigate("setup")}
           variant="warning"
         />
       )}
       {assignmentStatus === "pending_approval" && (
-        <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4">
-          <Clock className="h-5 w-5 shrink-0 text-blue-600 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-xl border border-accent-200 bg-accent-50 p-4.5 shadow-2xs">
+          <Clock className="h-5 w-5 shrink-0 text-accent-600 mt-0.5" />
           <div>
-            <p className="font-semibold text-blue-900">KPI with your manager for approval</p>
-            <p className="text-sm text-blue-700 mt-0.5">You can start monthly submissions once approved.</p>
+            <p className="font-bold text-accent-900 text-sm">KPI Setup Awaiting Manager Approval</p>
+            <p className="text-xs text-accent-700 mt-0.5">Your reporting hierarchy has received your setup. Monthly submissions unlock once approved.</p>
           </div>
         </div>
       )}
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Assignment" value={<KpiAssignmentBadge status={assignmentStatus} />} />
-        <StatCard label={`Months Scored`} value={monthsScored} sub={`of 12 in FY ${fy}`} />
-        <StatCard
-          label="Job Role Avg"
-          value={avgJob != null ? `${avgJob.toFixed(1)}%` : "—"}
-          sub={`of ${assignment?.job_role_weight ?? 80}%`}
+      {/* Zoho 4-Metric Grid */}
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
+        <StatCard 
+          label="Assignment Status" 
+          value={<KpiAssignmentBadge status={assignmentStatus} />} 
+          accent="indigo"
+        />
+        <StatCard 
+          label="Assessed Months" 
+          value={`${monthsScored} / 12`} 
+          sub={`FY ${fy} Completed`}
+          accent="emerald"
         />
         <StatCard
-          label="Core Values Avg"
+          label="Job Role Score"
+          value={avgJob != null ? `${avgJob.toFixed(1)}%` : "—"}
+          sub={`Target Weight: ${assignment?.job_role_weight ?? 80}%`}
+          accent="amber"
+        />
+        <StatCard
+          label="Core Values Score"
           value={avgCore != null ? `${avgCore.toFixed(1)}%` : "—"}
-          sub={`of ${assignment?.core_values_weight ?? 20}%`}
+          sub={`Target Weight: ${assignment?.core_values_weight ?? 20}%`}
+          accent="indigo"
         />
       </div>
 
-      {/* Score trend chart */}
+      {/* Zoho Trend Chart Card */}
       {trendPoints.length > 0 && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-1 text-sm font-semibold text-gray-800">My Score — Month by Month</h2>
-          <p className="mb-4 text-xs text-gray-400">Final score for each assessed month, on the 100-point scale.</p>
+        <div className="rounded-xl border border-line bg-white p-5 sm:p-6 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-bold text-ink-900 font-heading">Performance Progression Trend</h2>
+              <p className="text-xs text-ink-400 font-mono">Monthly finalized score distribution across FY {fy}</p>
+            </div>
+            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 bg-surface-sunken border border-line rounded text-ink-500">
+              100 Pt Standard Scale
+            </span>
+          </div>
           <ScoreTrendChart points={trendPoints} height={200} />
         </div>
       )}
 
-      {/* Areas needing attention */}
+      {/* Benchmark Attention Area */}
       {belowGood.length > 0 && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-900">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            Areas Below Good
-          </h2>
-          <div className="space-y-3">
-            {belowGood.slice(0, 5).map((a: any) => (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-5 shadow-2xs">
+          <div className="flex items-center justify-between mb-3.5">
+            <h2 className="flex items-center gap-2 text-xs font-bold font-mono text-amber-900 uppercase tracking-wider">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              Focus Areas Below Benchmark (&lt;60%)
+            </h2>
+            <span className="text-[10px] font-mono text-amber-700">{belowGood.length} KRA(s) Requiring Attention</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {belowGood.slice(0, 4).map((a: any) => (
               <KraAttainmentBar
                 key={`${a.section}-${a.kra}`}
                 kraName={a.kra}
                 attainmentPct={a.attainment_pct}
                 section={SECTION_LABELS[a.section]}
+                weight={a.weight}
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Manager section */}
+      {/* Manager Quick Team Card */}
       {isManager && teamData && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-            <Users className="h-4 w-4 text-gray-500" />
-            My Team
-          </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <StatCard label="Team Members" value={teamData.team?.length ?? 0} />
-            <StatCard label="Awaiting Scoring" value={teamData.scoring ?? 0} sub="submitted this month" />
-            <StatCard label="KPIs to Approve" value={teamData.approvals ?? 0} sub="pending setup review" />
-          </div>
-          {teamData.scoring > 0 && (
+        <div className="rounded-xl border border-line bg-white p-5 sm:p-6 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)]">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-4.5 w-4.5 text-accent-600" />
+              <h2 className="text-sm font-bold text-ink-900 font-heading">Subordinate Team Performance</h2>
+            </div>
             <button
-              onClick={() => {}}
-              className="mt-4 flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 transition-colors"
+              onClick={() => onNavigate("team")}
+              className="text-xs font-semibold text-accent-600 hover:text-accent-700 transition-colors flex items-center gap-1 cursor-pointer"
             >
-              <BarChart2 className="h-4 w-4" />
-              Score Submissions
-              <ChevronRight className="h-4 w-4" />
+              Open Team Matrix <ChevronRight className="h-3.5 w-3.5" />
             </button>
-          )}
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatCard label="Direct Reportees" value={teamData.team?.length ?? 0} accent="indigo" />
+            <StatCard label="Awaiting Scoring" value={teamData.scoring ?? 0} sub="Pending review" accent="amber" />
+            <StatCard label="Setup Approvals" value={teamData.approvals ?? 0} sub="Pending approval" accent="rose" />
+          </div>
         </div>
       )}
     </div>
@@ -490,11 +531,12 @@ function MyKpiTab({ assignment, fy: _fy, onNavigate }: any) {
     return (
       <div className="space-y-4">
         <ActionAlert
-          eyebrow="No KPI Set Up"
-          title="Define your KRAs for this financial year"
-          body="Go to KPI Setup to add your Job Role KRAs, Core Values, and submit to your manager."
-          cta="Set Up My KPI"
+          eyebrow="Configuration Pending"
+          title="No Approved KPI Setup Found"
+          body="Please set up your Job Role KRAs, Core Values, and target weights to activate your scorecard."
+          cta="Configure KPI Setup"
           onClick={() => onNavigate("setup")}
+          variant="info"
         />
       </div>
     );
@@ -508,54 +550,54 @@ function MyKpiTab({ assignment, fy: _fy, onNavigate }: any) {
   return (
     <div className="space-y-6">
       {/* Status banner */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-white p-5 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)]">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">KPI Assignment Status</p>
-          <div className="mt-2"><KpiAssignmentBadge status={assignment.status as any} /></div>
+          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-ink-400">Scorecard Assignment Status</p>
+          <div className="mt-1.5"><KpiAssignmentBadge status={assignment.status as any} /></div>
           {assignment.rejection_reason && (
-            <p className="mt-2 rounded-lg bg-red-50 p-3 text-sm text-red-700 italic">
-              "{assignment.rejection_reason}"
+            <p className="mt-2 rounded-lg bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700 font-mono">
+              Remarks: "{assignment.rejection_reason}"
             </p>
           )}
         </div>
-        <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-          <span className="rounded-lg bg-gray-100 px-3 py-1.5 font-medium">
-            Job Role: <strong>{assignment.job_role_weight}%</strong>
+        <div className="flex flex-wrap gap-2 text-xs font-mono">
+          <span className="rounded-lg bg-surface-sunken border border-line px-3 py-1.5 text-ink-700">
+            Job Role: <strong className="text-accent-700">{assignment.job_role_weight}%</strong>
           </span>
           {assignment.esms_weight > 0 && (
-            <span className="rounded-lg bg-gray-100 px-3 py-1.5 font-medium">
-              ESMS: <strong>{assignment.esms_weight}%</strong>
+            <span className="rounded-lg bg-surface-sunken border border-line px-3 py-1.5 text-ink-700">
+              ESMS: <strong className="text-accent-700">{assignment.esms_weight}%</strong>
             </span>
           )}
-          <span className="rounded-lg bg-gray-100 px-3 py-1.5 font-medium">
-            Core Values: <strong>{assignment.core_values_weight}%</strong>
+          <span className="rounded-lg bg-surface-sunken border border-line px-3 py-1.5 text-ink-700">
+            Core Values: <strong className="text-accent-700">{assignment.core_values_weight}%</strong>
           </span>
         </div>
       </div>
 
       {/* Job Role KRAs */}
       {jobKras.length > 0 && (
-        <KraSection title="Job Role KRAs" badge={`${assignment.job_role_weight}%`} kras={jobKras} />
+        <KraSection title="Job Role KRAs" badge={`${assignment.job_role_weight}% Weight`} kras={jobKras} />
       )}
 
       {/* ESMS KRAs */}
       {esmsKras.length > 0 && (
-        <KraSection title="ESMS KRAs" badge={`${assignment.esms_weight}%`} kras={esmsKras} />
+        <KraSection title="ESMS & Safety KRAs" badge={`${assignment.esms_weight}% Weight`} kras={esmsKras} />
       )}
 
       {/* Core Values */}
       {coreKras.length > 0 && (
-        <KraSection title="Core Values" badge={`${assignment.core_values_weight}%`} kras={coreKras} />
+        <KraSection title="Organizational Core Values" badge={`${assignment.core_values_weight}% Weight`} kras={coreKras} />
       )}
 
       {/* Actions */}
       {(assignment.status === "draft" || assignment.status === "rejected") && (
         <button
           onClick={() => onNavigate("setup")}
-          className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-600 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-accent-600 hover:bg-accent-700 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
         >
           <Edit3 className="h-4 w-4" />
-          Edit KPI Setup
+          Edit & Resubmit Setup
         </button>
       )}
     </div>
@@ -564,19 +606,19 @@ function MyKpiTab({ assignment, fy: _fy, onNavigate }: any) {
 
 function KraSection({ title, badge, kras }: { title: string; badge: string; kras: KRA[] }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-        <h2 className="text-sm font-semibold text-gray-800">{title}</h2>
-        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600">{badge}</span>
+    <div className="rounded-xl border border-line bg-white shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] overflow-hidden">
+      <div className="flex items-center justify-between border-b border-line bg-surface-sunken px-5 py-3.5">
+        <h2 className="text-xs font-bold font-mono uppercase tracking-wider text-ink-700">{title}</h2>
+        <span className="rounded-full bg-white border border-line px-2.5 py-0.5 text-[10px] font-bold font-mono text-accent-700">{badge}</span>
       </div>
-      <div className="divide-y divide-gray-50">
+      <div className="divide-y divide-line">
         {kras.map((kra, i) => (
-          <div key={i} className="flex items-start justify-between gap-4 px-5 py-4">
+          <div key={i} className="flex items-start justify-between gap-4 px-5 py-4 hover:bg-surface-sunken/40 transition-colors">
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-gray-900">{kra.name}</p>
-              {kra.target && <p className="mt-0.5 text-sm text-gray-500">{kra.target}</p>}
+              <p className="font-semibold text-sm text-ink-900">{kra.name}</p>
+              {kra.target && <p className="mt-0.5 text-xs text-ink-500 font-sans leading-relaxed">{kra.target}</p>}
             </div>
-            <span className="shrink-0 rounded-full bg-gray-900 px-2.5 py-1 text-xs font-bold text-white">
+            <span className="shrink-0 rounded-md bg-accent-50 border border-accent-200 px-2.5 py-1 text-xs font-mono font-bold text-accent-700">
               {kra.weight}%
             </span>
           </div>
@@ -617,20 +659,20 @@ function SubmissionTab({ assignment, submission, month, fy, fyMonths, onMonthCha
     setSaving(true);
     try {
       await kpiService.saveSubmission({ period_month: month, financial_year: fy, self_data: selfData, core_values_ratings: coreRatings, anything_to_add: anythingToAdd });
-      toast.success("Saved");
+      toast.success("Assessment Draft Saved");
       onRefresh();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to save");
+      toast.error(e?.response?.data?.error || "Failed to save draft");
     } finally { setSaving(false); }
   };
 
   const handleSubmit = async () => {
     if (!currentSub) { await handleSave(); }
-    if (!currentSub?.id) return toast.error("Save first");
+    if (!currentSub?.id) return toast.error("Please save draft first");
     setSubmitting(true);
     try {
       await kpiService.submitSubmission(currentSub.id);
-      toast.success("Submitted for manager scoring!");
+      toast.success("Submitted for Manager Scoring!");
       onRefresh();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to submit");
@@ -639,87 +681,89 @@ function SubmissionTab({ assignment, submission, month, fy, fyMonths, onMonthCha
 
   return (
     <div className="space-y-6">
-      {/* Month selector */}
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm font-semibold text-gray-700">Select Month</label>
-        <select
-          value={month}
-          onChange={(e) => onMonthChange(e.target.value)}
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-gray-400 focus:outline-none"
-        >
-          {fyMonths.map((m: string) => (
-            <option key={m} value={m}>{formatMonth(m)}</option>
-          ))}
-        </select>
+      {/* Month Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-line shadow-2xs">
+        <div className="flex items-center gap-3">
+          <label className="text-xs font-mono font-bold text-ink-500 uppercase tracking-wider">Assessment Cycle:</label>
+          <select
+            value={month}
+            onChange={(e) => onMonthChange(e.target.value)}
+            className="rounded-lg border border-line bg-surface-sunken px-3 py-1.5 text-xs font-mono font-bold text-ink-900 shadow-2xs focus:border-accent-600 focus:outline-none"
+          >
+            {fyMonths.map((m: string) => (
+              <option key={m} value={m}>{formatMonth(m)}</option>
+            ))}
+          </select>
+        </div>
         {currentSub && <KpiStatusBadge status={currentSub.status as any} />}
       </div>
 
       {/* Returned notice */}
       {currentSub?.status === "returned" && currentSub.return_reason && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4.5">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
           <div>
-            <p className="font-semibold text-amber-900">Returned by Manager</p>
-            <p className="mt-1 text-sm italic text-amber-800">"{currentSub.return_reason}"</p>
+            <p className="font-bold text-amber-900 text-sm">Returned for Revision by Manager</p>
+            <p className="mt-1 text-xs italic text-amber-800 font-mono">"{currentSub.return_reason}"</p>
           </div>
         </div>
       )}
 
-      {/* Finalized display */}
+      {/* Finalized Score Box */}
       {currentSub?.status === "finalized" && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap gap-4">
-            <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">Final Score</p>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-6 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-6">
+            <div className="text-left">
+              <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800">Final Assessment Score</p>
               <ScoreNumber score={currentSub.final_total_score} size="xl" showOutOf />
-              <ScoreBadge score={currentSub.final_total_score} size="md" />
+              <div className="mt-1"><ScoreBadge score={currentSub.final_total_score} size="md" /></div>
             </div>
-            <div className="flex-1 grid grid-cols-2 gap-3">
-              <StatCard label="Job Role" value={`${currentSub.final_job_score?.toFixed(1) ?? "—"}%`} />
-              <StatCard label="Core Values" value={`${currentSub.final_core_score?.toFixed(1) ?? "—"}%`} />
+            <div className="flex-1 grid grid-cols-2 gap-3 min-w-[240px]">
+              <StatCard label="Job Role Score" value={`${currentSub.final_job_score?.toFixed(1) ?? "—"}%`} accent="emerald" />
+              <StatCard label="Core Values Score" value={`${currentSub.final_core_score?.toFixed(1) ?? "—"}%`} accent="emerald" />
             </div>
           </div>
         </div>
       )}
 
       {!assignment && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          No active KPI assignment for FY {fy}. Set up your KPI first.
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 font-mono">
+          No active KPI assignment found for FY {fy}. Please complete KPI Setup first.
         </div>
       )}
 
       {assignment && kras.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Job Role KRAs self-assessment */}
           {kras.filter((k) => k.section === "job_role").length > 0 && (
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-                <h2 className="text-sm font-semibold text-gray-800">Job Role KRAs — Self Assessment</h2>
-                <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600">
-                  {assignment.job_role_weight}%
+            <div className="rounded-xl border border-line bg-white shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] overflow-hidden">
+              <div className="flex items-center justify-between border-b border-line bg-surface-sunken px-5 py-3.5">
+                <h2 className="text-xs font-bold font-mono uppercase tracking-wider text-ink-700">Job Role Self-Assessment</h2>
+                <span className="rounded-full bg-white border border-line px-2.5 py-0.5 text-[10px] font-bold font-mono text-accent-700">
+                  {assignment.job_role_weight}% Weight
                 </span>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-line">
                 {kras.filter((k) => k.section === "job_role").map((kra, i) => (
-                  <div key={i} className="px-5 py-4">
-                    <div className="flex items-start justify-between gap-2 mb-2">
+                  <div key={i} className="p-5 space-y-2.5">
+                    <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-medium text-gray-900">{kra.name}</p>
-                        {kra.target && <p className="text-sm text-gray-400">{kra.target}</p>}
+                        <p className="font-bold text-sm text-ink-900">{kra.name}</p>
+                        {kra.target && <p className="text-xs text-ink-500 font-sans mt-0.5">{kra.target}</p>}
                       </div>
-                      <span className="shrink-0 rounded-full bg-gray-900 px-2 py-0.5 text-xs font-bold text-white">
+                      <span className="shrink-0 rounded-md bg-accent-50 border border-accent-200 px-2 py-0.5 text-xs font-mono font-bold text-accent-700">
                         {kra.weight}%
                       </span>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500">What did you achieve?</label>
+                      <label className="text-[11px] font-mono font-bold text-ink-500 uppercase tracking-wider">Achievements & Evidences:</label>
                       <textarea
                         value={selfData[kra.name] || ""}
                         onChange={(e) => setSelfData((prev) => ({ ...prev, [kra.name]: e.target.value }))}
                         disabled={!isEditable}
                         rows={2}
-                        placeholder="Describe your achievement for this KRA..."
-                        className="mt-1 w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 placeholder:text-gray-300 focus:border-gray-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 resize-none"
+                        placeholder="Detail your monthly accomplishments against this KRA..."
+                        className="mt-1 w-full rounded-lg border border-line p-3 text-xs text-ink-900 placeholder:text-ink-300 focus:border-accent-600 focus:ring-2 focus:ring-accent-500/20 focus:outline-none disabled:bg-surface-sunken disabled:text-ink-400 resize-none font-sans"
                       />
                     </div>
                   </div>
@@ -729,24 +773,24 @@ function SubmissionTab({ assignment, submission, month, fy, fyMonths, onMonthCha
           )}
 
           {/* Core Values ratings */}
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-              <h2 className="text-sm font-semibold text-gray-800">Core Values — Self Rating</h2>
-              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-600">
-                {assignment.core_values_weight}%
+          <div className="rounded-xl border border-line bg-white shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] overflow-hidden">
+            <div className="flex items-center justify-between border-b border-line bg-surface-sunken px-5 py-3.5">
+              <h2 className="text-xs font-bold font-mono uppercase tracking-wider text-ink-700">Organizational Core Values (Self-Rating)</h2>
+              <span className="rounded-full bg-white border border-line px-2.5 py-0.5 text-[10px] font-bold font-mono text-accent-700">
+                {assignment.core_values_weight}% Weight
               </span>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-line">
               {CORE_VALUES_OPTIONS.map((cv) => (
-                <div key={cv} className="flex items-center justify-between gap-4 px-5 py-3.5">
-                  <p className="text-sm font-medium text-gray-800">{cv}</p>
+                <div key={cv} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-3.5 hover:bg-surface-sunken/40 transition-colors">
+                  <p className="text-xs font-semibold text-ink-800">{cv}</p>
                   <select
                     value={coreRatings[cv] || ""}
                     onChange={(e) => setCoreRatings((prev) => ({ ...prev, [cv]: parseInt(e.target.value) || 0 }))}
                     disabled={!isEditable}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 focus:border-gray-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                    className="rounded-lg border border-line bg-surface-sunken px-3 py-1.5 text-xs font-mono font-semibold text-ink-800 focus:border-accent-600 focus:outline-none disabled:opacity-60"
                   >
-                    <option value="">Select rating</option>
+                    <option value="">Select rating benchmark</option>
                     {CORE_VALUE_RATINGS.map((r) => (
                       <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
@@ -757,15 +801,15 @@ function SubmissionTab({ assignment, submission, month, fy, fyMonths, onMonthCha
           </div>
 
           {/* Anything to add */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold text-gray-800">Anything Else to Add?</h2>
+          <div className="rounded-xl border border-line bg-white p-5 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)]">
+            <h2 className="mb-2 text-xs font-mono font-bold uppercase tracking-wider text-ink-700">Additional Remarks / Highlights</h2>
             <textarea
               value={anythingToAdd}
               onChange={(e) => setAnythingToAdd(e.target.value)}
               disabled={!isEditable}
               rows={3}
-              placeholder="Any additional context, achievements, or notes for your manager..."
-              className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 placeholder:text-gray-300 focus:border-gray-400 focus:outline-none disabled:bg-gray-50 resize-none"
+              placeholder="Provide any additional operational challenges, exceptional highlights, or support needed..."
+              className="w-full rounded-lg border border-line p-3 text-xs text-ink-900 placeholder:text-ink-300 focus:border-accent-600 focus:ring-2 focus:ring-accent-500/20 focus:outline-none disabled:bg-surface-sunken resize-none font-sans"
             />
           </div>
 
@@ -775,7 +819,7 @@ function SubmissionTab({ assignment, submission, month, fy, fyMonths, onMonthCha
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg border border-line bg-white px-5 py-2.5 text-xs font-bold text-ink-700 hover:bg-surface-sunken shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 {saving ? "Saving…" : "Save Draft"}
@@ -783,10 +827,10 @@ function SubmissionTab({ assignment, submission, month, fy, fyMonths, onMonthCha
               <button
                 onClick={handleSubmit}
                 disabled={submitting || saving}
-                className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 rounded-lg bg-accent-600 hover:bg-accent-700 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />
-                {submitting ? "Submitting…" : "Submit for Scoring"}
+                {submitting ? "Submitting…" : "Submit for Manager Scoring"}
               </button>
             </div>
           )}
@@ -797,44 +841,44 @@ function SubmissionTab({ assignment, submission, month, fy, fyMonths, onMonthCha
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ─── History / Score Trend Tab ───────────────────────────────────────
+// ─── History Tab ─────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════
 function HistoryTab({ history, trendPoints, fy: _fy2, onRefresh: _onRefresh2 }: any) {
   const fy = _fy2;
   return (
     <div className="space-y-6">
       {/* Trend chart */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-1 text-sm font-semibold text-gray-800">Score Trend</h2>
-        <p className="mb-4 text-xs text-gray-400">Monthly final scores plotted on a 100-point scale with band regions.</p>
+      <div className="rounded-xl border border-line bg-white p-5 sm:p-6 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)]">
+        <h2 className="text-sm font-bold text-ink-900 font-heading">Historical Performance Trajectory</h2>
+        <p className="mb-4 text-xs text-ink-400 font-mono">Monthly finalized scores plotted with standard benchmark ranges</p>
         <ScoreTrendChart points={trendPoints} height={220} />
       </div>
 
       {/* Month-by-month table */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-4">
-          <h2 className="text-sm font-semibold text-gray-800">Month-by-Month Assessment History</h2>
+      <div className="rounded-xl border border-line bg-white shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] overflow-hidden">
+        <div className="border-b border-line bg-surface-sunken px-5 py-3.5">
+          <h2 className="text-xs font-bold font-mono uppercase tracking-wider text-ink-700">Assessment History — FY {fy}</h2>
         </div>
         {history.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-400">
-            No assessments recorded yet for FY {fy}.
+          <div className="px-5 py-12 text-center text-xs font-mono text-ink-400">
+            No assessment records found for FY {fy}.
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-line">
             {history.map((s: KpiSubmission) => (
-              <div key={s.id} className="flex items-center justify-between gap-4 px-5 py-4">
+              <div key={s.id} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-surface-sunken/40 transition-colors">
                 <div>
-                  <p className="font-medium text-gray-900">{formatMonth(s.period_month)}</p>
+                  <p className="font-bold text-sm text-ink-900 font-mono">{formatMonth(s.period_month)}</p>
                   <div className="mt-1"><KpiStatusBadge status={s.status as any} /></div>
                 </div>
                 <div className="flex items-center gap-4">
                   {s.final_total_score !== null && s.final_total_score !== undefined ? (
                     <div className="text-right">
                       <ScoreNumber score={s.final_total_score} size="md" />
-                      <ScoreBadge score={s.final_total_score} size="sm" />
+                      <div className="mt-0.5"><ScoreBadge score={s.final_total_score} size="sm" /></div>
                     </div>
                   ) : (
-                    <span className="text-gray-300 text-sm">—</span>
+                    <span className="text-ink-300 text-xs font-mono">—</span>
                   )}
                 </div>
               </div>
@@ -847,7 +891,7 @@ function HistoryTab({ history, trendPoints, fy: _fy2, onRefresh: _onRefresh2 }: 
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ─── Team Tab ────────────────────────────────────────────────────────
+// ─── Team Tab (Manager Console) ───────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════
 function TeamTab({ teamData, fy: _fyTeam, month, fyMonths, onMonthChange, onRefresh }: any) {
   const team = teamData?.team || [];
@@ -855,45 +899,47 @@ function TeamTab({ teamData, fy: _fyTeam, month, fyMonths, onMonthChange, onRefr
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-sm font-semibold text-gray-700">Viewing Month</h2>
-        <select
-          value={month}
-          onChange={(e) => onMonthChange(e.target.value)}
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-gray-400 focus:outline-none"
-        >
-          {fyMonths.map((m: string) => (
-            <option key={m} value={m}>{formatMonth(m)}</option>
-          ))}
-        </select>
-        <button onClick={onRefresh} className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600 hover:bg-gray-50">
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-line shadow-2xs">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xs font-mono font-bold text-ink-500 uppercase tracking-wider">Review Cycle:</h2>
+          <select
+            value={month}
+            onChange={(e) => onMonthChange(e.target.value)}
+            className="rounded-lg border border-line bg-surface-sunken px-3 py-1.5 text-xs font-mono font-bold text-ink-900 shadow-2xs focus:border-accent-600 focus:outline-none"
+          >
+            {fyMonths.map((m: string) => (
+              <option key={m} value={m}>{formatMonth(m)}</option>
+            ))}
+          </select>
+        </div>
+        <button onClick={onRefresh} className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-surface-sunken transition-all shadow-2xs cursor-pointer">
+          <RefreshCw className="h-3.5 w-3.5 text-ink-500" /> Refresh Team
         </button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatCard label="Team Size" value={team.length} />
-        <StatCard label="Submitted" value={submissions.filter((s: any) => s.status !== "draft").length} sub={`for ${formatMonth(month)}`} />
-        <StatCard label="Awaiting Scoring" value={teamData?.scoring ?? 0} />
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
+        <StatCard label="Direct Reportees" value={team.length} accent="indigo" />
+        <StatCard label="Submitted Claims" value={submissions.filter((s: any) => s.status !== "draft").length} sub={`for ${formatMonth(month)}`} accent="emerald" />
+        <StatCard label="Pending Manager Scoring" value={teamData?.scoring ?? 0} accent="amber" />
       </div>
 
       {/* Team list */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <div className="border-b border-gray-100 px-5 py-4">
-          <h2 className="text-sm font-semibold text-gray-800">Team Members — {formatMonth(month)}</h2>
+      <div className="rounded-xl border border-line bg-white shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] overflow-hidden">
+        <div className="border-b border-line bg-surface-sunken px-5 py-3.5">
+          <h2 className="text-xs font-bold font-mono uppercase tracking-wider text-ink-700">Team Performance Directory — {formatMonth(month)}</h2>
         </div>
         {team.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-400">No team members found.</div>
+          <div className="px-5 py-12 text-center text-xs font-mono text-ink-400">No mapped reportees found.</div>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-line">
             {team.map((member: any) => {
               const sub = submissions.find((s: any) => s.user_id === member.user_id);
               return (
-                <div key={member.user_id} className="flex items-center justify-between gap-4 px-5 py-4">
+                <div key={member.user_id} className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-surface-sunken/40 transition-colors">
                   <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{member.name}</p>
-                    <p className="text-xs text-gray-400">{member.role} · {member.district}</p>
+                    <p className="font-bold text-sm text-ink-900 truncate">{member.name}</p>
+                    <p className="text-xs text-ink-400 font-mono mt-0.5">{member.role} · {member.district}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     {sub ? (
@@ -927,7 +973,7 @@ function ApprovalsTab({ pending, onRefresh }: any) {
     setBusy(true);
     try {
       await kpiService.approveAssignment(id);
-      toast.success("KPI approved!");
+      toast.success("KPI Setup Approved!");
       onRefresh();
     } catch (e: any) {
       toast.error(e?.response?.data?.error || "Failed to approve");
@@ -935,57 +981,56 @@ function ApprovalsTab({ pending, onRefresh }: any) {
   };
 
   const handleReject = async (id: number) => {
-    if (!rejReason.trim()) return toast.error("Enter a reason");
+    if (!rejReason.trim()) return toast.error("Please enter revision remarks");
     setBusy(true);
     try {
       await kpiService.rejectAssignment(id, rejReason);
-      toast.success("KPI returned to employee");
+      toast.success("KPI Setup Returned for Revision");
       setActionId(null);
       setRejReason("");
       onRefresh();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to reject");
+      toast.error(e?.response?.data?.error || "Failed to return setup");
     } finally { setBusy(false); }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-800">Pending KPI Approvals</h2>
-        <button onClick={onRefresh} className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-ink-700">Pending Setup Approvals</h2>
+        <button onClick={onRefresh} className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-surface-sunken transition-all shadow-2xs cursor-pointer">
+          <RefreshCw className="h-3.5 w-3.5 text-ink-500" /> Refresh
         </button>
       </div>
 
       {pending.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 py-16 text-center">
-          <CheckSquare className="h-8 w-8 text-emerald-500 mb-3" />
-          <p className="font-medium text-gray-700">All clear!</p>
-          <p className="text-sm text-gray-400 mt-1">No KPI setups are waiting for your approval.</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-line bg-white py-16 text-center shadow-2xs">
+          <CheckSquare className="h-8 w-8 text-emerald-500 mb-2.5" />
+          <p className="font-bold text-ink-800 text-sm">All Setups Reviewed</p>
+          <p className="text-xs text-ink-400 font-mono mt-1">No employee KPI setups are currently awaiting approval.</p>
         </div>
       ) : (
         pending.map((item: any) => {
           const kras: KRA[] = parseJSON(item.kras, []);
           const isRejecting = actionId === item.id;
           return (
-            <div key={item.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
+            <div key={item.id} className="rounded-xl border border-line bg-white p-5 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <p className="font-semibold text-gray-900">{item.name}</p>
-                  <p className="text-sm text-gray-400">{item.role} · {item.district}</p>
-                  <p className="mt-1 text-xs text-gray-400">Submitted · FY {item.financial_year}</p>
+                  <p className="font-bold text-base text-ink-900">{item.name}</p>
+                  <p className="text-xs text-ink-400 font-mono mt-0.5">{item.role} · {item.district} · FY {item.financial_year}</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button
                     onClick={() => handleApprove(item.id)}
                     disabled={busy}
-                    className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <Check className="h-3.5 w-3.5" /> Approve
                   </button>
                   <button
                     onClick={() => { setActionId(item.id); setRejReason(""); }}
-                    className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-700 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-colors"
+                    className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-4 py-2 text-xs font-bold text-ink-700 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-700 shadow-2xs transition-colors cursor-pointer"
                   >
                     <X className="h-3.5 w-3.5" /> Return
                   </button>
@@ -994,37 +1039,37 @@ function ApprovalsTab({ pending, onRefresh }: any) {
 
               {/* KRA preview */}
               {kras.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-line">
                   {kras.slice(0, 5).map((k, i) => (
-                    <span key={i} className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600">
-                      {k.name} · {k.weight}%
+                    <span key={i} className="rounded-md bg-surface-sunken border border-line px-2.5 py-1 text-xs font-mono text-ink-700">
+                      {k.name} · <strong className="text-accent-700">{k.weight}%</strong>
                     </span>
                   ))}
-                  {kras.length > 5 && <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-500">+{kras.length - 5} more</span>}
+                  {kras.length > 5 && <span className="rounded-md bg-surface-sunken border border-line px-2.5 py-1 text-xs font-mono text-ink-500">+{kras.length - 5} more</span>}
                 </div>
               )}
 
               {/* Rejection form */}
               {isRejecting && (
-                <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                <div className="space-y-3 border-t border-line pt-4">
                   <textarea
                     value={rejReason}
                     onChange={(e) => setRejReason(e.target.value)}
-                    placeholder="Reason for returning (required)..."
+                    placeholder="Enter specific revision feedback for the employee..."
                     rows={2}
-                    className="w-full rounded-xl border border-gray-200 p-3 text-sm resize-none focus:border-gray-400 focus:outline-none"
+                    className="w-full rounded-lg border border-line p-3 text-xs text-ink-900 placeholder:text-ink-300 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20 focus:outline-none resize-none"
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleReject(item.id)}
                       disabled={busy}
-                      className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                      className="rounded-lg bg-rose-600 hover:bg-rose-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                     >
                       Confirm Return
                     </button>
                     <button
                       onClick={() => { setActionId(null); setRejReason(""); }}
-                      className="rounded-xl border border-gray-200 px-4 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="rounded-lg border border-line bg-white px-4 py-2 text-xs font-semibold text-ink-600 hover:bg-surface-sunken cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -1060,46 +1105,46 @@ function DeletionsTab({ deletions, isManager, onRefresh }: any) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-800">Deletion Requests</h2>
-        <button onClick={onRefresh} className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-ink-700">Deletion Requests</h2>
+        <button onClick={onRefresh} className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-surface-sunken shadow-2xs cursor-pointer">
+          <RefreshCw className="h-3.5 w-3.5 text-ink-500" /> Refresh
         </button>
       </div>
 
       {deletions.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 py-16 text-center">
-          <Trash2 className="h-8 w-8 text-gray-300 mb-3" />
-          <p className="font-medium text-gray-500">No deletion requests</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-line bg-white py-16 text-center shadow-2xs">
+          <Trash2 className="h-8 w-8 text-ink-300 mb-2.5" />
+          <p className="font-bold text-ink-700 text-sm">No Pending Deletion Requests</p>
         </div>
       ) : (
         deletions.map((d: any) => (
-          <div key={d.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div key={d.id} className="rounded-xl border border-line bg-white p-5 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)]">
             <div className="flex items-start justify-between gap-3">
               <div>
-                {d.name && <p className="font-semibold text-gray-900">{d.name}</p>}
-                <p className="text-sm text-gray-500">{formatMonth(d.period_month)} · FY {d.financial_year}</p>
-                <p className="mt-2 text-sm text-gray-700">Reason: <span className="italic">"{d.reason}"</span></p>
+                {d.name && <p className="font-bold text-sm text-ink-900">{d.name}</p>}
+                <p className="text-xs text-ink-400 font-mono mt-0.5">{formatMonth(d.period_month)} · FY {d.financial_year}</p>
+                <p className="mt-2 text-xs text-ink-700 font-sans">Reason: <span className="italic">"{d.reason}"</span></p>
               </div>
-              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold border
-                ${d.status === "pending" ? "bg-amber-100 text-amber-700 border-amber-200" :
-                  d.status === "approved" ? "bg-emerald-100 text-emerald-700 border-emerald-200" :
-                  "bg-red-100 text-red-700 border-red-200"}`}>
+              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-mono font-semibold border
+                ${d.status === "pending" ? "bg-amber-50 text-amber-800 border-amber-200" :
+                  d.status === "approved" ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
+                  "bg-rose-50 text-rose-800 border-rose-200"}`}>
                 {d.status}
               </span>
             </div>
             {isManager && d.status === "pending" && (
-              <div className="mt-4 flex gap-2 border-t border-gray-100 pt-4">
+              <div className="mt-4 flex gap-2 border-t border-line pt-4">
                 <button
                   onClick={() => handleAction(d.id, "approve")}
                   disabled={busy}
-                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <Check className="h-3.5 w-3.5" /> Approve
                 </button>
                 <button
                   onClick={() => handleAction(d.id, "reject")}
                   disabled={busy}
-                  className="flex items-center gap-1.5 rounded-xl border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-4 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 shadow-2xs cursor-pointer disabled:opacity-50"
                 >
                   <X className="h-3.5 w-3.5" /> Reject
                 </button>
@@ -1121,11 +1166,11 @@ function QueriesTab({ queries, isManager, onRefresh }: any) {
 
   const handleRespond = async (id: number) => {
     const text = responseMap[id];
-    if (!text?.trim()) return toast.error("Enter a response");
+    if (!text?.trim()) return toast.error("Please enter a response");
     setBusy(id);
     try {
       await kpiService.respondToQuery(id, text);
-      toast.success("Response saved");
+      toast.success("Query response dispatched");
       setResponseMap((prev) => { const n = { ...prev }; delete n[id]; return n; });
       onRefresh();
     } catch (e: any) {
@@ -1136,51 +1181,51 @@ function QueriesTab({ queries, isManager, onRefresh }: any) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-800">Score Queries</h2>
-        <button onClick={onRefresh} className="flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50">
-          <RefreshCw className="h-3.5 w-3.5" /> Refresh
+        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-ink-700">Performance Score Queries</h2>
+        <button onClick={onRefresh} className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 hover:bg-surface-sunken shadow-2xs cursor-pointer">
+          <RefreshCw className="h-3.5 w-3.5 text-ink-500" /> Refresh
         </button>
       </div>
 
       {queries.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 py-16 text-center">
-          <MessageCircle className="h-8 w-8 text-gray-300 mb-3" />
-          <p className="font-medium text-gray-500">No queries raised</p>
-          <p className="text-sm text-gray-400 mt-1">Score queries from finalized months appear here.</p>
+        <div className="flex flex-col items-center justify-center rounded-xl border border-line bg-white py-16 text-center shadow-2xs">
+          <MessageCircle className="h-8 w-8 text-ink-300 mb-2.5" />
+          <p className="font-bold text-ink-700 text-sm">No Active Queries</p>
+          <p className="text-xs text-ink-400 font-mono mt-1">Queries raised regarding finalized scores appear here.</p>
         </div>
       ) : (
         queries.map((q: any) => (
-          <div key={q.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-2">
+          <div key={q.id} className="rounded-xl border border-line bg-white p-5 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] space-y-3">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                {q.name && <p className="font-semibold text-gray-900">{q.name}</p>}
-                <p className="text-xs text-gray-400">{formatMonth(q.period_month)} · FY {q.financial_year}</p>
-                <p className="mt-2 text-sm text-gray-800">{q.query_text}</p>
+                {q.name && <p className="font-bold text-sm text-ink-900">{q.name}</p>}
+                <p className="text-xs text-ink-400 font-mono mt-0.5">{formatMonth(q.period_month)} · FY {q.financial_year}</p>
+                <p className="mt-2 text-xs text-ink-800 font-sans leading-relaxed">{q.query_text}</p>
               </div>
-              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold border
-                ${q.status === "open" ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-gray-100 text-gray-500 border-gray-200"}`}>
+              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-mono font-semibold border
+                ${q.status === "open" ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-surface-sunken text-ink-500 border-line"}`}>
                 {q.status}
               </span>
             </div>
             {q.response_text && (
-              <div className="mt-3 rounded-xl bg-gray-50 p-3 text-sm text-gray-700 border-l-4 border-gray-300">
-                <p className="text-xs font-semibold text-gray-400 mb-1">Manager Response</p>
+              <div className="rounded-lg bg-surface-sunken p-3 text-xs text-ink-800 border-l-3 border-accent-600 font-sans">
+                <p className="text-[10px] font-mono font-bold text-ink-500 uppercase tracking-wider mb-1">Manager Response</p>
                 {q.response_text}
               </div>
             )}
             {isManager && q.status === "open" && (
-              <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
+              <div className="space-y-2 border-t border-line pt-3">
                 <textarea
                   value={responseMap[q.id] || ""}
                   onChange={(e) => setResponseMap((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                  placeholder="Write your response..."
+                  placeholder="Draft your response to the employee..."
                   rows={2}
-                  className="w-full rounded-xl border border-gray-200 p-3 text-sm resize-none focus:border-gray-400 focus:outline-none"
+                  className="w-full rounded-lg border border-line p-3 text-xs text-ink-900 placeholder:text-ink-300 focus:border-accent-600 focus:outline-none resize-none font-sans"
                 />
                 <button
                   onClick={() => handleRespond(q.id)}
                   disabled={busy === q.id}
-                  className="flex items-center gap-1.5 rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg bg-accent-600 hover:bg-accent-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
                   {busy === q.id ? "Sending…" : "Send Response"}
@@ -1195,7 +1240,7 @@ function QueriesTab({ queries, isManager, onRefresh }: any) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-// ─── KPI Setup Tab ───────────────────────────────────────────────────
+// ─── KPI Setup Tab (Zoho KRA Builder) ─────────────────────────────────
 // ════════════════════════════════════════════════════════════════════
 function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
   const [kras, setKras] = useState<KRA[]>([]);
@@ -1224,27 +1269,27 @@ function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
 
   const handleSave = async () => {
     if (!isWeightOk) return toast.error("Job Role KRA weights cannot exceed 80%");
-    if (kras.some((k) => !k.name.trim())) return toast.error("All KRAs must have a name");
+    if (kras.some((k) => !k.name.trim())) return toast.error("All KRAs must have a descriptive title");
     setSaving(true);
     try {
       await kpiService.saveAssignment({ financial_year: fy, kras, starts_from: startsFrom || undefined });
-      toast.success("KPI saved as draft");
+      toast.success("KPI Setup Draft Saved");
       onRefresh();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to save");
+      toast.error(e?.response?.data?.error || "Failed to save draft");
     } finally { setSaving(false); }
   };
 
   const handleSubmitForApproval = async () => {
     await handleSave();
-    if (!assignment?.id) { toast.error("Save first"); return; }
+    if (!assignment?.id) { toast.error("Please save draft first"); return; }
     setSubmitting(true);
     try {
       await kpiService.submitAssignment(assignment.id);
-      toast.success("Submitted for manager approval!");
+      toast.success("Submitted for Manager Approval!");
       onRefresh();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || "Failed to submit");
+      toast.error(e?.response?.data?.error || "Failed to submit for approval");
     } finally { setSubmitting(false); }
   };
 
@@ -1254,63 +1299,63 @@ function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
     <div className="space-y-6">
       {/* Status */}
       {assignment && (
-        <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-4">
+        <div className="flex items-center gap-3 rounded-xl border border-line bg-white px-5 py-4 shadow-2xs">
           <KpiAssignmentBadge status={assignment.status} />
           {assignment.status === "pending_approval" && (
-            <p className="text-sm text-gray-500">KPI is with your manager for approval. You cannot edit it now.</p>
+            <p className="text-xs text-ink-500 font-mono">KPI Setup is under review with your manager.</p>
           )}
           {assignment.status === "active" && (
-            <p className="text-sm text-gray-500">KPI is approved and active. Contact your manager to make changes.</p>
+            <p className="text-xs text-ink-500 font-mono">KPI Setup is approved and active for FY {fy}.</p>
           )}
         </div>
       )}
 
       {/* Starts From */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-gray-800">When does your KPI start?</h2>
+      <div className="rounded-xl border border-line bg-white p-5 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)]">
+        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-ink-700 mb-2">Effective Joining / Scorecard Month</h2>
         <select
           value={startsFrom}
           onChange={(e) => setStartsFrom(e.target.value)}
           disabled={isLocked}
-          className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-800 focus:border-gray-400 focus:outline-none disabled:bg-gray-50"
+          className="rounded-lg border border-line bg-surface-sunken px-3 py-2 text-xs font-mono font-semibold text-ink-900 focus:border-accent-600 focus:outline-none disabled:opacity-60"
         >
-          <option value="">April (whole year)</option>
+          <option value="">April (Full Financial Year)</option>
           {fyMonths.map((m: string) => (
             <option key={m} value={m}>{formatMonth(m)}</option>
           ))}
         </select>
-        <p className="mt-2 text-xs text-gray-400">
-          Select April if you were here for the whole year, otherwise pick your joining month.
+        <p className="mt-2 text-[11px] text-ink-400 font-sans">
+          Select April if you were active for the full year, or choose your official company induction month.
         </p>
       </div>
 
       {/* KRA Editor */}
-      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+      <div className="rounded-xl border border-line bg-white shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line bg-surface-sunken px-5 py-3.5">
           <div>
-            <h2 className="text-sm font-semibold text-gray-800">Job Role KRAs</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Total weight: <span className={isWeightOk ? "text-gray-600 font-semibold" : "text-red-600 font-semibold"}>{totalWeight}% / 80%</span></p>
+            <h2 className="text-xs font-bold font-mono uppercase tracking-wider text-ink-700">Job Role KRAs Configuration</h2>
+            <p className="text-[11px] text-ink-400 font-mono mt-0.5">Cumulative Allocated Weight: <span className={isWeightOk ? "text-accent-700 font-bold" : "text-rose-600 font-bold"}>{totalWeight}% / 80% Max</span></p>
           </div>
           {!isLocked && (
             <button
               onClick={addKra}
-              className="flex items-center gap-1.5 rounded-xl bg-gray-900 px-3 py-2 text-xs font-bold text-white hover:bg-red-600 transition-colors"
+              className="flex items-center gap-1.5 rounded-lg bg-accent-600 hover:bg-accent-700 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" /> Add KRA
             </button>
           )}
         </div>
 
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-line">
           {kras.filter((k) => k.section === "job_role").map((kra, i) => (
-            <div key={i} className="px-5 py-4 space-y-3">
+            <div key={i} className="p-5 space-y-3">
               <div className="flex items-center gap-2">
                 <input
                   value={kra.name}
                   onChange={(e) => updateKra(i, "name", e.target.value)}
                   disabled={isLocked}
-                  placeholder="KRA Name (e.g. Customer Satisfaction)"
-                  className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-800 focus:border-gray-400 focus:outline-none disabled:bg-gray-50"
+                  placeholder="KRA Name (e.g. Machine Uptime & Preventative Maintenance)"
+                  className="flex-1 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-ink-900 focus:border-accent-600 focus:ring-2 focus:ring-accent-500/20 focus:outline-none disabled:bg-surface-sunken"
                 />
                 <div className="flex items-center gap-1 shrink-0">
                   <input
@@ -1318,14 +1363,14 @@ function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
                     value={kra.weight}
                     onChange={(e) => updateKra(i, "weight", Math.max(1, Math.min(80, parseInt(e.target.value) || 1)))}
                     disabled={isLocked}
-                    className="w-16 rounded-xl border border-gray-200 px-2 py-2 text-sm text-center font-bold text-gray-800 focus:border-gray-400 focus:outline-none disabled:bg-gray-50"
+                    className="w-16 rounded-lg border border-line px-2 py-2 text-xs text-center font-mono font-bold text-ink-900 focus:border-accent-600 focus:outline-none disabled:bg-surface-sunken"
                   />
-                  <span className="text-xs text-gray-400 font-medium">%</span>
+                  <span className="text-xs text-ink-400 font-mono font-bold">%</span>
                 </div>
                 {!isLocked && (
                   <button
                     onClick={() => removeKra(i)}
-                    className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    className="rounded-lg p-2 text-ink-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1335,8 +1380,8 @@ function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
                 value={kra.target}
                 onChange={(e) => updateKra(i, "target", e.target.value)}
                 disabled={isLocked}
-                placeholder="Target / description for this KRA..."
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-600 placeholder:text-gray-300 focus:border-gray-400 focus:outline-none disabled:bg-gray-50"
+                placeholder="Target milestone / description (e.g. 98% uptime across all assigned installations)..."
+                className="w-full rounded-lg border border-line px-3 py-2 text-xs text-ink-600 placeholder:text-ink-300 focus:border-accent-600 focus:outline-none disabled:bg-surface-sunken"
               />
             </div>
           ))}
@@ -1349,7 +1394,7 @@ function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
           <button
             onClick={handleSave}
             disabled={saving || submitting}
-            className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg border border-line bg-white px-5 py-2.5 text-xs font-bold text-ink-700 hover:bg-surface-sunken shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {saving ? "Saving…" : "Save Draft"}
@@ -1357,7 +1402,7 @@ function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
           <button
             onClick={handleSubmitForApproval}
             disabled={saving || submitting}
-            className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-3 text-sm font-semibold text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-accent-600 hover:bg-accent-700 px-5 py-2.5 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
             {submitting ? "Submitting…" : "Submit for Manager Approval"}
