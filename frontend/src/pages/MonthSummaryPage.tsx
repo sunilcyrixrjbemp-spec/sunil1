@@ -346,7 +346,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
       const legTotal = leg.ta_amount + leg.bike_amount + leg.car_amount + leg.auto_amount + leg.da_amount + leg.local_purchase + leg.hotel_amount + leg.other_amount;
       
-      // If total approved reimbursement amount is 0 (deducted by system policy or not payable), do not show in PDF table
+      // If total approved reimbursement amount is 0 (deducted by policy/rejected), do not show in PDF
       if (legTotal <= 0) {
         continue;
       }
@@ -439,21 +439,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     return map[m] || m;
   };
 
+  // Only show real ticket numbers; no barcodes
   const getCleanTicketNumber = (l: any): string => {
-    // Prefer single complaint/ticket id if present
-    const singleTicket = String(l.complaint_id || l.ticket_no || l.ticket_id || l.mpt_id || "").trim();
-    if (singleTicket && singleTicket !== "—" && singleTicket !== "-") {
-      return singleTicket.replace(/barcode[:\s]*/gi, "").trim();
-    }
-
-    const raw = String(l.barcode_ticket || "").trim();
-    if (!raw || raw === "—" || raw === "-") return "—";
-
-    const items = raw.split(/[,;\s]+/).map(s => s.replace(/barcode[:\s]*/gi, "").trim()).filter(Boolean);
-    if (items.length === 0) return "—";
-    if (items.length === 1) return items[0];
-    if (items.length === 2) return `${items[0]}, ${items[1]}`;
-    return `${items[0]} (+${items.length - 1})`;
+    const raw = String(l.complaint_id || l.ticket_no || l.ticket_id || l.mpt_id || "").trim();
+    if (!raw || raw === "—" || raw === "-" || raw.toLowerCase().includes("barcode")) return "";
+    return raw.replace(/barcode[:\s]*/gi, "").trim();
   };
 
   const isCallOrPmsReport = (label: string = "", billType: string = ""): boolean => {
@@ -468,12 +458,13 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
   const getAttachmentNormKey = (urlStr: string): string => {
     if (!urlStr) return "";
-    if (urlStr.startsWith("data:")) return urlStr.slice(0, 120);
+    if (urlStr.startsWith("data:")) return urlStr.slice(0, 150);
     const clean = urlStr.split("?")[0].replace(/^https?:\/\/[^\/]+/, "").replace(/^\//, "");
     const base = clean.split("/").pop() || clean;
-    return base.toLowerCase().replace(/\.[^/.]+$/, "");
+    return base.toLowerCase().replace(/\.[^/.]+$/, "").trim();
   };
 
+  // Strict Deduplication Map
   const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
   const seenNormKeys = new Set<string>();
 
@@ -569,44 +560,28 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
   const finalAttachments = Array.from(allAttachmentsMap.values());
 
-  // ── ORGANIZED 4-PER-PAGE BILL ATTACHMENTS GRID WITH SUBTLE SLATE HEADER ──
+  // ── 1 DEDICATED FULL A4 PAGE PER UNIQUE BILL ATTACHMENT ──
   let attachmentsSection = "";
   if (finalAttachments.length > 0) {
-    const ATTS_PER_PAGE = 4;
-    const totalAttPages = Math.ceil(finalAttachments.length / ATTS_PER_PAGE);
+    const totalAtts = finalAttachments.length;
+    attachmentsSection = finalAttachments.map((att: any, idx: number) => {
+      const rawUrl = att.url;
+      const base64OrUrl = base64Lookup.get(rawUrl) || base64Lookup.get(getAbsoluteUrl(rawUrl)) || rawUrl;
+      const absoluteUrl = base64OrUrl.startsWith("data:") ? base64OrUrl : getAbsoluteUrl(base64OrUrl);
+      const dateStr = att.date || `Receipt #${idx + 1}`;
+      const attLabel = att.label || "Expense Bill";
 
-    for (let p = 0; p < totalAttPages; p++) {
-      const pageAtts = finalAttachments.slice(p * ATTS_PER_PAGE, (p + 1) * ATTS_PER_PAGE);
-      const gridItems = pageAtts.map((att: any, aIndex) => {
-        const rawUrl = att.url;
-        const base64OrUrl = base64Lookup.get(rawUrl) || base64Lookup.get(getAbsoluteUrl(rawUrl)) || rawUrl;
-        const absoluteUrl = base64OrUrl.startsWith("data:") ? base64OrUrl : getAbsoluteUrl(base64OrUrl);
-        const dateStr = att.date || `Receipt #${p * ATTS_PER_PAGE + aIndex + 1}`;
-        const attLabel = att.label || "Expense Bill";
-
-        return `
-          <div style="border:1px solid #475569;border-radius:4px;padding:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:330px;box-sizing:border-box;">
-            <div style="width:100%;font-size:7.5pt;font-weight:bold;color:#1E293B;text-align:center;border-bottom:1px solid #94a3b8;padding-bottom:3px;margin-bottom:4px;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${attLabel} &mdash; ${dateStr}
-            </div>
-            <div style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-              <img src="${absoluteUrl}" style="max-width:100%;max-height:290px;object-fit:contain;display:block;" alt="Bill ${dateStr}" />
-            </div>
-          </div>
-        `;
-      }).join("\n");
-
-      attachmentsSection += `
+      return `
         <div class="attachment-page" style="width:1122px;height:793px;padding:6mm;background:#fff;box-sizing:border-box;page-break-before:always;display:flex;flex-direction:column;">
           <div style="background:#1E293B;color:#fff;padding:5px 12px;font-size:9pt;font-weight:bold;font-family:'Aptos','Segoe UI',Calibri,sans-serif;text-align:center;text-transform:uppercase;margin-bottom:8px;border-radius:3px;letter-spacing:0.5px;">
-            VERIFIED BILL ATTACHMENTS &amp; RECEIPTS &mdash; PAGE ${p + 1} OF ${totalAttPages}
+            VERIFIED BILL RECEIPT &mdash; ${attLabel} &mdash; ${dateStr} (BILL ${idx + 1} OF ${totalAtts})
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;flex:1;">
-            ${gridItems}
+          <div style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;border:1px solid #475569;border-radius:4px;padding:8px;background:#fff;overflow:hidden;box-sizing:border-box;">
+            <img src="${absoluteUrl}" style="max-width:100%;max-height:680px;object-fit:contain;display:block;" alt="Bill ${dateStr}" />
           </div>
         </div>
       `;
-    }
+    }).join("\n");
   }
 
   // ── Multi-page Table Split (15 rows per page with Aptos font and centered layout) ──
@@ -625,29 +600,29 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
                      + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
       const bg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
-      const c = `border:1px solid #475569!important;padding:3.5px 2px;font-size:7.5pt;font-weight:600;color:#0f172a;vertical-align:middle;text-align:center;font-family:'Aptos','Segoe UI',Calibri,sans-serif;`;
+      const c = `border:1px solid #475569!important;padding:4px 2px;font-size:7.5pt;font-weight:600;color:#0f172a;vertical-align:middle;text-align:center;line-height:1.2;font-family:'Aptos','Segoe UI',Calibri,sans-serif;`;
       const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
       const ticketNo = getCleanTicketNumber(l);
 
-      return `<tr style="background:${bg}!important;">
+      return `<tr style="background:${bg}!important;height:24px;">
         <td style="${c}">${fmtDate(r.date)}</td>
-        <td style="${c}">${l.from_location || "—"}</td>
-        <td style="${c}">${l.to_location || "—"}</td>
-        <td style="${c}">${l.worked_district || "—"}</td>
+        <td style="${c}">${l.from_location || ""}</td>
+        <td style="${c}">${l.to_location || ""}</td>
+        <td style="${c}">${l.worked_district || ""}</td>
         <td style="${c}font-weight:700;">${modeAbbr(l.travel_mode)}</td>
-        <td style="${c}">${l.distance_km > 0 ? l.distance_km.toFixed(1) : "—"}</td>
-        <td style="${c}">${taCol > 0 ? taCol.toFixed(2) : "—"}</td>
-        <td style="${c}">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : "—"}</td>
-        <td style="${c}">${l.da_amount > 0 ? l.da_amount.toFixed(2) : "—"}</td>
-        <td style="${c}">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : "—"}</td>
-        <td style="${c}">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : "—"}</td>
-        <td style="${c}">${getActivityOtherDesc(l) || "—"}</td>
-        <td style="${c}">${l.other_amount > 0 ? l.other_amount.toFixed(2) : "—"}</td>
-        <td style="${c}font-weight:800;background:#ecfdf5!important;color:#065f46;">${rowTotal > 0 ? rowTotal.toFixed(2) : "—"}</td>
-        <td style="${c}">${getFormattedPurpose(l)}</td>
-        <td style="${c}font-weight:bold;color:#1e293b;">${ticketNo || "—"}</td>
-        <td style="${c}">${pmsCalibCount || "0"}</td>
-        <td style="${c}">${l.calls_completed || 0}/${l.calls_assigned || 0}</td>
+        <td style="${c}">${l.distance_km > 0 ? l.distance_km.toFixed(1) : ""}</td>
+        <td style="${c}">${taCol > 0 ? taCol.toFixed(2) : ""}</td>
+        <td style="${c}">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : ""}</td>
+        <td style="${c}">${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
+        <td style="${c}">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
+        <td style="${c}">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : ""}</td>
+        <td style="${c}">${getActivityOtherDesc(l) || ""}</td>
+        <td style="${c}">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
+        <td style="${c}font-weight:800;background:#ecfdf5!important;color:#065f46;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
+        <td style="${c}">${getFormattedPurpose(l) || ""}</td>
+        <td style="${c}font-weight:bold;color:#1e293b;">${ticketNo || ""}</td>
+        <td style="${c}">${pmsCalibCount > 0 ? String(pmsCalibCount) : ""}</td>
+        <td style="${c}">${(l.calls_completed > 0 || l.calls_assigned > 0) ? `${l.calls_completed}/${l.calls_assigned}` : ""}</td>
       </tr>`;
     }).join("\n");
 
@@ -671,8 +646,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       <table class="info-tbl" style="width:100%;">
         <colgroup><col style="width:7%;"><col style="width:23%;"><col style="width:8%;"><col style="width:12%;"><col style="width:8%;"><col style="width:12%;"><col style="width:10%;"><col style="width:20%;"></colgroup>
         <tr>
-          <td class="info-lbl">NAME :</td><td class="info-val">${user.name || "—"}</td>
-          <td class="info-lbl">EE CODE:</td><td class="info-val">${user.e_code || "—"}</td>
+          <td class="info-lbl">NAME :</td><td class="info-val">${user.name || ""}</td>
+          <td class="info-lbl">EE CODE:</td><td class="info-val">${user.e_code || ""}</td>
           <td class="info-lbl">PROJECT:</td><td class="info-val">RJBEMP</td>
           <td class="info-lbl">LOCATION:</td><td class="info-val" style="border-right:none;">${(user.district || "").toUpperCase()}</td>
         </tr>
@@ -730,34 +705,34 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         </tbody>
         ${isLastPage ? `
         <tfoot>
-          <tr style="background:#FEF3C7!important;">
-            <td class="tot-lbl" colspan="5" style="text-align:center;border:1.5px solid #1E293B!important;text-transform:uppercase;background:#FEF3C7!important;font-weight:bold;">
+          <tr style="background:#FEF3C7!important;height:24px;">
+            <td class="tot-lbl" colspan="5" style="text-align:center;border:1.5px solid #1E293B!important;text-transform:uppercase;background:#FEF3C7!important;font-weight:bold;vertical-align:middle;line-height:1.2;padding:4px 3px;">
               TOTAL EXPENSE CLAIMED
             </td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gKM > 0 ? gKM.toFixed(1) : "0"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gTA > 0 ? gTA.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gAuto > 0 ? gAuto.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gDA > 0 ? gDA.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gLocal > 0 ? gLocal.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gHotel > 0 ? gHotel.toFixed(2) : "0.00"}</td>
-            <td class="tot-lbl" style="text-align:center;font-size:6.5pt;border:1.5px solid #1E293B!important;">Total</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gOther > 0 ? gOther.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="background:#FEF3C7!important;font-weight:bold;text-align:center;border:1.5px solid #1E293B!important;color:#0f172a;">₹${gTotal.toFixed(2)}</td>
-            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;"></td>
-            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;font-size:6.5pt!important;text-align:center;font-weight:bold;">
-              ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN')}` : "—"}
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:4px 3px;">${gKM > 0 ? gKM.toFixed(1) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:4px 3px;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:4px 3px;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:4px 3px;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:4px 3px;">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:4px 3px;">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
+            <td class="tot-lbl" style="text-align:center;font-size:7pt;border:1.5px solid #1E293B!important;vertical-align:middle;line-height:1.2;padding:4px 3px;">Total</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:4px 3px;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
+            <td class="tot-num" style="background:#FEF3C7!important;font-weight:bold;text-align:center;border:1.5px solid #1E293B!important;color:#0f172a;vertical-align:middle;line-height:1.2;padding:4px 3px;">₹${gTotal.toFixed(2)}</td>
+            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;vertical-align:middle;line-height:1.2;padding:4px 3px;"></td>
+            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;font-size:6.5pt!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:4px 3px;">
+              ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN')}` : ""}
             </td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;">${gPMSCalib}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;">${gCallsC}/${gCallsA}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:4px 3px;">${gPMSCalib > 0 ? String(gPMSCalib) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:4px 3px;">${(gCallsC > 0 || gCallsA > 0) ? `${gCallsC}/${gCallsA}` : ""}</td>
           </tr>
-          <tr>
-            <td colspan="13" style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;padding:3px 5px;font-size:7.5pt;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">LESS: MONTHLY ADVANCE DEDUCTION</td>
-            <td style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:8pt!important;color:#b91c1c;">₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
+          <tr style="height:22px;">
+            <td colspan="13" style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;padding:3px 5px;font-size:7.5pt;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;vertical-align:middle;line-height:1.2;">LESS: MONTHLY ADVANCE DEDUCTION</td>
+            <td style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:8pt!important;color:#b91c1c;vertical-align:middle;line-height:1.2;">₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
             <td colspan="4" style="border:1.5px solid #1E293B!important;background:#fff!important;"></td>
           </tr>
-          <tr style="background:#F1F5F9!important;">
-            <td class="net-lbl" colspan="13" style="border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;font-size:8pt;font-weight:bold;">NET PAYABLE AMOUNT</td>
-            <td class="net-val" style="font-weight:900;font-size:8.5pt!important;border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;text-align:center;">₹${Math.round(gTotal - advance).toFixed(2)}</td>
+          <tr style="background:#F1F5F9!important;height:22px;">
+            <td class="net-lbl" colspan="13" style="border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;font-size:8pt;font-weight:bold;vertical-align:middle;line-height:1.2;">NET PAYABLE AMOUNT</td>
+            <td class="net-val" style="font-weight:900;font-size:8.5pt!important;border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;text-align:center;vertical-align:middle;line-height:1.2;">₹${Math.round(gTotal - advance).toFixed(2)}</td>
             <td colspan="4" style="border:1.5px solid #1E293B!important;background:#F1F5F9!important;"></td>
           </tr>
         </tfoot>
@@ -770,9 +745,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         <table class="sig-tbl" style="width:100%;">
           <colgroup><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"></colgroup>
           <tr>
-            <td class="sig-lbl">Claimed By:<br><strong>${user.name}</strong></td>
-            <td class="sig-lbl">Approved By (Manager):<br><strong>${user.manager || "—"}</strong></td>
-            <td class="sig-lbl">Checked By (Coordinator):<br><strong>${user.coordinator || "—"}</strong></td>
+            <td class="sig-lbl">Claimed By:<br><strong>${user.name || ""}</strong></td>
+            <td class="sig-lbl">Approved By (Manager):<br><strong>${user.manager || ""}</strong></td>
+            <td class="sig-lbl">Checked By (Coordinator):<br><strong>${user.coordinator || ""}</strong></td>
             <td class="sig-lbl" style="border-right:none;">Accounted By:<br><strong>Amit Rawat</strong></td>
           </tr>
           <tr>
@@ -799,23 +774,23 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   <title>Expense Form — ${user.name} — ${user.month} ${user.year}</title>
   <style>
     * { -webkit-print-color-adjust: exact!important; print-color-adjust: exact!important; box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; color: #0f172a; background: #fff; font-size: 7.5pt; }
-    .wrap { width: 100%; padding: 3mm 4mm; background: #fff; }
+    body { font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; color: #0f172a; background: #fff; font-size: 7.5pt; line-height: 1.2; }
+    .wrap { width: 100%; padding: 3mm 4mm; background: #fff; line-height: 1.2; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    th, td { border: 1px solid #475569!important; padding: 3px 2px; vertical-align: middle; text-align: center; word-wrap: break-word; font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; }
+    th, td { border: 1px solid #475569!important; padding: 3.5px 2px; vertical-align: middle; text-align: center; word-wrap: break-word; line-height: 1.2; font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; }
     tbody tr { page-break-inside: avoid!important; break-inside: avoid!important; }
-    .main-hdr { background: #1E293B!important; color: #fff!important; text-align: center; font-size: 10.5pt!important; font-weight: 800!important; padding: 5px!important; border: 1.5px solid #1E293B!important; letter-spacing: 0.5px; }
+    .main-hdr { background: #1E293B!important; color: #fff!important; text-align: center; font-size: 10.5pt!important; font-weight: 800!important; padding: 5px!important; border: 1.5px solid #1E293B!important; letter-spacing: 0.5px; vertical-align: middle; }
     .info-tbl { margin-bottom: 0; border: 1.5px solid #1E293B!important; border-top: none!important; }
-    .info-lbl { font-weight: bold; background: #F1F5F9!important; color: #1E293B; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center; padding: 3px 4px; text-transform: uppercase; white-space: nowrap; }
-    .info-val { background: #fff!important; color: #0f172a!important; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center; padding: 3px 4px; font-weight: bold; }
-    .col-h1 { background: #1E293B!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; padding: 3.5px 2px!important; border: 1px solid #475569!important; line-height: 1.15; vertical-align: middle; }
-    .col-h2 { background: #334155!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; padding: 3px 2px!important; border: 1px solid #475569!important; line-height: 1.1; vertical-align: middle; }
-    .tot-lbl { border: 1.5px solid #1E293B!important; padding: 3.5px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #FEF3C7!important; vertical-align: middle; text-align: center; }
-    .tot-num { border: 1.5px solid #1E293B!important; padding: 3.5px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #FEF3C7!important; vertical-align: middle; text-align: center; }
-    .net-lbl { border: 1.5px solid #1E293B!important; padding: 3.5px 5px; font-size: 7.5pt; font-weight: bold; color: #0f172a; background: #F1F5F9!important; text-align: center; text-transform: uppercase; }
-    .net-val { border: 1.5px solid #1E293B!important; padding: 3.5px 5px; font-size: 8pt; font-weight: 900; color: #0f172a; background: #F1F5F9!important; text-align: center; }
-    .awords-box { border: 1.5px solid #1E293B!important; border-top: none!important; padding: 3.5px 6px; font-size: 7pt; font-weight: 600; color: #0f172a; background: #fff!important; text-align: center; }
-    .remarks-box { border: 1.5px solid #1E293B!important; border-top: none!important; padding: 3.5px 6px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #F1F5F9!important; text-align: center; }
+    .info-lbl { font-weight: bold; background: #F1F5F9!important; color: #1E293B; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center; padding: 3.5px 4px; text-transform: uppercase; white-space: nowrap; vertical-align: middle; }
+    .info-val { background: #fff!important; color: #0f172a!important; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center; padding: 3.5px 4px; font-weight: bold; vertical-align: middle; }
+    .col-h1 { background: #1E293B!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; padding: 4px 2px!important; border: 1px solid #475569!important; line-height: 1.2; vertical-align: middle; }
+    .col-h2 { background: #334155!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; padding: 3.5px 2px!important; border: 1px solid #475569!important; line-height: 1.2; vertical-align: middle; }
+    .tot-lbl { border: 1.5px solid #1E293B!important; padding: 4px 3px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #FEF3C7!important; vertical-align: middle; text-align: center; line-height: 1.2; }
+    .tot-num { border: 1.5px solid #1E293B!important; padding: 4px 3px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #FEF3C7!important; vertical-align: middle; text-align: center; line-height: 1.2; }
+    .net-lbl { border: 1.5px solid #1E293B!important; padding: 3.5px 5px; font-size: 7.5pt; font-weight: bold; color: #0f172a; background: #F1F5F9!important; text-align: center; text-transform: uppercase; vertical-align: middle; line-height: 1.2; }
+    .net-val { border: 1.5px solid #1E293B!important; padding: 3.5px 5px; font-size: 8pt; font-weight: 900; color: #0f172a; background: #F1F5F9!important; text-align: center; vertical-align: middle; line-height: 1.2; }
+    .awords-box { border: 1.5px solid #1E293B!important; border-top: none!important; padding: 3.5px 6px; font-size: 7pt; font-weight: 600; color: #0f172a; background: #fff!important; text-align: center; vertical-align: middle; }
+    .remarks-box { border: 1.5px solid #1E293B!important; border-top: none!important; padding: 3.5px 6px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #F1F5F9!important; text-align: center; vertical-align: middle; }
     .sig-tbl { border: 1.5px solid #1E293B!important; border-top: none!important; }
     .sig-lbl { border-right: 1px solid #475569!important; padding: 3px 5px; font-size: 7pt; font-weight: 600; color: #0f172a; background: #fff!important; height: 26px; vertical-align: top; text-align: center; }
     .sig-val { border-right: 1px solid #475569!important; padding: 2px 5px; font-size: 6.5pt; font-weight: 600; color: #64748b; background: #fff!important; height: 18px; vertical-align: bottom; text-align: center; }
