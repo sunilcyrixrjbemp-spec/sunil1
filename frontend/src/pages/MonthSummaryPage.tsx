@@ -1527,8 +1527,7 @@ export default function MonthSummaryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] pb-24 text-ink-900 font-sans">
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4 space-y-3.5">
+    <div className="pb-24 text-ink-900 font-sans space-y-3.5">
         
         {/* ══════════════════════════════════════════════════════════════════
             DITTO HOME PAGE ZOHO KPI ROW (EXACT 100% SAME CARD SPECIFICATIONS)
@@ -1996,7 +1995,6 @@ export default function MonthSummaryPage() {
             )}
           </div>
         </div>
-      </main>
 
       {/* ================= SET MONTHLY ADVANCE MODAL ================= */}
       {showAdvanceModal && advanceModalConfig && (

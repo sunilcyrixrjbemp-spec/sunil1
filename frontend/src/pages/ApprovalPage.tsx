@@ -877,7 +877,7 @@ export default function ApprovalPage() {
         }}
       />
 
-      <div className="relative z-10 space-y-3.5 max-w-7xl mx-auto pb-12 px-2 sm:px-4 pt-2">
+      <div className="relative z-10 space-y-3 pb-12 pt-1 sm:pt-2">
 
         {/* ── 1. Zoho Approval Header Card ─────────────────────────────────── */}
         <div 
@@ -1073,11 +1073,9 @@ export default function ApprovalPage() {
         )}
 
         {/* ── 3. Main Claims Awaiting Review Section ───────────────────────── */}
-        <div 
-          className="bg-white border border-line rounded-xl overflow-hidden shadow-xs"
-        >
+        <div className="space-y-3">
           {/* Header Bar with Count and Bulk Action Toolbar */}
-          <div className="bg-[#F8FAFC] border-b border-line px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="bg-white border border-line rounded-xl px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-accent-600 animate-pulse" />
               <span className="font-black text-sm tracking-tight text-ink-900 uppercase">
@@ -1124,11 +1122,11 @@ export default function ApprovalPage() {
           </div>
 
           {loading ? (
-            <div className="p-4 sm:p-6">
+            <div className="bg-white border border-line rounded-xl p-4 sm:p-6 shadow-xs">
               <ApprovalSkeleton />
             </div>
           ) : claimRequests.length === 0 ? (
-            <div className="py-16 text-center text-ink-400 space-y-2">
+            <div className="bg-white border border-line rounded-xl py-16 text-center text-ink-400 space-y-2 shadow-xs">
               <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto opacity-70" />
               <div className="text-sm font-bold text-ink-700">All caught up!</div>
               <div className="text-xs text-ink-400">No pending expense claims awaiting your review.</div>
@@ -1136,7 +1134,7 @@ export default function ApprovalPage() {
           ) : (
             <>
               {/* Desktop Table View */}
-              <div className="hidden md:block overflow-x-auto">
+              <div className="hidden md:block bg-white border border-line rounded-xl overflow-hidden shadow-xs">
                 <Table
                   dataSource={claimRequests}
                   rowKey="expense_id"
@@ -1287,8 +1285,8 @@ export default function ApprovalPage() {
                 />
               </div>
 
-              {/* Mobile Responsive Card List View */}
-              <div className={`block md:hidden space-y-2.5 p-3 ${selectedIds.length > 0 ? 'pb-24' : 'pb-6'}`}>
+              {/* Mobile Responsive Card List View (Directly on canvas, zero box-in-a-box) */}
+              <div className={`block md:hidden space-y-2.5 ${selectedIds.length > 0 ? 'pb-24' : 'pb-6'}`}>
                 {claimRequests.map((req) => {
                   const isChecked = selectedIds.includes(req.expense_id);
                   const isAutoApproved = req.is_auto_approved || req.auto_approved || req.status === "auto_approved";

@@ -211,8 +211,8 @@ export default function DashboardLayout() {
           onLogout={handleLogout}
         />
 
-        {/* Content Container on #FAFAF9 Canvas */}
-        <main className="flex-1 bg-canvas p-4 md:p-6 max-w-7xl mx-auto w-full pb-24 lg:pb-6">
+        {/* Content Container on #FAFAF9 Canvas (Single Source of Truth for Page Padding & Max-Width) */}
+        <main className="flex-1 bg-canvas px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 max-w-7xl mx-auto w-full pb-24 lg:pb-6 min-w-0">
           {!hasAccess ? (
             <div className="card-lte max-w-lg mx-auto my-12 p-6 sm:p-8 text-center bg-surface border border-line rounded-lg shadow-none">
               <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto mb-4 text-rose-600">

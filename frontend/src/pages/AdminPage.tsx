@@ -1942,7 +1942,7 @@ export default function AdminPage() {
           }}
         />
 
-        <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 pt-3 space-y-3 text-ink-900 font-sans antialiased">
+        <div className="relative z-10 pt-1 sm:pt-2 space-y-3 text-ink-900 font-sans antialiased">
           
           {/* ── 1. Slim Unified Top Header (HomePage Parity) ──────────────── */}
           <header className="bg-white border border-line rounded-xl px-4 py-2.5 shadow-xs flex flex-wrap items-center justify-between gap-3">

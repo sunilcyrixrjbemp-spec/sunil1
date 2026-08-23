@@ -496,7 +496,7 @@ export default function HelpPage() {
         }}
       />
 
-      <div className="relative z-10 space-y-3 max-w-7xl mx-auto pb-12 px-2 sm:px-4 pt-2">
+      <div className="relative z-10 space-y-3 pb-12 pt-1 sm:pt-2">
 
         {/* ── 1. Compact Zoho Header Card ──────────────────────────────────── */}
         <div 

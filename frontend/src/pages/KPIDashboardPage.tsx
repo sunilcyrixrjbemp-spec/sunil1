@@ -205,10 +205,9 @@ export default function KPIDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] text-ink-900 font-sans pb-16">
+    <div className="text-ink-900 font-sans pb-16 space-y-3">
       {/* ── Zoho Header Context Bar ── */}
-      <div className="sticky top-0 z-20 border-b border-line bg-white shadow-2xs">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+      <div className="border border-line bg-white rounded-xl shadow-2xs px-3 sm:px-4">
           <div className="flex items-center justify-between py-3.5">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-accent-50 border border-accent-100 flex items-center justify-center text-accent-700">
@@ -278,10 +277,9 @@ export default function KPIDashboardPage() {
             </nav>
           </div>
         </div>
-      </div>
 
       {/* ── Main Workspace ── */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6">
+      <div className="space-y-4">
         {activeTab === "dashboard" && (
           <DashboardTab
             assignment={assignment}
@@ -356,7 +354,7 @@ export default function KPIDashboardPage() {
             onRefresh={() => { loadAll(); }}
           />
         )}
-      </main>
+      </div>
     </div>
   );
 }

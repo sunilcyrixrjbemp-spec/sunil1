@@ -1,4 +1,4 @@
-﻿import React, { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, ArrowLeft, Plus, RotateCcw, ChevronDown } from "lucide-react";
 import { useHomeExpenses } from "../hooks/useHomeExpenses";
@@ -100,7 +100,7 @@ export default function ClaimsHistoryPage() {
         }}
       />
 
-      <div className="relative z-10 space-y-3 text-ink-900 font-sans antialiased max-w-7xl mx-auto pb-10">
+      <div className="relative z-10 space-y-3 text-ink-900 font-sans antialiased pb-10 pt-1 sm:pt-2">
         
         {/* ── Unified Header Card: Title + Scope Tabs + Stats + New Claim ── */}
         <div
