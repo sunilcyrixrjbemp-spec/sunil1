@@ -36,7 +36,7 @@ function fmtDate(d) {
     const dd = String(dt.getDate()).padStart(2, "0");
     const mm = String(dt.getMonth() + 1).padStart(2, "0");
     const yy = String(dt.getFullYear()).slice(2);
-    return `${dd}-${mm}-${yy}`;
+    return \`\${dd}-\${mm}-\${yy}\`;
   } catch { return d; }
 }
 
@@ -174,7 +174,7 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
   const getCleanTicketNumber = (l) => {
     const raw = String(l.complaint_id || l.ticket_no || l.ticket_id || l.mpt_id || "").trim();
     if (!raw || raw === "—" || raw === "-" || raw.toLowerCase().includes("barcode")) return "";
-    return raw.replace(/barcode[:\s]*/gi, "").trim();
+    return raw.replace(/barcode[:\\s]*/gi, "").trim();
   };
 
   const isCallOrPmsReport = (label = "", billType = "") => {
@@ -190,9 +190,9 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
   const getBillFingerprint = (urlStr) => {
     if (!urlStr) return "";
     if (urlStr.startsWith("data:")) return urlStr.slice(0, 150);
-    const clean = urlStr.split("?")[0].replace(/^https?:\/\/[^\/]+/, "").replace(/^\//, "").toLowerCase();
+    const clean = urlStr.split("?")[0].replace(/^https?:\\/\\/[^\\/]+/, "").replace(/^\\//, "").toLowerCase();
     const filename = clean.split("/").pop() || clean;
-    return filename.replace(/\.[^/.]+$/, "").trim();
+    return filename.replace(/\\.[^/.]+$/, "").trim();
   };
 
   const allAttachmentsMap = new Map();
@@ -208,7 +208,7 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
       seenFingerprints.add(fp);
       allAttachmentsMap.set(fp, {
         url: rawUrl,
-        date: att.date ? fmtDate(att.date) : `Bill #${idx + 1}`,
+        date: att.date ? fmtDate(att.date) : \`Bill #\${idx + 1}\`,
         label: label
       });
     }
@@ -226,7 +226,7 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
     claimAtts.forEach((cItem, cIdx) => {
       const cUrl = typeof cItem === "string" ? cItem : (cItem.file_url || cItem.url);
       const fp = getBillFingerprint(cUrl);
-      const label = (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`;
+      const label = (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : \`Claim Attachment #\${cIdx + 1}\`;
       if (cUrl && fp && !isCallOrPmsReport(label, (cItem.bill_type || "")) && !seenFingerprints.has(fp)) {
         seenFingerprints.add(fp);
         allAttachmentsMap.set(fp, { url: cUrl, date: claimDate, label: label });
@@ -266,7 +266,7 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
         leg.attachments.forEach((aItem, aIdx) => {
           const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
           const fp = getBillFingerprint(aUrl);
-          const label = aItem.bill_type || `Bill Attachment #${aIdx + 1}`;
+          const label = aItem.bill_type || \`Bill Attachment #\${aIdx + 1}\`;
           if (aUrl && fp && !isCallOrPmsReport(label, aItem.bill_type || "") && !seenFingerprints.has(fp)) {
             seenFingerprints.add(fp);
             allAttachmentsMap.set(fp, { url: aUrl, date: claimDate, label: label });
@@ -284,24 +284,24 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
     const totalAtts = finalAttachments.length;
     attachmentsSection = finalAttachments.map((att, idx) => {
       const absoluteUrl = att.url;
-      const dateStr = att.date || `Receipt #${idx + 1}`;
+      const dateStr = att.date || \`Receipt #\${idx + 1}\`;
       const attLabel = att.label || "Expense Bill";
 
-      return `
+      return \`
         <div class="attachment-page" style="page-break-before:always;display:flex;flex-direction:column;width:100%;height:100vh;box-sizing:border-box;padding:4mm;">
           <div style="background:#1E293B;color:#fff;padding:4px 12px;font-size:9pt;font-weight:bold;font-family:'Aptos','Segoe UI',Calibri,sans-serif;text-align:center;text-transform:uppercase;margin-bottom:6px;border-radius:3px;letter-spacing:0.5px;">
-            VERIFIED BILL RECEIPT &mdash; ${attLabel} &mdash; ${dateStr} (BILL ${idx + 1} OF ${totalAtts})
+            VERIFIED BILL RECEIPT &mdash; \${attLabel} &mdash; \${dateStr} (BILL \${idx + 1} OF \${totalAtts})
           </div>
           <div style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;border:1px solid #475569;border-radius:4px;padding:6px;background:#fff;overflow:hidden;box-sizing:border-box;">
-            <img src="${absoluteUrl}" style="max-width:100%;max-height:92vh;object-fit:contain;display:block;margin:0 auto;" alt="Bill ${dateStr}" />
+            <img src="\${absoluteUrl}" style="max-width:100%;max-height:92vh;object-fit:contain;display:block;margin:0 auto;" alt="Bill \${dateStr}" />
           </div>
         </div>
-      `;
-    }).join("\n");
+      \`;
+    }).join("\\n");
   }
 
   // ── Multi-page Table Split (12 rows per page to prevent any footer or signature cut-off) ──
-  const ROWS_PER_PAGE = 12;
+  const ROWS_PER_PAGE = 10;
   const numPages = Math.max(1, Math.ceil(allLegs.length / ROWS_PER_PAGE));
 
   let summaryPagesHtml = "";
@@ -316,33 +316,33 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
       const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
                      + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
       const bg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
-      const c = `border:1px solid #475569!important;padding:3px 2px;font-size:7.5pt;font-weight:600;color:#0f172a;vertical-align:middle;text-align:center;line-height:1.2;font-family:'Aptos','Segoe UI',Calibri,sans-serif;`;
+      const c = \`border:1px solid #475569!important;padding:5px 3px;font-size:7.5pt;font-weight:600;color:#0f172a;vertical-align:middle!important;text-align:center!important;line-height:1.2;font-family:'Aptos','Segoe UI',Calibri,sans-serif;\`;
       const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
       const ticketNo = getCleanTicketNumber(l);
 
-      return `<tr style="background:${bg}!important;height:22px;">
-        <td style="${c}">${fmtDate(r.date)}</td>
-        <td style="${c}">${l.from_location || ""}</td>
-        <td style="${c}">${l.to_location || ""}</td>
-        <td style="${c}">${l.worked_district || ""}</td>
-        <td style="${c}font-weight:700;">${modeAbbr(l.travel_mode)}</td>
-        <td style="${c}">${l.distance_km > 0 ? l.distance_km.toFixed(1) : ""}</td>
-        <td style="${c}">${taCol > 0 ? taCol.toFixed(2) : ""}</td>
-        <td style="${c}">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : ""}</td>
-        <td style="${c}">${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
-        <td style="${c}">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
-        <td style="${c}">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : ""}</td>
-        <td style="${c}">${getActivityOtherDesc(l) || ""}</td>
-        <td style="${c}">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
-        <td style="${c}font-weight:800;background:#ecfdf5!important;color:#065f46;white-space:nowrap!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
-        <td style="${c};text-align:left;padding-left:4px;word-break:break-word;font-size:7pt;">${getFormattedPurpose(l) || ""}</td>
-        <td style="${c}font-weight:bold;color:#1e293b;">${ticketNo || ""}</td>
-        <td style="${c}">${pmsCalibCount > 0 ? String(pmsCalibCount) : ""}</td>
-        <td style="${c}">${(l.calls_completed > 0 || l.calls_assigned > 0) ? `${l.calls_completed}/${l.calls_assigned}` : ""}</td>
-      </tr>`;
-    }).join("\n");
+      return \`<tr style="background:\${bg}!important;height:22px;">
+        <td style="\${c}">\${fmtDate(r.date)}</td>
+        <td style="\${c}">\${l.from_location || ""}</td>
+        <td style="\${c}">\${l.to_location || ""}</td>
+        <td style="\${c}">\${l.worked_district || ""}</td>
+        <td style="\${c}font-weight:700;">\${modeAbbr(l.travel_mode)}</td>
+        <td style="\${c}">\${l.distance_km > 0 ? l.distance_km.toFixed(1) : ""}</td>
+        <td style="\${c}">\${taCol > 0 ? taCol.toFixed(2) : ""}</td>
+        <td style="\${c}">\${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : ""}</td>
+        <td style="\${c}">\${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
+        <td style="\${c}">\${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
+        <td style="\${c}">\${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : ""}</td>
+        <td style="\${c}">\${getActivityOtherDesc(l) || ""}</td>
+        <td style="\${c}">\${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
+        <td style="\${c}font-weight:800;background:#ecfdf5!important;color:#065f46;white-space:nowrap!important;">\${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
+        <td style="\${c};text-align:center!important;word-break:break-word;font-size:7pt;">\${getFormattedPurpose(l) || ""}</td>
+        <td style="\${c}font-weight:bold;color:#1e293b;">\${ticketNo || ""}</td>
+        <td style="\${c}">\${pmsCalibCount > 0 ? String(pmsCalibCount) : ""}</td>
+        <td style="\${c}">\${(l.calls_completed > 0 || l.calls_assigned > 0) ? \`\${l.calls_completed}/\${l.calls_assigned}\` : ""}</td>
+      </tr>\`;
+    }).join("\\n");
 
-    summaryPagesHtml += `
+    summaryPagesHtml += \`
     <div class="summary-page wrap" style="width:100%;box-sizing:border-box;page-break-after:always;">
       <table style="margin-bottom:0;width:100%;">
         <colgroup><col style="width:12%;"><col style="width:68%;"><col style="width:20%;"></colgroup>
@@ -351,10 +351,10 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
             <div style="font-weight:900;color:#1E293B;font-size:10pt;">CYRIX</div>
           </td>
           <td class="main-hdr">
-            CYRIX HEALTHCARE &mdash; EXPENSES REIMBURSEMENT FORM ${numPages > 1 ? `(PAGE ${pageIdx + 1} OF ${numPages})` : ""}
+            CYRIX HEALTHCARE &mdash; EXPENSES REIMBURSEMENT FORM \${numPages > 1 ? \`(PAGE \${pageIdx + 1} OF \${numPages})\` : ""}
           </td>
           <td style="background:#1E293B!important;color:#fff!important;border:1.5px solid #1E293B;padding:2px 6px;font-size:7.5pt;font-weight:bold;text-align:center;vertical-align:middle;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">
-            <div>PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0,3)} ${user.year || "2026"}</div>
+            <div>PERIOD: \${(user.month || "MONTH").toUpperCase().substring(0,3)} \${user.year || "2026"}</div>
           </td>
         </tr>
       </table>
@@ -362,10 +362,10 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
       <table class="info-tbl" style="width:100%;">
         <colgroup><col style="width:7%;"><col style="width:23%;"><col style="width:8%;"><col style="width:12%;"><col style="width:8%;"><col style="width:12%;"><col style="width:10%;"><col style="width:20%;"></colgroup>
         <tr>
-          <td class="info-lbl">NAME :</td><td class="info-val">${user.name || ""}</td>
-          <td class="info-lbl">EE CODE:</td><td class="info-val">${user.e_code || ""}</td>
+          <td class="info-lbl">NAME :</td><td class="info-val">\${user.name || ""}</td>
+          <td class="info-lbl">EE CODE:</td><td class="info-val">\${user.e_code || ""}</td>
           <td class="info-lbl">PROJECT:</td><td class="info-val">RJBEMP</td>
-          <td class="info-lbl">LOCATION:</td><td class="info-val" style="border-right:none;">${(user.district || "").toUpperCase()}</td>
+          <td class="info-lbl">LOCATION:</td><td class="info-val" style="border-right:none;">\${(user.district || "").toUpperCase()}</td>
         </tr>
       </table>
 
@@ -417,76 +417,76 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
           </tr>
         </thead>
         <tbody>
-          ${pageRowsHtml || `<tr><td colspan="18" style="text-align:center;padding:12px;color:#888;font-style:italic;font-size:7.5pt;">No expense records found.</td></tr>`}
+          \${pageRowsHtml || \`<tr><td colspan="18" style="text-align:center;padding:12px;color:#888;font-style:italic;font-size:7.5pt;">No expense records found.</td></tr>\`}
         </tbody>
-        ${isLastPage ? `
+        \${isLastPage ? \`
         <tfoot>
           <tr style="background:#FEF3C7!important;height:22px;">
-            <td class="tot-lbl" colspan="5" style="text-align:center;border:1.5px solid #1E293B!important;text-transform:uppercase;background:#FEF3C7!important;font-weight:bold;vertical-align:middle;line-height:1.2;padding:3px 2px;">
+            <td class="tot-lbl" colspan="5" style="text-align:center;border:1.5px solid #1E293B!important;text-transform:uppercase;background:#FEF3C7!important;font-weight:bold;vertical-align:middle;line-height:1.2;padding:5px 3px;">
               TOTAL EXPENSE CLAIMED
             </td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:3px 2px;">${gKM > 0 ? gKM.toFixed(1) : ""}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:3px 2px;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:3px 2px;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:3px 2px;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:3px 2px;">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:3px 2px;">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
-            <td class="tot-lbl" style="text-align:center;font-size:7pt;border:1.5px solid #1E293B!important;vertical-align:middle;line-height:1.2;padding:3px 2px;">Total</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:3px 2px;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
-            <td class="tot-num" style="background:#FEF3C7!important;font-weight:bold;text-align:center;border:1.5px solid #1E293B!important;color:#0f172a;vertical-align:middle;line-height:1.2;padding:3px 2px;white-space:nowrap!important;">₹${gTotal.toFixed(2)}</td>
-            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;vertical-align:middle;line-height:1.2;padding:3px 2px;"></td>
-            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;font-size:6.5pt!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:3px 2px;">
-              ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN')}` : ""}
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${gKM > 0 ? gKM.toFixed(1) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${gTA > 0 ? gTA.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${gDA > 0 ? gDA.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
+            <td class="tot-lbl" style="text-align:center;font-size:7pt;border:1.5px solid #1E293B!important;vertical-align:middle;line-height:1.2;padding:5px 3px;">Total</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${gOther > 0 ? gOther.toFixed(2) : ""}</td>
+            <td class="tot-num" style="background:#FEF3C7!important;font-weight:bold;text-align:center;border:1.5px solid #1E293B!important;color:#0f172a;vertical-align:middle;line-height:1.2;padding:5px 3px;white-space:nowrap!important;">₹\${gTotal.toFixed(2)}</td>
+            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;vertical-align:middle;line-height:1.2;padding:5px 3px;"></td>
+            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;font-size:6.5pt!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:5px 3px;">
+              \${gAssetQty > 0 ? \`Qty: \${gAssetQty} | ₹\${gAssetVal.toLocaleString('en-IN')}\` : ""}
             </td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:3px 2px;">${gPMSCalib > 0 ? String(gPMSCalib) : ""}</td>
-            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:3px 2px;">${(gCallsC > 0 || gCallsA > 0) ? `${gCallsC}/${gCallsA}` : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${gPMSCalib > 0 ? String(gPMSCalib) : ""}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;vertical-align:middle;line-height:1.2;padding:5px 3px;">\${(gCallsC > 0 || gCallsA > 0) ? \`\${gCallsC}/\${gCallsA}\` : ""}</td>
           </tr>
           <tr style="height:20px;">
             <td colspan="13" style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;padding:2px 4px;font-size:7pt;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;vertical-align:middle;line-height:1.2;">LESS: MONTHLY ADVANCE DEDUCTION</td>
-            <td style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:7.5pt!important;color:#b91c1c;vertical-align:middle;line-height:1.2;white-space:nowrap!important;">₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
+            <td style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:7.5pt!important;color:#b91c1c;vertical-align:middle;line-height:1.2;white-space:nowrap!important;">₹\${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
             <td colspan="4" style="border:1.5px solid #1E293B!important;background:#fff!important;"></td>
           </tr>
           <tr style="background:#F1F5F9!important;height:20px;">
             <td class="net-lbl" colspan="13" style="border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;font-size:7.5pt;font-weight:bold;vertical-align:middle;line-height:1.2;">NET PAYABLE AMOUNT</td>
-            <td class="net-val" style="font-weight:900;font-size:8pt!important;border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;text-align:center;vertical-align:middle;line-height:1.2;white-space:nowrap!important;">₹${Math.round(gTotal - advance).toFixed(2)}</td>
+            <td class="net-val" style="font-weight:900;font-size:8pt!important;border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;text-align:center;vertical-align:middle;line-height:1.2;white-space:nowrap!important;">₹\${Math.round(gTotal - advance).toFixed(2)}</td>
             <td colspan="4" style="border:1.5px solid #1E293B!important;background:#F1F5F9!important;"></td>
           </tr>
         </tfoot>
-        ` : ""}
+        \` : ""}
       </table>
 
-      ${isLastPage ? `
-        <div class="awords-box" style="padding:2.5px 5px;font-size:6.5pt;line-height:1.2;">Amount in words: <strong style="color:#0f172a;">${amountWords(gTotal - advance).toUpperCase()}</strong></div>
+      \${isLastPage ? \`
+        <div class="awords-box" style="padding:2.5px 5px;font-size:6.5pt;line-height:1.2;">Amount in words: <strong style="color:#0f172a;">\${amountWords(gTotal - advance).toUpperCase()}</strong></div>
         <div class="remarks-box" style="padding:2px 5px;font-size:6.5pt;line-height:1.2;">REMARKS: AUDITED &amp; APPROVED BY CYRIX MANAGEMENT</div>
         <table class="sig-tbl" style="width:100%;margin-top:0;">
           <colgroup><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"></colgroup>
           <tr>
-            <td class="sig-lbl">Claimed By:<br><strong>${user.name || ""}</strong></td>
-            <td class="sig-lbl">Approved By (Manager):<br><strong>${user.manager || ""}</strong></td>
-            <td class="sig-lbl">Checked By (Coordinator):<br><strong>${user.coordinator || ""}</strong></td>
+            <td class="sig-lbl">Claimed By:<br><strong>\${user.name || ""}</strong></td>
+            <td class="sig-lbl">Approved By (Manager):<br><strong>\${user.manager || ""}</strong></td>
+            <td class="sig-lbl">Checked By (Coordinator):<br><strong>\${user.coordinator || ""}</strong></td>
             <td class="sig-lbl" style="border-right:none;">Accounted By:<br><strong>Amit Rawat</strong></td>
           </tr>
           <tr>
-            <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
-            <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
-            <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
-            <td class="sig-val" style="border-right:none;">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+            <td class="sig-val">Date: \${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+            <td class="sig-val">Date: \${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+            <td class="sig-val">Date: \${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
+            <td class="sig-val" style="border-right:none;">Date: \${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
           </tr>
         </table>
-      ` : `
+      \` : \`
         <div style="font-size:7pt;font-weight:bold;text-align:center;padding:3px;color:#444;font-style:italic;">
-          Summary continued on Page ${pageIdx + 2} of ${numPages} ...
+          Summary continued on Page \${pageIdx + 2} of \${numPages} ...
         </div>
-      `}
+      \`}
     </div>
-    `;
+    \`;
   }
 
-  return `<!DOCTYPE html>
+  return \`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Expense Form — ${user.name} — ${user.month} ${user.year}</title>
+  <title>Expense Form — \${user.name} — \${user.month} \${user.year}</title>
   <style>
     * { -webkit-print-color-adjust: exact!important; print-color-adjust: exact!important; box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; color: #0f172a; background: #fff; font-size: 7.5pt; line-height: 1.2; margin: 0; padding: 0; }
@@ -520,8 +520,8 @@ export function buildServerExcelPrintHTML(user, claims = [], attachments = [], a
   </style>
 </head>
 <body>
-${summaryPagesHtml}
-${attachmentsSection}
+\${summaryPagesHtml}
+\${attachmentsSection}
 </body>
-</html>`;
+</html>\`;
 }
