@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
 import { SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart, SaaS3DHybridTrendChart } from "../components/common/SaaSCharts";
-import { expenseService } from "../services/expenseService";
 import { analysisService, AnalysisSummaryResponse, AnalysisFilterOptionsResponse } from "../services/analysisService";
 import { authService } from "../services/authService";
 import { adminService } from "../services/adminService";
@@ -47,7 +46,7 @@ const ALL_RAJASTHAN_DISTRICTS = [
 export default function AnalysisPage() {
   const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
 
-  const [myExpenses, setMyExpenses] = useState<any[]>(() => {
+  const [myExpenses, _setMyExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return [];
     const savedM = localStorage.getItem("analysis_selectedMonth");
@@ -61,7 +60,7 @@ export default function AnalysisPage() {
     return cached ? JSON.parse(cached) : [];
   });
 
-  const [teamExpenses, setTeamExpenses] = useState<any[]>(() => {
+  const [teamExpenses, _setTeamExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return [];
     const savedM = localStorage.getItem("analysis_selectedMonth");
@@ -221,14 +220,10 @@ export default function AnalysisPage() {
   }, []);
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    const uId = currentUser?.user_id || "";
     const monthStr = String(selectedMonth + 1).padStart(2, "0");
     const monthQueryParam = `${selectedYear}-${monthStr}`;
     
     const fetchData = async () => {
-      const cacheKeyMy = `cache_v4_my_expenses_${uId}_${monthQueryParam}`;
-      const cacheKeyTeam = `cache_v4_team_expenses_${uId}_${monthQueryParam}`;
       setLoading(true);
       try {
         // Fast Parallel Fetch: KV Pre-computed Summary + Filter Options + Background Raw
@@ -253,20 +248,6 @@ export default function AnalysisPage() {
         }
         if (filtersRes.status === "fulfilled" && filtersRes.value) {
           setDistinctFilters(filtersRes.value);
-        }
-
-        // Secondary background load for raw arrays (graceful)
-        if (isReviewer) {
-          expenseService.getExpenses(monthQueryParam).then(own => setMyExpenses(own || [])).catch(() => {});
-          expenseService.getTeamExpenses(monthQueryParam).then(team => {
-            setTeamExpenses(team || []);
-            if (uId) localStorage.setItem(cacheKeyTeam, JSON.stringify(team || []));
-          }).catch(() => {});
-        } else {
-          expenseService.getExpenses(monthQueryParam).then(own => {
-            setMyExpenses(own || []);
-            if (uId) localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
-          }).catch(() => {});
         }
       } catch (err) {
         console.error("Error fetching analysis data:", err);
@@ -918,10 +899,32 @@ export default function AnalysisPage() {
     return Array.from(years).sort((a, b) => b - a);
   }, [myExpenses, teamExpenses]);
 
-  // CSV Downloader
-  const downloadCSV = () => {
-    if (activeExpenses.length === 0) {
-      alert("No data available to download");
+  // CSV Downloader (Fetches on-demand if clicked)
+  const downloadCSV = async () => {
+    let rowsToExport = activeExpenses;
+    if (rowsToExport.length === 0) {
+      try {
+        const monthStr = String(selectedMonth + 1).padStart(2, "0");
+        const monthQueryParam = `${selectedYear}-${monthStr}`;
+        const res = await analysisService.getClaims({
+          month: monthQueryParam,
+          year: selectedYear,
+          district: selectedDistrict !== "all" ? selectedDistrict : undefined,
+          engineer: selectedEngineer !== "all" ? selectedEngineer : undefined,
+          zone: selectedZone !== "all" ? selectedZone : undefined,
+          status: selectedStatus !== "all" ? selectedStatus : undefined,
+          pageSize: 500
+        });
+        if (res && Array.isArray(res.data) && res.data.length > 0) {
+          rowsToExport = res.data;
+        }
+      } catch (err) {
+        console.error("Error fetching claims for CSV:", err);
+      }
+    }
+
+    if (rowsToExport.length === 0) {
+      alert("No data available to download for the selected filters");
       return;
     }
 

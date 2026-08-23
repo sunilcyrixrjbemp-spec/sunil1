@@ -137,6 +137,13 @@ import {
   handleGetAnalysisClaims
 } from "./routes/analysisAnalytics.js";
 
+// Server-Side PDF Export handlers
+import {
+  handleGenerateSinglePdf,
+  handleTriggerBulkPdf,
+  handleGetPdfBatchStatus
+} from "./routes/pdfExport.js";
+
 // ─── Enterprise Route Handlers (Direct Imports) ───────────────────────────────
 import {
   handleMigrateGdrive, handleMigrationStatus,
