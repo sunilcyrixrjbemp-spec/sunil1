@@ -599,7 +599,7 @@ export async function handleLivePenaltyRecords(request, env, params, query, user
     }
 
     const totalRecords = calculated.length;
-    const paginatedRecords = calculated.slice(offset, offset + limit);
+    const paginatedRecords = (limit >= 5000 || query?.all === "true") ? calculated : calculated.slice(offset, offset + limit);
 
     return jsonResponse({
       status: "success",

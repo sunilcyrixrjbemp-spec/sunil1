@@ -60,6 +60,29 @@ export default function AnalysisPage() {
     const calls: ExtractedExpenseCall[] = [];
     const expDist = (e.district || e.facility_district || fallbackDistrict || "").trim();
 
+    // Helper: Determine whether a call is Online or Support based on ID and type
+    const classifyCall = (rawCid: string, rawType: string, defaultIsSupport = false): "Online Call" | "Support Call" => {
+      const cid = (rawCid || "").trim();
+      const typeStr = (rawType || "").trim().toLowerCase();
+
+      // 1. Explicit Support prefixes or keywords
+      if (/^SCRJ/i.test(cid) || typeStr.includes("support") || typeStr.includes("field") || typeStr.includes("breakdown") || typeStr.includes("service")) {
+        return "Support Call";
+      }
+
+      // 2. Explicit Online keywords or portal complaint format (e.g. 13126080-100125 or digits)
+      if (typeStr.includes("online") || /^\d{6,10}-\d{4,8}$/.test(cid) || /^\d{7,16}$/.test(cid)) {
+        return "Online Call";
+      }
+
+      // 3. If CID is present and not SCRJ
+      if (cid && !/^SCRJ/i.test(cid)) {
+        return "Online Call";
+      }
+
+      return defaultIsSupport ? "Support Call" : "Online Call";
+    };
+
     // 1. Check e.itinerary (legs)
     let legs: any[] = [];
     if (Array.isArray(e.itinerary)) {
@@ -71,6 +94,7 @@ export default function AnalysisPage() {
     if (legs.length > 0) {
       legs.forEach((leg: any) => {
         const legDist = (leg.district || leg.to_district || leg.district_from || leg.from_district || expDist || "").trim();
+        const legRawType = String(leg.calls_type || leg.call_type || leg.type || "").toLowerCase();
         
         // Check activity_details inside leg
         let actDetails = leg.activity_details;
@@ -78,16 +102,16 @@ export default function AnalysisPage() {
           try { actDetails = JSON.parse(actDetails); } catch (_) {}
         }
         
-        const callsList = actDetails?.calls_list;
+        const callsList = actDetails?.calls_list || actDetails?.calls;
         if (Array.isArray(callsList) && callsList.length > 0) {
           callsList.forEach((c: any) => {
             const cid = String(c.calls_complaint_id || c.complaint_id || c.call_number || c.ticket_no || c.id || "").trim();
-            const rawType = String(c.calls_type || c.call_type || c.type || leg.calls_type || leg.call_type || "").toLowerCase();
-            const isSupport = rawType.includes("support") || /^SCRJ/i.test(cid);
+            const rawType = String(c.calls_type || c.call_type || c.type || legRawType || "").trim();
+            const callType = classifyCall(cid, rawType, false);
             
             calls.push({
               complaintId: cid,
-              callType: isSupport ? "Support Call" : "Online Call",
+              callType,
               district: legDist || expDist,
               isResolved24h: c.tat_hours <= 24 || c.is_ftfr || c.status === "Close" || c.status === "Attend & Close" || c.status === "Closed",
               status: c.status || c.calls_status || "Completed"
@@ -96,15 +120,14 @@ export default function AnalysisPage() {
         } else {
           // Check leg-level complaint fields
           const legCid = String(leg.calls_complaint_id || leg.complaint_id || "").trim();
-          const legRawType = String(leg.calls_type || leg.call_type || leg.type || "").toLowerCase();
-          const isSupport = legRawType.includes("support") || /^SCRJ/i.test(legCid);
+          const callType = classifyCall(legCid, legRawType, false);
           const count = Math.max(parseSanitizedCount(leg.calls_completed), parseSanitizedCount(leg.calls_assigned), legCid ? 1 : 0);
 
           if (count > 0) {
             for (let i = 0; i < count; i++) {
               calls.push({
                 complaintId: i === 0 ? legCid : "",
-                callType: isSupport ? "Support Call" : "Online Call",
+                callType,
                 district: legDist || expDist,
                 isResolved24h: true,
                 status: "Completed"
@@ -125,12 +148,12 @@ export default function AnalysisPage() {
       if (Array.isArray(rawCalls) && rawCalls.length > 0) {
         rawCalls.forEach((c: any) => {
           const cid = String(c.calls_complaint_id || c.complaint_id || c.call_number || c.ticket_no || c.id || "").trim();
-          const rawType = String(c.calls_type || c.call_type || c.type || e.calls_type || e.call_type || "").toLowerCase();
-          const isSupport = rawType.includes("support") || /^SCRJ/i.test(cid);
+          const rawType = String(c.calls_type || c.call_type || c.type || e.calls_type || e.call_type || "").trim();
+          const callType = classifyCall(cid, rawType, false);
 
           calls.push({
             complaintId: cid,
-            callType: isSupport ? "Support Call" : "Online Call",
+            callType,
             district: (c.district || expDist || "").trim(),
             isResolved24h: c.tat_hours <= 24 || c.is_ftfr || c.status === "Close" || c.status === "Attend & Close" || c.status === "Closed",
             status: c.status || c.calls_status || "Completed"
@@ -139,15 +162,15 @@ export default function AnalysisPage() {
       } else {
         // 3. Row-level fallback on e
         const eCid = String(e.calls_complaint_id || e.complaint_id || "").trim();
-        const eRawType = String(e.calls_type || e.call_type || "").toLowerCase();
-        const isSupport = eRawType.includes("support") || /^SCRJ/i.test(eCid);
+        const eRawType = String(e.calls_type || e.call_type || "").trim();
+        const callType = classifyCall(eCid, eRawType, false);
         const count = Math.max(parseSanitizedCount(e.calls_completed), parseSanitizedCount(e.calls_assigned), eCid ? 1 : 0);
 
         if (count > 0) {
           for (let i = 0; i < count; i++) {
             calls.push({
               complaintId: i === 0 ? eCid : "",
-              callType: isSupport ? "Support Call" : "Online Call",
+              callType,
               district: expDist,
               isResolved24h: true,
               status: "Completed"
@@ -411,10 +434,24 @@ export default function AnalysisPage() {
         try {
           const pRes = await penaltyLiveService.getRecords({ limit: 50000, status: "all" });
           if (pRes && Array.isArray(pRes.records)) {
-            setComplaintRecords(pRes.records);
+            let allRecords = [...pRes.records];
+            const totalPages = Math.min(pRes.total_pages || 1, 30);
+            if (allRecords.length < (pRes.total_records || 0) && totalPages > 1) {
+              const pagePromises = [];
+              for (let p = 2; p <= totalPages; p++) {
+                pagePromises.push(penaltyLiveService.getRecords({ page: p, limit: pRes.limit || 500, status: "all" }));
+              }
+              const restResults = await Promise.all(pagePromises);
+              restResults.forEach(r => {
+                if (r && Array.isArray(r.records)) {
+                  allRecords.push(...r.records);
+                }
+              });
+            }
+            setComplaintRecords(allRecords);
           }
         } catch (pErr) {
-          // Graceful fallback
+          console.warn("Failed to fetch complaint records in analysis:", pErr);
         }
       } catch (err) {
         console.error("Error fetching analysis data:", err);
