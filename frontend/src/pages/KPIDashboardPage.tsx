@@ -744,30 +744,101 @@ function SubmissionTab({ assignment, submission, month, fy, fyMonths, onMonthCha
                 </span>
               </div>
               <div className="divide-y divide-line">
-                {kras.filter((k) => k.section === "job_role").map((kra, i) => (
-                  <div key={i} className="p-5 space-y-2.5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-bold text-sm text-ink-900">{kra.name}</p>
-                        {kra.target && <p className="text-xs text-ink-500 font-sans mt-0.5">{kra.target}</p>}
+                {kras.filter((k) => k.section === "job_role").map((kra, i) => {
+                  const rawVal: any = selfData[kra.name];
+                  const savedObj = (rawVal && typeof rawVal === 'object') ? rawVal : { notes: typeof rawVal === 'string' ? rawVal : "", achievedPct: 100 };
+                  const currentAchieved: number = typeof savedObj.achievedPct === 'number' ? savedObj.achievedPct : 100;
+                  const currentNotes: string = typeof savedObj.notes === 'string' ? savedObj.notes : "";
+
+                  const updateSelf = (field: 'notes' | 'achievedPct', val: any) => {
+                    setSelfData((prev: any) => {
+                      const prevRaw = prev[kra.name];
+                      const prevObj = (prevRaw && typeof prevRaw === 'object') ? prevRaw : { notes: typeof prevRaw === 'string' ? prevRaw : "", achievedPct: 100 };
+                      return {
+                        ...prev,
+                        [kra.name]: {
+                          ...prevObj,
+                          [field]: val
+                        }
+                      };
+                    });
+                  };
+
+                  return (
+                    <div key={i} className="p-5 space-y-3.5 hover:bg-surface-sunken/20 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-accent-50 border border-accent-200 text-accent-700 text-[10px] font-mono font-bold flex items-center justify-center">
+                              {i + 1}
+                            </span>
+                            <p className="font-bold text-sm text-ink-900">{kra.name}</p>
+                          </div>
+                          {kra.target && (
+                            <div className="mt-1.5 flex items-center gap-1.5 text-xs text-ink-600 font-mono bg-surface-sunken px-2.5 py-1 rounded-md border border-line inline-flex">
+                              <span className="font-bold text-accent-700">Target:</span> {kra.target}
+                            </div>
+                          )}
+                        </div>
+                        <span className="shrink-0 rounded-md bg-accent-50 border border-accent-200 px-2.5 py-1 text-xs font-mono font-bold text-accent-700">
+                          {kra.weight}% Weight
+                        </span>
                       </div>
-                      <span className="shrink-0 rounded-md bg-accent-50 border border-accent-200 px-2 py-0.5 text-xs font-mono font-bold text-accent-700">
-                        {kra.weight}%
-                      </span>
+
+                      {/* Dual Target vs Achieved Attainment Box */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-surface-sunken/70 p-3.5 rounded-lg border border-line">
+                        <div className="sm:col-span-1">
+                          <label className="text-[10px] font-mono font-bold text-ink-500 uppercase tracking-wider block mb-1">
+                            Self-Attainment Score:
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="150"
+                              value={currentAchieved}
+                              onChange={(e) => updateSelf('achievedPct', Math.max(0, Math.min(150, parseInt(e.target.value) || 0)))}
+                              disabled={!isEditable}
+                              className="w-20 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-mono font-bold text-accent-700 text-center focus:border-accent-600 focus:outline-none disabled:bg-surface-sunken"
+                            />
+                            <span className="text-xs font-mono font-bold text-ink-600">% achieved</span>
+                          </div>
+                        </div>
+
+                        <div className="sm:col-span-2 flex flex-col justify-center">
+                          <div className="flex justify-between text-[10px] font-mono font-semibold text-ink-500 mb-1">
+                            <span>Attainment Gauge</span>
+                            <span className={currentAchieved >= 90 ? "text-emerald-600 font-bold" : currentAchieved >= 60 ? "text-accent-600 font-bold" : "text-rose-600 font-bold"}>
+                              {currentAchieved >= 90 ? "Outstanding" : currentAchieved >= 60 ? "On Track" : "Needs Focus"}
+                            </span>
+                          </div>
+                          <div className="h-2 w-full bg-line rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                currentAchieved >= 90 ? "bg-emerald-500" : currentAchieved >= 60 ? "bg-accent-600" : "bg-rose-500"
+                              }`}
+                              style={{ width: `${Math.min(100, currentAchieved)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-mono font-bold text-ink-500 uppercase tracking-wider block mb-1">
+                          Monthly Achievements & Evidences:
+                        </label>
+                        <textarea
+                          value={currentNotes}
+                          onChange={(e) => updateSelf('notes', e.target.value)}
+                          disabled={!isEditable}
+                          rows={2}
+                          placeholder="Detail specific numbers, hospitals visited, tickets resolved, or deliverables completed..."
+                          className="w-full rounded-lg border border-line p-3 text-xs text-ink-900 placeholder:text-ink-300 focus:border-accent-600 focus:ring-2 focus:ring-accent-500/20 focus:outline-none disabled:bg-surface-sunken disabled:text-ink-400 resize-none font-sans"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-[11px] font-mono font-bold text-ink-500 uppercase tracking-wider">Achievements & Evidences:</label>
-                      <textarea
-                        value={selfData[kra.name] || ""}
-                        onChange={(e) => setSelfData((prev) => ({ ...prev, [kra.name]: e.target.value }))}
-                        disabled={!isEditable}
-                        rows={2}
-                        placeholder="Detail your monthly accomplishments against this KRA..."
-                        className="mt-1 w-full rounded-lg border border-line p-3 text-xs text-ink-900 placeholder:text-ink-300 focus:border-accent-600 focus:ring-2 focus:ring-accent-500/20 focus:outline-none disabled:bg-surface-sunken disabled:text-ink-400 resize-none font-sans"
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1242,6 +1313,36 @@ function QueriesTab({ queries, isManager, onRefresh }: any) {
 // ════════════════════════════════════════════════════════════════════
 // ─── KPI Setup Tab (Zoho KRA Builder) ─────────────────────────────────
 // ════════════════════════════════════════════════════════════════════
+
+// ─── Standard Role KRA Templates ──────────────────────────────────────────────
+const KRA_TEMPLATES: Record<string, { label: string; kras: KRA[] }> = {
+  field_engineer: {
+    label: "Field Service Engineer (Medical Equipment)",
+    kras: [
+      { name: "Preventative Maintenance (PM) Visits Compliance", target: "100% scheduled PM visits completed within month", weight: 25, section: "job_role" },
+      { name: "Breakdown Call Resolution within SLA", target: "≥95% breakdown calls resolved within 24-48 hours SLA", weight: 25, section: "job_role" },
+      { name: "Equipment Uptime across Assigned Installations", target: "≥98% operational uptime across assigned hospital sites", weight: 15, section: "job_role" },
+      { name: "Daily Activity & Expense Submission Compliance", target: "100% on-time daily logs and zero delayed expense submissions", weight: 15, section: "job_role" },
+    ]
+  },
+  biomedical: {
+    label: "Bio-Medical / Quality Specialist",
+    kras: [
+      { name: "Quality Calibration & Safety Testing", target: "100% calibration certificates issued with zero non-conformances", weight: 30, section: "job_role" },
+      { name: "Critical Spares & Inventory Management", target: "Zero equipment downtime caused by unmanaged parts inventory", weight: 25, section: "job_role" },
+      { name: "Clinical Staff Training & Handover", target: "Minimum 4 hospital training sessions conducted per quarter", weight: 25, section: "job_role" },
+    ]
+  },
+  coordinator: {
+    label: "Service Coordinator / Operations",
+    kras: [
+      { name: "Call Dispatch & SLA Allocation Efficiency", target: "100% incoming service calls dispatched within 15 minutes", weight: 30, section: "job_role" },
+      { name: "Monthly MIS & Claim Audit Reconciliations", target: "100% team expenses and service reports audited by 3rd of month", weight: 30, section: "job_role" },
+      { name: "Customer Satisfaction & Feedback Score", target: "≥90% positive feedback across all closed service tickets", weight: 20, section: "job_role" },
+    ]
+  }
+};
+
 function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
   const [kras, setKras] = useState<KRA[]>([]);
   const [startsFrom, setStartsFrom] = useState("");
@@ -1307,6 +1408,33 @@ function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
           {assignment.status === "active" && (
             <p className="text-xs text-ink-500 font-mono">KPI Setup is approved and active for FY {fy}.</p>
           )}
+        </div>
+      )}
+
+      {/* Quick 1-Click Role Templates (If not locked) */}
+      {!isLocked && (
+        <div className="rounded-xl border border-accent-200 bg-accent-50/50 p-5 shadow-2xs">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-accent-900">1-Click Industry KRA Templates</h2>
+              <p className="text-[11px] text-accent-700 font-sans mt-0.5">Pre-fill standard medical equipment service & operational targets with pre-calculated weights</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            {Object.entries(KRA_TEMPLATES).map(([key, t]) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setKras(t.kras);
+                  toast.success(`Applied ${t.label} template!`);
+                }}
+                className="flex items-center gap-1.5 rounded-lg border border-accent-300 bg-white hover:bg-accent-50 px-3.5 py-2 text-xs font-semibold text-accent-900 shadow-2xs transition-all cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5 text-accent-600" />
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
