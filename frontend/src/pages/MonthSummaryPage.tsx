@@ -588,12 +588,29 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       </table>
 
       <table class="info-tbl" style="width:100%;">
-        <colgroup><col style="width:7%;"><col style="width:23%;"><col style="width:8%;"><col style="width:12%;"><col style="width:8%;"><col style="width:12%;"><col style="width:10%;"><col style="width:20%;"></colgroup>
+        <colgroup>
+          <col style="width:6%;">
+          <col style="width:17%;">
+          <col style="width:7%;">
+          <col style="width:10%;">
+          <col style="width:6%;">
+          <col style="width:8%;">
+          <col style="width:7%;">
+          <col style="width:12%;">
+          <col style="width:7%;">
+          <col style="width:9%;">
+          <col style="width:7%;">
+          <col style="width:11%;">
+        </colgroup>
         <tr>
-          <td class="info-lbl" style="text-align:center!important;vertical-align:middle!important;">NAME :</td>
+          <td class="info-lbl" style="text-align:center!important;vertical-align:middle!important;">NAME:</td>
           <td class="info-val" style="text-align:center!important;vertical-align:middle!important;">${user.name || ""}</td>
           <td class="info-lbl" style="text-align:center!important;vertical-align:middle!important;">EE CODE:</td>
           <td class="info-val" style="text-align:center!important;vertical-align:middle!important;">${user.e_code || ""}</td>
+          <td class="info-lbl" style="text-align:center!important;vertical-align:middle!important;">GRADE:</td>
+          <td class="info-val" style="text-align:center!important;vertical-align:middle!important;">${user.grade || "L1"}</td>
+          <td class="info-lbl" style="text-align:center!important;vertical-align:middle!important;">MOBILE:</td>
+          <td class="info-val" style="text-align:center!important;vertical-align:middle!important;">${user.phone || user.mobile || user.contact_no || ""}</td>
           <td class="info-lbl" style="text-align:center!important;vertical-align:middle!important;">PROJECT:</td>
           <td class="info-val" style="text-align:center!important;vertical-align:middle!important;">RJBEMP</td>
           <td class="info-lbl" style="text-align:center!important;vertical-align:middle!important;">LOCATION:</td>

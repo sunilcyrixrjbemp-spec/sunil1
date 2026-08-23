@@ -234,10 +234,12 @@ export async function generateCyrixVectorPdf(
     doc.setTextColor(15, 23, 42);
     doc.setFontSize(7);
     const infoY = 18;
-    doc.text(`NAME: ${user.name || ""}`, margin + 5, infoY);
-    doc.text(`EE CODE: ${user.e_code || ""}`, margin + 75, infoY);
-    doc.text("PROJECT: RJBEMP", margin + 145, infoY);
-    doc.text(`LOCATION: ${(user.district || "").toUpperCase()}`, margin + 215, infoY);
+    doc.text(`NAME: ${user.name || ""}`, margin + 4, infoY);
+    doc.text(`EE CODE: ${user.e_code || ""}`, margin + 55, infoY);
+    doc.text(`GRADE: ${user.grade || "L1"}`, margin + 95, infoY);
+    doc.text(`MOBILE: ${user.phone || user.mobile || user.contact_no || ""}`, margin + 130, infoY);
+    doc.text("PROJECT: RJBEMP", margin + 185, infoY);
+    doc.text(`LOCATION: ${(user.district || "").toUpperCase()}`, margin + 235, infoY);
 
     // 3. Table Rows Data
     const tableBody = pageLegs.map((r) => {
