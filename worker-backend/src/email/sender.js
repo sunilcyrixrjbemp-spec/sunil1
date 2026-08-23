@@ -35,26 +35,15 @@ import {
 // ─── Cloudflare Email Workers (Native) ───────────────────────────────────────
 
 /**
- * Send email via Cloudflare Email Workers binding (env.EMAIL_SENDER).
- * This is the native Cloudflare solution — no third-party API needed.
- * Docs: https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
- *
- * Requirements:
- *   - [[send_email]] binding in wrangler.toml
- *   - Email Routing enabled on domain (Cloudflare Dashboard → Email → Email Routing)
- *   - From address verified in Email Routing
- *
- * @param {Object} env
- * @param {Object} opts - { to, toName, subject, html }
- * @returns {Promise<{ success: boolean, messageId?: string, error?: string }>}
+ * Send email via Cloudflare Email Workers binding (env.EMAIL_SENDER) or MailChannels API.
+ * Single From address: noreply@indrae.in (zero personal reply-to or duplicate contact headers)
  */
 async function sendViaCloudflareMail(env, opts) {
   const { to, toName, subject, html, text, cc = [] } = opts;
 
   const fromEmail = env.EMAIL_FROM_ADDRESS || "noreply@indrae.in";
-  const replyTo   = env.EMAIL_REPLY_TO     || "rjbemp-bikaner@cyrix.in";
   const fromName  = env.EMAIL_FROM_NAME   || "Cyrix Field Connect";
-  const textBody  = text || "Cyrix Field Connect Security Verification Email.";
+  const textBody  = text || "Cyrix Field Connect Notification Email.";
   const ccHeader  = cc.length > 0 ? cc.join(", ") : null;
 
   // ── Primary: MailChannels API (Sends TO + CC in 1 single transaction — no multi-send count) ──
@@ -65,7 +54,6 @@ async function sendViaCloudflareMail(env, opts) {
         ...(cc.length > 0 ? { cc: cc.map(e => ({ email: e })) } : {})
       }],
       from: { email: fromEmail, name: fromName },
-      reply_to: { email: replyTo, name: fromName },
       subject: subject,
       content: [
         { type: "text/plain", value: textBody },
@@ -115,7 +103,6 @@ async function sendViaCloudflareMail(env, opts) {
         `Message-ID: ${msgId}`,
         `From: ${fromName} <${fromEmail}>`,
         `To: ${toHeader}`,
-        `Reply-To: ${fromName} <${replyTo}>`,
         ...(ccHeader ? [`Cc: ${ccHeader}`] : []),
         `Subject: ${cleanSubject}`,
         `Organization: Cyrix HealthCare Private Limited`,
@@ -184,7 +171,6 @@ async function sendViaCloudflareMail(env, opts) {
     error: "All email delivery methods (CF Email Workers, MailChannels API, GAS Webhook) failed.",
   };
 }
-
 
 // ─── Email Log Helpers ────────────────────────────────────────────────────────
 
