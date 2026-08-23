@@ -415,12 +415,13 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
               <h2 className="text-xs font-bold font-display uppercase tracking-wider text-ink-900 m-0 leading-tight">
                 EXPENSE VARIANCE ANALYSIS
               </h2>
-              <span className="text-[9.5px] font-bold text-accent-700 bg-accent-50 px-1.5 py-0.2 rounded border border-accent-200 font-mono whitespace-nowrap leading-none">
+              <span className="text-[9.5px] font-bold text-accent-700 bg-accent-50 px-1.5 py-0.5 rounded border border-accent-200 font-mono whitespace-nowrap leading-none shrink-0">
                 {prevLabel} vs {currLabel}
               </span>
             </div>
-            <p className="text-[10px] text-ink-500 font-sans mt-0.5 m-0 leading-tight truncate">
-              Comparative executive analytics model (Coordinator, Admin, Accountant, Travel Desk, MIS)
+            <p className="text-[10px] text-ink-500 font-sans mt-0.5 m-0 leading-tight sm:truncate">
+              <span className="hidden sm:inline">Comparative executive analytics model (Coordinator, Admin, Accountant, Travel Desk, MIS)</span>
+              <span className="sm:hidden">Comparative analytics (Coordinator, Admin, MIS)</span>
             </p>
           </div>
         </div>
