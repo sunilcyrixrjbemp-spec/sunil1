@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -10,8 +10,12 @@ import {
   HelpCircle,
   LogOut,
   ChevronDown,
+  CheckCheck,
+  ExternalLink,
+  Inbox,
 } from "lucide-react";
 import CommandPalette from "./CommandPalette";
+import type { NotificationItem } from "../../services/notificationService";
 
 export interface NavbarProps {
   userName: string;
@@ -68,6 +72,46 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isStandalone, setIsStandalone] = useState<boolean>(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const bellMenuRef = useRef<HTMLDivElement>(null);
+  const [isBellOpen, setIsBellOpen] = useState(false);
+
+  // Read notifications from localStorage (same source as DashboardLayout + NotificationsPage)
+  const recentNotifications = useMemo<NotificationItem[]>(() => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+      if (!currentUser) return [];
+      const cached = localStorage.getItem(`notifications_${currentUser.user_id}`);
+      if (cached) {
+        const list = JSON.parse(cached);
+        if (Array.isArray(list)) {
+          // Return the 5 most recent notifications
+          return list
+            .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 5);
+        }
+      }
+    } catch (_) {}
+    return [];
+  }, [location.pathname]); // Re-compute on route change to pick up any new cached notifications
+
+  // Relative time formatter
+  const relativeTime = (dateStr: string) => {
+    try {
+      const now = Date.now();
+      const then = new Date(dateStr).getTime();
+      const diff = Math.max(0, now - then);
+      const mins = Math.floor(diff / 60000);
+      if (mins < 1) return "Just now";
+      if (mins < 60) return `${mins}m ago`;
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return `${hrs}h ago`;
+      const days = Math.floor(hrs / 24);
+      if (days < 7) return `${days}d ago`;
+      return new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    } catch {
+      return "";
+    }
+  };
 
   // Command palette key shortcut listener (Ctrl+K or Cmd+K)
   useEffect(() => {
@@ -93,6 +137,19 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isUserMenuOpen]);
+
+  // Dismiss bell menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (bellMenuRef.current && !bellMenuRef.current.contains(e.target as Node)) {
+        setIsBellOpen(false);
+      }
+    };
+    if (isBellOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isBellOpen]);
 
   // PWA Install prompt listener
   useEffect(() => {
@@ -219,11 +276,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Section: Mobile Search, PWA Install (Desktop only), Notifications, User Profile */}
         <div className="flex items-center gap-2 xs:gap-2.5 sm:gap-3 md:gap-3.5 shrink-0">
-          {/* Mobile Command Palette Search Trigger */}
+          {/* Mobile Command Palette Search Trigger (36px tap target, 20px icon) */}
           <button
             type="button"
             onClick={() => setIsCmdOpen(true)}
-            className="md:hidden w-8 h-8 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer shrink-0"
+            className="md:hidden w-9 h-9 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-full transition-colors cursor-pointer shrink-0"
             title="Search"
             aria-label="Search"
           >
@@ -243,24 +300,132 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Notification Bell with Unread Badge */}
-          <Link
-            to="/notifications"
-            className="relative w-8 h-8 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer shrink-0"
-            title="Notifications"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-accent-600 ring-2 ring-white animate-pulse" />
-            )}
-          </Link>
-
-          {/* User Profile Avatar with Dropdown (32px Circle) */}
-          <div className="relative ml-0.5 sm:ml-1 shrink-0" ref={userMenuRef}>
+          {/* Notification Bell with Dropdown Panel */}
+          <div className="relative shrink-0" ref={bellMenuRef}>
             <button
               type="button"
-              onClick={() => setIsUserMenuOpen((prev) => !prev)}
+              onClick={() => { setIsBellOpen((prev) => !prev); setIsUserMenuOpen(false); }}
+              className="relative w-9 h-9 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-full transition-colors cursor-pointer focus:outline-none"
+              title="Notifications"
+              aria-label="Notifications"
+              aria-expanded={isBellOpen}
+              aria-haspopup="true"
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-accent-600 ring-2 ring-white animate-pulse" />
+              )}
+            </button>
+
+            {/* Bell Dropdown Panel */}
+            {isBellOpen && (
+              <div
+                className="absolute right-0 top-full mt-1.5 w-72 sm:w-80 max-w-[calc(100vw-24px)] bg-white border border-line rounded-xl shadow-lg z-50 animate-in fade-in zoom-in-95 duration-150 select-none overflow-hidden"
+                role="menu"
+              >
+                {/* Dropdown Header */}
+                <div className="px-3.5 py-2.5 border-b border-line flex items-center justify-between bg-surface-sunken/50">
+                  <h3 className="text-xs font-bold text-ink-900 m-0 flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5 text-accent-600" />
+                    Notifications
+                    {unreadCount > 0 && (
+                      <span className="ml-1 text-[10px] font-bold text-white bg-accent-600 rounded-full px-1.5 py-0.5 leading-none">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </h3>
+                  {recentNotifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Mark all as read in localStorage
+                        try {
+                          const currentUser = JSON.parse(localStorage.getItem("user") || "null");
+                          if (currentUser) {
+                            const cacheKey = `notifications_${currentUser.user_id}`;
+                            const cached = localStorage.getItem(cacheKey);
+                            if (cached) {
+                              const list = JSON.parse(cached);
+                              if (Array.isArray(list)) {
+                                const updated = list.map((n: any) => ({ ...n, read: true }));
+                                localStorage.setItem(cacheKey, JSON.stringify(updated));
+                              }
+                            }
+                          }
+                        } catch (_) {}
+                        setIsBellOpen(false);
+                      }}
+                      className="text-[10px] font-semibold text-accent-700 hover:text-accent-900 flex items-center gap-1 border-0 bg-transparent cursor-pointer transition-colors"
+                    >
+                      <CheckCheck className="w-3 h-3" /> Mark all read
+                    </button>
+                  )}
+                </div>
+
+                {/* Notification List */}
+                <div className="max-h-72 overflow-y-auto">
+                  {recentNotifications.length === 0 ? (
+                    <div className="py-8 px-4 text-center">
+                      <Inbox className="w-8 h-8 text-ink-300 mx-auto mb-2" />
+                      <p className="text-xs font-semibold text-ink-500 m-0">No notifications yet</p>
+                      <p className="text-[10px] text-ink-400 mt-0.5 m-0">You're all caught up!</p>
+                    </div>
+                  ) : (
+                    recentNotifications.map((n: NotificationItem) => (
+                      <Link
+                        key={n.id}
+                        to={n.link || "/notifications"}
+                        onClick={() => setIsBellOpen(false)}
+                        className={`flex items-start gap-2.5 px-3.5 py-2.5 border-b border-line/60 last:border-b-0 transition-colors hover:bg-surface-sunken/60 ${
+                          !n.read ? "bg-accent-50/40" : ""
+                        }`}
+                      >
+                        {/* Unread dot */}
+                        <div className="mt-1.5 shrink-0">
+                          {!n.read ? (
+                            <span className="block w-2 h-2 rounded-full bg-accent-600" />
+                          ) : (
+                            <span className="block w-2 h-2 rounded-full bg-transparent" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[11px] m-0 leading-snug ${!n.read ? "font-bold text-ink-900" : "font-medium text-ink-700"}`}>
+                            {n.title}
+                          </p>
+                          {n.description && (
+                            <p className="text-[10px] text-ink-500 mt-0.5 m-0 leading-snug line-clamp-2">
+                              {n.description}
+                            </p>
+                          )}
+                          <p className="text-[9px] text-ink-400 mt-1 m-0 font-mono">
+                            {relativeTime(n.created_at)}
+                          </p>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </div>
+
+                {/* Footer: View All */}
+                <Link
+                  to="/notifications"
+                  onClick={() => setIsBellOpen(false)}
+                  className="block px-3.5 py-2 border-t border-line text-center text-[11px] font-semibold text-accent-700 hover:text-accent-900 hover:bg-surface-sunken/60 transition-colors"
+                >
+                  View All Notifications <ExternalLink className="w-3 h-3 inline-block ml-0.5 -mt-0.5" />
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* User Profile Avatar with Dropdown (32px Circle) */}
+          <div className="relative ml-1 sm:ml-2.5 shrink-0" ref={userMenuRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsUserMenuOpen((prev) => !prev);
+                setIsBellOpen(false);
+              }}
               className="flex items-center gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-surface-sunken transition-colors cursor-pointer focus:outline-none border border-transparent hover:border-line shrink-0"
               title="User Account Menu"
               aria-expanded={isUserMenuOpen}
