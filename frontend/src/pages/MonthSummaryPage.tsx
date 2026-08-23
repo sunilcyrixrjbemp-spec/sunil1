@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import { generateCyrixVectorPdf } from "../utils/cyrixVectorPdfEngine";
 // High-Speed In-Memory PDF Cache
 const pdfBlobCache = new Map<string, Blob>();
@@ -1403,7 +1404,7 @@ export default function MonthSummaryPage() {
     });
 
     try {
-      const zip = new (window as any).JSZip();
+      const zip = new JSZip();
       const total = selectedRows.length;
       let completedPdfs = 0;
 
