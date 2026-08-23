@@ -290,8 +290,8 @@ const NAV_ITEMS: NavItemConfig[] = [
     id: "facilities", 
     label: "Facilities & No TA/DA", 
     icon: Building2,
-    title: "Facilities Directory & Policy Exception Master",
-    subtitle: "Manage Expense Page facilities (facility_details) and No TA/DA policy exceptions (no_ta_da_hospitals)."
+    title: "Facilities & Policy Locations",
+    subtitle: "Manage official expense claim locations and zero daily allowance exception hospitals."
   },
   { 
     id: "audit", 
@@ -1665,7 +1665,6 @@ export default function AdminPage() {
   const cList = getEligibleCoordinators();
 
   const currentTabConfig = NAV_ITEMS.find(n => n.id === activeTab) || NAV_ITEMS[0];
-  const CurrentSectionIcon = currentTabConfig.icon;
 
   const getNavCount = (tabId: AdminTab) => {
     if (tabId === "users") return users.length;
@@ -1677,244 +1676,145 @@ export default function AdminPage() {
 
   return (
     <>
-      <div className="min-h-screen w-full relative bg-[#FAFAF9] selection:bg-accent-100 selection:text-accent-900 pb-20">
-        {/* ══════════════════════════════════════════════════════════════════
-            CLEAN SUBTLE AMBIENT CANVAS (Ditto HomePage / Login)
-        ══════════════════════════════════════════════════════════════════ */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-25">
+      <div className="min-h-screen w-full relative bg-[#FAFAF9] selection:bg-accent-100 selection:text-accent-900 pb-16">
+        {/* Subtle Ambient Background Mesh */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-20">
           <div
-            className="absolute -top-[10%] -left-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-1"
+            className="absolute -top-[10%] -left-[10%] w-[500px] h-[500px] rounded-full"
             style={{
               background: "radial-gradient(circle, #4338CA 0%, rgba(67, 56, 202, 0) 70%)",
-              filter: "blur(120px)",
+              filter: "blur(100px)",
             }}
           />
           <div
-            className="absolute -bottom-[10%] -right-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-2"
+            className="absolute -bottom-[10%] -right-[10%] w-[500px] h-[500px] rounded-full"
             style={{
               background: "radial-gradient(circle, #6366F1 0%, rgba(99, 102, 241, 0) 70%)",
-              filter: "blur(130px)",
+              filter: "blur(110px)",
             }}
           />
         </div>
 
-        {/* Delicate Architectural Grid */}
-        <div
-          className="absolute inset-0 pointer-events-none opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "linear-gradient(#12151A 1px, transparent 1px), linear-gradient(90deg, #12151A 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-          }}
-        />
-
-        <div className="relative z-10 max-w-[1680px] mx-auto px-3 sm:px-6 pt-3 space-y-4 text-ink-900 font-sans antialiased">
+        <div className="relative z-10 max-w-[1680px] mx-auto px-3 sm:px-5 pt-3 space-y-3 text-ink-900 font-sans antialiased">
           
-          {/* ── 1. Compact Zoho Header: Identity + Badges + Quick Actions ─ */}
-          <div className="bg-surface border border-line rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white flex items-center justify-center font-black text-sm shadow-xs border border-white/10 shrink-0">
+          {/* ── 1. Slim Unified Top Header (Compact & Clean) ──────────────── */}
+          <header className="bg-surface border border-line rounded-2xl px-4 py-2.5 shadow-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white flex items-center justify-center font-black text-xs shadow-2xs shrink-0">
                 AD
               </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="bg-accent-50 text-accent-700 border border-accent-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-accent-600" /> Super Admin
-                  </span>
-                  <span className="bg-surface-sunken border border-line text-ink-700 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1.5 font-mono">
-                    <Calendar className="w-3 h-3 text-ink-400" /> {new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                  </span>
-                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-2xs font-mono font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> D1 Database Online
-                  </span>
-                </div>
-                <h1 className="text-lg sm:text-xl font-black text-ink-900 tracking-tight m-0 mt-1 font-display">
-                  Admin Console &amp; Control Center
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-bold text-ink-900 tracking-tight m-0 font-display">
+                  Admin Console
                 </h1>
+                <span className="text-ink-400">/</span>
+                <span className="text-xs font-bold text-accent-700 bg-accent-50 px-2.5 py-0.5 rounded-full border border-accent-200 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-accent-600" />
+                  {currentTabConfig.label}
+                </span>
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-2xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online
+                </span>
               </div>
             </div>
 
-            {/* Quick Context Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-start md:justify-end">
-              <div className="relative hidden sm:block">
-                <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder={activeTab === "facilities" ? "Search facility / district..." : "Quick filter roster..."}
-                  value={activeTab === "facilities" ? facilitySearch : userSearchTerm}
-                  onChange={(e) => {
-                    if (activeTab === "facilities") setFacilitySearch(e.target.value);
-                    else setUserSearchTerm(e.target.value);
-                  }}
-                  className="input-lte pl-8 h-9 text-xs w-44 md:w-56 lg:w-60 rounded-xl"
-                />
-              </div>
-
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleSyncData}
                 disabled={isSyncing}
-                className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
-                title="Synchronize D1 Database"
+                className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                title="Refresh All Data"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${isSyncing ? "animate-spin" : ""}`} />
-                <span>{isSyncing ? "Syncing..." : "Sync D1"}</span>
+                <span className="hidden sm:inline">{isSyncing ? "Refreshing..." : "Refresh"}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setShowSingleUserModal(true)}
-                className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-9 px-4 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>+ Add User</span>
-              </button>
+              {activeTab === "users" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkUploadModal(true)}
+                    className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
+                    <span className="hidden sm:inline">Bulk CSV</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowSingleUserModal(true)}
+                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-8 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add User</span>
+                  </button>
+                </>
+              )}
 
-              <button
-                type="button"
-                onClick={() => setShowBulkUploadModal(true)}
-                className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
-              >
-                <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
-                <span>Bulk CSV</span>
-              </button>
+              {activeTab === "approvals" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleExportHierarchies}
+                    className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                    title="Export Hierarchy CSV"
+                  >
+                    <Download className="w-3.5 h-3.5 text-ink-600" />
+                    <span className="hidden sm:inline">Export CSV</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkHierarchyModal(true)}
+                    className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
+                    <span className="hidden sm:inline">Bulk Import</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenHierarchyModal()}
+                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-8 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Create Team</span>
+                  </button>
+                </>
+              )}
 
-              <button
-                type="button"
-                onClick={() => {
-                  setNewFacilityTargetTable("standard");
-                  setIsAddFacilityModalOpen(true);
-                }}
-                className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
-              >
-                <Building2 className="w-3.5 h-3.5 text-accent-600" />
-                <span>+ Add Facility</span>
-              </button>
+              {activeTab === "facilities" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleExportFacilitiesExcel}
+                    className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline">Export Excel</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewFacilityTargetTable(facilitySubTab === "expense" ? "standard" : "no_ta_da");
+                      setNewFacilityName("");
+                      setNewFacilityDistrict("");
+                      setNewFacilityIncharge("");
+                      setNewFacilityDmName("");
+                      setNewFacilityCoordinatorName("");
+                      setIsAddFacilityModalOpen(true);
+                    }}
+                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-8 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Location</span>
+                  </button>
+                </>
+              )}
             </div>
-          </div>
+          </header>
 
-          {/* ── 2. Compact Zoho Summary KPI Cards Row (4 Governance Cards) ──── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Card 1: Total Users / Workforce */}
-            <div 
-              onClick={() => handleTabChange("users")}
-              className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:border-accent-400/60 transition-all cursor-pointer space-y-2 group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono">
-                  TOTAL WORKFORCE
-                </span>
-                <div className="w-7 h-7 rounded-lg bg-accent-50 text-accent-700 flex items-center justify-center font-bold text-xs group-hover:scale-105 transition-transform">
-                  <Users className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-ink-900 font-display">
-                  {safeUsers.length}
-                </span>
-                <div className="flex items-center gap-1.5 text-2xs font-mono font-bold">
-                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                    {safeUsers.filter(u => (u.user_status || "active").toLowerCase() === "active").length} Active
-                  </span>
-                </div>
-              </div>
-              <div className="text-2xs text-ink-500 font-medium">
-                {availableUserRoles.length} active employee roles configured
-              </div>
-            </div>
-
-            {/* Card 2: Facilities Master */}
-            <div 
-              onClick={() => handleTabChange("facilities")}
-              className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:border-accent-400/60 transition-all cursor-pointer space-y-2 group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono">
-                  FACILITIES MASTER
-                </span>
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold text-xs group-hover:scale-105 transition-transform">
-                  <Building2 className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-ink-900 font-display">
-                  {standardFacilities.length + noTaDaHospitals.length}
-                </span>
-                <div className="flex items-center gap-1 text-2xs font-mono font-bold">
-                  <span className="text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
-                    {standardFacilities.length} Std
-                  </span>
-                  <span className="text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-full border border-rose-200">
-                    {noTaDaHospitals.length} Excp
-                  </span>
-                </div>
-              </div>
-              <div className="text-2xs text-ink-500 font-medium">
-                Expense facilities &amp; No TA/DA hospitals
-              </div>
-            </div>
-
-            {/* Card 3: Team Hierarchies */}
-            <div 
-              onClick={() => handleTabChange("approvals")}
-              className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:border-accent-400/60 transition-all cursor-pointer space-y-2 group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono">
-                  TEAM HIERARCHIES
-                </span>
-                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs group-hover:scale-105 transition-transform">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-ink-900 font-display">
-                  {safeHierarchies.length}
-                </span>
-                <span className="text-2xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Mapped HQs
-                </span>
-              </div>
-              <div className="text-2xs text-ink-500 font-medium">
-                Multi-tier approval sequences active
-              </div>
-            </div>
-
-            {/* Card 4: System Policies */}
-            <div 
-              onClick={() => handleTabChange("settings")}
-              className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:border-accent-400/60 transition-all cursor-pointer space-y-2 group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono">
-                  POLICY ENGINE
-                </span>
-                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs group-hover:scale-105 transition-transform">
-                  <Zap className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-black text-ink-900 font-display">
-                    {settings.past_days_limit || 15}d
-                  </span>
-                  <span className="text-xs text-ink-500 font-mono font-semibold">
-                    / Cutoff {settings.cutoff_day || 3}rd
-                  </span>
-                </div>
-                <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 rounded-full border border-approved-border flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-approved animate-pulse" /> Active
-                </span>
-              </div>
-              <div className="text-2xs text-ink-500 font-medium">
-                Auto-expiry: {settings.auto_approve_days ? `${settings.auto_approve_days} days` : "Disabled"}
-              </div>
-            </div>
-          </div>
-
-          {/* ================= MOBILE SUB-NAVIGATION PILLS (<768px) ================= */}
-          <nav className="block md:hidden bg-surface border border-line rounded-2xl p-2 overflow-x-auto no-scrollbar shadow-xs">
-            <div className="flex items-center gap-1.5">
+          {/* ================= MOBILE NAVIGATION PILLS (<768px) ================= */}
+          <nav className="block md:hidden bg-surface border border-line rounded-2xl p-1.5 overflow-x-auto no-scrollbar shadow-xs">
+            <div className="flex items-center gap-1">
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -1924,7 +1824,7 @@ export default function AdminPage() {
                     key={item.id}
                     type="button"
                     onClick={() => handleTabChange(item.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-colors cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-all cursor-pointer ${
                       isActive
                         ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
                         : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
@@ -1945,11 +1845,11 @@ export default function AdminPage() {
             </div>
           </nav>
 
-          {/* ================= MAIN TWO-COLUMN ZOHO SHELL ================= */}
-          <div className="flex flex-col md:flex-row gap-4 items-start">
-            {/* Tablet 56px Collapsed Icon Rail (768px–1024px) */}
-            <aside className="hidden md:block lg:hidden w-14 shrink-0 bg-surface border border-line rounded-2xl py-3 shadow-xs sticky top-4">
-              <div className="flex flex-col items-center gap-1.5">
+          {/* ================= MAIN TWO-COLUMN WORKSPACE ================= */}
+          <div className="flex flex-col md:flex-row gap-3.5 items-start">
+            {/* Tablet 52px Collapsed Icon Rail (768px–1024px) */}
+            <aside className="hidden md:block lg:hidden w-13 shrink-0 bg-surface border border-line rounded-2xl py-2.5 shadow-xs sticky top-3">
+              <div className="flex flex-col items-center gap-1">
                 {NAV_ITEMS.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
@@ -1958,16 +1858,16 @@ export default function AdminPage() {
                       <button
                         type="button"
                         onClick={() => handleTabChange(item.id)}
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer border-0 ${
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer border-0 ${
                           isActive
-                            ? "bg-accent-50 text-accent-700 border-l-[3px] border-accent-600 rounded-l-none"
+                            ? "bg-accent-50 text-accent-700 font-bold"
                             : "bg-transparent text-ink-500 hover:bg-surface-sunken hover:text-ink-900"
                         }`}
                         title={item.label}
                       >
-                        <Icon className="w-5 h-5" />
+                        <Icon className="w-4 h-4" />
                       </button>
-                      <div className="absolute left-14 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 bg-ink-900 text-white text-xs font-semibold rounded-md shadow-md whitespace-nowrap hidden group-hover:block z-50 pointer-events-none">
+                      <div className="absolute left-12 top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-ink-900 text-white text-xs font-semibold rounded-lg shadow-md whitespace-nowrap hidden group-hover:block z-50 pointer-events-none">
                         {item.label}
                       </div>
                     </div>
@@ -1976,11 +1876,8 @@ export default function AdminPage() {
               </div>
             </aside>
 
-            {/* Desktop 240px Persistent Sidebar (≥1024px) */}
-            <aside className="hidden lg:block w-60 shrink-0 bg-surface border border-line rounded-2xl py-4 px-2.5 shadow-xs sticky top-4">
-              <div className="px-3 pb-2 text-2xs font-bold uppercase tracking-wider text-ink-500 font-mono flex items-center gap-1.5">
-                <span>NAVIGATION</span>
-              </div>
+            {/* Desktop 230px Zoho Left Sidebar (≥1024px) */}
+            <aside className="hidden lg:block w-56 shrink-0 bg-surface border border-line rounded-2xl p-2 shadow-xs sticky top-3">
               <nav className="space-y-1">
                 {NAV_ITEMS.map((item) => {
                   const Icon = item.icon;
@@ -1991,9 +1888,9 @@ export default function AdminPage() {
                       key={item.id}
                       type="button"
                       onClick={() => handleTabChange(item.id)}
-                      className={`w-full h-10 px-3 flex items-center justify-between text-xs font-semibold rounded-xl transition-all cursor-pointer border-0 ${
+                      className={`w-full h-9 px-3 flex items-center justify-between text-xs rounded-xl transition-all cursor-pointer border-0 ${
                         isActive
-                          ? "bg-[#EEF0FF] text-[#4338CA] font-bold border-l-[3px] border-[#4338CA] rounded-l-none shadow-xs"
+                          ? "bg-[#EEF0FF] text-[#4338CA] font-bold shadow-2xs"
                           : "bg-transparent text-ink-700 hover:bg-surface-sunken hover:text-ink-900 font-medium"
                       }`}
                     >
@@ -2004,8 +1901,8 @@ export default function AdminPage() {
                       {count !== undefined && (
                         <span className={`px-2 py-0.5 text-2xs font-mono font-bold rounded-full ${
                           isActive
-                            ? "bg-accent-100 text-accent-700 border border-accent-400/30"
-                            : "bg-surface border border-line text-ink-600"
+                            ? "bg-accent-100 text-accent-700 border border-accent-300/40"
+                            : "bg-surface-sunken text-ink-500"
                         }`}>
                           {count}
                         </span>
@@ -2016,98 +1913,13 @@ export default function AdminPage() {
               </nav>
             </aside>
 
-            {/* Main Content Pane */}
-            <main className="flex-1 min-w-0 space-y-4">
-              {/* Standardized Content Pane Header */}
-              <div className="bg-surface border border-line rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-bold shrink-0 border border-accent-200">
-                    <CurrentSectionIcon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base sm:text-lg font-bold font-display text-ink-900 leading-tight m-0">
-                      {currentTabConfig.title}
-                    </h2>
-                    <p className="text-xs text-ink-500 mt-0.5 font-medium m-0">
-                      {currentTabConfig.subtitle}
-                    </p>
-                  </div>
+            {/* Main Content Workspace */}
+            <main className="flex-1 min-w-0">
+              {error && (
+                <div className="mb-3">
+                  <Alert message={error} type="error" showIcon className="rounded-xl font-semibold border-rose-200" />
                 </div>
-
-                {/* Top-Right Contextual Primary / Secondary Actions */}
-                <div className="flex flex-wrap items-center gap-2">
-                {activeTab === "users" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setShowBulkUploadModal(true)}
-                      className="btn-lte-secondary text-xs h-8 px-3 flex items-center gap-1.5 cursor-pointer font-semibold"
-                    >
-                      <UploadCloud className="w-3.5 h-3.5 text-ink-600" />
-                      <span>Bulk CSV</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSingleUserError(null);
-                        setShowSingleUserModal(true);
-                      }}
-                      className="btn-lte-primary text-xs h-8 px-3.5 flex items-center gap-1.5 cursor-pointer font-bold"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Add User</span>
-                    </button>
-                  </>
-                )}
-
-                {activeTab === "approvals" && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setShowBulkHierarchyModal(true)}
-                      className="btn-lte-secondary text-xs h-8 px-3 flex items-center gap-1.5 cursor-pointer font-semibold"
-                    >
-                      <UploadCloud className="w-3.5 h-3.5 text-ink-600" />
-                      <span>Bulk Import</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportHierarchies}
-                      className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 cursor-pointer font-semibold"
-                    >
-                      <Download className="w-3.5 h-3.5 text-ink-600" />
-                      <span>Export CSV</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleOpenHierarchyModal()}
-                      className="btn-lte-primary text-xs h-8 px-3.5 flex items-center gap-1.5 cursor-pointer font-bold"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Create Team</span>
-                    </button>
-                  </>
-                )}
-
-                {activeTab === "facilities" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewFacilityTargetTable(facilitySubTab === "expense" ? "standard" : "no_ta_da");
-                      setIsAddFacilityModalOpen(true);
-                    }}
-                    className="btn-lte-primary text-xs h-8 px-3.5 flex items-center gap-1.5 cursor-pointer font-bold"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>{facilitySubTab === "expense" ? "+ Add Facility" : "+ Add Hospital"}</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {error && (
-              <Alert message={error} type="error" showIcon className="rounded-lg font-semibold border-rose-200" />
-            )}
+              )}
 
             {/* ================= SECTION 1: USERS DIRECTORY ================= */}
             {activeTab === "users" && (
@@ -3359,123 +3171,63 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* ================= SECTION 5: FACILITIES & NO TA/DA TAB ================= */}
+            {/* ================= SECTION 5: FACILITIES & POLICY LOCATIONS ================= */}
             {activeTab === "facilities" && (
-              <div className="space-y-4 animate-fadeIn">
-                {/* Header Overview Banner */}
-                <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-black shrink-0 border border-indigo-200 shadow-xs">
-                      <Building2 className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-accent-600 text-white text-2xs font-mono font-bold uppercase px-2 py-0.5 rounded-full tracking-wider">
-                          OPERATIONAL LOCATIONS MASTER
-                        </span>
-                        <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 border border-approved-border rounded-full flex items-center gap-1">
-                          <Check className="w-3 h-3" /> LIVE D1 &amp; KV SYNCED
-                        </span>
-                      </div>
-                      <h3 className="text-base font-bold text-ink-900 mt-1.5 mb-0 font-display">
-                        Facilities Directory &amp; Policy Exception Master
-                      </h3>
-                      <p className="text-xs text-ink-500 font-medium m-0 mt-0.5">
-                        Central master database for all selectable expense facilities (<code>facility_details</code>) and ₹0 DA policy exception hospitals (<code>no_ta_da_hospitals</code>).
-                      </p>
-                    </div>
-                  </div>
+              <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs animate-fadeIn">
+                {/* Clean Integrated Header Bar: Sub-Tabs + Filters + Quick Actions */}
+                <div className="p-3.5 sm:p-4 border-b border-line bg-surface flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                  {/* Left: Clean Segmented Sub-Tab Switcher */}
+                  <div className="bg-surface-sunken p-1 rounded-xl flex gap-1 border border-line shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setFacilitySubTab("expense")}
+                      className={`py-1.5 px-3.5 text-xs font-bold border-0 cursor-pointer transition-all rounded-lg flex items-center gap-1.5 ${
+                        facilitySubTab === "expense"
+                          ? "bg-surface text-accent-700 shadow-2xs border border-line"
+                          : "bg-transparent text-ink-600 hover:text-ink-900"
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>Expense Facilities</span>
+                      <span className="bg-accent-100 text-accent-700 px-1.5 py-0.2 rounded-full text-2xs font-mono font-bold">
+                        {standardFacilities.length}
+                      </span>
+                    </button>
 
-                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      onClick={fetchFacilities}
-                      disabled={facilityLoading}
-                      className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
-                      title="Reload Facilities"
+                      onClick={() => setFacilitySubTab("notada")}
+                      className={`py-1.5 px-3.5 text-xs font-bold border-0 cursor-pointer transition-all rounded-lg flex items-center gap-1.5 ${
+                        facilitySubTab === "notada"
+                          ? "bg-surface text-rose-700 shadow-2xs border border-line"
+                          : "bg-transparent text-ink-600 hover:text-ink-900"
+                      }`}
                     >
-                      <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${facilityLoading ? "animate-spin" : ""}`} />
-                      <span>{facilityLoading ? "Reloading..." : "Reload"}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportFacilitiesExcel}
-                      className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
-                      title="Export Facilities to Excel"
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Export Excel</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewFacilityTargetTable(facilitySubTab === "expense" ? "standard" : "no_ta_da");
-                        setNewFacilityName("");
-                        setNewFacilityDistrict("");
-                        setNewFacilityIncharge("");
-                        setNewFacilityDmName("");
-                        setNewFacilityCoordinatorName("");
-                        setIsAddFacilityModalOpen(true);
-                      }}
-                      className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-9 px-4 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Add Facility</span>
+                      <span className="w-2 h-2 rounded-full bg-rose-500" />
+                      <span>No TA/DA Exceptions</span>
+                      <span className="bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded-full text-2xs font-mono font-bold">
+                        {noTaDaHospitals.length}
+                      </span>
                     </button>
                   </div>
-                </div>
 
-                {/* Sub-Tab Navigation Bar */}
-                <div className="bg-surface-sunken p-1 rounded-2xl flex gap-1.5 border border-line shadow-inner">
-                  <button
-                    type="button"
-                    onClick={() => setFacilitySubTab("expense")}
-                    className={`flex-1 py-2.5 px-4 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-xl flex items-center justify-center gap-2 ${
-                      facilitySubTab === "expense"
-                        ? "bg-surface text-accent-700 shadow-xs border border-line"
-                        : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
-                    }`}
-                  >
-                    <span>🏢 Standard Expense Facilities (facility_details)</span>
-                    <span className="bg-accent-100 text-accent-700 px-2 py-0.5 rounded-full text-2xs font-mono font-bold">
-                      {standardFacilities.length}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFacilitySubTab("notada")}
-                    className={`flex-1 py-2.5 px-4 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-xl flex items-center justify-center gap-2 ${
-                      facilitySubTab === "notada"
-                        ? "bg-surface text-rose-700 shadow-xs border border-line"
-                        : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
-                    }`}
-                  >
-                    <span>🛑 No TA / DA Exceptions (no_ta_da_hospitals)</span>
-                    <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full text-2xs font-mono font-bold">
-                      {noTaDaHospitals.length}
-                    </span>
-                  </button>
-                </div>
-
-                {/* Filter Toolbar */}
-                <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
-                    <div className="relative flex-1 min-w-[200px]">
-                      <Search className="w-4 h-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  {/* Right: Search & Filters */}
+                  <div className="flex flex-wrap items-center gap-2 flex-1 justify-start lg:justify-end">
+                    <div className="relative min-w-[180px] sm:min-w-[220px] flex-1 sm:flex-initial">
+                      <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Search facility name, district, incharge, DM..."
+                        placeholder="Search name, district, incharge, manager..."
                         value={facilitySearch}
                         onChange={(e) => setFacilitySearch(e.target.value)}
-                        className="input-lte pl-9 h-9 text-xs w-full rounded-xl"
+                        className="input-lte pl-8 h-8 text-xs w-full rounded-xl"
                       />
                     </div>
 
                     <select
                       value={facilityZoneFilter}
                       onChange={(e) => setFacilityZoneFilter(e.target.value)}
-                      className="input-lte h-9 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[140px]"
+                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer min-w-[120px]"
                     >
                       <option value="all">All Zones</option>
                       {dropdowns?.zones && Object.keys(dropdowns.zones).map((z: string) => (
@@ -3486,7 +3238,7 @@ export default function AdminPage() {
                     <select
                       value={facilityDistrictFilter}
                       onChange={(e) => setFacilityDistrictFilter(e.target.value)}
-                      className="input-lte h-9 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[140px]"
+                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer min-w-[120px]"
                     >
                       <option value="all">All Districts</option>
                       {availableUserDistricts.map((d: string) => (
@@ -3494,48 +3246,30 @@ export default function AdminPage() {
                       ))}
                     </select>
                   </div>
-
-                  <div className="text-2xs font-mono font-bold text-ink-500">
-                    Showing {facilitySubTab === "expense" ? standardFacilities.length : noTaDaHospitals.length} entries
-                  </div>
                 </div>
 
                 {/* Sub-Tab 1: Standard Facilities Table */}
                 {facilitySubTab === "expense" && (
-                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs">
-                    <div className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white px-5 py-3.5 flex items-center justify-between">
-                      <div>
-                        <span className="text-xs font-bold uppercase tracking-wider font-mono">
-                          🏢 Table: facility_details (Expense Dropdown Master)
-                        </span>
-                        <div className="text-2xs text-accent-200 mt-0.5">
-                          Directly queried by Expense Submit page (<code>GET /api/expenses/init</code>). Selectable in daily claim legs.
-                        </div>
-                      </div>
-                      <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-accent-100 font-bold border border-white/10">
-                        {standardFacilities.length} Records
-                      </span>
-                    </div>
-
+                  <div>
                     {facilityLoading ? (
-                      <div className="p-12 text-center text-ink-500 font-bold text-xs bg-surface flex flex-col items-center justify-center gap-3">
+                      <div className="p-12 text-center text-ink-500 font-bold text-xs flex flex-col items-center justify-center gap-3">
                         <LteSpinner />
-                        <span>Loading Expense Facilities from D1...</span>
+                        <span>Loading Facilities...</span>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
-                              <th className="py-3 px-3"># ID</th>
-                              <th className="py-3 px-4">Facility Name</th>
-                              <th className="py-3 px-3">District</th>
-                              <th className="py-3 px-3">Facility Type</th>
-                              <th className="py-3 px-3">Zone</th>
-                              <th className="py-3 px-3">Incharge</th>
-                              <th className="py-3 px-3">DM Name</th>
-                              <th className="py-3 px-3">Coordinator</th>
-                              <th className="py-3 px-3 text-right min-w-[100px]">Actions</th>
+                              <th className="py-2.5 px-3"># ID</th>
+                              <th className="py-2.5 px-4">Facility Name</th>
+                              <th className="py-2.5 px-3">District</th>
+                              <th className="py-2.5 px-3">Facility Type</th>
+                              <th className="py-2.5 px-3">Zone</th>
+                              <th className="py-2.5 px-3">Facility Incharge</th>
+                              <th className="py-2.5 px-3">Divisional Manager</th>
+                              <th className="py-2.5 px-3">Coordinator</th>
+                              <th className="py-2.5 px-3 text-right min-w-[90px]">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-line text-ink-900 font-medium">
@@ -3556,45 +3290,40 @@ export default function AdminPage() {
                                 );
                               })
                               .map((f, idx) => (
-                                <tr key={f.id || idx} className="hover:bg-accent-50/30 transition-colors">
-                                  <td className="py-2.5 px-3 font-mono font-bold text-ink-500">#{f.id}</td>
-                                  <td className="py-2.5 px-4">
-                                    <div className="font-bold text-ink-900 text-xs">{f.facility_name}</div>
-                                    <span className="text-2xs text-ink-500 font-mono">
-                                      source: {f.source || "facility_details"}
-                                    </span>
-                                  </td>
-                                  <td className="py-2.5 px-3 font-bold text-accent-700 font-mono">{f.district_name}</td>
-                                  <td className="py-2.5 px-3">
+                                <tr key={f.id || idx} className="hover:bg-accent-50/20 transition-colors">
+                                  <td className="py-2 px-3 font-mono text-ink-500 font-semibold">#{f.id}</td>
+                                  <td className="py-2 px-4 font-bold text-ink-900">{f.facility_name}</td>
+                                  <td className="py-2 px-3 font-bold text-accent-700">{f.district_name}</td>
+                                  <td className="py-2 px-3">
                                     <span className="px-2 py-0.5 bg-surface-sunken text-ink-700 rounded border border-line text-2xs font-semibold">
                                       {f.facility_type || "Hospital"}
                                     </span>
                                   </td>
-                                  <td className="py-2.5 px-3 font-medium text-ink-600">{f.zone_name || "Rajasthan"}</td>
-                                  <td className="py-2.5 px-3 text-ink-700">{f.facility_incharge || "N/A"}</td>
-                                  <td className="py-2.5 px-3 text-ink-700">{f.dm_name || "N/A"}</td>
-                                  <td className="py-2.5 px-3 text-ink-700">{f.coordinator_name || "N/A"}</td>
-                                  <td className="py-2.5 px-3 text-right">
+                                  <td className="py-2 px-3 text-ink-600">{f.zone_name || "Rajasthan"}</td>
+                                  <td className="py-2 px-3 text-ink-700">{f.facility_incharge || "—"}</td>
+                                  <td className="py-2 px-3 text-ink-700 font-medium">{f.dm_name || "—"}</td>
+                                  <td className="py-2 px-3 text-ink-700">{f.coordinator_name || "—"}</td>
+                                  <td className="py-2 px-3 text-right">
                                     <div className="flex items-center justify-end gap-1.5">
                                       <button
                                         type="button"
                                         onClick={() => openEditFacilityModal(f, "standard")}
-                                        className="p-1.5 bg-surface hover:bg-accent-50 text-ink-700 hover:text-accent-700 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                        className="p-1.5 bg-surface hover:bg-accent-50 text-ink-600 hover:text-accent-700 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
                                         title="Edit Facility"
                                       >
                                         <Pencil className="w-3.5 h-3.5" />
                                       </button>
                                       <Popconfirm
-                                        title="Delete Expense Facility?"
-                                        description="Are you sure you want to remove this facility from facility_details?"
+                                        title="Delete Facility?"
+                                        description="Are you sure you want to remove this facility?"
                                         onConfirm={() => handleDeleteFacility(f.id || f.facility_name, "standard")}
-                                        okText="Yes, Delete"
+                                        okText="Delete"
                                         cancelText="Cancel"
                                         okButtonProps={{ danger: true, size: "small" }}
                                       >
                                         <button
                                           type="button"
-                                          className="p-1.5 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                          className="p-1.5 bg-surface hover:bg-rose-50 text-ink-400 hover:text-rose-600 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
                                           title="Delete Facility"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
@@ -3607,7 +3336,7 @@ export default function AdminPage() {
                             {standardFacilities.length === 0 && (
                               <tr>
                                 <td colSpan={9} className="py-8 text-center text-ink-400 font-medium">
-                                  No Expense Facilities found in facility_details table.
+                                  No Expense Facilities found.
                                 </td>
                               </tr>
                             )}
@@ -3620,36 +3349,22 @@ export default function AdminPage() {
 
                 {/* Sub-Tab 2: No TA/DA Exceptions Table */}
                 {facilitySubTab === "notada" && (
-                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs">
-                    <div className="bg-gradient-to-r from-[#991B1B] to-[#DC2626] text-white px-5 py-3.5 flex items-center justify-between">
-                      <div>
-                        <span className="text-xs font-bold uppercase tracking-wider font-mono">
-                          🛑 Table: no_ta_da_hospitals (Policy Exemption Master)
-                        </span>
-                        <div className="text-2xs text-rose-100 mt-0.5">
-                          Directly queried by <code>GET /api/auth/dropdowns</code>. Visits to these hospitals attract ₹0 DA policy deduction.
-                        </div>
-                      </div>
-                      <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-rose-100 font-bold border border-white/10">
-                        {noTaDaHospitals.length} Exceptions
-                      </span>
-                    </div>
-
+                  <div>
                     {facilityLoading ? (
-                      <div className="p-12 text-center text-ink-500 font-bold text-xs bg-surface flex flex-col items-center justify-center gap-3">
+                      <div className="p-12 text-center text-ink-500 font-bold text-xs flex flex-col items-center justify-center gap-3">
                         <LteSpinner />
-                        <span>Loading No TA/DA Hospitals from D1...</span>
+                        <span>Loading Exception Hospitals...</span>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
-                              <th className="py-3 px-3"># ID</th>
-                              <th className="py-3 px-4">Hospital Name</th>
-                              <th className="py-3 px-4">District</th>
-                              <th className="py-3 px-4">Created Date</th>
-                              <th className="py-3 px-3 text-right min-w-[100px]">Actions</th>
+                              <th className="py-2.5 px-3"># ID</th>
+                              <th className="py-2.5 px-4">Hospital Name</th>
+                              <th className="py-2.5 px-4">District</th>
+                              <th className="py-2.5 px-4">Policy Rule</th>
+                              <th className="py-2.5 px-3 text-right min-w-[90px]">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-line text-ink-900 font-medium">
@@ -3664,38 +3379,40 @@ export default function AdminPage() {
                                 );
                               })
                               .map((f, idx) => (
-                                <tr key={f.id || idx} className="hover:bg-rose-50/30 transition-colors">
-                                  <td className="py-2.5 px-3 font-mono font-bold text-ink-500">#{f.id || idx + 1}</td>
-                                  <td className="py-2.5 px-4 font-bold text-ink-900 text-xs">
+                                <tr key={f.id || idx} className="hover:bg-rose-50/20 transition-colors">
+                                  <td className="py-2 px-3 font-mono text-ink-500 font-semibold">#{f.id || idx + 1}</td>
+                                  <td className="py-2 px-4 font-bold text-ink-900 text-xs">
                                     {f.hospital_name || f.facility_name}
                                   </td>
-                                  <td className="py-2.5 px-4 font-bold text-rose-700 font-mono">
+                                  <td className="py-2 px-4 font-bold text-rose-700 font-mono">
                                     {f.district_name}
                                   </td>
-                                  <td className="py-2.5 px-4 text-2xs font-mono text-ink-500">
-                                    {f.created_at ? formatToIST(f.created_at) : "—"}
+                                  <td className="py-2 px-4 text-2xs font-semibold text-rose-600">
+                                    <span className="bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                                      ₹0 Daily Allowance
+                                    </span>
                                   </td>
-                                  <td className="py-2.5 px-3 text-right">
+                                  <td className="py-2 px-3 text-right">
                                     <div className="flex items-center justify-end gap-1.5">
                                       <button
                                         type="button"
                                         onClick={() => openEditFacilityModal(f, "no_ta_da")}
-                                        className="p-1.5 bg-surface hover:bg-rose-50 text-ink-700 hover:text-rose-700 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                        className="p-1.5 bg-surface hover:bg-rose-50 text-ink-600 hover:text-rose-700 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
                                         title="Edit Hospital"
                                       >
                                         <Pencil className="w-3.5 h-3.5" />
                                       </button>
                                       <Popconfirm
-                                        title="Remove No TA/DA Exception?"
-                                        description="Are you sure you want to remove this hospital from no_ta_da_hospitals?"
+                                        title="Remove Exception?"
+                                        description="Are you sure you want to remove this hospital from No TA/DA exception list?"
                                         onConfirm={() => handleDeleteFacility(f.id || f.hospital_name, "no_ta_da")}
-                                        okText="Yes, Delete"
+                                        okText="Delete"
                                         cancelText="Cancel"
                                         okButtonProps={{ danger: true, size: "small" }}
                                       >
                                         <button
                                           type="button"
-                                          className="p-1.5 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                          className="p-1.5 bg-surface hover:bg-rose-50 text-ink-400 hover:text-rose-600 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
                                           title="Delete Hospital"
                                         >
                                           <Trash2 className="w-3.5 h-3.5" />
@@ -3708,7 +3425,7 @@ export default function AdminPage() {
                             {noTaDaHospitals.length === 0 && (
                               <tr>
                                 <td colSpan={5} className="py-8 text-center text-ink-400 font-medium">
-                                  No Hospitals found in no_ta_da_hospitals table.
+                                  No Exception Hospitals found.
                                 </td>
                               </tr>
                             )}
@@ -4204,8 +3921,8 @@ export default function AdminPage() {
                     onChange={(e) => setNewFacilityTargetTable(e.target.value as any)}
                     className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
                   >
-                    <option value="standard">🏢 facility_details (Expense Page Facilities)</option>
-                    <option value="no_ta_da">🛑 no_ta_da_hospitals (No TA/DA Exception List)</option>
+                    <option value="standard">Standard Expense Facility (Selectable in claims)</option>
+                    <option value="no_ta_da">No TA/DA Exception Location (Zero daily allowance)</option>
                   </select>
                 </div>
 
@@ -4382,14 +4099,14 @@ export default function AdminPage() {
             >
               <div className="p-5 space-y-3.5 overflow-y-auto max-h-[70vh]">
                 <div>
-                  <label className="label-lte text-2xs block mb-1">Target Master Table *</label>
+                  <label className="label-lte text-2xs block mb-1">Category *</label>
                   <select
                     value={newFacilityTargetTable}
                     onChange={(e) => setNewFacilityTargetTable(e.target.value as any)}
                     className="input-lte h-9 text-xs font-bold w-full rounded-xl"
                   >
-                    <option value="standard">🏢 facility_details (Expense Page Dropdown)</option>
-                    <option value="no_ta_da">🛑 no_ta_da_hospitals (No TA/DA Exception List)</option>
+                    <option value="standard">Standard Expense Facility (Selectable in claims)</option>
+                    <option value="no_ta_da">No TA/DA Exception Location (Zero daily allowance)</option>
                   </select>
                 </div>
 
@@ -4475,7 +4192,7 @@ export default function AdminPage() {
 
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="label-lte text-2xs block mb-1">DM Name</label>
+                        <label className="label-lte text-2xs block mb-1">Divisional Manager (DM)</label>
                         <input
                           type="text"
                           value={newFacilityDmName}
