@@ -3847,14 +3847,14 @@ export default function AdminPage() {
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
           <div className="bg-surface border border-line rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-scale-up flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="bg-surface border-b border-line px-5 py-4 flex items-center justify-between shrink-0">
+            <div className="bg-surface border-b border-line px-5 py-3.5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200">
                   <UploadCloud className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-ink-900 text-sm m-0">Bulk Import Facilities (Smart Upsert)</h3>
-                  <p className="text-2xs text-ink-500 m-0">Upload Excel (.xlsx) or CSV file to add or update facilities in bulk</p>
+                  <h3 className="font-bold text-ink-900 text-sm m-0">Bulk Import Facilities</h3>
+                  <p className="text-2xs text-ink-500 m-0">Upload Excel (.xlsx) or CSV file</p>
                 </div>
               </div>
               <button
@@ -3871,29 +3871,20 @@ export default function AdminPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-5 overflow-y-auto space-y-4 flex-1">
-              {/* Smart Upsert Banner */}
-              <div className="bg-[#EEF0FF] border border-[#DEE1FF] rounded-xl p-3.5 flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 text-[#4338CA] shrink-0 mt-0.5" />
-                <div className="text-xs text-[#1E1B4B] leading-relaxed">
-                  <strong className="font-bold block mb-0.5 text-[#362FA0]">Unique Facility Name Rule (Auto-Update):</strong>
-                  If a <code>Facility Name</code> in your file matches an existing hospital/facility in the database, its details (Incharge, Divisional Manager, Coordinator, Zone, District) will be <strong>automatically updated</strong>. If it is a new facility, it will be <strong>created</strong>.
-                </div>
-              </div>
-
-              {/* Sample Template Download */}
-              <div className="flex items-center justify-between bg-surface-sunken border border-line rounded-xl p-3">
-                <div>
-                  <div className="text-xs font-bold text-ink-900">Need the correct Excel format?</div>
-                  <div className="text-2xs text-ink-500">Download the official pre-formatted template with sample rows.</div>
+            <div className="p-5 overflow-y-auto space-y-3.5 flex-1">
+              {/* Compact Template Download Bar */}
+              <div className="flex items-center justify-between bg-surface-sunken border border-line rounded-xl px-3.5 py-2.5">
+                <div className="flex items-center gap-2 text-xs font-medium text-ink-700">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Download sample Excel format</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleDownloadFacilityTemplate}
-                  className="bg-white hover:bg-surface-sunken text-accent-700 border border-accent-200 text-xs font-bold px-3 py-1.5 rounded-xl shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+                  className="bg-white hover:bg-surface text-accent-700 border border-line text-xs font-bold px-3 py-1 rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
                 >
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Download Sample Template</span>
+                  <Download className="w-3.5 h-3.5 text-accent-600" />
+                  <span>Download Format</span>
                 </button>
               </div>
 
