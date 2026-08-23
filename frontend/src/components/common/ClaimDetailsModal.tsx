@@ -1024,11 +1024,35 @@ const LegDetailCard = ({
 
       {/* ASSET TAGGING WORK LIST - EXCEL TABLE FORMAT (IDENTICAL TO CALLS/PMS) */}
       {(() => {
+        const hasExplicitAssetTagging = !!(
+          (act.assetsList && act.assetsList.length > 0) ||
+          barcode ||
+          act.parsed?.asset_tagging_barcode ||
+          leg.asset_tagging_barcode ||
+          leg.asset_tagging_suffix ||
+          equipmentName ||
+          act.assetEquipment ||
+          act.parsed?.asset_tagging_equipment ||
+          leg.asset_tagging_equipment ||
+          act.parsed?.asset_tagging_hospital ||
+          leg.asset_tagging_hospital ||
+          act.parsed?.asset_tagging_make ||
+          leg.asset_tagging_make ||
+          act.parsed?.asset_tagging_model ||
+          leg.asset_tagging_model ||
+          act.parsed?.asset_tagging_serial ||
+          leg.asset_tagging_serial ||
+          act.parsed?.asset_tagging_barcode_photo ||
+          leg.asset_tagging_barcode_photo ||
+          act.parsed?.asset_tagging_serial_photo ||
+          leg.asset_tagging_serial_photo
+        );
+
         const rawAssets = (act.assetsList && act.assetsList.length > 0) ? act.assetsList : (
-          (hospitalName || equipmentName || barcode || act.assetEquipment || department || schedule || act.parsed?.asset_tagging_equipment || leg.asset_tagging_equipment || leg.asset_tagging_barcode || leg.asset_tagging_hospital) ? [{
-            equipment_name: equipmentName || act.assetEquipment || act.parsed?.asset_tagging_equipment || leg.asset_tagging_equipment || leg.equipment_name || "",
+          hasExplicitAssetTagging ? [{
+            equipment_name: equipmentName || act.assetEquipment || act.parsed?.asset_tagging_equipment || leg.asset_tagging_equipment || "",
             barcode: barcode || act.parsed?.asset_tagging_barcode || leg.asset_tagging_barcode || (leg.asset_tagging_suffix ? `(8004890615671) ${leg.asset_tagging_suffix}` : "") || "",
-            hospital_name: hospitalName || act.parsed?.asset_tagging_hospital || leg.asset_tagging_hospital || leg.hospital_name || toLoc || "",
+            hospital_name: act.parsed?.asset_tagging_hospital || leg.asset_tagging_hospital || ((barcode || leg.asset_tagging_barcode || equipmentName || act.assetEquipment) ? (hospitalName || "") : "") || "",
             make: act.parsed?.make || act.parsed?.asset_tagging_make || act.parsed?.brand || leg.asset_tagging_make || leg.make || leg.brand || "",
             model: equipmentModel || act.parsed?.model || act.parsed?.asset_tagging_model || leg.asset_tagging_model || leg.model || "",
             serial_number: act.parsed?.serial_no || act.parsed?.serial_number || act.parsed?.asset_tagging_serial || leg.asset_tagging_serial || leg.serial_number || leg.serial_no || "",
@@ -1053,7 +1077,8 @@ const LegDetailCard = ({
           const make = item.make || item.brand || "";
           const model = item.model || "";
           const serial = item.serial_number || item.serial_no || "";
-          return isValidText(eq) || isValidText(bar) || isValidText(hosp) || isValidText(make) || isValidText(model) || isValidText(serial) || item.barcode_photo || item.serial_photo || item.model_photo;
+          const hasPhotos = !!(item.barcode_photo || item.serial_photo || item.model_photo);
+          return isValidText(bar) || isValidText(eq) || isValidText(serial) || isValidText(model) || isValidText(make) || hasPhotos || (isValidText(hosp) && (isValidText(eq) || isValidText(bar)));
         });
 
         if (validAssets.length === 0) return null;
@@ -1085,7 +1110,7 @@ const LegDetailCard = ({
                   {validAssets.map((assetItem: any, aIdx: number) => {
                     const bar = assetItem.barcode || assetItem.code || "—";
                     const eq = assetItem.equipment_name || assetItem.equipment || "—";
-                    const hosp = assetItem.hospital_name || assetItem.hospital || hospitalName || "—";
+                    const hosp = assetItem.hospital_name || assetItem.hospital || "—";
                     const make = assetItem.make || assetItem.brand || "—";
                     const model = assetItem.model || assetItem.model_no || "—";
                     const serial = assetItem.serial_number || assetItem.serial_no || "—";
@@ -2594,7 +2619,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       <div className="p-2.5 space-y-2 font-sans text-ink-900">
 
         {/* ─── 1. HIERARCHY-ALIGNED LIFECYCLE APPROVAL STEPPER (3-STAGE: SUBMITTED ➔ LEVEL 1 MANAGER ➔ LEVEL 2 COORDINATOR) ─────────────────── */}
-        <div className="bg-white rounded-[4px] border border-line/80 p-2.5 shadow-2xs">
+        <div className="bg-white rounded-[4px] border border-line/80 p-2 sm:p-2.5 shadow-2xs overflow-x-auto">
           {(() => {
             // Level 1: Manager Review
             const l1 = approvals.find((a: any) => a.level === 1 || a.approver_role?.toLowerCase().includes("manag")) || approvals[0];
@@ -2609,23 +2634,23 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             const isL2Returned = l2?.status === "returned";
 
             return (
-              <div className="flex items-center justify-between relative px-3 sm:px-12">
+              <div className="flex items-center justify-between relative px-1 sm:px-12 min-w-[280px]">
                 {/* Step 1: Submission */}
-                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[75px]">
+                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[65px] sm:min-w-[75px] shrink-0">
                   <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shadow-2xs">
                     <CheckCircle2 size={13} />
                   </div>
-                  <span className="text-[10px] font-bold text-ink-900 font-sans">1. Submitted</span>
-                  <span className="text-[9px] text-ink-400 font-mono">{formatDateDDMMMYY(c.date || c.itinerary)}</span>
+                  <span className="text-[9.5px] sm:text-[10px] font-bold text-ink-900 font-sans whitespace-nowrap">1. Submitted</span>
+                  <span className="text-[8.5px] sm:text-[9px] text-ink-400 font-mono">{formatDateDDMMMYY(c.date || c.itinerary)}</span>
                 </div>
 
                 {/* Line 1 -> 2 */}
-                <div className={`flex-1 h-0.5 mx-3 sm:mx-6 ${
+                <div className={`flex-1 h-0.5 mx-1.5 sm:mx-6 min-w-[12px] ${
                   isL1Approved ? "bg-emerald-500" : (isL1Rejected ? "bg-rose-400" : (isL1Returned ? "bg-orange-400" : "bg-amber-400"))
                 }`} />
 
                 {/* Step 2: Level 1 - Manager */}
-                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[95px]">
+                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[80px] sm:min-w-[95px] shrink-0">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-2xs ${
                     isL1Approved
                       ? "bg-emerald-600 text-white"
@@ -2637,8 +2662,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   }`}>
                     {isL1Approved ? <CheckCircle2 size={13} /> : (isL1Rejected ? <XCircle size={13} /> : (isL1Returned ? <RotateCcw size={13} /> : <Clock size={13} />))}
                   </div>
-                  <span className="text-[10px] font-bold text-ink-900 font-sans">2. Level 1: Manager</span>
-                  <span className="text-[9px] font-mono font-medium">
+                  <span className="text-[9.5px] sm:text-[10px] font-bold text-ink-900 font-sans whitespace-nowrap">2. Level 1: Manager</span>
+                  <span className="text-[8.5px] sm:text-[9px] font-mono font-medium whitespace-nowrap">
                     {isL1Approved ? (
                       <span className="text-emerald-700">{l1?.action_date ? formatDateDDMMMYY(l1.action_date) : "Approved"}</span>
                     ) : isL1Rejected ? (
@@ -2652,12 +2677,12 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                 </div>
 
                 {/* Line 2 -> 3 */}
-                <div className={`flex-1 h-0.5 mx-3 sm:mx-6 ${
+                <div className={`flex-1 h-0.5 mx-1.5 sm:mx-6 min-w-[12px] ${
                   isL2Approved ? "bg-emerald-500" : (isL2Rejected ? "bg-rose-400" : (isL2Returned ? "bg-orange-400" : (isL1Approved ? "bg-amber-400" : "bg-line")))
                 }`} />
 
                 {/* Step 3: Level 2 - Coordinator */}
-                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[95px]">
+                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[85px] sm:min-w-[95px] shrink-0">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-2xs ${
                     isL2Approved
                       ? "bg-emerald-600 text-white"
@@ -2669,8 +2694,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   }`}>
                     {isL2Approved ? <CheckCircle2 size={13} /> : (isL2Rejected ? <XCircle size={13} /> : (isL2Returned ? <RotateCcw size={13} /> : <Clock size={13} />))}
                   </div>
-                  <span className="text-[10px] font-bold text-ink-900 font-sans">3. Level 2: Coordinator</span>
-                  <span className="text-[9px] font-mono font-medium">
+                  <span className="text-[9.5px] sm:text-[10px] font-bold text-ink-900 font-sans whitespace-nowrap">3. Level 2: Coordinator</span>
+                  <span className="text-[8.5px] sm:text-[9px] font-mono font-medium whitespace-nowrap">
                     {isL2Approved ? (
                       <span className="text-emerald-700">{l2?.action_date ? formatDateDDMMMYY(l2.action_date) : "Approved"}</span>
                     ) : isL2Rejected ? (
