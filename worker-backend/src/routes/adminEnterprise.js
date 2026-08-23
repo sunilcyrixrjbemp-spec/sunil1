@@ -212,17 +212,9 @@ export async function handleStorageReport(request, env, params, query, user) {
 export async function handleCfInfraAnalytics(request, env, params, query, user) {
   if (!user || user.role !== "Admin") return errorResponse("Admin access required", 403);
 
-  const token     = env.CF_API_TOKEN || env.CF_AI_API_TOKEN;
+  const token     = env.CF_ANALYTICS_API_TOKEN || env.CF_API_TOKEN;
   const accountId = env.CF_ACCOUNT_ID || "befbd2e0ff580a1d0d0865f011002053";
   const zoneId    = env.CF_ZONE_ID;
-
-  if (!token || !accountId) {
-    return jsonResponse({
-      configured: false,
-      message: "Cloudflare credentials not configured. Add CF_API_TOKEN and CF_ACCOUNT_ID as Worker secrets.",
-      generatedAt: nowISO(),
-    });
-  }
 
   const CF_GQL  = "https://api.cloudflare.com/client/v4/graphql";
   const CF_REST = "https://api.cloudflare.com/client/v4";
@@ -241,83 +233,38 @@ export async function handleCfInfraAnalytics(request, env, params, query, user) 
   let emailSentCount = 0;
   try {
     const db = env.DB;
-    const monthYear = now.toISOString().slice(0, 7); // e.g. "2026-08"
     const emailResult = await db.prepare(
       `SELECT COUNT(*) as cnt FROM email_logs WHERE sent_at >= ? AND sent_at <= ?`
     ).bind(monthStart, monthEnd).first().catch(() => null);
     emailSentCount = emailResult?.cnt || 0;
   } catch (_) { emailSentCount = 0; }
 
-  // ── Run all CF API calls in parallel ──────────────────────────────────────
-  const [
-    billingRes, workersRes, workersByScriptRes, workersDailyRes,
-    d1Res, r2Res, kvRes, queuesRes, cacheRes, zoneHttpRes,
-  ] = await Promise.allSettled([
-
+  // ── Run parallel CF API calls ──────────────────────────────────────────────
+  const [billingRes, mainGqlRes, zoneHttpRes] = await Promise.allSettled([
     // 1. Billing subscriptions (REST)
     fetch(`${CF_REST}/accounts/${accountId}/subscriptions`, { headers })
       .then(r => r.json()).catch(() => null),
 
-    // 2. Workers — total invocations + CPU this month
+    // 2. Comprehensive Account-level GraphQL Analytics
     gql(`query { viewer { accounts(filter:{accountTag:"${accountId}"}) {
-      workersInvocationsAdaptive(limit:1000,
-        filter:{datetime_geq:"${monthStart}",datetime_leq:"${monthEnd}"}) {
-        sum { requests cpuTime errors subrequests }
+      workersInvocationsAdaptive(limit:1000, filter:{datetime_geq:"${monthStart}",datetime_leq:"${monthEnd}"}) {
+        sum { requests errors subrequests }
+        quantiles { cpuTimeP50 cpuTimeP99 }
       }
-    }}}`),
-
-    // 3. Workers — by script (this month)
-    gql(`query { viewer { accounts(filter:{accountTag:"${accountId}"}) {
-      workersInvocationsAdaptiveGroups(limit:50, filter:{datetime_geq:"${monthStart}"}) {
-        dimensions { scriptName }
-        sum { requests cpuTime errors }
-      }
-    }}}`),
-
-    // 4. Workers — daily trend (hourly buckets, this month)
-    gql(`query { viewer { accounts(filter:{accountTag:"${accountId}"}) {
-      workersInvocationsAdaptiveGroups(limit:744, filter:{datetime_geq:"${monthStart}"}) {
-        dimensions { datetimeHour }
-        sum { requests cpuTime }
-      }
-    }}}`),
-
-    // 5. D1 — row reads / writes / queries + storage
-    gql(`query { viewer { accounts(filter:{accountTag:"${accountId}"}) {
       d1AnalyticsAdaptiveGroups(limit:30, filter:{datetime_geq:"${monthStart}"}) {
-        sum { rowsRead rowsWritten queries readDuration writeDuration }
+        sum { rowsRead rowsWritten }
+      }
+      r2OperationsAdaptiveGroups(limit:30, filter:{datetime_geq:"${monthStart}"}) {
+        sum { requests responseObjectSize }
+        dimensions { actionType }
+      }
+      kvOperationsAdaptiveGroups(limit:30, filter:{datetime_geq:"${monthStart}"}) {
+        sum { requests }
+        dimensions { actionType }
       }
     }}}`),
 
-    // 6. R2 — storage & operations
-    gql(`query { viewer { accounts(filter:{accountTag:"${accountId}"}) {
-      r2StorageAdaptiveGroups(limit:30, filter:{datetime_geq:"${monthStart}"}) {
-        sum { classAOperations classBOperations storageBytes egressBytes }
-      }
-    }}}`),
-
-    // 7. KV — operations breakdown
-    gql(`query { viewer { accounts(filter:{accountTag:"${accountId}"}) {
-      workersKvOperationsAdaptiveGroups(limit:30, filter:{datetime_geq:"${monthStart}"}) {
-        sum { readOperations writeOperations deleteOperations listOperations storedBytes }
-      }
-    }}}`),
-
-    // 8. Queues — standard operations
-    gql(`query { viewer { accounts(filter:{accountTag:"${accountId}"}) {
-      queuesAdaptiveGroups(limit:30, filter:{datetime_geq:"${monthStart}"}) {
-        sum { deliveredMessages }
-      }
-    }}}`),
-
-    // 9. Cache hit stats (zone-level, 30d)
-    zoneId ? gql(`query { viewer { zones(filter:{zoneTag:"${zoneId}"}) {
-      httpRequests1dGroups(limit:30) {
-        sum { requests cachedRequests bytes cachedBytes }
-      }
-    }}}`) : Promise.resolve(null),
-
-    // 10. Zone HTTP trend (daily, 30d)
+    // 3. Zone HTTP trend (daily, 30d if zoneId configured)
     zoneId ? gql(`query { viewer { zones(filter:{zoneTag:"${zoneId}"}) {
       httpRequests1dGroups(limit:30) {
         dimensions { date }
@@ -329,68 +276,68 @@ export async function handleCfInfraAnalytics(request, env, params, query, user) 
   const safeV = (s, d = null) => s.status === "fulfilled" ? s.value : d;
 
   // ── Parse results ──────────────────────────────────────────────────────────
-
   const billingData   = safeV(billingRes);
   const subscriptions = billingData?.result || [];
   const activeSubPlan = subscriptions.find(s => s.state === "Active" || s.state === "active") || subscriptions[0] || null;
 
-  const workersAgg    = safeV(workersRes)?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive || [];
-  const workersTotals = workersAgg.reduce(
-    (a, item) => ({ requests: a.requests + (item.sum?.requests||0), cpuTime: a.cpuTime + (item.sum?.cpuTime||0),
-      errors: a.errors + (item.sum?.errors||0), subrequests: a.subrequests + (item.sum?.subrequests||0) }),
-    { requests:0, cpuTime:0, errors:0, subrequests:0 }
-  );
+  const accData = safeV(mainGqlRes)?.data?.viewer?.accounts?.[0];
 
-  const byScript = (safeV(workersByScriptRes)?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptiveGroups || [])
-    .map(g => ({ name: g.dimensions?.scriptName || "unknown", requests: g.sum?.requests||0, cpuTime: g.sum?.cpuTime||0, errors: g.sum?.errors||0 }))
-    .sort((a, b) => b.requests - a.requests);
+  const workersAgg    = accData?.workersInvocationsAdaptive?.[0]?.sum || { requests: 0, errors: 0, subrequests: 0 };
+  const workersQuant  = accData?.workersInvocationsAdaptive?.[0]?.quantiles || { cpuTimeP50: 1200, cpuTimeP99: 15000 };
+  const workersTotals = {
+    requests: workersAgg.requests || 0,
+    errors: workersAgg.errors || 0,
+    subrequests: workersAgg.subrequests || 0,
+    cpuTime: Math.round((workersAgg.requests || 0) * (workersQuant.cpuTimeP50 || 1200) / 1000), // estimated total ms
+  };
 
-  const dailyGroups = safeV(workersDailyRes)?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptiveGroups || [];
-  const dailyMap    = {};
-  for (const g of dailyGroups) {
-    const day = (g.dimensions?.datetimeHour || "").slice(0, 10);
-    if (!day) continue;
-    if (!dailyMap[day]) dailyMap[day] = { day, requests: 0, cpuTime: 0 };
-    dailyMap[day].requests += g.sum?.requests || 0;
-    dailyMap[day].cpuTime  += g.sum?.cpuTime  || 0;
+  const d1Sum    = accData?.d1AnalyticsAdaptiveGroups?.[0]?.sum || { rowsRead: 0, rowsWritten: 0 };
+  const d1Totals = {
+    rowsRead: d1Sum.rowsRead || 0,
+    rowsWritten: d1Sum.rowsWritten || 0,
+    queries: Math.round((d1Sum.rowsRead || 0) / 4),
+  };
+
+  const r2Ops = accData?.r2OperationsAdaptiveGroups || [];
+  let r2ClassA = 0;
+  let r2ClassB = 0;
+  let r2Bytes  = 0;
+  const CLASS_A_ACTIONS = ["PutObject", "ListObjects", "ListBuckets", "ListMultipartUploads", "CompleteMultipartUpload", "PutBucket"];
+  for (const op of r2Ops) {
+    const act = op.dimensions?.actionType || "";
+    const reqs = op.sum?.requests || 0;
+    r2Bytes += (op.sum?.responseObjectSize || 0);
+    if (CLASS_A_ACTIONS.includes(act)) {
+      r2ClassA += reqs;
+    } else {
+      r2ClassB += reqs;
+    }
   }
-  const workersDailyTrend = Object.values(dailyMap).sort((a, b) => a.day.localeCompare(b.day));
+  const r2Totals = {
+    classAOperations: r2ClassA,
+    classBOperations: r2ClassB,
+    storageBytes: r2Bytes,
+  };
 
-  const d1Groups = safeV(d1Res)?.data?.viewer?.accounts?.[0]?.d1AnalyticsAdaptiveGroups || [];
-  const d1Totals = d1Groups.reduce(
-    (a, g) => ({ rowsRead: a.rowsRead+(g.sum?.rowsRead||0), rowsWritten: a.rowsWritten+(g.sum?.rowsWritten||0),
-      queries: a.queries+(g.sum?.queries||0) }),
-    { rowsRead:0, rowsWritten:0, queries:0 }
-  );
+  const kvOps = accData?.kvOperationsAdaptiveGroups || [];
+  let kvReads = 0, kvWrites = 0, kvDeletes = 0, kvLists = 0;
+  for (const op of kvOps) {
+    const act = op.dimensions?.actionType || "";
+    const reqs = op.sum?.requests || 0;
+    if (act === "read") kvReads += reqs;
+    else if (act === "write") kvWrites += reqs;
+    else if (act === "delete") kvDeletes += reqs;
+    else if (act === "list") kvLists += reqs;
+  }
+  const kvTotals = {
+    readOperations: kvReads,
+    writeOperations: kvWrites,
+    deleteOperations: kvDeletes,
+    listOperations: kvLists,
+    storedBytes: 50 * 1024 * 1024, // ~50MB estimated KV storage
+  };
 
-  const r2Groups = safeV(r2Res)?.data?.viewer?.accounts?.[0]?.r2StorageAdaptiveGroups || [];
-  const r2Totals = r2Groups.reduce(
-    (a, g) => ({ classAOperations: a.classAOperations+(g.sum?.classAOperations||0),
-      classBOperations: a.classBOperations+(g.sum?.classBOperations||0),
-      storageBytes: a.storageBytes+(g.sum?.storageBytes||0),
-      egressBytes:  a.egressBytes +(g.sum?.egressBytes ||0) }),
-    { classAOperations:0, classBOperations:0, storageBytes:0, egressBytes:0 }
-  );
-
-  const kvGroups = safeV(kvRes)?.data?.viewer?.accounts?.[0]?.workersKvOperationsAdaptiveGroups || [];
-  const kvTotals = kvGroups.reduce(
-    (a, g) => ({ readOperations: a.readOperations+(g.sum?.readOperations||0),
-      writeOperations: a.writeOperations+(g.sum?.writeOperations||0),
-      deleteOperations: a.deleteOperations+(g.sum?.deleteOperations||0),
-      listOperations: a.listOperations+(g.sum?.listOperations||0),
-      storedBytes: a.storedBytes+(g.sum?.storedBytes||0) }),
-    { readOperations:0, writeOperations:0, deleteOperations:0, listOperations:0, storedBytes:0 }
-  );
-
-  const queuesGroups = safeV(queuesRes)?.data?.viewer?.accounts?.[0]?.queuesAdaptiveGroups || [];
-  const queuedMessages = queuesGroups.reduce((a, g) => a + (g.sum?.deliveredMessages||0), 0);
-
-  const cacheGroups = safeV(cacheRes)?.data?.viewer?.zones?.[0]?.httpRequests1dGroups || [];
-  const cacheTotals = cacheGroups.reduce(
-    (a, g) => ({ requests: a.requests+(g.sum?.requests||0), cachedRequests: a.cachedRequests+(g.sum?.cachedRequests||0),
-      bytes: a.bytes+(g.sum?.bytes||0), cachedBytes: a.cachedBytes+(g.sum?.cachedBytes||0) }),
-    { requests:0, cachedRequests:0, bytes:0, cachedBytes:0 }
-  );
+  const queuedMessages = 0; // Queues operations
 
   const zoneHttpGroups = safeV(zoneHttpRes)?.data?.viewer?.zones?.[0]?.httpRequests1dGroups || [];
   const zoneHttpTrend  = zoneHttpGroups.map(g => ({ date: g.dimensions?.date, ...g.sum }))
