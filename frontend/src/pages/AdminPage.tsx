@@ -58,6 +58,7 @@ import {
   Activity,
   Clock,
   Save,
+  ArrowUpRight,
   LucideIcon
 } from "lucide-react";
 
@@ -1912,43 +1913,55 @@ export default function AdminPage() {
   return (
     <>
       <div className="min-h-screen w-full relative bg-[#FAFAF9] selection:bg-accent-100 selection:text-accent-900 pb-16">
-        {/* Subtle Ambient Background Mesh */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-20">
+        {/* ══════════════════════════════════════════════════════════════════
+            CLEAN SUBTLE AMBIENT CANVAS (Ditto HomePage)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-25">
           <div
-            className="absolute -top-[10%] -left-[10%] w-[500px] h-[500px] rounded-full"
+            className="absolute -top-[10%] -left-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-1"
             style={{
               background: "radial-gradient(circle, #4338CA 0%, rgba(67, 56, 202, 0) 70%)",
-              filter: "blur(100px)",
+              filter: "blur(120px)",
             }}
           />
           <div
-            className="absolute -bottom-[10%] -right-[10%] w-[500px] h-[500px] rounded-full"
+            className="absolute -bottom-[10%] -right-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-2"
             style={{
               background: "radial-gradient(circle, #6366F1 0%, rgba(99, 102, 241, 0) 70%)",
-              filter: "blur(110px)",
+              filter: "blur(130px)",
             }}
           />
         </div>
 
-        <div className="relative z-10 max-w-[1680px] mx-auto px-3 sm:px-5 pt-3 space-y-3 text-ink-900 font-sans antialiased">
+        {/* Delicate Architectural Grid (Ditto HomePage) */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#12151A 1px, transparent 1px), linear-gradient(90deg, #12151A 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+
+        <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 pt-3 space-y-3 text-ink-900 font-sans antialiased">
           
           {/* ── 1. Slim Unified Top Header (HomePage Parity) ──────────────── */}
-          <header className="bg-surface border border-line rounded-2xl px-4 py-2.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <header className="bg-white border border-line rounded-xl px-4 py-2.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white flex items-center justify-center font-black text-xs shadow-2xs shrink-0">
+              <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white flex items-center justify-center font-black text-xs shadow-2xs shrink-0">
                 AD
               </div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold text-ink-900 tracking-tight m-0 font-display">
+                <h1 className="text-base font-bold text-ink-900 tracking-tight m-0 font-display">
                   Admin Console
                 </h1>
-                <span className="text-ink-400">/</span>
-                <span className="text-xs font-bold text-accent-700 bg-accent-50 px-2.5 py-0.5 rounded-full border border-accent-200 flex items-center gap-1">
+                <span className="text-ink-300">/</span>
+                <span className="text-2xs font-bold text-accent-700 bg-accent-50 px-2.5 py-0.5 rounded-full border border-accent-200 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-accent-600" />
                   {NAV_ITEMS.find(n => n.id === activeTab)?.label || "Dashboard"}
                 </span>
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-2xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online
+                <span className="hidden sm:inline-flex items-center gap-1 text-2xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live D1
                 </span>
               </div>
             </div>
@@ -1978,7 +1991,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowSingleUserModal(true)}
-                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-bold px-4 h-10 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer border-0 active:scale-[0.98]"
+                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-bold px-3.5 h-8.5 rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5 cursor-pointer border-0 active:scale-[0.98]"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Add User</span>
@@ -2021,7 +2034,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={handleDownloadFacilityTemplate}
-                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3.5 h-10 rounded-xl shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
+                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                     title="Download pre-formatted Excel template"
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
@@ -2031,7 +2044,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setIsBulkFacilityModalOpen(true)}
-                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3.5 h-10 rounded-xl shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
+                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                     title="Bulk import facilities via Excel / CSV (Upsert)"
                   >
                     <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
@@ -2041,7 +2054,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={handleExportFacilitiesExcel}
-                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3.5 h-10 rounded-xl shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
+                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                     title="Export facilities list to Excel"
                   >
                     <Download className="w-3.5 h-3.5 text-ink-600" />
@@ -2074,7 +2087,136 @@ export default function AdminPage() {
               <button type="button" onClick={() => setError(null)} className="text-rose-500 hover:text-rose-800 text-xs font-bold border-0 bg-transparent cursor-pointer">Dismiss</button>
             </div>
           )}
-          {/* ── 2. Top Horizontal Navigation Tabs (HomePage Parity) ─── */}
+
+          {/* ── 2. Compact Zoho Summary KPI Cards Row (5 Cards - Ditto HomePage) ──── */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+            {/* 1. Total Workforce */}
+            <div
+              onClick={() => handleTabChange("users")}
+              className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-accent-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-600" />
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-bold uppercase tracking-wider text-ink-500 font-sans group-hover:text-ink-700 transition-colors">
+                  TOTAL WORKFORCE
+                </span>
+                <div className="w-5.5 h-5.5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200 group-hover:bg-accent-100 transition-colors">
+                  <Users className="w-3 h-3" />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm sm:text-base font-bold font-mono text-ink-900 leading-tight flex items-baseline justify-between">
+                  <span>{users.length}</span>
+                  <ArrowUpRight className="w-3 h-3 text-ink-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-[10px] text-emerald-600 font-medium leading-none mt-0.5 block">
+                  {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active Staff
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Management & Hierarchy */}
+            <div
+              onClick={() => handleTabChange("approvals")}
+              className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-emerald-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-600" />
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-800 font-sans">
+                  ROLES &amp; HIERARCHY
+                </span>
+                <div className="w-5.5 h-5.5 rounded-[3px] bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 group-hover:bg-emerald-100 transition-colors">
+                  <ShieldCheck className="w-3 h-3" />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm sm:text-base font-bold font-mono text-emerald-700 leading-tight flex items-baseline justify-between">
+                  <span>{hierarchies.length} Teams</span>
+                  <ArrowUpRight className="w-3 h-3 text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-[10px] text-emerald-600/80 font-medium leading-none mt-0.5 block">
+                  {users.filter(u => !u.manager || u.manager === 'N/A').length === 0 ? "100% Mapped" : `${users.filter(u => !u.manager || u.manager === 'N/A').length} Unmapped`}
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Regional Footprint */}
+            <div
+              onClick={() => handleTabChange("analytics")}
+              className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-amber-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-amber-500" />
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-bold uppercase tracking-wider text-amber-800 font-sans">
+                  REGIONAL COVERAGE
+                </span>
+                <div className="w-5.5 h-5.5 rounded-[3px] bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 group-hover:bg-amber-100 transition-colors">
+                  <Building2 className="w-3 h-3" />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm sm:text-base font-bold font-mono text-amber-700 leading-tight flex items-baseline justify-between">
+                  <span>{availableUserZones.length} Zones</span>
+                  <ArrowUpRight className="w-3 h-3 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-[10px] text-amber-600/80 font-medium leading-none mt-0.5 block">
+                  {availableUserDistricts.length} Districts Assigned
+                </span>
+              </div>
+            </div>
+
+            {/* 4. Facility Registry */}
+            <div
+              onClick={() => handleTabChange("facilities")}
+              className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-indigo-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-indigo-600" />
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-bold uppercase tracking-wider text-indigo-800 font-sans">
+                  FACILITIES &amp; HOSPITALS
+                </span>
+                <div className="w-5.5 h-5.5 rounded-[3px] bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-200 group-hover:bg-indigo-100 transition-colors">
+                  <Building2 className="w-3 h-3" />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm sm:text-base font-bold font-mono text-indigo-700 leading-tight flex items-baseline justify-between">
+                  <span>{standardFacilities.length + noTaDaHospitals.length}</span>
+                  <ArrowUpRight className="w-3 h-3 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-[10px] text-indigo-600/80 font-medium leading-none mt-0.5 block">
+                  {standardFacilities.length} Standard · {noTaDaHospitals.length} No TA/DA
+                </span>
+              </div>
+            </div>
+
+            {/* 5. System Audit Trail */}
+            <div
+              onClick={() => handleTabChange("audit")}
+              className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-violet-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+            >
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-violet-600" />
+              <div className="flex items-center justify-between">
+                <span className="text-[9.5px] font-bold uppercase tracking-wider text-violet-800 font-sans">
+                  GOVERNANCE &amp; AUDIT
+                </span>
+                <div className="w-5.5 h-5.5 rounded-[3px] bg-violet-50 text-violet-700 flex items-center justify-center border border-violet-200 group-hover:bg-violet-100 transition-colors">
+                  <History className="w-3 h-3" />
+                </div>
+              </div>
+              <div>
+                <div className="text-sm sm:text-base font-bold font-mono text-violet-700 leading-tight flex items-baseline justify-between">
+                  <span>{auditLogs.length || "Live"}</span>
+                  <ArrowUpRight className="w-3 h-3 text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+                <span className="text-[10px] text-violet-600/80 font-medium leading-none mt-0.5 block">
+                  Tamper-Evident D1 Logs
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 3. Top Horizontal Navigation Tabs (HomePage Parity) ─── */}
           <nav className="bg-surface-sunken/80 p-1.5 rounded-2xl border border-line flex items-center gap-1.5 overflow-x-auto scrollbar-none shadow-xs">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -2085,17 +2227,17 @@ export default function AdminPage() {
                   key={item.id}
                   type="button"
                   onClick={() => handleTabChange(item.id)}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 flex items-center gap-2 border transition-all cursor-pointer active:scale-[0.98] ${
+                  className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 flex items-center gap-2 border transition-all cursor-pointer active:scale-[0.98] ${
                     isActive
-                      ? "bg-white text-[#1E1B4B] shadow-xs border-line ring-1 ring-black/5"
+                      ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white shadow-xs border-transparent"
                       : "bg-transparent text-ink-600 hover:text-ink-900 border-transparent hover:bg-surface/60"
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-accent-600" : "text-ink-400"}`} />
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-white" : "text-ink-400"}`} />
                   <span>{item.label}</span>
                   {count !== undefined && count > 0 && (
                     <span className={`px-1.5 py-0.2 rounded-full text-2xs font-mono font-bold ${
-                      isActive ? "bg-accent-100 text-accent-700" : "bg-surface text-ink-500 border border-line"
+                      isActive ? "bg-white/20 text-white" : "bg-surface text-ink-500 border border-line"
                     }`}>
                       {count}
                     </span>
@@ -2105,7 +2247,7 @@ export default function AdminPage() {
             })}
           </nav>
 
-          {/* ── 3. Full-Width Workspace ─── */}
+          {/* ── 4. Full-Width Workspace ─── */}
           <main className="space-y-3.5 w-full">
             {/* ================= SECTION 1: USERS DIRECTORY ================= */}
             {activeTab === "users" && (
