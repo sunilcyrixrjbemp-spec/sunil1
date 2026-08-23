@@ -1,12 +1,12 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 import { expenseService } from "../services/expenseService";
 import api from "../services/api";
 import {
   Calendar, Download, RefreshCw, Users, CheckCircle,
-  IndianRupee, MapPin, Search, Filter, FileText, Loader2, Printer, X
+  IndianRupee, MapPin, Search, Filter, FileText, Printer, X,
+  Building2, UserCircle, RotateCcw, ArrowUpRight, ChevronDown
 } from "lucide-react";
-import MonthSummarySkeleton from "../components/common/MonthSummarySkeleton";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -856,7 +856,6 @@ ${attachmentsSection}
 
 export default function MonthSummaryPage() {
   const [data, setData] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -890,12 +889,16 @@ export default function MonthSummaryPage() {
   const currentDate = new Date();
   const [filterMonth, setFilterMonth] = useState<string>(MONTHS[currentDate.getMonth() + 1]);
   const [filterYear, setFilterYear] = useState<number>(currentDate.getFullYear());
-  const [filterDistrict, setFilterDistrict] = useState("");
-  const [filterEngineer, setFilterEngineer] = useState("");
+  
+  // Dependent cascading filters
+  const [filterZone, setFilterZone] = useState<string>("all");
+  const [filterDistrict, setFilterDistrict] = useState<string>("all");
+  const [filterCoordinator, setFilterCoordinator] = useState<string>("all");
+  const [filterEngineer, setFilterEngineer] = useState<string>("all");
+
   const [appliedFilters, setAppliedFilters] = useState({
     month: MONTHS[currentDate.getMonth() + 1],
     year: currentDate.getFullYear(),
-    district: "", engineer: "",
   });
   const didFetch = useRef(false);
 
@@ -905,32 +908,111 @@ export default function MonthSummaryPage() {
     fetchData(appliedFilters);
   }, []);
 
-  const fetchData = async (f: typeof appliedFilters) => {
+  const fetchData = async (f: { month?: string; year?: number }) => {
     setLoading(true);
     try {
       const res = await expenseService.getMonthSummary({
-        month: f.month || undefined, year: f.year || undefined,
-        district: f.district || undefined, engineer: f.engineer || undefined,
+        month: f.month || undefined,
+        year: f.year || undefined,
       });
       setData(res.data || []);
-      if (res.districts?.length) setDistricts(res.districts);
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Failed to load month summary");
+      console.error("Failed to load month summary", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApplyFilters = () => {
-    const f = { month: filterMonth, year: filterYear, district: filterDistrict, engineer: filterEngineer };
-    setAppliedFilters(f);
-    fetchData(f);
+  // 1. Available Zones (from all data)
+  const uniqueZones = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach((r: any) => {
+      const z = (r.zone || r.state || "").trim();
+      if (z) set.add(z);
+    });
+    return Array.from(set).sort();
+  }, [data]);
+
+  // 2. Available Districts (Dependent on Selected Zone)
+  const uniqueDistricts = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach((r: any) => {
+      const zoneMatch = filterZone === "all" || (r.zone || r.state || "").trim() === filterZone;
+      if (zoneMatch && r.district) {
+        set.add(r.district.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [data, filterZone]);
+
+  // 3. Available Coordinators / Managers (Dependent on Zone & District)
+  const uniqueCoordinators = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach((r: any) => {
+      const zoneMatch = filterZone === "all" || (r.zone || r.state || "").trim() === filterZone;
+      const districtMatch = filterDistrict === "all" || (r.district || "").trim() === filterDistrict;
+      if (zoneMatch && districtMatch) {
+        const coord = (r.coordinator || r.manager || "").trim();
+        if (coord) set.add(coord);
+      }
+    });
+    return Array.from(set).sort();
+  }, [data, filterZone, filterDistrict]);
+
+  // 4. Available Engineers (Dependent on Zone, District & Coordinator)
+  const uniqueEngineers = useMemo(() => {
+    const map = new Map<string, string>();
+    data.forEach((r: any) => {
+      const zoneMatch = filterZone === "all" || (r.zone || r.state || "").trim() === filterZone;
+      const districtMatch = filterDistrict === "all" || (r.district || "").trim() === filterDistrict;
+      const coordMatch = filterCoordinator === "all" || (r.coordinator || r.manager || "").trim() === filterCoordinator;
+
+      if (zoneMatch && districtMatch && coordMatch) {
+        if (r.e_code && r.name) {
+          map.set(r.e_code, r.name);
+        }
+      }
+    });
+    return Array.from(map.entries())
+      .map(([code, name]) => ({ code, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [data, filterZone, filterDistrict, filterCoordinator]);
+
+  // Cascading Handlers
+  const handleZoneChange = (zone: string) => {
+    setFilterZone(zone);
+    setFilterDistrict("all");
+    setFilterCoordinator("all");
+    setFilterEngineer("all");
   };
 
-  const handleClear = () => {
-    const f = { month: "", year: 0, district: "", engineer: "" };
-    setFilterMonth(""); setFilterYear(0); setFilterDistrict(""); setFilterEngineer(""); setSearch("");
-    setAppliedFilters(f); fetchData(f);
+  const handleDistrictChange = (dist: string) => {
+    setFilterDistrict(dist);
+    setFilterCoordinator("all");
+    setFilterEngineer("all");
+  };
+
+  const handleCoordinatorChange = (coord: string) => {
+    setFilterCoordinator(coord);
+    setFilterEngineer("all");
+  };
+
+  const handleEngineerChange = (emp: string) => {
+    setFilterEngineer(emp);
+  };
+
+  const handleResetFilters = () => {
+    setFilterZone("all");
+    setFilterDistrict("all");
+    setFilterCoordinator("all");
+    setFilterEngineer("all");
+    setSearch("");
+  };
+
+  const handleApplyMonthYear = () => {
+    const f = { month: filterMonth, year: filterYear };
+    setAppliedFilters(f);
+    fetchData(f);
   };
 
   const loadScript = (src: string): Promise<void> => {
@@ -1075,6 +1157,78 @@ export default function MonthSummaryPage() {
     return pdf.output("blob");
   };
 
+  const handleDownloadSingle = async (row: any) => {
+    await handlePDF(row);
+  };
+
+  const handleOpenAdvanceModal = (r: any) => {
+    setAdvanceAmountInput(String(r.advance_amount || 0));
+    setAdvanceModalConfig({
+      title: "Edit Monthly Advance",
+      description: `Update Advance Amount (₹) for ${r.name} for ${r.month} ${r.year}.`,
+      initialValue: r.advance_amount || 0,
+      userCode: r.user_id,
+      month: r.month,
+      year: r.year,
+      onSave: async (amount: number) => {
+        try {
+          await expenseService.saveEngineerAdvance(r.user_id, r.month, r.year, amount);
+          setData(prev => prev.map(item => {
+            if (item.user_id === r.user_id && item.month === r.month && item.year === r.year) {
+              return { ...item, advance_amount: amount };
+            }
+            return item;
+          }));
+          toast.success("Advance updated successfully");
+        } catch (err: any) {
+          toast.error(err?.response?.data?.detail || "Failed to save advance");
+        }
+      }
+    });
+    setShowAdvanceModal(true);
+  };
+
+  const handlePrintSingle = async (row: any) => {
+    const key = `${row.user_id}-${row.month}-${row.year}`;
+    setPdfLoadingId(key);
+    try {
+      const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
+      const userObj = res.user || row;
+      const claims = res.claims || [];
+      if (claims.length === 0) {
+        toast.error("No approved claim data found");
+        return;
+      }
+      await Promise.all(
+        claims.map(async (claim: any) => {
+          try {
+            const details = await expenseService.getExpenseDetails(claim.expense_code);
+            if (details) {
+              if (details.attachments && Array.isArray(details.attachments)) {
+                claim.attachments = details.attachments;
+              }
+              if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
+                claim.attachments_detailed = details.attachments_detailed;
+              }
+            }
+          } catch (e) {}
+        })
+      );
+      const attachments = await prepareConvertedAttachments(claims);
+      const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, true);
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+      }
+    } catch (e) {
+      toast.error("Print preview failed");
+    } finally {
+      setPdfLoadingId(null);
+    }
+  };
+
   const handlePDF = async (row: any) => {
     const key = `${row.user_id}-${row.month}-${row.year}`;
     setPdfLoadingId(key);
@@ -1175,14 +1329,31 @@ export default function MonthSummaryPage() {
     }
   };
 
-  const filtered = data.filter((r) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (r.name || "").toLowerCase().includes(q) ||
-      (r.e_code || "").toLowerCase().includes(q) ||
-      (r.district || "").toLowerCase().includes(q) ||
-      (r.month || "").toLowerCase().includes(q);
-  });
+  const filtered = useMemo(() => {
+    return data.filter((r: any) => {
+      if (filterZone !== "all" && (r.zone || r.state || "").trim() !== filterZone) return false;
+      if (filterDistrict !== "all" && (r.district || "").trim() !== filterDistrict) return false;
+      if (filterCoordinator !== "all" && (r.coordinator || r.manager || "").trim() !== filterCoordinator) return false;
+      if (filterEngineer !== "all" && r.e_code !== filterEngineer) return false;
+
+      if (!search.trim()) return true;
+      const q = search.toLowerCase().trim();
+      return (
+        (r.name || "").toLowerCase().includes(q) ||
+        (r.e_code || "").toLowerCase().includes(q) ||
+        (r.district || "").toLowerCase().includes(q) ||
+        (r.zone || "").toLowerCase().includes(q) ||
+        (r.coordinator || r.manager || "").toLowerCase().includes(q)
+      );
+    });
+  }, [data, filterZone, filterDistrict, filterCoordinator, filterEngineer, search]);
+
+  const hasActiveFilters =
+    filterZone !== "all" ||
+    filterDistrict !== "all" ||
+    filterCoordinator !== "all" ||
+    filterEngineer !== "all" ||
+    Boolean(search.trim());
 
   const totalEngineers = filtered.length;
   const totalClaims = filtered.reduce((s, r) => s + (r.claims_count || 0), 0);
@@ -1641,427 +1812,484 @@ export default function MonthSummaryPage() {
   };
 
   return (
-    <div className="space-y-4 animate-fadeIn font-sans pb-10 text-[#212529]">
-      {/* Header Info Bar */}
-      <div className="bg-white border border-slate-200 rounded-none shadow-2xs flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
-            <Calendar className="w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="text-sm font-extrabold text-slate-900 leading-none">MONTH SUMMARY REPORT</h1>
-            <p className="text-[10px] text-slate-500 mt-0.5">Comprehensive monthly claim breakdown, field statistics, and PDF export center.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-bold text-white bg-[#4A6A8A] px-2.5 py-1 rounded-none border border-line font-mono">
-            Total Staff: <strong>{totalEngineers}</strong>
-          </span>
-          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-none border border-emerald-200 font-mono">
-            Approved Claims: <strong>{totalClaims}</strong>
-          </span>
-          <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2.5 py-1 rounded-none border border-blue-200 font-mono">
-            Total Value: <strong>{fmt(totalAmount)}</strong>
-          </span>
-        </div>
-      </div>
-
-      {/* 4 Enterprise Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Box 1 */}
-        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-          <div className="w-9 h-9 rounded-none bg-[#4A6A8A] flex items-center justify-center text-white shrink-0">
-            <Users className="w-4.5 h-4.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Engineers</span>
-            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{totalEngineers}</span>
-            <span className="text-[9px] text-[#4A6A8A] font-bold uppercase block mt-0.5">Active Staff</span>
-          </div>
-        </div>
-
-        {/* Box 2 */}
-        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-          <div className="w-9 h-9 rounded-none bg-emerald-600 flex items-center justify-center text-white shrink-0">
-            <CheckCircle className="w-4.5 h-4.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Approved Claims</span>
-            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{totalClaims}</span>
-            <span className="text-[9px] text-emerald-700 font-bold uppercase block mt-0.5">Processed</span>
-          </div>
-        </div>
-
-        {/* Box 3 */}
-        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-          <div className="w-9 h-9 rounded-none bg-amber-600 flex items-center justify-center text-white shrink-0">
-            <IndianRupee className="w-4.5 h-4.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Amount</span>
-            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{fmt(totalAmount)}</span>
-            <span className="text-[9px] text-amber-700 font-bold uppercase block mt-0.5">Disbursed Value</span>
-          </div>
-        </div>
-
-        {/* Box 4 */}
-        <div className="bg-white border border-slate-300 rounded-none p-3 flex items-center gap-3 shadow-2xs">
-          <div className="w-9 h-9 rounded-none bg-purple-600 flex items-center justify-center text-white shrink-0">
-            <MapPin className="w-4.5 h-4.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block leading-none">Total Distance</span>
-            <span className="text-sm font-black text-slate-900 font-mono block mt-1">{fmtN(totalKM)} km</span>
-            <span className="text-[9px] text-purple-700 font-bold uppercase block mt-0.5">Travelled</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Month Report Card */}
-      <div className="bg-white border border-[#4f4f4f]/30 rounded-[4px] shadow-2xs p-3">
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
-          <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            <Filter className="w-4 h-4 text-[#4A6A8A]" />
-            Filter Month Report
-          </h3>
-          <button 
-            onClick={() => fetchData(appliedFilters)} 
-            disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-[10.5px] font-bold rounded-none cursor-pointer disabled:opacity-60 transition-colors"
-          >
-            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} /> Refresh
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
-          <div>
-            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Select Month</label>
-            <select 
-              value={filterMonth} 
-              onChange={(e) => setFilterMonth(e.target.value)}
-              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-line cursor-pointer bg-white"
-            >
-              <option value="">All Months</option>
-              {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
-            </select>
+    <div className="min-h-screen bg-[#FAFAF9] pb-24 text-ink-900 font-sans">
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4 space-y-3.5">
+        
+        {/* ══════════════════════════════════════════════════════════════════
+            DITTO HOME PAGE ZOHO KPI ROW (EXACT 100% SAME CARD SPECIFICATIONS)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          
+          {/* 1. Total Engineers */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-accent-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-ink-500 font-sans group-hover:text-ink-700 transition-colors">
+                TOTAL ENGINEERS
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200 group-hover:bg-accent-100 transition-colors">
+                <Users className="w-3 h-3" />
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-ink-900 leading-tight flex items-baseline justify-between">
+                <span>{totalEngineers} <span className="text-xs font-sans text-ink-500 font-normal">Active</span></span>
+                <ArrowUpRight className="w-3 h-3 text-ink-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-ink-500 font-medium leading-none mt-0.5 block">
+                {filtered.length} Displayed
+              </span>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Select Year</label>
-            <select 
-              value={filterYear || ""} 
-              onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : 0)}
-              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-line cursor-pointer bg-white"
-            >
-              <option value="">All Years</option>
-              {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
+          {/* 2. Approved Claims */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-emerald-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-800 font-sans">
+                APPROVED CLAIMS
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 group-hover:bg-emerald-100 transition-colors">
+                <CheckCircle className="w-3 h-3" />
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-emerald-700 leading-tight flex items-baseline justify-between">
+                <span>{totalClaims}</span>
+                <ArrowUpRight className="w-3 h-3 text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-emerald-600/80 font-medium leading-none mt-0.5 block">
+                Audited & Approved
+              </span>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">District Location</label>
-            <select 
-              value={filterDistrict} 
-              onChange={(e) => setFilterDistrict(e.target.value)}
-              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-line cursor-pointer bg-white"
-            >
-              <option value="">All Districts</option>
-              {districts.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
+          {/* 3. Total Amount */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-accent-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-accent-800 font-sans">
+                TOTAL AMOUNT
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200 group-hover:bg-accent-100 transition-colors">
+                <IndianRupee className="w-3 h-3" />
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-accent-900 leading-tight flex items-baseline justify-between">
+                <span>₹{fmt(totalAmount)}</span>
+                <ArrowUpRight className="w-3 h-3 text-accent-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-accent-700 font-medium leading-none mt-0.5 block">
+                Disbursement Value
+              </span>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Engineer / E-Code</label>
-            <input 
-              type="text" 
-              value={filterEngineer} 
-              onChange={(e) => setFilterEngineer(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleApplyFilters()}
-              placeholder="Type name or code..."
-              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-line bg-white" 
-            />
+          {/* 4. Total Distance */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-purple-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-purple-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-purple-800 font-sans">
+                TOTAL DISTANCE
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200 group-hover:bg-purple-100 transition-colors">
+                <MapPin className="w-3 h-3" />
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-purple-800 leading-tight flex items-baseline justify-between">
+                <span>{fmtN(totalKM)} <span className="text-xs font-sans font-normal">km</span></span>
+                <ArrowUpRight className="w-3 h-3 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-purple-600/80 font-medium leading-none mt-0.5 block">
+                Logged Travel
+              </span>
+            </div>
           </div>
+
         </div>
 
-        <div className="flex gap-2 pt-2 border-t border-slate-200">
-          <button 
-            onClick={handleApplyFilters} 
-            disabled={loading}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#4A6A8A] hover:bg-[#3b5570] text-white text-xs font-extrabold uppercase rounded-none cursor-pointer border-0 shadow-2xs transition-colors disabled:opacity-60"
-          >
-            <Search className="w-3.5 h-3.5" /> Search Summary
-          </button>
-          <button 
-            onClick={handleClear}
-            className="px-4 py-1.5 border border-slate-300 bg-white text-slate-700 text-xs font-bold rounded-none hover:bg-slate-50 transition-colors cursor-pointer"
-          >
-            Reset Filters
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Data Table Section */}
-      <div className="border border-[#4f4f4f]/30 rounded-[4px] shadow-2xs bg-white overflow-hidden">
-        {/* Table Header Banner */}
-        <div className="bg-[#1E1B4B] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-between rounded-[4px] flex-wrap gap-2 font-mono">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-200 shrink-0" />
-            <span>
-              {appliedFilters.month && appliedFilters.year
-                ? `${appliedFilters.month} ${appliedFilters.year}`
-                : appliedFilters.month || (appliedFilters.year ? String(appliedFilters.year) : "All Months")}
-              {" Summary "}
-              <span className="text-emerald-300 font-mono">({filtered.length} row(s))</span>
+        {/* ══════════════════════════════════════════════════════════════════
+            DITTO HOME PAGE CRISP DEPENDENT CASCADING FILTERS BAR
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-[4px] border border-[#4f4f4f]/30 bg-white shadow-2xs p-3.5 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-line">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-accent-600" />
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-ink-900 m-0 leading-none">
+                Targeted Filters (Zone • District • Coordinator • Employee)
+              </h3>
+            </div>
+            <span className="text-[11px] font-mono font-bold text-accent-700">
+              {filtered.length} Filtered Staff
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {selectedKeys.length > 0 && (
-              <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1 rounded-none border border-white/20">
-                <span className="text-[10px] font-bold text-white uppercase tracking-wider">
-                  {selectedKeys.length} Selected
-                </span>
-                <button 
-                  onClick={handleBulkPrintCombined}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-none bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold border-0 cursor-pointer transition-all"
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {/* 1. Month */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 transition-all focus-within:ring-1 focus-within:ring-accent-600">
+              <Calendar className="w-3.5 h-3.5 text-accent-600 mr-1.5 shrink-0" />
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="h-full w-full pr-4 text-xs font-semibold text-ink-900 bg-transparent border-0 focus:outline-none cursor-pointer appearance-none leading-none"
+                title="Select Month"
+              >
+                {MONTHS.slice(1).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-ink-500 absolute right-2 pointer-events-none" />
+            </div>
+
+            {/* 2. Year */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 transition-all focus-within:ring-1 focus-within:ring-accent-600">
+              <select
+                value={filterYear || ""}
+                onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : 0)}
+                className="h-full w-full pr-4 text-xs font-semibold text-ink-900 bg-transparent border-0 focus:outline-none cursor-pointer appearance-none leading-none"
+                title="Select Year"
+              >
+                {[2024, 2025, 2026, 2027].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-ink-500 absolute right-2 pointer-events-none" />
+            </div>
+
+            {/* 3. Dependent Zone Filter */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 transition-all focus-within:ring-1 focus-within:ring-accent-600">
+              <MapPin className="w-3.5 h-3.5 text-emerald-600 mr-1.5 shrink-0" />
+              <select
+                value={filterZone}
+                onChange={(e) => handleZoneChange(e.target.value)}
+                className="h-full w-full pr-4 text-xs font-semibold text-ink-900 bg-transparent border-0 focus:outline-none cursor-pointer appearance-none leading-none"
+                title="Filter by Zone"
+              >
+                <option value="all">All Zones</option>
+                {uniqueZones.map((z: any) => (
+                  <option key={z} value={z}>Zone {z}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-ink-500 absolute right-2 pointer-events-none" />
+            </div>
+
+            {/* 4. Dependent District Filter */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 transition-all focus-within:ring-1 focus-within:ring-accent-600">
+              <Building2 className="w-3.5 h-3.5 text-blue-600 mr-1.5 shrink-0" />
+              <select
+                value={filterDistrict}
+                onChange={(e) => handleDistrictChange(e.target.value)}
+                className="h-full w-full pr-4 text-xs font-semibold text-ink-900 bg-transparent border-0 focus:outline-none cursor-pointer appearance-none leading-none"
+                title="Filter by District"
+              >
+                <option value="all">All Districts ({uniqueDistricts.length})</option>
+                {uniqueDistricts.map((d: any) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-ink-500 absolute right-2 pointer-events-none" />
+            </div>
+
+            {/* 5. Dependent Coordinator Filter */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 transition-all focus-within:ring-1 focus-within:ring-accent-600">
+              <Users className="w-3.5 h-3.5 text-purple-600 mr-1.5 shrink-0" />
+              <select
+                value={filterCoordinator}
+                onChange={(e) => handleCoordinatorChange(e.target.value)}
+                className="h-full w-full pr-4 text-xs font-semibold text-ink-900 bg-transparent border-0 focus:outline-none cursor-pointer appearance-none leading-none"
+                title="Filter by Coordinator / Manager"
+              >
+                <option value="all">All Coordinators ({uniqueCoordinators.length})</option>
+                {uniqueCoordinators.map((c: any) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-ink-500 absolute right-2 pointer-events-none" />
+            </div>
+
+            {/* 6. Dependent Engineer Filter */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 transition-all focus-within:ring-1 focus-within:ring-accent-600">
+              <UserCircle className="w-3.5 h-3.5 text-accent-600 mr-1.5 shrink-0" />
+              <select
+                value={filterEngineer}
+                onChange={(e) => handleEngineerChange(e.target.value)}
+                className="h-full w-full pr-4 text-xs font-semibold text-ink-900 bg-transparent border-0 focus:outline-none cursor-pointer appearance-none leading-none"
+                title="Filter by Engineer"
+              >
+                <option value="all">All Engineers ({uniqueEngineers.length})</option>
+                {uniqueEngineers.map((emp: any) => (
+                  <option key={emp.code} value={emp.code}>
+                    {emp.name} ({emp.code})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-ink-500 absolute right-2 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Action Buttons Toolbar */}
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-line flex-wrap">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleApplyMonthYear}
+                disabled={loading}
+                className="h-9 rounded-[4px] bg-[#4338CA] hover:bg-[#3730A3] text-white px-4 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer border border-[#3730A3] disabled:opacity-50"
+              >
+                <Search className="w-3.5 h-3.5 text-white" />
+                <span className="text-white">Fetch Month Data</span>
+              </button>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={handleResetFilters}
+                  className="h-9 rounded-[4px] bg-white hover:bg-surface-sunken text-ink-800 px-3.5 text-xs font-bold flex items-center gap-1.5 shadow-2xs border border-[#4f4f4f] transition-colors cursor-pointer"
                 >
-                  <Printer className="w-3 h-3" /> Print Combined
+                  <RotateCcw className="w-3.5 h-3.5 text-ink-500" />
+                  <span>Reset Dropdowns</span>
                 </button>
-                <button 
-                  onClick={handleBulkDownloadZIP}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-none bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold border-0 cursor-pointer transition-all"
-                >
-                  <Download className="w-3 h-3" /> Download ZIP
-                </button>
+              )}
+            </div>
+
+            {/* Right: Quick Search & Targeted Batch Actions */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 transition-all focus-within:ring-1 focus-within:ring-accent-600 w-48">
+                <Search className="w-3.5 h-3.5 text-ink-400 mr-2 shrink-0" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Quick search table..."
+                  className="h-full w-full text-xs font-medium text-ink-900 placeholder:text-ink-400 bg-transparent border-0 focus:outline-none leading-none"
+                />
               </div>
-            )}
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input 
-                type="text" 
-                value={search} 
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Quick filter..."
-                className="pl-7 pr-2 py-1 border border-slate-400 bg-white rounded-none text-xs font-bold text-slate-900 focus:outline-none focus:border-white w-40" 
-              />
+
+              {filtered.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (selectedKeys.length === filtered.length) {
+                      setSelectedKeys([]);
+                    } else {
+                      setSelectedKeys(filtered.map((r: any) => `${r.user_id}-${r.month}-${r.year}`));
+                    }
+                  }}
+                  className="h-9 rounded-[4px] bg-white hover:bg-surface-sunken text-accent-700 px-3 text-xs font-bold border border-accent-300 shadow-2xs transition-colors cursor-pointer"
+                >
+                  {selectedKeys.length === filtered.length
+                    ? "Deselect All"
+                    : `Select All ${filtered.length} Filtered`}
+                </button>
+              )}
+
+              {selectedKeys.length > 0 && (
+                <>
+                  <button
+                    onClick={handleBulkPrintCombined}
+                    className="h-9 rounded-[4px] bg-[#2563EB] hover:bg-[#1D4ED8] text-white px-3 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer border border-[#1D4ED8]"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white">Print Combined ({selectedKeys.length})</span>
+                  </button>
+
+                  <button
+                    onClick={handleBulkDownloadZIP}
+                    className="h-9 rounded-[4px] bg-emerald-600 hover:bg-emerald-700 text-white px-4 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer border border-emerald-700"
+                  >
+                    <Download className="w-3.5 h-3.5 text-white" />
+                    <span className="text-white">Download ZIP ({selectedKeys.length})</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto w-full">
-          {loading ? (
-            <MonthSummarySkeleton />
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <FileText className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-700 font-extrabold text-xs uppercase tracking-wider">No matching summary records found</p>
-              <p className="text-slate-400 text-[11px] mt-0.5">Ensure filters are selected correctly and claims are approved.</p>
+        {/* ══════════════════════════════════════════════════════════════════
+            DITTO HIGH-DENSITY ZOHO TABLE (CLEAR READABLE HEADER & CONTRAST)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-[4px] border border-[#4f4f4f]/30 bg-white shadow-2xs overflow-hidden">
+          {/* Table Header Banner */}
+          <div className="bg-[#1E1B4B] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-between rounded-none flex-wrap gap-2 font-mono">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-accent-300 shrink-0" />
+              <span>
+                {appliedFilters.month && appliedFilters.year
+                  ? `${appliedFilters.month} ${appliedFilters.year}`
+                  : appliedFilters.month || (appliedFilters.year ? String(appliedFilters.year) : "All Months")}
+                {" Monthly Ledger "}
+                <span className="text-emerald-300 font-mono">({filtered.length} Staff)</span>
+              </span>
             </div>
-          ) : (
-            <>
-              <table className="hidden md:table w-full text-left table-auto border-collapse min-w-full">
-                <thead>
-                  <tr className="bg-[#4A6A8A] text-white text-[10.5px] font-extrabold uppercase tracking-wider border-b border-slate-600">
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-center w-10">
+
+            <span className="text-xs font-bold text-emerald-300 font-mono">
+              Total Disbursed: ₹{fmt(totalAmount)}
+            </span>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto w-full">
+            {loading ? (
+              <div className="flex items-center justify-center py-20 gap-2 text-ink-500 font-bold text-xs">
+                <RefreshCw className="h-4 w-4 animate-spin text-accent-600" />
+                Loading monthly summary data...
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-20 text-ink-400 font-bold text-xs uppercase tracking-wider">
+                No monthly summary records found for this period.
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs border-collapse min-w-[1300px]">
+                <thead className="bg-[#F4F3F1] text-ink-800 text-[10.5px] font-bold font-mono uppercase tracking-wider text-left border-b border-line">
+                  <tr>
+                    <th className="py-2.5 px-2 text-center w-10 border-r border-line bg-[#F4F3F1] text-ink-700">
                       <input 
-                        type="checkbox"
+                        type="checkbox" 
                         checked={filtered.length > 0 && selectedKeys.length === filtered.length}
                         onChange={handleSelectAll}
-                        className="cursor-pointer rounded-none" 
+                        className="cursor-pointer rounded-[2px]"
                       />
                     </th>
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-center w-10">#</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600">Engineer Details</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600">E-Code</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600">Base District</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-right">Claimed (₹)</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-right bg-emerald-700/30">Approved (₹)</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-right bg-rose-700/30">Rejected (₹)</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-center">Calls</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-center">PMS</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-center">Tagging</th>
-                    <th className="py-2.5 px-3 border-r border-slate-600 text-center">Month</th>
-                    <th className="py-2.5 px-3 text-center whitespace-nowrap">Export</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-[#F4F3F1] text-accent-700 text-center">E-Code</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-[#F4F3F1] text-ink-900">Engineer Name</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-[#F4F3F1] text-ink-700">District</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-[#F4F3F1] text-ink-700 text-center">Month</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-[#F4F3F1] text-ink-700 text-right">Distance</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-[#F4F3F1] text-ink-700 text-right">Claims</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-[#F4F3F1] text-ink-700 text-right">Gross Claimed</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-rose-50 text-rose-800 text-right font-bold">Advance (Adv)</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-emerald-50 text-emerald-800 text-right font-bold">Total Approved</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-accent-50 text-accent-800 text-right font-bold">Net Payable</th>
+                    <th className="py-2.5 px-2 border-r border-line bg-[#F4F3F1] text-ink-700 text-center">Status</th>
+                    <th className="py-2.5 px-2 text-center bg-[#F4F3F1] text-ink-700">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 text-xs">
-                  {filtered.map((row, idx) => {
-                    const key = `${row.user_id}-${row.month}-${row.year}`;
-                    const isLoading = pdfLoadingId === key;
+                <tbody className="divide-y divide-line font-mono text-[11px]">
+                  {filtered.map((r: any, idx: number) => {
+                    const rowKey = `${r.user_id}-${r.month}-${r.year}`;
+                    const isSelected = selectedKeys.includes(rowKey);
+                    const gross = r.total_claimed || (r.bike_amount + r.car_amount + r.da_amount + r.other_amount);
+                    const adv = r.advance_amount || 0;
+                    const net = (r.total_amount || 0) - adv;
+                    const isRowPdfLoading = pdfLoadingId === rowKey;
+
                     return (
-                      <tr key={key} className="hover:bg-slate-50 transition-colors border-b border-slate-200">
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-center w-10">
+                      <tr 
+                        key={rowKey} 
+                        className={`hover:bg-accent-50/30 transition-colors ${isSelected ? "bg-accent-50/40" : idx % 2 === 0 ? "bg-white" : "bg-surface-sunken/20"}`}
+                      >
+                        <td className="py-2 px-2 text-center border-r border-line">
                           <input 
-                            type="checkbox"
-                            checked={selectedKeys.includes(key)}
-                            onChange={(e) => handleSelectRow(key, e.target.checked)}
-                            className="cursor-pointer rounded-none" 
+                            type="checkbox" 
+                            checked={isSelected}
+                            onChange={(e) => handleSelectRow(rowKey, e.target.checked)}
+                            className="cursor-pointer rounded-[2px]"
                           />
                         </td>
-                        <td className="py-2.5 px-3 text-slate-400 font-mono font-bold border-r border-slate-200 text-center">{idx + 1}</td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">
-                          <div className="font-extrabold text-slate-900 text-xs">{row.name}</div>
-                          <div className="text-[10px] text-slate-500 font-bold uppercase">{row.designation}</div>
+                        <td className="py-2 px-2 font-bold text-accent-700 bg-accent-50/40 border-r border-line text-center">
+                          {r.e_code || "—"}
                         </td>
-                        <td className="py-2.5 px-3 border-r border-slate-200">
-                          <span className="font-mono font-extrabold text-xs text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200">
-                            {row.e_code || row.user_id || "—"}
+                        <td className="py-2 px-2 font-bold font-sans text-ink-900 border-r border-line">
+                          {r.name || "—"}
+                        </td>
+                        <td className="py-2 px-2 border-r border-line text-ink-700">
+                          {r.district || "—"}
+                        </td>
+                        <td className="py-2 px-2 border-r border-line text-center text-accent-700 font-bold">
+                          {r.month} {r.year}
+                        </td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">
+                          {fmtN(r.total_km)} km
+                        </td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-700">
+                          {r.claim_count}
+                        </td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">
+                          {fmt(gross)}
+                        </td>
+                        <td className="py-2 px-2 text-right border-r border-line font-bold text-rose-700 bg-rose-50/40">
+                          {isAllowedAdvance ? (
+                            <button
+                              onClick={() => handleOpenAdvanceModal(r)}
+                              title="Click to edit advance"
+                              className="text-rose-700 hover:text-rose-900 underline font-bold cursor-pointer transition-colors"
+                            >
+                              ₹{fmt(adv)}
+                            </button>
+                          ) : (
+                            `₹${fmt(adv)}`
+                          )}
+                        </td>
+                        <td className="py-2 px-2 text-right border-r border-line font-bold text-emerald-700 bg-emerald-50/40">
+                          ₹{fmt(r.total_amount)}
+                        </td>
+                        <td className="py-2 px-2 text-right border-r border-line font-bold text-accent-800 bg-accent-50/40">
+                          ₹{fmt(net)}
+                        </td>
+                        <td className="py-2 px-2 text-center border-r border-line">
+                          <span className="rounded-[3px] bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[9.5px] font-bold text-emerald-700 uppercase">
+                            Approved
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-slate-800 font-bold border-r border-slate-200">{row.district || "—"}</td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 border-r border-slate-200">
-                          {fmt(row.claimed_amount != null ? row.claimed_amount : (row.total_amount || 0))}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-emerald-700 bg-emerald-50/40 border-r border-slate-200">
-                          {fmt(row.approved_amount != null ? row.approved_amount : (row.total_amount || 0))}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-black text-rose-700 bg-rose-50/30 border-r border-slate-200">
-                          {row.rejected_amount > 0 ? fmt(row.rejected_amount) : <span className="text-slate-300">—</span>}
-                        </td>
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
-                          {row.calls_assigned > 0 ? `${row.calls_completed || 0}/${row.calls_assigned}` : <span className="text-slate-300">—</span>}
-                        </td>
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
-                          {row.pms_count || <span className="text-slate-300">—</span>}
-                        </td>
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800 border-r border-slate-200">
-                          {row.tagging_count || row.asset_tagging || row.asset_tagging_count || <span className="text-slate-300">—</span>}
-                        </td>
-                        <td className="py-2.5 px-3 border-r border-slate-200 text-center">
-                          <span className="text-[10px] font-bold text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200 whitespace-nowrap">
-                            {row.month} {row.year}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <button 
-                            onClick={() => handlePDF(row)} 
-                            disabled={isLoading}
-                            className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-[10.5px] uppercase tracking-wider rounded-none px-2.5 py-1 border-0 cursor-pointer shadow-2xs inline-flex items-center gap-1 transition-colors disabled:opacity-60 whitespace-nowrap"
-                            title={`Download Reimbursement Form PDF for ${row.name}`}
-                          >
-                            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                            {isLoading ? "..." : "Download PDF"}
-                          </button>
+                        <td className="py-2 px-2 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => handleDownloadSingle(r)}
+                              disabled={isRowPdfLoading}
+                              title="Download individual PDF"
+                              className="p-1 rounded-[3px] bg-white border border-[#4f4f4f] hover:border-accent-600 text-ink-700 hover:text-accent-600 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <Download className={`w-3.5 h-3.5 ${isRowPdfLoading ? "animate-spin text-accent-600" : ""}`} />
+                            </button>
+
+                            <button
+                              onClick={() => handlePrintSingle(r)}
+                              title="Print individual PDF"
+                              className="p-1 rounded-[3px] bg-white border border-[#4f4f4f] hover:border-accent-600 text-ink-700 hover:text-accent-600 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
-                {filtered.length > 1 && (
-                  <tfoot>
-                    <tr className="bg-slate-100 border-t-2 border-slate-300 text-xs font-black text-slate-900 font-mono">
-                      <td className="border-r border-slate-200" />
-                      <td colSpan={4} className="py-2.5 px-3 border-r border-slate-200 uppercase tracking-wider text-slate-700 font-sans font-extrabold">
-                        Grand Total Summary
-                      </td>
-                      <td className="py-2.5 px-3 text-right border-r border-slate-200 font-mono font-black text-slate-900">
-                        {fmt(filtered.reduce((s, r) => s + r.claimed_amount, 0))}
-                      </td>
-                      <td className="py-2.5 px-3 text-right border-r border-slate-200 font-mono font-black text-emerald-800 bg-emerald-100/60">
-                        {fmt(totalAmount)}
-                      </td>
-                      <td className="py-2.5 px-3 text-right border-r border-slate-200 font-mono font-black text-rose-800 bg-rose-100/60">
-                        {fmt(filtered.reduce((s, r) => s + r.rejected_amount, 0))}
-                      </td>
-                      <td className="py-2.5 px-3 text-center border-r border-slate-200 font-mono">
-                        {filtered.reduce((s, r) => s + r.calls_completed, 0)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center border-r border-slate-200 font-mono">
-                        {filtered.reduce((s, r) => s + r.pms_count, 0)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center border-r border-slate-200 font-mono">
-                        {filtered.reduce((s, r) => s + r.asset_tagging_count, 0)}
-                      </td>
-                      <td className="py-2.5 px-3 text-center border-r border-slate-200 text-[10px] font-sans font-bold text-slate-600">
-                        {filtered.length} Staff
-                      </td>
-                      <td className="py-2.5 px-3 text-center text-slate-400 text-[10px] font-sans">
-                        —
-                      </td>
-                    </tr>
-                  </tfoot>
-                )}
+                <tfoot>
+                  <tr className="bg-surface-sunken border-t-2 border-line text-xs font-bold font-mono text-ink-900">
+                    <td colSpan={5} className="py-2.5 px-2 border-r border-line text-center uppercase tracking-wider text-accent-900 font-sans">
+                      Grand Total ({filtered.length} Staff)
+                    </td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmtN(totalKM)} km</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{totalClaims}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">
+                      ₹{fmt(filtered.reduce((s: number, r: any) => s + (r.total_claimed || (r.bike_amount + r.car_amount + r.da_amount + r.other_amount)), 0))}
+                    </td>
+                    <td className="py-2.5 px-2 text-right border-r border-line font-bold text-rose-700 bg-rose-50/60">
+                      ₹{fmt(filtered.reduce((s: number, r: any) => s + (r.advance_amount || 0), 0))}
+                    </td>
+                    <td className="py-2.5 px-2 text-right border-r border-line font-bold text-emerald-700 bg-emerald-50/60">
+                      ₹{fmt(totalAmount)}
+                    </td>
+                    <td className="py-2.5 px-2 text-right border-r border-line font-bold text-accent-800 bg-accent-50/80">
+                      ₹{fmt(totalAmount - filtered.reduce((s: number, r: any) => s + (r.advance_amount || 0), 0))}
+                    </td>
+                    <td colSpan={2} className="text-center text-ink-500 font-sans font-bold">100% Processed</td>
+                  </tr>
+                </tfoot>
               </table>
-
-              {/* Mobile Card List View */}
-              <div className="block md:hidden space-y-3 p-3">
-                {filtered.map((row) => {
-                  const key = `${row.user_id}-${row.month}-${row.year}`;
-                  const isLoading = pdfLoadingId === key;
-                  return (
-                    <div
-                      key={key}
-                      className="bg-white border border-slate-300 rounded-none p-3 space-y-2 shadow-2xs text-xs"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedKeys.includes(key)}
-                            onChange={(e) => handleSelectRow(key, e.target.checked)}
-                            className="cursor-pointer rounded-none h-4 w-4"
-                          />
-                          <div>
-                            <div className="font-extrabold text-slate-900 leading-tight">{row.name}</div>
-                            <span className="text-[9.5px] text-slate-500 font-bold uppercase">{row.designation}</span>
-                          </div>
-                        </div>
-                        <span className="font-mono font-extrabold text-xs text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200">
-                          {row.e_code}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-[11px] border-t border-slate-200 pt-2">
-                        <div>
-                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Base District</span>
-                          <span className="text-slate-800 font-bold">{row.district || "—"}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Month</span>
-                          <span className="text-[10px] font-bold text-[#4A6A8A] bg-slate-100 px-2 py-0.5 border border-slate-200 inline-block mt-0.5">{row.month} {row.year}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Financials</span>
-                          <span className="text-slate-800 font-bold leading-tight block">
-                            Claimed: <span className="font-mono">{fmt(row.claimed_amount)}</span>
-                          </span>
-                          <span className="text-emerald-700 font-black leading-tight block">
-                            Approved: {fmt(row.total_amount)}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-slate-400 font-extrabold uppercase text-[9px] block">Task Metrics</span>
-                          <span className="text-slate-700 font-bold block mt-0.5">Calls: {row.calls_assigned > 0 ? `${row.calls_completed}/${row.calls_assigned}` : "—"}</span>
-                          <span className="text-slate-700 font-bold block">PMS: {row.pms_count || "—"}</span>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-slate-200 pt-2 flex justify-end">
-                        <button 
-                          onClick={() => handlePDF(row)} 
-                          disabled={isLoading}
-                          className="bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-[10.5px] uppercase tracking-wider rounded-none px-3 py-1.5 border-0 cursor-pointer shadow-2xs inline-flex items-center gap-1.5 transition-colors disabled:opacity-60"
-                        >
-                          {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                          <span>Download PDF</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      </main>
 
       {/* ================= SET MONTHLY ADVANCE MODAL ================= */}
       {showAdvanceModal && advanceModalConfig && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white border border-slate-400 rounded-none shadow-2xl w-full max-w-sm overflow-hidden text-left animate-fadeIn">
+          <div className="bg-white border border-[#4f4f4f]/30 rounded-[4px] shadow-2xl w-full max-w-sm overflow-hidden text-left animate-fadeIn">
             {/* Modal Header */}
-            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex justify-between items-center rounded-none">
-              <h3 className="text-xs font-extrabold tracking-wider uppercase m-0 flex items-center gap-2 text-white">
+            <div className="bg-[#1E1B4B] text-white px-4 py-3 flex justify-between items-center rounded-none font-mono">
+              <h3 className="text-xs font-bold tracking-wider uppercase m-0 flex items-center gap-2 text-white">
                 <CheckCircle className="w-4 h-4 text-emerald-300" /> {advanceModalConfig.title}
               </h3>
               <button 
@@ -2074,11 +2302,11 @@ export default function MonthSummaryPage() {
 
             {/* Modal Body */}
             <div className="p-4 space-y-3">
-              <p className="text-xs font-semibold text-slate-700 leading-snug">
+              <p className="text-xs font-semibold text-ink-700 leading-snug">
                 {advanceModalConfig.description}
               </p>
               <div>
-                <label className="block text-[10.5px] font-extrabold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-[10.5px] font-bold text-ink-900 uppercase tracking-wider mb-1 font-mono">
                   Advance Amount (₹)
                 </label>
                 <input
@@ -2086,7 +2314,7 @@ export default function MonthSummaryPage() {
                   value={String(advanceAmountInput) === "0" || advanceAmountInput === "" ? "" : advanceAmountInput}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setAdvanceAmountInput(e.target.value)}
-                  className="w-full border border-slate-300 rounded-none px-3 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-line bg-white"
+                  className="w-full border border-[#4f4f4f] rounded-[4px] px-3 py-1.5 text-xs font-mono font-bold text-ink-900 focus:outline-none focus:border-accent-600 bg-white"
                   placeholder="0"
                   min="0"
                 />
@@ -2094,11 +2322,11 @@ export default function MonthSummaryPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-slate-50 px-4 py-3 flex justify-end gap-2 border-t border-slate-200">
+            <div className="bg-surface-sunken px-4 py-3 flex justify-end gap-2 border-t border-line">
               <button
                 type="button"
                 onClick={() => setShowAdvanceModal(false)}
-                className="px-4 py-1.5 rounded-none text-xs font-bold bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="h-9 px-4 rounded-[4px] text-xs font-bold bg-white text-ink-800 border border-[#4f4f4f] hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -2109,7 +2337,7 @@ export default function MonthSummaryPage() {
                   setShowAdvanceModal(false);
                   await advanceModalConfig.onSave(amount);
                 }}
-                className="px-4 py-1.5 rounded-none text-xs font-extrabold uppercase tracking-wider bg-[#4A6A8A] hover:bg-[#3b5570] text-white border-0 cursor-pointer shadow-2xs transition-colors"
+                className="h-9 px-4 rounded-[4px] text-xs font-bold uppercase tracking-wider bg-[#4338CA] hover:bg-[#3730A3] text-white border-0 cursor-pointer shadow-2xs transition-colors"
               >
                 Save &amp; Proceed
               </button>
@@ -2121,11 +2349,11 @@ export default function MonthSummaryPage() {
       {/* ================= LIVE ZIP GENERATION PROGRESS MODAL ================= */}
       {zipProgress && zipProgress.active && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn font-sans">
-          <div className="bg-white border border-slate-400 rounded-none shadow-2xl w-full max-w-md overflow-hidden text-left">
+          <div className="bg-white border border-[#4f4f4f]/30 rounded-[4px] shadow-2xl w-full max-w-md overflow-hidden text-left">
             {/* Modal Header */}
-            <div className="bg-[#1565C0] text-white px-4 py-3 flex justify-between items-center rounded-none">
-              <h3 className="text-xs font-extrabold tracking-wider uppercase m-0 flex items-center gap-2 text-white">
-                <FileText className="w-4 h-4 text-sky-200" />
+            <div className="bg-[#1E1B4B] text-white px-4 py-3 flex justify-between items-center rounded-none font-mono">
+              <h3 className="text-xs font-bold tracking-wider uppercase m-0 flex items-center gap-2 text-white">
+                <FileText className="w-4 h-4 text-accent-300" />
                 <span>ZIP Download Progress</span>
               </h3>
               <div className="flex items-center gap-2">
@@ -2136,7 +2364,7 @@ export default function MonthSummaryPage() {
                   <button
                     type="button"
                     onClick={handleCancelZIP}
-                    className="text-[10px] font-black uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded-none border-0 cursor-pointer transition-colors flex items-center gap-1 shadow-2xs"
+                    className="text-[10px] font-bold uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded-[3px] border-0 cursor-pointer transition-colors flex items-center gap-1 shadow-2xs"
                     title="Cancel Download"
                   >
                     <X className="w-3 h-3" />
@@ -2148,37 +2376,37 @@ export default function MonthSummaryPage() {
 
             {/* Modal Body */}
             <div className="p-4 space-y-3.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-700 truncate max-w-[260px]">
+              <div className="flex items-center justify-between text-xs font-mono">
+                <span className="font-bold text-ink-700 truncate max-w-[260px]">
                   {zipProgress.stage === "fetching" && "📥 Step 1/3: Fetching Data"}
                   {zipProgress.stage === "rendering" && "📄 Step 2/3: Generating PDFs"}
                   {zipProgress.stage === "compressing" && "📦 Step 3/3: Packing ZIP Archive"}
                   {zipProgress.stage === "complete" && "✅ Step 3/3: Download Ready"}
                   {zipProgress.stage === "error" && "❌ Error"}
                 </span>
-                <span className="font-extrabold text-[#1565C0] font-mono">
+                <span className="font-bold text-accent-700 font-mono">
                   {zipProgress.current} / {zipProgress.total} Ready
                 </span>
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full bg-slate-100 h-4 border border-slate-300 rounded-none p-0.5 overflow-hidden">
+              <div className="w-full bg-slate-100 h-3.5 border border-line rounded-[2px] p-0.5 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-[#1565C0] to-[#1E88E5] h-full transition-all duration-300 ease-out"
+                  className="bg-accent-600 h-full transition-all duration-300 ease-out rounded-[2px]"
                   style={{ width: `${zipProgress.percent}%` }}
                 />
               </div>
 
               {/* Current Status Log */}
-              <div className="bg-slate-50 border border-slate-200 p-3 rounded-none space-y-1">
-                <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Current Activity</div>
-                <div className="font-semibold text-slate-800 break-words font-mono text-[11px]">
+              <div className="bg-surface-sunken border border-line p-3 rounded-[4px] space-y-1">
+                <div className="text-[10px] font-bold text-ink-400 uppercase tracking-wider font-mono">Current Activity</div>
+                <div className="font-semibold text-ink-800 break-words font-mono text-[11px]">
                   {zipProgress.message}
                 </div>
                 {zipProgress.stage === "rendering" && zipProgress.total > 0 && (
-                  <div className="text-[10.5px] text-slate-500 font-sans pt-1 border-t border-slate-200 mt-1 flex justify-between">
-                    <span>Remaining: <strong className="text-slate-800">{zipProgress.total - zipProgress.current} PDFs</strong></span>
-                    <span className="font-mono text-[#1565C0] font-bold">{Math.round((zipProgress.current / zipProgress.total) * 100)}% PDFs Done</span>
+                  <div className="text-[10.5px] text-ink-500 font-sans pt-1 border-t border-line mt-1 flex justify-between">
+                    <span>Remaining: <strong className="text-ink-900">{zipProgress.total - zipProgress.current} PDFs</strong></span>
+                    <span className="font-mono text-accent-700 font-bold">{Math.round((zipProgress.current / zipProgress.total) * 100)}% PDFs Done</span>
                   </div>
                 )}
               </div>
@@ -2187,7 +2415,7 @@ export default function MonthSummaryPage() {
             {/* Modal Footer / Completion Notification */}
             {zipProgress.stage === "complete" && (
               <div className="bg-emerald-50 px-4 py-2.5 border-t border-emerald-200 text-center">
-                <span className="text-xs font-extrabold text-emerald-800 flex items-center justify-center gap-1.5">
+                <span className="text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5 font-mono">
                   <CheckCircle className="w-4 h-4 text-emerald-600" /> ZIP Folder Downloaded Successfully!
                 </span>
               </div>
