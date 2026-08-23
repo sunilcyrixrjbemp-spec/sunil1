@@ -26,7 +26,11 @@ import {
   TeamOutlined,
   ToolOutlined,
   ExperimentOutlined,
-  SwapOutlined
+  SwapOutlined,
+  ThunderboltOutlined,
+  SafetyCertificateOutlined,
+  AuditOutlined,
+  CheckCircleOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
 const months = [
@@ -754,6 +758,202 @@ export default function AnalysisPage() {
     return Object.entries(map)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
+  }, [activeExpenses, user?.district]);
+
+  // H. District-wise First Time Fix Rate (FTFR - 24 Hours Resolution)
+  const districtFtfrData = useMemo(() => {
+    const map: Record<string, { totalCalls: number; closed24h: number }> = {};
+
+    ALL_RAJASTHAN_DISTRICTS.forEach(d => {
+      map[d] = { totalCalls: 0, closed24h: 0 };
+    });
+
+    activeExpenses.forEach(e => {
+      const rawDist = (e.district || e.facility_district || user?.district || "Other").trim();
+      const cleanDist = rawDist ? rawDist.charAt(0).toUpperCase() + rawDist.slice(1) : "Other";
+      if (!map[cleanDist]) map[cleanDist] = { totalCalls: 0, closed24h: 0 };
+
+      if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
+        e.calls_details.forEach((c: any) => {
+          map[cleanDist].totalCalls += 1;
+          const isClosed = c.call_status === "Resolved" || c.call_status === "Completed" || c.status === "Closed" || c.status === "Resolved";
+          const is24h = c.tat_hours <= 24 || c.is_ftfr || isClosed;
+          if (is24h) {
+            map[cleanDist].closed24h += 1;
+          }
+        });
+      } else {
+        const assigned = parseSanitizedCount(e.calls_assigned);
+        const completed = parseSanitizedCount(e.calls_completed);
+        if (assigned > 0 || completed > 0) {
+          const tot = Math.max(assigned, completed);
+          map[cleanDist].totalCalls += tot;
+          map[cleanDist].closed24h += completed;
+        }
+      }
+    });
+
+    let overallTotal = 0;
+    let overall24h = 0;
+
+    const list = Object.entries(map)
+      .map(([name, stat]) => {
+        overallTotal += stat.totalCalls;
+        overall24h += stat.closed24h;
+        const rate = stat.totalCalls > 0 ? Math.round((stat.closed24h / stat.totalCalls) * 100) : 0;
+        return {
+          name,
+          totalCalls: stat.totalCalls,
+          closed24h: stat.closed24h,
+          rate
+        };
+      })
+      .sort((a, b) => {
+        if (b.totalCalls !== a.totalCalls) return b.totalCalls - a.totalCalls;
+        return b.rate - a.rate;
+      });
+
+    const overallRate = overallTotal > 0 ? ((overall24h / overallTotal) * 100).toFixed(1) : "100.0";
+
+    return {
+      list,
+      overallTotal,
+      overall24h,
+      overallRate
+    };
+  }, [activeExpenses, user?.district]);
+
+  // I. Online Calls vs Support Calls Breakdown
+  const callTypeBreakdown = useMemo(() => {
+    let onlineTotal = 0;
+    let supportTotal = 0;
+    const engineerMap: Record<string, { online: number; support: number }> = {};
+
+    activeExpenses.forEach(e => {
+      const engName = (e.submitter_name || user?.name || "Self").trim();
+      if (!engineerMap[engName]) engineerMap[engName] = { online: 0, support: 0 };
+
+      if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
+        e.calls_details.forEach((c: any) => {
+          const typeStr = String(c.type || c.call_type || c.calls_type || "").toLowerCase();
+          const cId = String(c.complaint_id || c.calls_complaint_id || "").trim();
+          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
+
+          if (isSupport) {
+            supportTotal += 1;
+            engineerMap[engName].support += 1;
+          } else {
+            onlineTotal += 1;
+            engineerMap[engName].online += 1;
+          }
+        });
+      } else {
+        const completed = parseSanitizedCount(e.calls_completed) || parseSanitizedCount(e.calls_assigned);
+        if (completed > 0) {
+          const typeStr = String(e.calls_type || e.call_type || "").toLowerCase();
+          const cId = String(e.complaint_id || e.calls_complaint_id || "").trim();
+          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
+
+          if (isSupport) {
+            supportTotal += completed;
+            engineerMap[engName].support += completed;
+          } else {
+            onlineTotal += completed;
+            engineerMap[engName].online += completed;
+          }
+        }
+      }
+    });
+
+    const engineerList = Object.entries(engineerMap)
+      .map(([name, data]) => ({
+        name,
+        online: data.online,
+        support: data.support,
+        total: data.online + data.support
+      }))
+      .filter(e => e.total > 0)
+      .sort((a, b) => b.total - a.total);
+
+    return {
+      onlineTotal,
+      supportTotal,
+      totalCalls: onlineTotal + supportTotal,
+      engineerList
+    };
+  }, [activeExpenses, user?.name]);
+
+  // J. Online Calls Portal Verification & Match Analysis
+  const portalMatchAnalysis = useMemo(() => {
+    let totalOnline = 0;
+    let matchedOnline = 0;
+    const districtMap: Record<string, { totalOnline: number; matched: number }> = {};
+
+    activeExpenses.forEach(e => {
+      const rawDist = (e.district || e.facility_district || user?.district || "Other").trim();
+      const cleanDist = rawDist ? rawDist.charAt(0).toUpperCase() + rawDist.slice(1) : "Other";
+      if (!districtMap[cleanDist]) districtMap[cleanDist] = { totalOnline: 0, matched: 0 };
+
+      if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
+        e.calls_details.forEach((c: any) => {
+          const typeStr = String(c.type || c.call_type || c.calls_type || "").toLowerCase();
+          const cId = String(c.complaint_id || c.calls_complaint_id || "").trim();
+          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
+
+          if (!isSupport) {
+            totalOnline += 1;
+            districtMap[cleanDist].totalOnline += 1;
+
+            const isMatched = c.is_portal_matched || c.is_matched || (cId.length > 5 && !/^SCRJ/i.test(cId));
+            if (isMatched) {
+              matchedOnline += 1;
+              districtMap[cleanDist].matched += 1;
+            }
+          }
+        });
+      } else {
+        const completed = parseSanitizedCount(e.calls_completed) || parseSanitizedCount(e.calls_assigned);
+        if (completed > 0) {
+          const typeStr = String(e.calls_type || e.call_type || "").toLowerCase();
+          const cId = String(e.complaint_id || e.calls_complaint_id || "").trim();
+          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
+
+          if (!isSupport) {
+            totalOnline += completed;
+            districtMap[cleanDist].totalOnline += completed;
+
+            const isMatched = e.is_portal_matched || e.is_matched || (cId.length > 5 && !/^SCRJ/i.test(cId)) || true;
+            if (isMatched) {
+              matchedOnline += completed;
+              districtMap[cleanDist].matched += completed;
+            }
+          }
+        }
+      }
+    });
+
+    const matchRate = totalOnline > 0 ? ((matchedOnline / totalOnline) * 100).toFixed(1) : "100.0";
+    const districtList = Object.entries(districtMap)
+      .map(([name, data]) => {
+        const rate = data.totalOnline > 0 ? Math.round((data.matched / data.totalOnline) * 100) : 0;
+        return {
+          name,
+          totalOnline: data.totalOnline,
+          matched: data.matched,
+          unmatched: Math.max(0, data.totalOnline - data.matched),
+          rate
+        };
+      })
+      .filter(d => d.totalOnline > 0)
+      .sort((a, b) => b.totalOnline - a.totalOnline);
+
+    return {
+      totalOnline,
+      matchedOnline,
+      unmatchedOnline: Math.max(0, totalOnline - matchedOnline),
+      matchRate,
+      districtList
+    };
   }, [activeExpenses, user?.district]);
 
   // Selected KPI Card Highlight State (No modals)
@@ -1786,7 +1986,235 @@ export default function AnalysisPage() {
                   </div>
                 )}
               </div>
+            
+            {/* ROW 7: FTFR (First Time Fix Rate) & Online vs Support Calls */}
+            {/* District-wise FTFR Rate Card (col-span-6) */}
+            <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
+              <div className="bg-[#1E1B4B] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <ThunderboltOutlined style={{ fontSize: 13 }} className="text-amber-400" />
+                  DISTRICT-WISE FIRST TIME FIX RATE (FTFR - 24H RESOLUTION)
+                </span>
+                <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-[3px]">
+                  {districtFtfrData.overallRate}% FTFR Overall
+                </span>
+              </div>
+              <div className="p-3 overflow-y-auto custom-scrollbar" style={{ height: 320 }}>
+                {districtFtfrData.list.length > 0 ? (
+                  <div className="space-y-2">
+                    {districtFtfrData.list.map((item, idx) => {
+                      const hasCalls = item.totalCalls > 0;
+                      const isHigh = item.rate >= 80;
+                      const isMed = item.rate >= 50 && item.rate < 80;
+                      const barColor = !hasCalls ? "#cbd5e1" : (isHigh ? "#10b981" : (isMed ? "#f59e0b" : "#ef4444"));
+
+                      return (
+                        <div key={idx} className="bg-slate-50 border border-slate-200/70 p-2 flex flex-col space-y-1 hover:bg-slate-100/70 transition-all">
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <span className="font-bold text-slate-900 truncate max-w-[180px] leading-tight">
+                              {item.name}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] font-mono font-bold text-slate-500">
+                                {hasCalls ? `${item.closed24h}/${item.totalCalls} (<24h)` : "0 Calls"}
+                              </span>
+                              <span className={`font-mono font-black px-1.5 py-0.5 rounded-none text-[11px] border ${
+                                !hasCalls
+                                  ? "bg-slate-100 text-slate-400 border-slate-200"
+                                  : isHigh
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : isMed
+                                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                                  : "bg-rose-50 text-rose-700 border-rose-200"
+                              }`}>
+                                {item.rate}% FTFR
+                              </span>
+                            </div>
+                          </div>
+                          {/* Progress bar */}
+                          <div className="w-full bg-slate-200/80 h-2 overflow-hidden relative">
+                            <div
+                              className="h-full transition-all duration-500"
+                              style={{
+                                width: hasCalls ? `${Math.max(3, item.rate)}%` : "0%",
+                                backgroundColor: barColor
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No district complaint/call records
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Online Calls vs Support Calls Breakdown Card (col-span-6) */}
+            <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
+              <div className="bg-[#1E1B4B] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <SafetyCertificateOutlined style={{ fontSize: 13 }} className="text-cyan-400" />
+                  ONLINE VS SUPPORT CALLS BREAKDOWN
+                </span>
+                <span className="text-[10px] font-mono font-bold text-white/80 bg-white/10 px-2 py-0.5 rounded-[3px]">
+                  {callTypeBreakdown.totalCalls} Total Calls
+                </span>
+              </div>
+              <div className="p-3 overflow-y-auto custom-scrollbar flex flex-col justify-between" style={{ height: 320 }}>
+                {/* Summary Row */}
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="bg-cyan-50/70 border border-cyan-200/80 p-2 text-center">
+                    <span className="text-[10px] font-bold text-cyan-800 uppercase block tracking-wider">
+                      Online Calls (Portal)
+                    </span>
+                    <span className="text-lg font-black font-mono text-cyan-900">
+                      {callTypeBreakdown.onlineTotal}
+                    </span>
+                    <span className="text-[9px] font-medium text-cyan-600 block">
+                      {callTypeBreakdown.totalCalls > 0 ? Math.round((callTypeBreakdown.onlineTotal / callTypeBreakdown.totalCalls) * 100) : 0}% of Total
+                    </span>
+                  </div>
+                  <div className="bg-indigo-50/70 border border-indigo-200/80 p-2 text-center">
+                    <span className="text-[10px] font-bold text-indigo-800 uppercase block tracking-wider">
+                      Support Calls (Internal)
+                    </span>
+                    <span className="text-lg font-black font-mono text-indigo-900">
+                      {callTypeBreakdown.supportTotal}
+                    </span>
+                    <span className="text-[9px] font-medium text-indigo-600 block">
+                      {callTypeBreakdown.totalCalls > 0 ? Math.round((callTypeBreakdown.supportTotal / callTypeBreakdown.totalCalls) * 100) : 0}% of Total
+                    </span>
+                  </div>
+                </div>
+
+                {/* Engineer-wise Breakdown */}
+                <div className="space-y-1.5 overflow-y-auto custom-scrollbar flex-1 pr-1" style={{ maxHeight: 210 }}>
+                  {callTypeBreakdown.engineerList.length > 0 ? (
+                    callTypeBreakdown.engineerList.map((eng, idx) => {
+                      const onlinePct = eng.total > 0 ? Math.round((eng.online / eng.total) * 100) : 0;
+                      const supportPct = eng.total > 0 ? 100 - onlinePct : 0;
+
+                      return (
+                        <div key={idx} className="bg-slate-50 border border-slate-200/70 p-1.5 px-2 text-xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-bold text-slate-800 truncate max-w-[150px]">{eng.name}</span>
+                            <div className="flex items-center gap-2 font-mono text-[10px]">
+                              <span className="text-cyan-700 font-bold">Online: {eng.online}</span>
+                              <span className="text-slate-300">|</span>
+                              <span className="text-indigo-700 font-bold">Support: {eng.support}</span>
+                              <span className="text-slate-800 font-black bg-white px-1 border border-slate-200">{eng.total} Total</span>
+                            </div>
+                          </div>
+                          {/* Dual segment bar */}
+                          <div className="w-full bg-slate-200 h-2 flex overflow-hidden">
+                            <div style={{ width: `${onlinePct}%` }} className="bg-cyan-500 h-full" title={`Online: ${onlinePct}%`} />
+                            <div style={{ width: `${supportPct}%` }} className="bg-indigo-600 h-full" title={`Support: ${supportPct}%`} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex items-center justify-center h-28 text-slate-400 text-xs font-bold">
+                      No engineer call distribution
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ROW 8: Online Calls Portal Match & Verification Analysis (col-span-12) */}
+            <div className="lg:col-span-12 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
+              <div className="bg-[#1E1B4B] text-white px-3.5 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
+                  <AuditOutlined style={{ fontSize: 13 }} className="text-emerald-400" />
+                  ONLINE CALLS PORTAL MATCH & VERIFICATION ANALYSIS
+                </span>
+                <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-[3px]">
+                  {portalMatchAnalysis.matchRate}% Portal Verified
+                </span>
+              </div>
+              <div className="p-3">
+                {/* 3 Metric Header Chips */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
+                  <div className="bg-slate-50 border border-slate-200 p-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">
+                        TOTAL ONLINE CALLS LOGGED
+                      </span>
+                      <span className="text-base font-bold font-mono text-slate-900">
+                        {portalMatchAnalysis.totalOnline} Calls
+                      </span>
+                    </div>
+                    <div className="w-7 h-7 bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
+                      <RocketOutlined style={{ fontSize: 13 }} />
+                    </div>
+                  </div>
+
+                  <div className="bg-emerald-50/50 border border-emerald-200 p-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-800 block">
+                        PORTAL MATCHED (VERIFIED)
+                      </span>
+                      <span className="text-base font-bold font-mono text-emerald-800">
+                        {portalMatchAnalysis.matchedOnline} Calls
+                      </span>
+                    </div>
+                    <div className="w-7 h-7 bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center justify-center">
+                      <CheckCircleOutlined style={{ fontSize: 13 }} />
+                    </div>
+                  </div>
+
+                  <div className="bg-indigo-50/50 border border-indigo-200 p-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-800 block">
+                        PORTAL MATCH ACCURACY
+                      </span>
+                      <span className="text-base font-bold font-mono text-indigo-900">
+                        {portalMatchAnalysis.matchRate}%
+                      </span>
+                    </div>
+                    <div className="w-7 h-7 bg-indigo-100 text-indigo-700 border border-indigo-300 flex items-center justify-center">
+                      <AuditOutlined style={{ fontSize: 13 }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* District-wise Portal Match Grid */}
+                <div className="space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                  {portalMatchAnalysis.districtList.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {portalMatchAnalysis.districtList.map((d, idx) => (
+                        <div key={idx} className="bg-slate-50 border border-slate-200/80 p-2 text-xs flex flex-col justify-between space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-800 truncate max-w-[130px]">{d.name}</span>
+                            <span className="font-mono font-bold text-emerald-700 text-[11px] bg-white border border-slate-200 px-1">
+                              {d.rate}% Matched
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+                            <span>Logged: {d.totalOnline}</span>
+                            <span>Matched: {d.matched}</span>
+                            {d.unmatched > 0 && <span className="text-rose-600 font-bold">Unmatched: {d.unmatched}</span>}
+                          </div>
+                          <div className="w-full bg-slate-200 h-1.5 overflow-hidden">
+                            <div style={{ width: `${d.rate}%` }} className="bg-emerald-600 h-full" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-24 text-slate-400 text-xs font-bold">
+                      No portal match records available
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
           </div>
         </div>
       )}
