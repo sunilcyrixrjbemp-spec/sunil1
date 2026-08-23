@@ -30,7 +30,8 @@ import {
   WalletOutlined,
   UserOutlined,
   GlobalOutlined,
-  TeamOutlined
+  TeamOutlined,
+  SwapOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
 const months = [
@@ -52,6 +53,34 @@ export default function AnalysisPage() {
     const keyV4 = `cache_v4_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
     const keyOld = `cache_my_expenses_${currentUser.user_id}_${y}-${monthStr}`;
     const cached = localStorage.getItem(keyV4) || localStorage.getItem(keyOld);
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [prevMyExpenses, setPrevMyExpenses] = useState<any[]>(() => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) return [];
+    const savedM = localStorage.getItem("analysis_selectedMonth");
+    const savedY = localStorage.getItem("analysis_selectedYear");
+    const m = savedM !== null ? Number(savedM) : new Date().getMonth();
+    const y = savedY !== null ? Number(savedY) : new Date().getFullYear();
+    const prevM = m === 0 ? 11 : m - 1;
+    const prevY = m === 0 ? y - 1 : y;
+    const prevMonthStr = String(prevM + 1).padStart(2, "0");
+    const keyV4 = `cache_v4_my_expenses_${currentUser.user_id}_${prevY}-${prevMonthStr}`;
+    const cached = localStorage.getItem(keyV4);
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [prevTeamExpenses, setPrevTeamExpenses] = useState<any[]>(() => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) return [];
+    const savedM = localStorage.getItem("analysis_selectedMonth");
+    const savedY = localStorage.getItem("analysis_selectedYear");
+    const m = savedM !== null ? Number(savedM) : new Date().getMonth();
+    const y = savedY !== null ? Number(savedY) : new Date().getFullYear();
+    const prevM = m === 0 ? 11 : m - 1;
+    const prevY = m === 0 ? y - 1 : y;
+    const prevMonthStr = String(prevM + 1).padStart(2, "0");
+    const keyV4 = `cache_v4_team_expenses_${currentUser.user_id}_${prevY}-${prevMonthStr}`;
+    const cached = localStorage.getItem(keyV4);
     return cached ? JSON.parse(cached) : [];
   });
   const [teamExpenses, setTeamExpenses] = useState<any[]>(() => {
@@ -229,24 +258,43 @@ export default function AnalysisPage() {
     const fetchData = async () => {
       const cacheKeyMy = `cache_v4_my_expenses_${uId}_${monthQueryParam}`;
       const cacheKeyTeam = `cache_v4_team_expenses_${uId}_${monthQueryParam}`;
+      
+      const prevM = selectedMonth === 0 ? 11 : selectedMonth - 1;
+      const prevY = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+      const prevMonthStr = String(prevM + 1).padStart(2, "0");
+      const prevMonthQueryParam = `${prevY}-${prevMonthStr}`;
+      const cacheKeyPrevMy = `cache_v4_my_expenses_${uId}_${prevMonthQueryParam}`;
+      const cacheKeyPrevTeam = `cache_v4_team_expenses_${uId}_${prevMonthQueryParam}`;
+
       setLoading(true);
       try {
         if (isReviewer) {
-          const [own, team] = await Promise.all([
+          const [own, team, prevOwn, prevTeam] = await Promise.all([
             expenseService.getExpenses(monthQueryParam),
-            expenseService.getTeamExpenses(monthQueryParam)
+            expenseService.getTeamExpenses(monthQueryParam),
+            expenseService.getExpenses(prevMonthQueryParam).catch(() => []),
+            expenseService.getTeamExpenses(prevMonthQueryParam).catch(() => [])
           ]);
           setMyExpenses(own || []);
           setTeamExpenses(team || []);
+          setPrevMyExpenses(prevOwn || []);
+          setPrevTeamExpenses(prevTeam || []);
           if (uId) {
             localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
             localStorage.setItem(cacheKeyTeam, JSON.stringify(team || []));
+            localStorage.setItem(cacheKeyPrevMy, JSON.stringify(prevOwn || []));
+            localStorage.setItem(cacheKeyPrevTeam, JSON.stringify(prevTeam || []));
           }
         } else {
-          const own = await expenseService.getExpenses(monthQueryParam);
+          const [own, prevOwn] = await Promise.all([
+            expenseService.getExpenses(monthQueryParam),
+            expenseService.getExpenses(prevMonthQueryParam).catch(() => [])
+          ]);
           setMyExpenses(own || []);
+          setPrevMyExpenses(prevOwn || []);
           if (uId) {
             localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
+            localStorage.setItem(cacheKeyPrevMy, JSON.stringify(prevOwn || []));
           }
         }
       } catch (err) {
@@ -1473,6 +1521,87 @@ export default function AnalysisPage() {
 
   console.log("AnalysisPage activeExpenses:", activeExpenses);
 
+    // Role permission check for Executive Comparative Expense Widget (Coordinator, Admin, Accountant, Travel Desk, MIS)
+  const isComparativeExpenseAllowed = useMemo(() => {
+    const r = (userRole || "").toLowerCase();
+    return (
+      r.includes("coordinator") ||
+      r.includes("admin") ||
+      r.includes("account") ||
+      r.includes("travel") ||
+      r.includes("mis") ||
+      r.includes("director") ||
+      r.includes("vp") ||
+      r.includes("project head") ||
+      r.includes("project_head")
+    );
+  }, [userRole]);
+
+  const prevMonthIndex = selectedMonth === 0 ? 11 : selectedMonth - 1;
+  const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+  const prevMonthLabel = `${months[prevMonthIndex].substring(0, 3)} ${prevYear}`;
+  const currMonthLabel = `${months[selectedMonth].substring(0, 3)} ${selectedYear}`;
+
+  const activePrevExpenses = useMemo(() => {
+    if (!isComparativeExpenseAllowed) return [];
+    const rawSource = viewMode === "team" && isReviewer ? prevTeamExpenses : prevMyExpenses;
+    const source = (rawSource || []).filter((e: any) => e && e.category !== "Limit Request" && e.request_type !== "limit");
+    
+    return source.filter((e: any) => {
+      const expMonth = e.month || "";
+      const expYear = e.year || prevYear;
+      const monthMatch = expMonth.toLowerCase() === months[prevMonthIndex].toLowerCase() && Number(expYear) === prevYear;
+      if (!monthMatch) return false;
+
+      if (selectedStatus !== "all") {
+        if (e.status?.toLowerCase() !== selectedStatus.toLowerCase()) return false;
+      }
+
+      if (selectedZone !== "all") {
+        const eZone = cleanZone(e.zone || "");
+        if (eZone !== cleanZone(selectedZone)) return false;
+      }
+
+      if (selectedDistrict !== "all") {
+        const eDist = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
+        if (eDist.toLowerCase() !== selectedDistrict.toLowerCase()) return false;
+      }
+
+      if (selectedCoordinator !== "all") {
+        const eCoord = (e.coordinator_name || e.coordinator || e.submitter_coordinator || e.facility_coordinator || "").trim();
+        if (eCoord.toLowerCase() !== selectedCoordinator.toLowerCase()) return false;
+      }
+
+      if (selectedEngineer !== "all") {
+        const name = e.submitter_name || "Self";
+        if (name.toLowerCase() !== selectedEngineer.toLowerCase()) return false;
+      }
+
+      return true;
+    });
+  }, [
+    isComparativeExpenseAllowed,
+    viewMode,
+    isReviewer,
+    prevTeamExpenses,
+    prevMyExpenses,
+    prevMonthIndex,
+    prevYear,
+    selectedStatus,
+    selectedZone,
+    selectedDistrict,
+    selectedCoordinator,
+    selectedEngineer
+  ]);
+
+  const prevTotalAmount = useMemo(() => {
+    return activePrevExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
+  }, [activePrevExpenses]);
+
+  const prevCount = activePrevExpenses.length;
+  const deltaAmount = totalAmount - prevTotalAmount;
+  const percentageDelta = prevTotalAmount > 0 ? ((totalAmount - prevTotalAmount) / prevTotalAmount) * 100 : (totalAmount > 0 ? 100 : 0);
+
   if (loading) {
     return <AnalysisSkeleton />;
   }  return (
@@ -1830,6 +1959,70 @@ export default function AnalysisPage() {
                   />
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Executive Leadership Comparative Spend Banner: Last Month vs Current Month */}
+      {isComparativeExpenseAllowed && (
+        <div className="bg-white border border-line rounded-xl p-3.5 shadow-xs mb-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-3">
+            <div className="w-8.5 h-8.5 rounded-lg bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
+              <SwapOutlined className="text-sm" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                  Monthly Expense Comparison
+                </span>
+                <span className="text-2xs font-bold text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
+                  {prevMonthLabel} vs {currMonthLabel}
+                </span>
+              </div>
+              <p className="text-2xs text-ink-500 font-sans mt-0.5 m-0 font-medium">
+                Comparative financial variance based on active filters (Coordinator, Admin, Accountant, Travel Desk, MIS only)
+              </p>
+            </div>
+          </div>
+
+          {/* Side-by-side Metric Pills */}
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-2.5 shrink-0">
+            {/* Last Month */}
+            <div className="bg-surface-sunken/60 border border-line rounded-lg px-3 py-1.5 flex flex-col min-w-[110px]">
+              <span className="text-3xs font-extrabold uppercase tracking-wider text-ink-500">{prevMonthLabel} Total</span>
+              <span className="text-xs font-mono font-black text-ink-800">
+                {(prevTotalAmount || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-3xs text-ink-400 font-medium">{prevCount} Claims</span>
+            </div>
+
+            {/* Current Month */}
+            <div className="bg-accent-50/70 border border-accent-200 rounded-lg px-3 py-1.5 flex flex-col min-w-[110px]">
+              <span className="text-3xs font-extrabold uppercase tracking-wider text-accent-700">{currMonthLabel} Total</span>
+              <span className="text-xs font-mono font-black text-accent-900">
+                {(totalAmount || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-3xs text-accent-700 font-medium">{count} Claims</span>
+            </div>
+
+            {/* Variance / Growth */}
+            <div className={`border rounded-lg px-3 py-1.5 flex flex-col min-w-[110px] ${
+              deltaAmount > 0 
+                ? 'bg-rose-50 border-rose-200 text-rose-700' 
+                : deltaAmount < 0 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700' 
+                : 'bg-surface-sunken border-line text-ink-600'
+            }`}>
+              <span className="text-3xs font-extrabold uppercase tracking-wider">
+                {deltaAmount >= 0 ? "Variance (▲)" : "Variance (▼)"}
+              </span>
+              <span className="text-xs font-mono font-black">
+                {percentageDelta > 0 ? `+${percentageDelta.toFixed(1)}%` : `${percentageDelta.toFixed(1)}%`}
+              </span>
+              <span className="text-3xs font-medium font-mono">
+                {deltaAmount >= 0 ? `+₹${Math.abs(deltaAmount).toLocaleString('en-IN')}` : `-₹${Math.abs(deltaAmount).toLocaleString('en-IN')}`}
+              </span>
             </div>
           </div>
         </div>
