@@ -4,6 +4,31 @@ import * as XLSX from "xlsx";
 import { adminService, UserCreatePayload, UserEditPayload, ApprovalHierarchyResponse } from "../services/adminService";
 import { authService } from "../services/authService";
 import { formatToIST } from "../utils/timezone";
+
+// Helper to guarantee true IST (UTC +05:30) conversion for SQLite/D1 database timestamps
+function formatAuditTimestampIST(ts: string | number | Date | null | undefined): string {
+  if (!ts) return "—";
+  let str = String(ts).trim();
+  if (!str) return "—";
+
+  if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}/.test(str)) {
+    return formatToIST(str);
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}[\sT]\d{2}:\d{2}/.test(str)) {
+    let clean = str.replace(" ", "T");
+    if (!clean.endsWith("Z") && !/[+-]\d{2}:?\d{2}$/.test(clean)) {
+      clean = clean + "Z";
+    }
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) {
+      return formatToIST(d);
+    }
+  }
+
+  return formatToIST(ts);
+}
+
 import { safeStorageSetItem } from "../utils/safeStorage";
 
 import { 
@@ -2867,7 +2892,7 @@ export default function AdminPage() {
                   </div>
 
                   <div className="text-2xs font-mono text-ink-500 font-semibold px-2">
-                    <span>Active Policy Engine</span>
+                    <span>System Configuration</span>
                   </div>
                 </div>
 
@@ -3554,11 +3579,11 @@ export default function AdminPage() {
                     <div className="flex items-center gap-2">
                       <ShieldAlert className="w-4 h-4 text-accent-200" />
                       <span className="text-xs font-bold uppercase tracking-wider font-mono">
-                        Enterprise Privilege Cross-Reference Matrix
+                        System Roles & Permissions Matrix
                       </span>
                     </div>
                     <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-accent-100 font-bold border border-white/10">
-                      10 Capabilities × 8 Roles
+                      8 Standard System Roles
                     </span>
                   </div>
 
@@ -3864,7 +3889,7 @@ export default function AdminPage() {
                           "Performed By": l.performed_by_name || l.actor_name || "Admin",
                           Role: l.performed_by_role || l.actor_role || "Admin",
                           "New Value": typeof l.new_value === "object" ? JSON.stringify(l.new_value) : l.new_value,
-                          "Created At": l.created_at
+                          "Created At (IST)": formatAuditTimestampIST(l.created_at)
                         })));
                         const wb = XLSX.utils.book_new();
                         XLSX.utils.book_append_sheet(wb, ws, "Audit_Trail");
@@ -3888,7 +3913,7 @@ export default function AdminPage() {
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-accent-200" />
                       <span className="text-xs font-bold uppercase tracking-wider font-mono">
-                        Activity Events Stream
+                        System Activity Log
                       </span>
                     </div>
                     <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-accent-100 font-bold border border-white/10">
@@ -3925,7 +3950,7 @@ export default function AdminPage() {
                             return (
                               <tr key={log.id || idx} className="hover:bg-accent-50/30 transition-colors">
                                 <td className="py-2.5 px-4 font-mono text-2xs font-bold text-ink-500 whitespace-nowrap">
-                                  {formatToIST(log.created_at)}
+                                  {formatAuditTimestampIST(log.created_at)}
                                 </td>
                                 <td className="py-2.5 px-4">
                                   <div className="flex items-center gap-2">
