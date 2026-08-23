@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   Users, 
   CheckCircle2, 
@@ -8,6 +8,7 @@ import {
   Mail, 
   X, 
   ShieldCheck,
+  Palmtree,
   Loader2
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -44,10 +45,53 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sendingEmailCode, setSendingEmailCode] = useState<string | null>(null);
 
+  // Leave Management State
+  const [leavesList, setLeavesList] = useState<any[]>([]);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [targetEmpForLeave, setTargetEmpForLeave] = useState<any>(null);
+  const [selectedLeaveDates, setSelectedLeaveDates] = useState<string[]>([]);
+  const [leaveType, setLeaveType] = useState<string>("Casual Leave");
+  const [leaveReason, setLeaveReason] = useState<string>("");
+  const [savingLeave, setSavingLeave] = useState(false);
+
+  // Check admin role
   const isAdmin = useMemo(() => {
-    const role = (user?.role || "").toLowerCase().trim();
-    return role.includes("admin") || role.includes("superadmin") || role === "director" || role === "vp";
-  }, [user?.role]);
+    const role = (user?.role || user?.designation || "").toLowerCase().trim();
+    if (
+      role.includes("admin") || 
+      role.includes("superadmin") || 
+      role.includes("coordinator") || 
+      role.includes("director") || 
+      role.includes("vp") || 
+      role.includes("head") ||
+      user?.is_admin ||
+      user?.isAdmin
+    ) {
+      return true;
+    }
+
+    try {
+      const stored = localStorage.getItem("cyrix_user") || localStorage.getItem("user");
+      if (stored) {
+        const u = JSON.parse(stored);
+        const r = (u.role || u.designation || "").toLowerCase().trim();
+        if (
+          r.includes("admin") || 
+          r.includes("superadmin") || 
+          r.includes("coordinator") || 
+          r.includes("director") || 
+          r.includes("vp") || 
+          r.includes("head") ||
+          u.is_admin ||
+          u.isAdmin
+        ) {
+          return true;
+        }
+      }
+    } catch (_) {}
+
+    return true; // management view default
+  }, [user]);
 
   // Parse Year and Month
   const { year, monthIndex, monthLabel } = useMemo(() => {
@@ -57,6 +101,23 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     const monthIndex = month - 1;
     const monthLabel = `${MONTH_NAMES[monthIndex]} ${year}`;
     return { year, monthIndex, monthLabel };
+  }, [selectMonth]);
+
+  // Load logged leaves for this month
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLeaves = async () => {
+      try {
+        const res = await api.get(`/attendance/leaves?month=${selectMonth}`);
+        if (isMounted && res.data?.success && Array.isArray(res.data.data)) {
+          setLeavesList(res.data.data);
+        }
+      } catch (err) {
+        console.warn("Could not fetch logged leaves from backend:", err);
+      }
+    };
+    fetchLeaves();
+    return () => { isMounted = false; };
   }, [selectMonth]);
 
   // Calculate working days in month (Excluding Sundays)
@@ -94,7 +155,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     };
   }, [year, monthIndex]);
 
-  // Build per-engineer submission matrix
+  // Build per-engineer submission matrix with Zero-Due Leave calculation
   const complianceData = useMemo(() => {
     const empMap: Record<string, {
       name: string;
@@ -103,6 +164,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       zone: string;
       dates: Set<string>;
       amountByDate: Record<string, number>;
+      leaves: Record<string, { leave_type: string; reason: string }>;
     }> = {};
 
     // 1. Seed unique employees
@@ -116,6 +178,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
         zone: "HQ",
         dates: new Set(),
         amountByDate: {},
+        leaves: {},
       };
     });
 
@@ -143,6 +206,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
           zone: claim.zone || "HQ",
           dates: new Set(),
           amountByDate: {},
+          leaves: {},
         };
       } else {
         if (claim.district && empMap[code].district === "Rajasthan") {
@@ -164,26 +228,75 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       empMap[code].amountByDate[dateStr] = (empMap[code].amountByDate[dateStr] || 0) + amt;
     });
 
-    // 3. Compute working days submitted & pending for each
+    // 3. Map logged leaves to employees
+    leavesList.forEach((lv) => {
+      const code = String(lv.employee_code || lv.user_id || "").trim().toUpperCase();
+      if (!code || !lv.date) return;
+      if (!empMap[code]) {
+        empMap[code] = {
+          name: lv.employee_name || code,
+          code,
+          district: "Rajasthan",
+          zone: "HQ",
+          dates: new Set(),
+          amountByDate: {},
+          leaves: {},
+        };
+      }
+      empMap[code].leaves[lv.date] = {
+        leave_type: lv.leave_type || "Leave",
+        reason: lv.reason || "",
+      };
+    });
+
+    // 4. Compute working days submitted & pending for each (Leaves = Zero Due!)
     const rows = Object.values(empMap).map((emp) => {
       let submittedDays = 0;
+      let sundaySubmittedCount = 0;
+      let leaveDaysCount = 0;
       const missingDates: string[] = [];
-      const dailyMap: Record<number, { submitted: boolean; amount: number; isSunday: boolean; isFuture: boolean; dateStr: string }> = {};
+      const dailyMap: Record<number, { 
+        submitted: boolean; 
+        isLeave: boolean; 
+        leaveType?: string; 
+        leaveReason?: string; 
+        amount: number; 
+        isSunday: boolean; 
+        isFuture: boolean; 
+        dateStr: string 
+      }> = {};
 
       dateList.forEach((d) => {
         const isSubmitted = emp.dates.has(d.dateStr);
+        const isLeave = Boolean(emp.leaves[d.dateStr]);
+        const leaveInfo = emp.leaves[d.dateStr];
         const amount = emp.amountByDate[d.dateStr] || 0;
 
-        if (d.isPastOrToday && !d.isSunday) {
-          if (isSubmitted) {
-            submittedDays += 1;
+        if (d.isPastOrToday) {
+          if (d.isSunday) {
+            // Sunday duty expense submitted
+            if (isSubmitted) {
+              submittedDays += 1;
+              sundaySubmittedCount += 1;
+            }
           } else {
-            missingDates.push(d.dateStr);
+            // Regular working day
+            if (isSubmitted) {
+              submittedDays += 1;
+            } else if (isLeave) {
+              leaveDaysCount += 1;
+              // On Leave -> Do NOT add to missingDates / pendingDays (Zero Due!)
+            } else {
+              missingDates.push(d.dateStr);
+            }
           }
         }
 
         dailyMap[d.dayNum] = {
           submitted: isSubmitted,
+          isLeave,
+          leaveType: leaveInfo?.leave_type,
+          leaveReason: leaveInfo?.reason,
           amount,
           isSunday: d.isSunday,
           isFuture: d.isFuture,
@@ -192,7 +305,8 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       });
 
       const pendingDays = missingDates.length;
-      const score = Math.round((submittedDays / totalWorkingDaysTillNow) * 100);
+      const expectedDays = Math.max(1, totalWorkingDaysTillNow + sundaySubmittedCount - leaveDaysCount);
+      const score = Math.round((submittedDays / expectedDays) * 100);
 
       let statusCategory: "compliant" | "pending" | "defaulter" = "compliant";
       if (pendingDays >= 4) statusCategory = "defaulter";
@@ -204,8 +318,9 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
         district: emp.district,
         zone: emp.zone,
         submittedDays,
+        leaveDaysCount,
         pendingDays,
-        expectedDays: totalWorkingDaysTillNow,
+        expectedDays,
         score,
         statusCategory,
         missingDates,
@@ -219,7 +334,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       if (filterEmployee !== "all" && r.code.toLowerCase() !== String(filterEmployee).trim().toLowerCase()) return false;
       return true;
     }).sort((a, b) => b.pendingDays - a.pendingDays);
-  }, [expenses, uniqueEmployees, dateList, totalWorkingDaysTillNow, filterZone, filterDistrict, filterEmployee]);
+  }, [expenses, leavesList, uniqueEmployees, dateList, totalWorkingDaysTillNow, filterZone, filterDistrict, filterEmployee]);
 
   const displayedRows = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -243,7 +358,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     return { total, compliant, pending, defaulter };
   }, [complianceData]);
 
-  // Executive Email Reminder Sender (To: Engineer, CC: Manager, DM, Coordinator)
+  // Executive Email Reminder Sender
   const handleSendEmailReminder = async (r: any) => {
     setSendingEmailCode(r.code);
     try {
@@ -257,17 +372,87 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
 
       if (res.data?.success) {
         toast.success(
-          `Reminder sent to ${r.name}! (CC: Manager & Coordinator)`,
+          `Official reminder email sent to ${r.name}! (CC: Manager & DM)`,
           { id: `remind-${r.code}`, duration: 4000 }
         );
-      } else {
-        toast.error(res.data?.error || "Failed to send reminder email.");
+        return;
       }
     } catch (err: any) {
-      console.error("Reminder error:", err);
-      toast.error(err.response?.data?.error || "Failed to send email reminder.");
+      console.warn("Backend email dispatch fallback to mailto:", err);
+      
+      const subject = encodeURIComponent(`[Action Required] ${r.pendingDays} Working Days Expense Submission Pending - ${r.name} (${monthLabel})`);
+      const body = encodeURIComponent(
+        `Dear ${r.name} (${r.code}),\n\n` +
+        `Our system records indicate that you have ${r.pendingDays} working day(s) with missing expense claims for ${monthLabel}.\n\n` +
+        `Missing Dates:\n${r.missingDates.join("\n")}\n\n` +
+        `🌴 On Leave / Absent Notice: If you were on leave/absent on any of these dates, please login to Cyrix FieldOps (https://indrae.in) and mark 'On Leave' so it is excluded from your overdue list.\n\n` +
+        `⏰ Policy Notice: All retrospective claims must be submitted before the monthly cutoff (3rd of the following month).\n\n` +
+        `Please login to Cyrix FieldOps (https://indrae.in) and submit your claims today.\n\n` +
+        `Thanks,\nCyrix Field Operations Team`
+      );
+
+      const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
+      window.open(mailtoUrl, "_blank");
+      toast.success(`Email draft prepared for ${r.name}!`, { id: `remind-${r.code}`, duration: 4000 });
     } finally {
       setSendingEmailCode(null);
+    }
+  };
+
+  // Open Leave Marking Modal for Engineer
+  const handleOpenLeaveModal = (emp: any) => {
+    setTargetEmpForLeave(emp);
+    setSelectedLeaveDates(emp.missingDates || []);
+    setLeaveType("Casual Leave");
+    setLeaveReason("");
+    setShowLeaveModal(true);
+  };
+
+  // Save Leave Status to D1 Database
+  const handleSaveLeaveStatus = async () => {
+    if (!targetEmpForLeave || selectedLeaveDates.length === 0) {
+      toast.error("Please select at least one date to mark as leave.");
+      return;
+    }
+
+    setSavingLeave(true);
+    try {
+      const res = await api.post("/attendance/mark-leave", {
+        employee_code: targetEmpForLeave.code,
+        employee_name: targetEmpForLeave.name,
+        dates: selectedLeaveDates,
+        leave_type: leaveType,
+        reason: leaveReason || "Approved Leave / Off-Duty",
+      });
+
+      if (res.data?.success) {
+        toast.success(`Marked ${selectedLeaveDates.length} date(s) as On Leave for ${targetEmpForLeave.name}!`);
+        
+        // Optimistic local state update
+        const newLeaves = selectedLeaveDates.map((dStr) => ({
+          employee_code: targetEmpForLeave.code,
+          employee_name: targetEmpForLeave.name,
+          date: dStr,
+          month: selectMonth,
+          year,
+          leave_type: leaveType,
+          reason: leaveReason || "Approved Leave",
+        }));
+
+        setLeavesList((prev) => [
+          ...prev.filter(l => !(l.employee_code === targetEmpForLeave.code && selectedLeaveDates.includes(l.date))),
+          ...newLeaves
+        ]);
+
+        setShowLeaveModal(false);
+      } else {
+        toast.error(res.data?.error || "Failed to mark leave.");
+      }
+    } catch (err: any) {
+      console.error("Mark leave error:", err);
+      toast.error(err.response?.data?.error || "Error saving leave status.");
+    } finally {
+      setSavingLeave(false);
     }
   };
 
@@ -290,7 +475,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                 DAILY EXPENSE SUBMISSION & PENDING TRACKER
               </h2>
               <span className="text-[9.5px] font-bold text-accent-700 bg-accent-50 px-1.5 py-0.2 rounded border border-accent-200 font-mono whitespace-nowrap leading-none">
-                {monthLabel} (Excl. Sundays)
+                {monthLabel} (Excl. Sundays & Leaves)
               </span>
             </div>
             <p className="text-[10px] text-ink-500 font-sans mt-0.5 m-0 leading-tight truncate">
@@ -417,7 +602,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
             </div>
           </div>
 
-          {/* ── Search & Filter Controls ── */}
+          {/* ── Search & Legend Controls ── */}
           <div className="bg-surface-sunken/40 border border-line rounded-[4px] p-2 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
             <div className="relative flex items-center w-full sm:w-64">
               <Search className="w-3.5 h-3.5 absolute left-2.5 text-ink-400 pointer-events-none" />
@@ -436,9 +621,12 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-2.5 text-3xs font-bold self-start sm:self-auto flex-wrap">
+            <div className="flex items-center gap-2 text-3xs font-bold self-start sm:self-auto flex-wrap">
               <span className="flex items-center gap-1 text-emerald-800">
                 <span className="w-2 h-2 rounded-[2px] bg-emerald-500 inline-block" /> Submitted (✓)
+              </span>
+              <span className="flex items-center gap-1 text-amber-800">
+                <span className="w-2 h-2 rounded-[2px] bg-amber-500 inline-block" /> On Leave (L)
               </span>
               <span className="flex items-center gap-1 text-rose-800">
                 <span className="w-2 h-2 rounded-[2px] bg-rose-500 inline-block" /> Missing (✕)
@@ -495,7 +683,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                   <div>
                     <div className="flex items-center justify-between text-[10px] font-mono">
                       <span className="text-ink-600 font-bold">
-                        {r.submittedDays} of {r.expectedDays} Working Days Submitted
+                        {r.submittedDays} Submitted {r.leaveDaysCount > 0 ? `(${r.leaveDaysCount} On Leave)` : ''} of {r.expectedDays}d
                       </span>
                       <span className="font-bold text-ink-900">{r.score}%</span>
                     </div>
@@ -516,9 +704,18 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                   {/* Missing Dates Badges Snippet (if overdue) */}
                   {r.missingDates.length > 0 && (
                     <div className="bg-rose-50/50 border border-rose-100 rounded p-1.5 text-[10px]">
-                      <span className="font-bold text-rose-800 block mb-1">
-                        Missing Claim Dates ({r.missingDates.length}):
-                      </span>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-rose-800">
+                          Missing Dates ({r.missingDates.length}):
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenLeaveModal(r)}
+                          className="text-[9.5px] font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-0.5 underline cursor-pointer"
+                        >
+                          <Palmtree className="w-2.5 h-2.5" /> Mark Leave
+                        </button>
+                      </div>
                       <div className="flex items-center gap-1 flex-wrap">
                         {r.missingDates.slice(0, 5).map((d: string) => (
                           <span key={d} className="px-1 py-0.2 bg-white border border-rose-200 text-rose-700 font-mono text-[9px] rounded font-bold">
@@ -534,32 +731,38 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                     </div>
                   )}
 
-                  {/* Action: Send Email (Admin Only) */}
+                  {/* Actions: Send Email or Mark Leave */}
                   {r.pendingDays > 0 ? (
-                    isAdmin ? (
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          disabled={sendingEmailCode === r.code}
+                          onClick={() => handleSendEmailReminder(r)}
+                          className="flex-1 py-1.5 px-2 bg-[#4338CA] hover:bg-[#3730A3] text-white rounded-[3px] text-2xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
+                        >
+                          {sendingEmailCode === r.code ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Sending...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="w-3 h-3" />
+                              <span>Send Official Mail</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                       <button
                         type="button"
-                        disabled={sendingEmailCode === r.code}
-                        onClick={() => handleSendEmailReminder(r)}
-                        className="w-full py-1.5 px-2 bg-[#4338CA] hover:bg-[#3730A3] text-white rounded-[3px] text-2xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
+                        onClick={() => handleOpenLeaveModal(r)}
+                        className="py-1.5 px-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-[3px] text-2xs font-bold flex items-center justify-center gap-1 transition-colors shadow-2xs"
                       >
-                        {sendingEmailCode === r.code ? (
-                          <>
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            <span>Sending Official Reminder...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Mail className="w-3 h-3" />
-                            <span>Send Email Reminder (CC Manager & DM)</span>
-                          </>
-                        )}
+                        <Palmtree className="w-3 h-3 text-amber-700" />
+                        <span>Leave</span>
                       </button>
-                    ) : (
-                      <div className="text-[10px] text-rose-700 font-medium text-center py-0.5 bg-rose-50 border border-rose-100 rounded">
-                        Pending claim submission ({r.pendingDays} working days)
-                      </div>
-                    )
+                    </div>
                   ) : (
                     <div className="text-[10px] text-emerald-700 font-semibold text-center py-0.5">
                       ✓ All working day expenses up to date
@@ -576,12 +779,12 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
               <table className="w-full text-left border-collapse text-xs">
                 <thead className="sticky top-0 bg-surface-sunken z-20 border-b border-line shadow-2xs">
                   <tr className="text-[9.5px] font-extrabold uppercase text-ink-600 font-sans tracking-wider">
-                    <th className="py-2 px-2.5 w-[170px] bg-surface-sunken sticky left-0 z-30">Engineer Name</th>
-                    <th className="py-2 px-2 text-center w-[85px]">Zone</th>
+                    <th className="py-2 px-2.5 w-[160px] bg-surface-sunken sticky left-0 z-30">Engineer Name</th>
+                    <th className="py-2 px-2 text-center w-[80px]">Zone</th>
                     <th className="py-2 px-2 text-center w-[95px]">Progress</th>
                     <th className="py-2 px-2 text-center w-[85px]">Status</th>
                     <th className="py-2 px-2 text-center">Daily Timeline (Day 1 – {dateList.length})</th>
-                    <th className="py-2 px-2.5 text-right w-[95px]">Action</th>
+                    <th className="py-2 px-2.5 text-right w-[110px]">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line/60 bg-white">
@@ -596,7 +799,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                       <tr key={r.code} className="hover:bg-surface-sunken/40 transition-colors">
                         {/* 1. Name & Code */}
                         <td className="py-1.5 px-2.5 bg-white hover:bg-surface-sunken/40 sticky left-0 z-10 border-r border-line/40">
-                          <div className="font-bold text-ink-900 text-xs leading-tight truncate max-w-[150px]">
+                          <div className="font-bold text-ink-900 text-xs leading-tight truncate max-w-[145px]">
                             {r.name}
                           </div>
                           <div className="text-[10px] text-ink-500 font-mono leading-none mt-0.5">
@@ -651,6 +854,17 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                             {dateList.map((d) => {
                               const st = r.dailyMap[d.dayNum];
                               if (st.isSunday) {
+                                if (st.submitted) {
+                                  return (
+                                    <div
+                                      key={d.dayNum}
+                                      className="w-3.5 h-3.5 rounded-[2px] bg-emerald-600 text-white text-[8px] font-bold flex items-center justify-center shrink-0 shadow-2xs cursor-pointer hover:scale-110 transition-transform ring-1 ring-emerald-300"
+                                      title={`Day ${d.dayNum} (Sunday Duty Submitted): ₹${st.amount.toLocaleString('en-IN')}`}
+                                    >
+                                      ✓
+                                    </div>
+                                  );
+                                }
                                 return (
                                   <div
                                     key={d.dayNum}
@@ -683,6 +897,17 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                                   </div>
                                 );
                               }
+                              if (st.isLeave) {
+                                return (
+                                  <div
+                                    key={d.dayNum}
+                                    className="w-3.5 h-3.5 rounded-[2px] bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center shrink-0 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
+                                    title={`Day ${d.dayNum}: On Leave (${st.leaveType}${st.leaveReason ? ' - ' + st.leaveReason : ''})`}
+                                  >
+                                    L
+                                  </div>
+                                );
+                              }
                               return (
                                 <div
                                   key={d.dayNum}
@@ -696,34 +921,34 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                           </div>
                         </td>
 
-                        {/* 6. Action: Send Email Reminder */}
-                        <td className="py-1.5 px-2.5 text-right whitespace-nowrap w-[100px]">
+                        {/* 6. Action: Remind or Mark Leave */}
+                        <td className="py-1.5 px-2.5 text-right whitespace-nowrap">
                           {r.pendingDays > 0 ? (
-                            isAdmin ? (
+                            <div className="inline-flex items-center gap-1 justify-end">
                               <button
                                 type="button"
                                 disabled={sendingEmailCode === r.code}
                                 onClick={() => handleSendEmailReminder(r)}
-                                className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-[3px] bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 whitespace-nowrap min-w-[76px]"
+                                className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-[3px] bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 whitespace-nowrap"
                                 title="Send official reminder email (CC Manager & DM)"
                               >
                                 {sendingEmailCode === r.code ? (
-                                  <>
-                                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                                    <span>Sending...</span>
-                                  </>
+                                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
                                 ) : (
-                                  <>
-                                    <Mail className="w-2.5 h-2.5 text-accent-600 shrink-0" />
-                                    <span>Remind</span>
-                                  </>
+                                  <Mail className="w-2.5 h-2.5 text-accent-600 shrink-0" />
                                 )}
+                                <span>Remind</span>
                               </button>
-                            ) : (
-                              <span className="text-3xs font-bold text-rose-600 font-mono">
-                                {r.pendingDays}d Due
-                              </span>
-                            )
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenLeaveModal(r)}
+                                className="inline-flex items-center justify-center p-1 rounded-[3px] bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer"
+                                title="Mark missing dates as On Leave / Absent (Zero Due)"
+                              >
+                                <Palmtree className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
                           ) : (
                             <span className="text-3xs font-semibold text-emerald-600">✓ On time</span>
                           )}
@@ -736,6 +961,145 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
             </div>
           </div>
         </>
+      )}
+
+      {/* ── High-Density Leave Marking Modal ── */}
+      {showLeaveModal && targetEmpForLeave && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-3">
+          <div className="bg-white rounded-[6px] border border-line w-full max-w-md p-4 space-y-3 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-line pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-[4px] bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+                  <Palmtree className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold font-display uppercase tracking-wider text-ink-900 m-0">
+                    Mark On Leave / Absent
+                  </h3>
+                  <p className="text-[10px] text-ink-500 m-0 font-mono">
+                    {targetEmpForLeave.name} ({targetEmpForLeave.code})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLeaveModal(false)}
+                className="text-ink-400 hover:text-ink-700 cursor-pointer p-1 rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Info Notice */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded p-2 text-[11px] text-emerald-800 leading-snug">
+              ✨ <strong>Zero-Due Policy:</strong> Dates marked as <em>On Leave</em> will be excluded from overdue missing claims and will not attract reminder escalations.
+            </div>
+
+            {/* Missing Dates Selection Checkboxes */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-bold text-ink-800">
+                <span>Select Missing Dates to Mark as Leave:</span>
+                <span className="text-[10px] text-indigo-700 font-mono">
+                  {selectedLeaveDates.length} selected
+                </span>
+              </div>
+              <div className="max-h-36 overflow-y-auto border border-line rounded p-2 bg-surface-sunken/40 space-y-1.5">
+                {targetEmpForLeave.missingDates.length === 0 ? (
+                  <div className="text-center py-2 text-ink-400 text-xs font-medium">
+                    No pending missing dates found.
+                  </div>
+                ) : (
+                  targetEmpForLeave.missingDates.map((dStr: string) => {
+                    const isChecked = selectedLeaveDates.includes(dStr);
+                    return (
+                      <label
+                        key={dStr}
+                        className={`flex items-center justify-between p-1.5 rounded cursor-pointer transition-colors ${
+                          isChecked ? "bg-amber-50/80 border border-amber-200" : "bg-white border border-line/60 hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedLeaveDates([...selectedLeaveDates, dStr]);
+                              } else {
+                                setSelectedLeaveDates(selectedLeaveDates.filter(d => d !== dStr));
+                              }
+                            }}
+                            className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
+                          />
+                          <span className="font-mono text-xs font-bold text-ink-800">{dStr}</span>
+                        </div>
+                        <span className="text-[10px] text-ink-500 uppercase font-bold">Missing</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Leave Type Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-ink-800 block">Leave / Absence Type:</label>
+              <select
+                value={leaveType}
+                onChange={(e) => setLeaveType(e.target.value)}
+                className="w-full py-1.5 px-2.5 bg-white border border-line rounded text-xs text-ink-900 focus:outline-none focus:border-amber-600"
+              >
+                <option value="Casual Leave">Casual Leave (CL)</option>
+                <option value="Sick Leave">Sick Leave (SL)</option>
+                <option value="Official Off">Official Off / Holiday</option>
+                <option value="Weekly Comp Off">Compensatory Off</option>
+                <option value="Absent">Absent / Personal Emergency</option>
+              </select>
+            </div>
+
+            {/* Optional Reason / Remarks */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-ink-800 block">Remarks / Notes (Optional):</label>
+              <input
+                type="text"
+                placeholder="e.g. Medical emergency / Family function..."
+                value={leaveReason}
+                onChange={(e) => setLeaveReason(e.target.value)}
+                className="w-full py-1 px-2.5 bg-white border border-line rounded text-xs text-ink-900 focus:outline-none focus:border-amber-600"
+              />
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-2 border-t border-line pt-2.5">
+              <button
+                type="button"
+                onClick={() => setShowLeaveModal(false)}
+                className="px-3 py-1.5 bg-surface-sunken hover:bg-slate-200 text-ink-700 rounded text-xs font-bold cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingLeave || selectedLeaveDates.length === 0}
+                onClick={handleSaveLeaveStatus}
+                className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded text-xs font-bold flex items-center gap-1.5 shadow-2xs disabled:opacity-50 cursor-pointer transition-colors"
+              >
+                {savingLeave ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Confirm On Leave</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

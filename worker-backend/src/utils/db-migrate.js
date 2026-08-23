@@ -108,6 +108,22 @@ export async function runMigrations(db) {
       facility_type TEXT,
       zone_name TEXT
     )`,
+    // engineer_leaves table
+    `CREATE TABLE IF NOT EXISTS engineer_leaves (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      employee_code TEXT NOT NULL,
+      employee_name TEXT,
+      date TEXT NOT NULL,
+      month TEXT NOT NULL,
+      year INTEGER NOT NULL,
+      leave_type TEXT DEFAULT 'Leave',
+      reason TEXT,
+      marked_by TEXT,
+      marked_by_role TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(employee_code, date)
+    )`,
     // expense_audit_logs table
     `CREATE TABLE IF NOT EXISTS expense_audit_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

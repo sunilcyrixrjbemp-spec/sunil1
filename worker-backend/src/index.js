@@ -127,7 +127,7 @@ import {
 
 // Attendance handlers
 import {
-  handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies, handleSendSubmissionReminder
+  handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies, handleSendSubmissionReminder, handleGetEngineerLeaves, handleMarkEngineerLeave, handleDeleteEngineerLeave
 } from "./routes/attendance.js";
 
 // ─── Enterprise Route Handlers (Direct Imports) ───────────────────────────────
@@ -544,6 +544,9 @@ router.get("/api/attendance/summary", handleGetAttendanceSummary, true);
 router.get("/api/attendance/discrepancies", handleGetAttendanceDiscrepancies, true);
 router.get("/api/attendance", handleGetAttendance, true);
 router.post("/api/attendance/send-reminder", handleSendSubmissionReminder, true);
+router.get("/api/attendance/leaves", handleGetEngineerLeaves, true);
+router.post("/api/attendance/mark-leave", handleMarkEngineerLeave, true);
+router.delete("/api/attendance/leaves/:id", handleDeleteEngineerLeave, true);
 
 // ─── Expense Endpoints ────────────────────────────────────────────────────────
 router.get("/api/expense/init", handleExpenseInit, true);

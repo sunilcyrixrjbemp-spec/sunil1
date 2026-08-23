@@ -273,3 +273,177 @@ export async function handleSendSubmissionReminder(request, env, params, query, 
     return jsonResponse({ success: false, error: error.message }, 500);
   }
 }
+
+/**
+ * GET /api/attendance/leaves
+ * Query: month (e.g. "2026-08" or "August"), employee_code (optional)
+ */
+export async function handleGetEngineerLeaves(request, env, params, query, user) {
+  try {
+    const monthQuery = query.get("month") || "";
+    const empCode = query.get("employee_code") || "";
+
+    let sql = `
+      SELECT id, user_id, employee_code, employee_name, date, month, year, leave_type, reason, marked_by, created_at
+      FROM engineer_leaves
+      WHERE 1=1
+    `;
+    const bindings = [];
+
+    if (monthQuery) {
+      sql += ` AND (month = ? OR date LIKE ?)`;
+      bindings.push(monthQuery, `${monthQuery}%`);
+    }
+
+    if (empCode) {
+      sql += ` AND (REPLACE(REPLACE(employee_code, '-', ''), ' ', '') = REPLACE(REPLACE(?, '-', ''), ' ', '') OR user_id = ?)`;
+      bindings.push(empCode, empCode);
+    }
+
+    sql += ` ORDER BY date ASC`;
+
+    // Ensure table exists on first query
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS engineer_leaves (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        employee_code TEXT NOT NULL,
+        employee_name TEXT,
+        date TEXT NOT NULL,
+        month TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        leave_type TEXT DEFAULT 'Leave',
+        reason TEXT,
+        marked_by TEXT,
+        marked_by_role TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(employee_code, date)
+      )
+    `).run();
+
+    const res = await env.DB.prepare(sql).bind(...bindings).all();
+    const rows = res.results || [];
+
+    return jsonResponse({
+      success: true,
+      count: rows.length,
+      data: rows
+    });
+  } catch (error) {
+    console.error("handleGetEngineerLeaves error:", error);
+    return jsonResponse({ success: false, error: error.message }, 500);
+  }
+}
+
+/**
+ * POST /api/attendance/mark-leave
+ * Body: { employee_code, dates: string[], leave_type, reason }
+ */
+export async function handleMarkEngineerLeave(request, env, params, query, user) {
+  try {
+    const body = await request.json();
+    const { employee_code, employee_name, dates = [], leave_type = "Leave", reason = "" } = body;
+
+    const targetEmpCode = employee_code || user.user_id || user.e_code;
+    if (!targetEmpCode || !Array.isArray(dates) || dates.length === 0) {
+      return jsonResponse({ success: false, error: "employee_code and valid dates array are required" }, 400);
+    }
+
+    // Ensure table exists
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS engineer_leaves (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        employee_code TEXT NOT NULL,
+        employee_name TEXT,
+        date TEXT NOT NULL,
+        month TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        leave_type TEXT DEFAULT 'Leave',
+        reason TEXT,
+        marked_by TEXT,
+        marked_by_role TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(employee_code, date)
+      )
+    `).run();
+
+    // Fetch user details
+    const empRows = await env.DB.prepare(`
+      SELECT id, user_id, name, district, zone FROM users
+      WHERE REPLACE(REPLACE(user_id, '-', ''), ' ', '') = REPLACE(REPLACE(?, '-', ''), ' ', '')
+         OR REPLACE(REPLACE(e_code, '-', ''), ' ', '') = REPLACE(REPLACE(?, '-', ''), ' ', '')
+      LIMIT 1
+    `).bind(targetEmpCode, targetEmpCode).all();
+
+    const emp = empRows.results?.[0];
+    const resolvedName = employee_name || emp?.name || targetEmpCode;
+    const resolvedUserId = emp?.user_id || targetEmpCode;
+
+    const savedLeaves = [];
+    for (const dStr of dates) {
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) continue;
+
+      const year = d.getFullYear();
+      const monthNum = String(d.getMonth() + 1).padStart(2, "0");
+      const monthStr = `${year}-${monthNum}`;
+
+      await env.DB.prepare(`
+        INSERT INTO engineer_leaves (user_id, employee_code, employee_name, date, month, year, leave_type, reason, marked_by, marked_by_role)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(employee_code, date) DO UPDATE SET
+          leave_type = excluded.leave_type,
+          reason = excluded.reason,
+          marked_by = excluded.marked_by,
+          marked_by_role = excluded.marked_by_role,
+          created_at = CURRENT_TIMESTAMP
+      `).bind(
+        resolvedUserId,
+        targetEmpCode,
+        resolvedName,
+        dStr,
+        monthStr,
+        year,
+        leave_type,
+        reason,
+        user.user_id || user.id || "system",
+        user.role || "Admin"
+      ).run();
+
+      savedLeaves.push(dStr);
+    }
+
+    return jsonResponse({
+      success: true,
+      message: `Successfully marked ${savedLeaves.length} date(s) as ${leave_type} for ${resolvedName}.`,
+      employee_code: targetEmpCode,
+      dates: savedLeaves
+    });
+  } catch (error) {
+    console.error("handleMarkEngineerLeave error:", error);
+    return jsonResponse({ success: false, error: error.message }, 500);
+  }
+}
+
+/**
+ * DELETE /api/attendance/leaves/:id
+ */
+export async function handleDeleteEngineerLeave(request, env, params, query, user) {
+  try {
+    const leaveId = params.id;
+    if (!leaveId) {
+      return jsonResponse({ success: false, error: "Leave ID is required" }, 400);
+    }
+
+    await env.DB.prepare(`DELETE FROM engineer_leaves WHERE id = ?`).bind(leaveId).run();
+
+    return jsonResponse({
+      success: true,
+      message: "Leave entry removed successfully."
+    });
+  } catch (error) {
+    console.error("handleDeleteEngineerLeave error:", error);
+    return jsonResponse({ success: false, error: error.message }, 500);
+  }
+}

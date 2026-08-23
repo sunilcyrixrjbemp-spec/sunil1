@@ -573,10 +573,16 @@ export function submissionReminderTemplate({
       </tr>
     </table>
 
+    <!-- On Leave / Absent Advisory Box -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px 14px;margin-bottom:14px;font-size:12.5px;color:#166534;line-height:1.5;">
+      🌴 <strong>अवकाश / अनुपस्थिति (On Leave / Absent) की स्थिति में:</strong><br/>
+      यदि आप इनमें से किसी तारीख को अवकाश (Casual/Sick Leave/Off) पर थे और फील्ड वर्क नहीं किया था, तो कृपया तुरंत पोर्टल पर जाकर उस तारीख को <strong>"On Leave"</strong> मार्क करें। मार्क करते ही वह तारीख आपके पेंडिंग ड्यू से स्वतः हटा दी जाएगी।
+    </div>
+
     <!-- Submission Policy & Cutoff Warning Box -->
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#92400e;line-height:1.5;">
       ⏰ <strong>Submission Window & Cutoff Policy:</strong><br/>
-      As per Cyrix operational policy, all retrospective claims must be submitted within the active billing window (Monthly Cutoff: <strong>3rd of the following month</strong>). Expenses submitted after the cutoff cannot be processed without senior management approval. Please log all missing claims immediately before the window expires.
+      As per Cyrix operational policy, all retrospective claims must be submitted within the active billing window (Monthly Cutoff: <strong>3rd of the following month</strong>). Expenses submitted after the cutoff cannot be processed without senior management approval.
     </div>
 
     <div style="margin-bottom:18px;">
@@ -593,12 +599,12 @@ export function submissionReminderTemplate({
     <!-- CTA Button -->
     <div style="text-align:center;margin:24px 0 18px 0;">
       <a href="https://indrae.in/#/submit-expense" target="_blank" style="display:inline-block;background-color:#4338ca;color:#ffffff;font-size:13.5px;font-weight:700;padding:10px 24px;border-radius:6px;text-decoration:none;box-shadow:0 2px 4px rgba(67,56,202,0.3);">
-        Submit Claims on Portal →
+        Open Portal (Submit Claims or Mark Leave) →
       </a>
     </div>
 
     <p style="margin:14px 0 0 0;font-size:11.5px;color:#64748b;line-height:1.5;border-top:1px solid #e2e8f0;padding-top:12px;">
-      <strong>Note to Reporting Managers & Coordinators (in CC):</strong> Please ensure the engineer logs all pending field claims before the financial cycle close.
+      <strong>Note to Reporting Managers & Coordinators (in CC):</strong> Please verify with the engineer regarding leave status vs pending claims.
     </p>
 
     <p style="margin:14px 0 0 0;font-size:13px;color:#0f172a;line-height:1.6;">
@@ -607,7 +613,7 @@ export function submissionReminderTemplate({
     </p>
   `;
 
-  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou have ${pendingDays} working day(s) with missing expense claims for ${monthName} ${year}.\n\nMissing Dates:\n${(missingDates || []).join("\n")}\n\nPolicy Notice: Expenses must be logged before the monthly cutoff (3rd of the following month).\n\nPlease login to Cyrix FieldOps (https://indrae.in) and submit your claims today.\n\nThanks,\nCyrix Field Operations Team`;
+  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou have ${pendingDays} working day(s) with missing expense claims for ${monthName} ${year}.\n\nMissing Dates:\n${(missingDates || []).join("\n")}\n\nNotice: If you were on leave/absent on any of these dates, please login to Cyrix FieldOps (https://indrae.in) and mark 'On Leave' so it is not counted as overdue.\n\nThanks,\nCyrix Field Operations Team`;
 
   return {
     subject: `[Action Required] ${pendingDays} Working Days Expense Submission Pending - ${employeeName} (${monthName} ${year})`,
