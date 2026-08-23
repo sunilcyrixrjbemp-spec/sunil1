@@ -5,14 +5,7 @@ import { adminService } from "../services/adminService";
 import { expenseService } from "../services/expenseService";
 import { getISTMonth } from "../utils/dateUtils";
 import toast from "react-hot-toast";
-import { 
-  Button, 
-  Input, 
-  Alert, 
-  Tag,
-  Row,
-  Col
-} from "antd";
+import { Input, Alert } from "antd";
 import {
   Mail,
   Phone,
@@ -30,31 +23,30 @@ import {
   CheckCircle2,
   KeyRound,
   FileText,
-  Printer,
   ShieldCheck,
-  Zap,
-  PhoneCall,
   Car,
-  Receipt
+  IndianRupee,
+  Lock,
+  BadgeCheck
 } from "lucide-react";
 
-// Reusable Apple iOS / Meta AI style soft gradient IconTile component (Matching HomePage)
-const IconTile = ({ 
+const rupee = (num: number | string) => {
+  const val = Number(num) || 0;
+  return "₹" + val.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+};
+
+// Reusable Zoho-style Icon Tile component
+const ZohoIconTile = ({ 
   icon: Icon, 
-  gradientFrom, 
-  gradientTo, 
-  shadowColor = "rgba(0, 0, 0, 0.12)" 
+  colorClass = "bg-accent-50 text-accent-700 border-accent-100" 
 }: { 
   icon: React.ElementType; 
-  gradientFrom: string; 
-  gradientTo: string; 
-  shadowColor?: string;
+  colorClass?: string;
 }) => (
   <div 
-    className={`w-7 h-7 rounded-lg bg-gradient-to-br ${gradientFrom} ${gradientTo} flex items-center justify-center text-white shrink-0`}
-    style={{ boxShadow: `0 2px 6px -1px ${shadowColor}` }}
+    className={`w-8 h-8 rounded-lg ${colorClass} border flex items-center justify-center shrink-0 shadow-2xs`}
   >
-    <Icon className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+    <Icon className="w-4 h-4 stroke-[2]" />
   </div>
 );
 
@@ -93,14 +85,6 @@ export default function ProfilePage() {
   const [isEditingMobile, setIsEditingMobile] = useState(false);
   const [tempMobile, setTempMobile] = useState("");
   const [mobileLoading, setMobileLoading] = useState(false);
-
-  // Inline edit state for Emergency Contact
-  const [isEditingEmergency, setIsEditingEmergency] = useState(false);
-  const [tempEmergency, setTempEmergency] = useState("");
-  const [emergencyLoading, setEmergencyLoading] = useState(false);
-  const [emergencyContact, setEmergencyContact] = useState<string>(() => {
-    return localStorage.getItem("user_emergency_contact") || "";
-  });
   
   // Notices
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -118,8 +102,6 @@ export default function ProfilePage() {
       setUser(currUser);
       setTempEmail(currUser.mail_id || "");
       setTempMobile(currUser.mobile_number || "");
-      setTempEmergency(localStorage.getItem(`emergency_contact_${currUser.user_id}`) || currUser.emergency_contact || "");
-      setEmergencyContact(localStorage.getItem(`emergency_contact_${currUser.user_id}`) || currUser.emergency_contact || "");
       fetchExpenseAllowanceInfo(currUser.user_id);
     }
 
@@ -128,10 +110,6 @@ export default function ProfilePage() {
         setUser(freshUser);
         setTempEmail(freshUser.mail_id || "");
         setTempMobile(freshUser.mobile_number || "");
-        if (freshUser.emergency_contact) {
-          setEmergencyContact(freshUser.emergency_contact);
-          setTempEmergency(freshUser.emergency_contact);
-        }
       })
       .catch((err) => {
         console.error("Failed to sync profile:", err);
@@ -257,26 +235,6 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveEmergency = async () => {
-    if (!tempEmergency.trim()) {
-      setNotice({ type: "error", text: "Emergency contact cannot be empty." });
-      return;
-    }
-    setEmergencyLoading(true);
-    setNotice(null);
-    try {
-      localStorage.setItem(`emergency_contact_${user.user_id}`, tempEmergency.trim());
-      setEmergencyContact(tempEmergency.trim());
-      setIsEditingEmergency(false);
-      setNotice({ type: "success", text: "Emergency contact saved successfully!" });
-      setTimeout(() => setNotice(null), 3000);
-    } catch (err: any) {
-      setNotice({ type: "error", text: "Failed to save emergency contact." });
-    } finally {
-      setEmergencyLoading(false);
-    }
-  };
-
   const handleCancelEmail = () => {
     setTempEmail(user.mail_id || "");
     setIsEditingEmail(false);
@@ -287,16 +245,6 @@ export default function ProfilePage() {
     setTempMobile(user.mobile_number || "");
     setIsEditingMobile(false);
     setNotice(null);
-  };
-
-  const handleCancelEmergency = () => {
-    setTempEmergency(emergencyContact);
-    setIsEditingEmergency(false);
-    setNotice(null);
-  };
-
-  const handlePrintProfile = () => {
-    window.print();
   };
 
   const handleRunMigrations = async () => {
@@ -380,714 +328,735 @@ export default function ProfilePage() {
     ? user.allowed_windows.split(",").map((w: string) => w.trim())
     : ["Home", "Profile", "Help"];
 
+  // Vehicle Allowance Visibility Logic
+  const rawVType = (allowanceData?.vehicle_type || user?.vehicle_type || user?.allowed_vehicle || "Bike").trim();
+  const vTypeLower = rawVType.toLowerCase();
+  const isBikeOnly = vTypeLower.includes("bike") && !vTypeLower.includes("car") && !vTypeLower.includes("both");
+  const isCarOnly = vTypeLower.includes("car") && !vTypeLower.includes("bike") && !vTypeLower.includes("both");
+  const isBoth = vTypeLower.includes("both") || (vTypeLower.includes("bike") && vTypeLower.includes("car"));
+  
+  const showBike = !isCarOnly;
+  const showCar = !isBikeOnly || isBoth;
+
   return (
-    <div className="space-y-3 sm:space-y-4 animate-fadeIn text-[#212529] p-0 sm:p-2 md:p-4 w-full max-w-none">
-      {/* Darker Slate-Blue Enterprise Header Bar (#4A6A8A) - HomePage Matching */}
-      <div className="bg-[#4A6A8A] text-white rounded-lg px-3 py-1.5 flex items-center justify-between shadow-2xs mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-white/15 text-white font-semibold text-xs flex items-center justify-center shrink-0">
-            {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-white tracking-normal">
-              {user?.name || "User"}'s Enterprise Profile
-            </span>
-            {user?.role && (
-              <span className="text-white/60 text-[10px] font-normal leading-none ml-1">
-                ({user.role})
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button
-            onClick={handlePrintProfile}
-            className="bg-white/15 hover:bg-white/25 text-white border-0 font-medium text-[10px] h-6 px-2 rounded shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-          >
-            <Printer size={12} className="text-white" />
-            Print Profile
-          </Button>
-          <span className="text-[9.5px] font-mono text-white/80 bg-white/15 px-2 py-0.5 rounded">
-            ID: {user?.user_id}
-          </span>
-        </div>
+    <div className="min-h-screen w-full relative bg-[#FAFAF9] selection:bg-accent-100 selection:text-accent-900 font-sans antialiased text-ink-900">
+      
+      {/* ══════════════════════════════════════════════════════════════════
+          ZOHO AMBIENT CANVAS & SUBTLE GRID (Matching HomePage)
+      ══════════════════════════════════════════════════════════════════ */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-25">
+        <div
+          className="absolute -top-[10%] -left-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-1"
+          style={{
+            background: "radial-gradient(circle, #4338CA 0%, rgba(67, 56, 202, 0) 70%)",
+            filter: "blur(120px)",
+          }}
+        />
+        <div
+          className="absolute -bottom-[10%] -right-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-2"
+          style={{
+            background: "radial-gradient(circle, #6366F1 0%, rgba(99, 102, 241, 0) 70%)",
+            filter: "blur(130px)",
+          }}
+        />
       </div>
 
-      {notice && (
-        <Alert
-          message={notice.text}
-          type={notice.type === "success" ? "success" : "error"}
-          showIcon
-          closable
-          onClose={() => setNotice(null)}
-          className="mb-2 py-1 px-3 rounded text-xs font-semibold"
-        />
-      )}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage:
+            "linear-gradient(#12151A 1px, transparent 1px), linear-gradient(90deg, #12151A 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
 
-      {/* Main Grid Content Layout - HomePage Inspired */}
-      <Row gutter={[12, 12]}>
-        {/* Left Sidebar Column - Employee Card & Module Permissions */}
-        <Col xs={24} lg={8} className="space-y-3">
-          {/* Main Profile Info Card */}
-          <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-2xs">
-            {/* Header bar */}
-            <div className="bg-[#4A6A8A] text-white px-3 py-1.5 flex items-center justify-between">
-              <span className="text-[11px] font-medium tracking-normal text-white uppercase">
-                EMPLOYEE PROFILE
-              </span>
-              <Tag color="blue" className="m-0 border-0 uppercase font-bold text-[9px]">
-                {user.role}
-              </Tag>
+      <div className="relative z-10 space-y-3.5 max-w-7xl mx-auto pb-12 px-2 sm:px-4 pt-2">
+
+        {/* ── 1. Zoho Profile Header Card ──────────────────────────────────── */}
+        <div 
+          className="bg-white border border-line rounded-xl p-4 sm:p-5 flex items-center justify-between gap-4"
+          style={{
+            boxShadow: "0 10px 30px -5px rgba(30, 27, 75, 0.04), 0 4px 12px -2px rgba(30, 27, 75, 0.02)",
+          }}
+        >
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            {/* Elegant Circular Avatar with Status Badge */}
+            <div className="relative shrink-0">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden bg-accent-100 text-accent-700 border-2 border-accent-200 flex items-center justify-center font-black text-xl sm:text-2xl uppercase shadow-xs">
+                {avatarUrl && !avatarError ? (
+                  <img 
+                    src={avatarUrl} 
+                    alt="Avatar" 
+                    className="h-full w-full object-cover"
+                    onError={() => setAvatarError(true)}
+                  />
+                ) : (
+                  user.name ? user.name.charAt(0).toUpperCase() : "U"
+                )}
+              </div>
+              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white shadow-2xs" title="Active Account" />
             </div>
 
-            {/* Avatar and Main Info */}
-            <div className="p-4 text-center border-b border-slate-200/80">
-              <div className="relative h-20 w-20 mx-auto mb-2.5">
-                <div className="h-full w-full rounded-full overflow-hidden border-2 border-[#4A6A8A] shadow-2xs select-none bg-slate-100 text-[#4A6A8A] flex items-center justify-center font-bold text-2xl uppercase">
-                  {avatarUrl && !avatarError ? (
-                    <img 
-                      src={avatarUrl} 
-                      alt="Avatar" 
-                      className="h-full w-full object-cover"
-                      onError={() => setAvatarError(true)}
-                    />
-                  ) : (
-                    user.name ? user.name.charAt(0).toUpperCase() : "U"
-                  )}
-                </div>
-              </div>
-              <h3 className="text-sm font-bold text-slate-900 leading-tight">{user.name || "Employee"}</h3>
-              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-tight mt-0.5">{user.designation || "Staff"}</p>
-              <div className="mt-2 flex justify-center gap-1">
-                <span className="inline-block px-2 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80">
-                  ACTIVE
+            {/* User Details */}
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-xl font-black tracking-tight text-ink-900 leading-tight">
+                  {user.name || "Employee"}
+                </h1>
+                <span className="text-[10px] sm:text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-accent-50 text-accent-700 border border-accent-200">
+                  {user.role || "Staff"}
                 </span>
-                <span className="inline-block px-2 py-0.5 rounded text-[9.5px] font-bold bg-blue-50 text-blue-800 border border-blue-200/80">
-                  {user.type || "Staff"}
+                <span className="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
                 </span>
               </div>
-            </div>
-
-            {/* Quick Details Micro-grid */}
-            <div className="p-3 space-y-2 bg-slate-50/50">
-              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/60">
-                <span className="text-[10.5px] font-medium text-slate-500">Login ID:</span>
-                <span className="font-mono font-bold text-slate-800 text-[11px]">{user.user_id}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1 border-b border-slate-200/60">
-                <span className="text-[10.5px] font-medium text-slate-500">E-Code:</span>
-                <span className="font-mono font-bold text-slate-800 text-[11px]">{user.e_code || "—"}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs py-1">
-                <span className="text-[10.5px] font-medium text-slate-500">Zone / District:</span>
-                <span className="font-bold text-slate-800 text-[10.5px]">{user.zone || "—"} / {user.district || "—"}</span>
+              
+              <div className="flex items-center gap-2 mt-1 text-xs text-ink-500 font-medium flex-wrap">
+                <span>{user.designation || "Staff"}</span>
+                <span>•</span>
+                <span className="font-mono font-bold text-accent-700 bg-surface-sunken px-1.5 py-0.5 rounded border border-line text-[11px]">
+                  ID: {user.user_id}
+                </span>
+                {user.e_code && (
+                  <>
+                    <span>•</span>
+                    <span className="font-mono text-ink-600 text-[11px]">Code: <b>{user.e_code}</b></span>
+                  </>
+                )}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Module Access & System Permissions Widget */}
-          <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-2xs">
-            <div className="bg-[#4A6A8A] text-white px-3 py-1.5 flex items-center justify-between">
-              <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                <ShieldCheck size={13} className="text-white" /> MODULE PERMISSIONS
-              </span>
+        {/* Global Notices */}
+        {notice && (
+          <Alert
+            message={notice.text}
+            type={notice.type === "success" ? "success" : "error"}
+            showIcon
+            closable
+            onClose={() => setNotice(null)}
+            className="rounded-xl text-xs font-bold border-line shadow-xs py-2 px-3.5"
+          />
+        )}
+
+        {/* ── 2. Zoho Tabs Header Bar (Using IndianRupee ₹ Icon) ───────────── */}
+        <div className="bg-white border border-line rounded-xl p-1.5 flex items-center gap-1.5 shadow-xs overflow-x-auto">
+          <button
+            onClick={() => handleTabChange("info")}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+              activeTab === "info"
+                ? "bg-accent-600 text-white shadow-xs"
+                : "text-ink-600 hover:text-ink-900 hover:bg-surface-sunken"
+            }`}
+          >
+            <User size={14} />
+            <span>Personal & Employment Info</span>
+          </button>
+          
+          <button
+            onClick={() => handleTabChange("expense")}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              activeTab === "expense"
+                ? "bg-accent-600 text-white shadow-xs"
+                : "text-ink-600 hover:text-ink-900 hover:bg-surface-sunken"
+            }`}
+          >
+            <IndianRupee size={14} />
+            <span>Expense & Allowance Policy</span>
+          </button>
+          
+          <button
+            onClick={() => handleTabChange("password")}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+              activeTab === "password"
+                ? "bg-accent-600 text-white shadow-xs"
+                : "text-ink-600 hover:text-ink-900 hover:bg-surface-sunken"
+            }`}
+          >
+            <KeyRound size={14} />
+            <span>Security & Credentials</span>
+          </button>
+        </div>
+
+        {/* ── 3. Main Workspace Grid ───────────────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+          
+          {/* Left Sidebar Column (4 Cols) */}
+          <div className="lg:col-span-4 space-y-3.5">
+            
+            {/* Quick Profile Summary Card */}
+            <div 
+              className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-3"
+            >
+              <div className="flex items-center justify-between border-b border-line pb-2.5">
+                <span className="text-[11px] font-black uppercase tracking-wider text-ink-500 flex items-center gap-1.5">
+                  <BadgeCheck size={14} className="text-accent-600" /> Account Summary
+                </span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  Verified
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between py-1 border-b border-line/60">
+                  <span className="text-ink-500 font-medium">Employee Type</span>
+                  <span className="font-bold text-ink-900">{user.type || "Permanent Staff"}</span>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-line/60">
+                  <span className="text-ink-500 font-medium">Zone / Region</span>
+                  <span className="font-bold text-ink-900">{user.zone || "—"}</span>
+                </div>
+                <div className="flex items-center justify-between py-1 border-b border-line/60">
+                  <span className="text-ink-500 font-medium">Home District</span>
+                  <span className="font-bold text-ink-900">{user.district || "—"}</span>
+                </div>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-ink-500 font-medium">Employee Grade</span>
+                  <span className="font-bold text-accent-700 bg-accent-50 px-2 py-0.5 rounded border border-accent-200 font-mono text-[11px]">
+                    Grade {user.grade || "A"}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="p-3 space-y-2">
-              <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">AUTHORIZED WINDOWS</span>
-              <div className="flex flex-wrap gap-1">
+
+            {/* Module Access Permissions Card */}
+            <div 
+              className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-3"
+            >
+              <div className="flex items-center justify-between border-b border-line pb-2.5">
+                <span className="text-[11px] font-black uppercase tracking-wider text-ink-500 flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-accent-600" /> Authorized Windows
+                </span>
+                <span className="text-[10px] font-bold text-ink-400">
+                  {allowedModulesList.length} Modules
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 {allowedModulesList.map((mod: string, idx: number) => (
                   <span
                     key={idx}
-                    className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-slate-100 text-slate-700 border border-slate-200/90"
+                    className="px-2.5 py-1 rounded-lg text-[10.5px] font-bold uppercase bg-surface-sunken text-ink-700 border border-line"
                   >
                     {mod}
                   </span>
                 ))}
               </div>
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
-                <span>Account Status:</span>
-                <span className="font-bold text-emerald-700">Verified & Authenticated</span>
-              </div>
             </div>
-          </div>
 
-          {/* Vehicle Allowance Rates Summary */}
-          {allowanceData && (() => {
-            const rawVType = (allowanceData.vehicle_type || "Bike").trim();
-            const vTypeLower = rawVType.toLowerCase();
-            const isBikeOnly = vTypeLower.includes("bike") && !vTypeLower.includes("car") && !vTypeLower.includes("both");
-            const isCarOnly = vTypeLower.includes("car") && !vTypeLower.includes("bike") && !vTypeLower.includes("both");
-
-            const showBike = !isCarOnly;
-            const showCar = !isBikeOnly;
-
-            return (
-              <div className="bg-white border border-slate-200/90 rounded-xl overflow-hidden shadow-2xs">
-                <div className="bg-[#4A6A8A] text-white px-3 py-1.5 flex items-center justify-between">
-                  <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                    <Zap size={13} className="text-white" /> ALLOWANCE POLICY RATES
+            {/* Allowance Policy Snapshot Card */}
+            {allowanceData && (
+              <div 
+                className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-3"
+              >
+                <div className="flex items-center justify-between border-b border-line pb-2.5">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-ink-500 flex items-center gap-1.5">
+                    <IndianRupee size={14} className="text-amber-500" /> Allowance Policy
+                  </span>
+                  <span className="text-[10px] font-bold text-accent-700 bg-accent-50 border border-accent-200 px-2 py-0.5 rounded">
+                    {allowanceData.vehicle_type || "Bike"}
                   </span>
                 </div>
-                <div className="p-3 space-y-2">
-                  <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
-                    <span className="text-[10px] font-medium text-slate-500">Vehicle Type:</span>
-                    <span className="font-bold text-indigo-700">{rawVType}</span>
-                  </div>
+
+                <div className="space-y-2 text-xs">
                   {showBike && (
-                    <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
-                      <span className="text-[10px] font-medium text-slate-500">Bike Rate:</span>
-                      <span className="font-bold text-slate-800">₹{allowanceData.rate_bike || 0} / KM</span>
+                    <div className="flex items-center justify-between py-1 border-b border-line/60">
+                      <span className="text-ink-500 font-medium">Bike Rate</span>
+                      <span className="font-bold text-ink-900 font-mono">₹{allowanceData.rate_bike || 0} / KM</span>
                     </div>
                   )}
                   {showCar && (
-                    <div className="flex items-center justify-between text-xs py-1 border-b border-slate-100">
-                      <span className="text-[10px] font-medium text-slate-500">Car Rate:</span>
-                      <span className="font-bold text-slate-800">₹{allowanceData.rate_car || 0} / KM</span>
+                    <div className="flex items-center justify-between py-1 border-b border-line/60">
+                      <span className="text-ink-500 font-medium">Car Rate</span>
+                      <span className="font-bold text-ink-900 font-mono">₹{allowanceData.rate_car || 0} / KM</span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-xs py-1">
-                    <span className="text-[10px] font-medium text-slate-500">Monthly KM Limit:</span>
-                    <span className="font-mono font-bold text-amber-800">{allowanceData.max_km_per_month || 0} KM</span>
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-ink-500 font-medium">Monthly Max KM</span>
+                    <span className="font-bold text-amber-800 font-mono">{allowanceData.max_km_per_month || 0} KM</span>
                   </div>
                 </div>
               </div>
-            );
-          })()}
-        </Col>
+            )}
+          </div>
 
-        {/* Right Main Column - Workspace */}
-        <Col xs={24} lg={16} className="space-y-3">
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 md:p-3 shadow-2xs space-y-3">
-            {/* HomePage Style Ultra-Compact Slate-Blue Tabs Header */}
-            <div className="flex items-center gap-1.5 border-b border-slate-200/80 pb-1.5">
-              <button
-                onClick={() => handleTabChange("info")}
-                className={`px-3 py-1 text-xs font-bold transition-all rounded-md cursor-pointer ${
-                  activeTab === "info"
-                    ? "bg-[#4A6A8A] text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                Personal Info
-              </button>
-              <button
-                onClick={() => handleTabChange("expense")}
-                className={`px-3 py-1 text-xs font-bold transition-all rounded-md cursor-pointer ${
-                  activeTab === "expense"
-                    ? "bg-[#4A6A8A] text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                Expense & Allowance
-              </button>
-              <button
-                onClick={() => handleTabChange("password")}
-                className={`px-3 py-1 text-xs font-bold transition-all rounded-md cursor-pointer ${
-                  activeTab === "password"
-                    ? "bg-[#4A6A8A] text-white shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                Security & Account
-              </button>
-            </div>
-
-            {/* Tab 1: Personal Info */}
+          {/* Right Main Content Area (8 Cols) */}
+          <div className="lg:col-span-8 space-y-3.5">
+            
+            {/* ── TAB 1: PERSONAL & EMPLOYMENT INFO ── */}
             {activeTab === "info" && (
-              <div className="space-y-3">
-                {/* Section 1: Contact Info */}
-                <div className="space-y-1">
-                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
-                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                      <User size={13} className="text-white" /> CONTACT & PERSONAL INFO
-                    </span>
-                  </div>
-                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-2 md:p-2.5 shadow-2xs">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {/* Email Card */}
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={Mail} gradientFrom="from-blue-500" gradientTo="to-indigo-600" shadowColor="rgba(37, 99, 235, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">EMAIL ADDRESS</span>
-                              {!isEditingEmail && (
-                                <button
-                                  onClick={() => {
-                                    setTempEmail(user.mail_id || "");
-                                    setIsEditingEmail(true);
-                                    setIsEditingMobile(false);
-                                    setIsEditingEmergency(false);
-                                    setNotice(null);
-                                  }}
-                                  className="text-[9px] text-blue-600 font-bold hover:underline leading-none cursor-pointer"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                            </div>
-                            {isEditingEmail ? (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Input
-                                  type="email"
-                                  value={tempEmail}
-                                  onChange={(e) => setTempEmail(e.target.value)}
-                                  size="small"
-                                  disabled={emailLoading}
-                                  autoFocus
-                                  className="flex-1 text-xs"
-                                />
-                                <Button type="primary" size="small" onClick={handleSaveEmail} loading={emailLoading} className="text-[10px] bg-[#4A6A8A]">Save</Button>
-                                <Button size="small" onClick={handleCancelEmail} disabled={emailLoading} className="text-[10px]">Cancel</Button>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate" title={user.mail_id || "—"}>
-                                {user.mail_id || "—"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Mobile Card */}
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={Phone} gradientFrom="from-emerald-500" gradientTo="to-teal-600" shadowColor="rgba(16, 185, 129, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">MOBILE NUMBER</span>
-                              {!isEditingMobile && (
-                                <button
-                                  onClick={() => {
-                                    setTempMobile(user.mobile_number || "");
-                                    setIsEditingMobile(true);
-                                    setIsEditingEmail(false);
-                                    setIsEditingEmergency(false);
-                                    setNotice(null);
-                                  }}
-                                  className="text-[9px] text-blue-600 font-bold hover:underline leading-none cursor-pointer"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                            </div>
-                            {isEditingMobile ? (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Input
-                                  type="tel"
-                                  value={tempMobile}
-                                  onChange={(e) => setTempMobile(e.target.value)}
-                                  size="small"
-                                  disabled={mobileLoading}
-                                  autoFocus
-                                  className="flex-1 text-xs"
-                                />
-                                <Button type="primary" size="small" onClick={handleSaveMobile} loading={mobileLoading} className="text-[10px] bg-[#4A6A8A]">Save</Button>
-                                <Button size="small" onClick={handleCancelMobile} disabled={mobileLoading} className="text-[10px]">Cancel</Button>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate" title={user.mobile_number || "—"}>
-                                {user.mobile_number || "—"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Emergency Contact Card */}
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={PhoneCall} gradientFrom="from-purple-500" gradientTo="to-indigo-600" shadowColor="rgba(147, 51, 234, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">EMERGENCY CONTACT</span>
-                              {!isEditingEmergency && (
-                                <button
-                                  onClick={() => {
-                                    setTempEmergency(emergencyContact);
-                                    setIsEditingEmergency(true);
-                                    setIsEditingEmail(false);
-                                    setIsEditingMobile(false);
-                                    setNotice(null);
-                                  }}
-                                  className="text-[9px] text-blue-600 font-bold hover:underline leading-none cursor-pointer"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                            </div>
-                            {isEditingEmergency ? (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Input
-                                  type="text"
-                                  placeholder="Emergency Name / Number"
-                                  value={tempEmergency}
-                                  onChange={(e) => setTempEmergency(e.target.value)}
-                                  size="small"
-                                  disabled={emergencyLoading}
-                                  autoFocus
-                                  className="flex-1 text-xs"
-                                />
-                                <Button type="primary" size="small" onClick={handleSaveEmergency} loading={emergencyLoading} className="text-[10px] bg-[#4A6A8A]">Save</Button>
-                                <Button size="small" onClick={handleCancelEmergency} disabled={emergencyLoading} className="text-[10px]">Cancel</Button>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate" title={emergencyContact || "Not Set"}>
-                                {emergencyContact || "Not Set"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* DOB Card */}
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={Calendar} gradientFrom="from-rose-500" gradientTo="to-red-600" shadowColor="rgba(239, 68, 68, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">DATE OF BIRTH</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">
-                              {user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString("en-GB") : "—"}
-                            </span>
-                          </div>
-                        </div>
+              <div className="space-y-3.5">
+                
+                {/* Contact & Communication Details Card */}
+                <div 
+                  className="bg-white border border-line rounded-xl p-4 sm:p-5 shadow-xs space-y-4"
+                >
+                  <div className="flex items-center justify-between border-b border-line pb-3">
+                    <div className="flex items-center gap-2">
+                      <ZohoIconTile icon={Phone} colorClass="bg-accent-50 text-accent-700 border-accent-100" />
+                      <div>
+                        <h3 className="text-sm font-black text-ink-900 leading-tight">Contact & Communication</h3>
+                        <p className="text-[11px] text-ink-400 font-medium">Primary email and phone number</p>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Section 2: Employment Details */}
-                <div className="space-y-1">
-                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
-                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                      <Briefcase size={13} className="text-white" /> EMPLOYMENT & SYSTEMS DETAILS
-                    </span>
-                  </div>
-                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-2 md:p-2.5 shadow-2xs">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={CreditCard} gradientFrom="from-blue-500" gradientTo="to-indigo-600" shadowColor="rgba(37, 99, 235, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">EMPLOYEE CODE</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.e_code || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={Award} gradientFrom="from-purple-500" gradientTo="to-indigo-600" shadowColor="rgba(147, 51, 234, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">GRADE</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.grade || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={Calendar} gradientFrom="from-amber-500" gradientTo="to-amber-600" shadowColor="rgba(245, 158, 11, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">DATE OF JOINING</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">
-                              {user.date_of_joining ? new Date(user.date_of_joining).toLocaleDateString("en-GB") : "—"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={Smartphone} gradientFrom="from-slate-600" gradientTo="to-slate-700" shadowColor="rgba(71, 85, 105, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">DEVICE / UPKARAN ID</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.e_upkaran_id || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Hierarchy */}
-                <div className="space-y-1">
-                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
-                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                      <Users size={13} className="text-white" /> REPORTING HIERARCHY & REGION
-                    </span>
-                  </div>
-                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-2 md:p-2.5 shadow-2xs">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={User} gradientFrom="from-indigo-500" gradientTo="to-indigo-600" shadowColor="rgba(99, 102, 241, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">REPORTING MANAGER</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.manager || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={Shield} gradientFrom="from-blue-600" gradientTo="to-indigo-700" shadowColor="rgba(37, 99, 235, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">ZONAL MANAGER</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.zonal_manager || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={Users} gradientFrom="from-cyan-500" gradientTo="to-teal-600" shadowColor="rgba(6, 182, 212, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">COORDINATOR</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.coordinator || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={MapPin} gradientFrom="from-amber-500" gradientTo="to-amber-600" shadowColor="rgba(245, 158, 11, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">ZONE</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.zone || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border border-slate-200/80 rounded-lg py-1.5 px-2 flex items-center shadow-2xs hover:border-slate-300 transition-colors h-12">
-                        <div className="flex items-center gap-2 min-w-0 w-full">
-                          <IconTile icon={MapPin} gradientFrom="from-rose-500" gradientTo="to-red-600" shadowColor="rgba(239, 68, 68, 0.25)" />
-                          <div className="flex flex-col justify-center min-w-0 flex-1">
-                            <span className="text-[8.5px] font-medium uppercase tracking-normal text-slate-400 leading-none">DISTRICT</span>
-                            <span className="text-[11px] font-bold text-slate-800 leading-none mt-1 truncate">{user.district || "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Tab 2: Expense & Allowance Overview (New Feature!) */}
-            {activeTab === "expense" && (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
-                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                      <Receipt size={13} className="text-white" /> CURRENT MONTH EXPENSE STATS
-                    </span>
-                    <span className="text-[9.5px] font-mono text-white/80 bg-white/15 px-2 py-0.5 rounded">
-                      MONTH: {getISTMonth()}
-                    </span>
-                  </div>
-                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-3 shadow-2xs">
-                    {loadingExpenseStats ? (
-                      <div className="py-4 text-center text-xs text-slate-500">Loading expense summary...</div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        {/* Micro-card 1 */}
-                        <div className="bg-white border border-slate-200/80 rounded-lg py-2 px-3 flex items-center gap-2.5 shadow-2xs">
-                          <IconTile icon={FileText} gradientFrom="from-blue-500" gradientTo="to-indigo-600" shadowColor="rgba(37, 99, 235, 0.25)" />
-                          <div className="flex flex-col">
-                            <span className="text-[8.5px] font-bold text-slate-400 uppercase">SUBMITTED CLAIMS</span>
-                            <span className="text-sm font-bold font-mono text-slate-900 mt-0.5">{myExpenseStats?.total || 0} Claims</span>
-                          </div>
-                        </div>
-
-                        {/* Micro-card 2 */}
-                        <div className="bg-white border border-slate-200/80 rounded-lg py-2 px-3 flex items-center gap-2.5 shadow-2xs">
-                          <IconTile icon={CheckCircle2} gradientFrom="from-emerald-500" gradientTo="to-teal-600" shadowColor="rgba(16, 185, 129, 0.25)" />
-                          <div className="flex flex-col">
-                            <span className="text-[8.5px] font-bold text-slate-400 uppercase">APPROVED CLAIMS</span>
-                            <span className="text-sm font-bold font-mono text-emerald-700 mt-0.5">{myExpenseStats?.approved || 0} Approved</span>
-                          </div>
-                        </div>
-
-                        {/* Micro-card 3 */}
-                        <div className="bg-white border border-slate-200/80 rounded-lg py-2 px-3 flex items-center gap-2.5 shadow-2xs">
-                          <IconTile icon={Receipt} gradientFrom="from-purple-500" gradientTo="to-indigo-600" shadowColor="rgba(147, 51, 234, 0.25)" />
-                          <div className="flex flex-col">
-                            <span className="text-[8.5px] font-bold text-slate-400 uppercase">TOTAL CLAIM VALUE</span>
-                            <span className="text-sm font-bold font-mono text-slate-900 mt-0.5">₹{(myExpenseStats?.amount || 0).toLocaleString("en-IN")}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Allowance Rates & Policy Summary */}
-                {allowanceData && (() => {
-                  const rawVType = (allowanceData.vehicle_type || "Bike").trim();
-                  const vTypeLower = rawVType.toLowerCase();
-                  const isBikeOnly = vTypeLower.includes("bike") && !vTypeLower.includes("car") && !vTypeLower.includes("both");
-                  const isCarOnly = vTypeLower.includes("car") && !vTypeLower.includes("bike") && !vTypeLower.includes("both");
-
-                  const showBike = !isCarOnly;
-                  const showCar = !isBikeOnly;
-
-                  return (
-                    <div className="space-y-1">
-                      <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
-                        <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                          <Car size={13} className="text-white" /> TRAVEL &amp; DAILY ALLOWANCE RATES
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    
+                    {/* Email Card */}
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] hover:bg-white hover:border-accent-200 transition-all space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                          <Mail size={12} /> Email Address
                         </span>
+                        {!isEditingEmail && (
+                          <button
+                            onClick={() => {
+                              setTempEmail(user.mail_id || "");
+                              setIsEditingEmail(true);
+                              setIsEditingMobile(false);
+                              setNotice(null);
+                            }}
+                            className="text-[11px] text-accent-700 font-bold hover:underline cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                        )}
                       </div>
-                      <div className="bg-white border border-slate-200/80 rounded-b-lg p-3 shadow-2xs space-y-2">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          <div className="p-2 bg-slate-50 rounded border border-slate-200/60 text-center">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase block">IN-DISTRICT DA</span>
-                            <span className="text-xs font-extrabold text-slate-800 mt-0.5 block">₹{allowanceData.daily_in_district || 0} / Day</span>
-                          </div>
-                          <div className="p-2 bg-slate-50 rounded border border-slate-200/60 text-center">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase block">OUT-DISTRICT DA</span>
-                            <span className="text-xs font-extrabold text-slate-800 mt-0.5 block">₹{allowanceData.daily_out_district || 0} / Day</span>
-                          </div>
-                          {showBike && (
-                            <div className="p-2 bg-slate-50 rounded border border-slate-200/60 text-center">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase block">BIKE RATE</span>
-                              <span className="text-xs font-extrabold text-indigo-700 mt-0.5 block">₹{allowanceData.rate_bike || 0} / KM</span>
-                            </div>
-                          )}
-                          {showCar && (
-                            <div className="p-2 bg-slate-50 rounded border border-slate-200/60 text-center">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase block">CAR RATE</span>
-                              <span className="text-xs font-extrabold text-indigo-700 mt-0.5 block">₹{allowanceData.rate_car || 0} / KM</span>
-                            </div>
-                          )}
+
+                      {isEditingEmail ? (
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <Input
+                            type="email"
+                            value={tempEmail}
+                            onChange={(e) => setTempEmail(e.target.value)}
+                            size="small"
+                            disabled={emailLoading}
+                            autoFocus
+                            className="rounded-lg text-xs"
+                          />
+                          <button
+                            onClick={handleSaveEmail}
+                            disabled={emailLoading}
+                            className="px-2.5 py-1 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={handleCancelEmail}
+                            disabled={emailLoading}
+                            className="px-2.5 py-1 bg-white hover:bg-surface-sunken text-ink-600 rounded-lg text-xs font-bold border border-line cursor-pointer"
+                          >
+                            Cancel
+                          </button>
                         </div>
+                      ) : (
+                        <div className="text-xs font-bold text-ink-900 truncate" title={user.mail_id || "—"}>
+                          {user.mail_id || "—"}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mobile Card */}
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] hover:bg-white hover:border-accent-200 transition-all space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                          <Phone size={12} /> Mobile Number
+                        </span>
+                        {!isEditingMobile && (
+                          <button
+                            onClick={() => {
+                              setTempMobile(user.mobile_number || "");
+                              setIsEditingMobile(true);
+                              setIsEditingEmail(false);
+                              setNotice(null);
+                            }}
+                            className="text-[11px] text-accent-700 font-bold hover:underline cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </div>
+
+                      {isEditingMobile ? (
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <Input
+                            type="tel"
+                            value={tempMobile}
+                            onChange={(e) => setTempMobile(e.target.value)}
+                            size="small"
+                            disabled={mobileLoading}
+                            autoFocus
+                            className="rounded-lg text-xs"
+                          />
+                          <button
+                            onClick={handleSaveMobile}
+                            disabled={mobileLoading}
+                            className="px-2.5 py-1 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={handleCancelMobile}
+                            disabled={mobileLoading}
+                            className="px-2.5 py-1 bg-white hover:bg-surface-sunken text-ink-600 rounded-lg text-xs font-bold border border-line cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-xs font-bold text-ink-900 truncate" title={user.mobile_number || "—"}>
+                          {user.mobile_number || "—"}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Date of Birth Card */}
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1.5">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <Calendar size={12} /> Date of Birth
+                      </span>
+                      <div className="text-xs font-bold text-ink-900">
+                        {user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString("en-GB") : "—"}
                       </div>
                     </div>
-                  );
-                })()}
+                  </div>
+                </div>
+
+                {/* Employment & Systems Identity Card */}
+                <div 
+                  className="bg-white border border-line rounded-xl p-4 sm:p-5 shadow-xs space-y-4"
+                >
+                  <div className="flex items-center justify-between border-b border-line pb-3">
+                    <div className="flex items-center gap-2">
+                      <ZohoIconTile icon={Briefcase} colorClass="bg-blue-50 text-blue-700 border-blue-100" />
+                      <div>
+                        <h3 className="text-sm font-black text-ink-900 leading-tight">Employment & System Identity</h3>
+                        <p className="text-[11px] text-ink-400 font-medium">Company record and official equipment codes</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <CreditCard size={12} /> Employee Code
+                      </span>
+                      <div className="text-xs font-bold font-mono text-ink-900">{user.e_code || "—"}</div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <Award size={12} /> Staff Grade
+                      </span>
+                      <div className="text-xs font-bold text-ink-900">{user.grade || "Grade A"}</div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <Calendar size={12} /> Date of Joining
+                      </span>
+                      <div className="text-xs font-bold text-ink-900">
+                        {user.date_of_joining ? new Date(user.date_of_joining).toLocaleDateString("en-GB") : "—"}
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <Smartphone size={12} /> e-Upkaran / Device ID
+                      </span>
+                      <div className="text-xs font-bold font-mono text-ink-900">{user.e_upkaran_id || "—"}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reporting Hierarchy & Regional Jurisdiction Card */}
+                <div 
+                  className="bg-white border border-line rounded-xl p-4 sm:p-5 shadow-xs space-y-4"
+                >
+                  <div className="flex items-center justify-between border-b border-line pb-3">
+                    <div className="flex items-center gap-2">
+                      <ZohoIconTile icon={Users} colorClass="bg-purple-50 text-purple-700 border-purple-100" />
+                      <div>
+                        <h3 className="text-sm font-black text-ink-900 leading-tight">Reporting Hierarchy & Region</h3>
+                        <p className="text-[11px] text-ink-400 font-medium">Managers, coordinators, and operational districts</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <User size={12} /> Reporting Manager
+                      </span>
+                      <div className="text-xs font-bold text-ink-900">{user.manager || "—"}</div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <Shield size={12} /> Zonal Manager
+                      </span>
+                      <div className="text-xs font-bold text-ink-900">{user.zonal_manager || "—"}</div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <Users size={12} /> Operations Coordinator
+                      </span>
+                      <div className="text-xs font-bold text-ink-900">{user.coordinator || "—"}</div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                        <MapPin size={12} /> Operating Zone & District
+                      </span>
+                      <div className="text-xs font-bold text-ink-900">{user.zone || "—"} / {user.district || "—"}</div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
-            {/* Tab 3: Password & Security */}
-            {activeTab === "password" && (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
-                    <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                      <KeyRound size={13} className="text-white" /> UPDATE CREDENTIALS
-                    </span>
+            {/* ── TAB 2: EXPENSE & ALLOWANCE INTELLIGENCE ── */}
+            {activeTab === "expense" && (
+              <div className="space-y-3.5">
+                
+                {/* Current Month Expense Metrics */}
+                <div 
+                  className="bg-white border border-line rounded-xl p-4 sm:p-5 shadow-xs space-y-4"
+                >
+                  <div className="flex items-center justify-between border-b border-line pb-3">
+                    <div className="flex items-center gap-2">
+                      <ZohoIconTile icon={IndianRupee} colorClass="bg-emerald-50 text-emerald-700 border-emerald-100" />
+                      <div>
+                        <h3 className="text-sm font-black text-ink-900 leading-tight">Monthly Expense Overview</h3>
+                        <p className="text-[11px] text-ink-400 font-medium">Active cycle metrics for {getISTMonth()}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-white border border-slate-200/80 rounded-b-lg p-3 md:p-4 shadow-2xs">
-                    <form onSubmit={handlePasswordChange} className="space-y-3 max-w-md">
-                      {passNotice && (
-                        <Alert
-                          message={passNotice.text}
-                          type={passNotice.type === "success" ? "success" : "error"}
-                          showIcon
-                          className="py-1 px-2 text-xs"
-                        />
+
+                  {loadingExpenseStats ? (
+                    <div className="py-8 text-center text-xs text-ink-400">Loading expense summary...</div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-4 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                          <FileText size={12} /> Submitted Claims
+                        </span>
+                        <div className="text-lg font-black font-mono text-ink-900">
+                          {myExpenseStats?.total || 0} Claims
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                          <CheckCircle2 size={12} className="text-emerald-600" /> Approved Claims
+                        </span>
+                        <div className="text-lg font-black font-mono text-emerald-700">
+                          {myExpenseStats?.approved || 0} Approved
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl border border-line bg-[#FAFAF9] space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-400 flex items-center gap-1">
+                          <IndianRupee size={12} /> Total Claim Value
+                        </span>
+                        <div className="text-lg font-black font-mono text-accent-700">
+                          {rupee(myExpenseStats?.amount || 0)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Travel & Daily Allowance Policy Master Rates (Filter Car/Bike by Permission) */}
+                {allowanceData && (
+                  <div 
+                    className="bg-white border border-line rounded-xl p-4 sm:p-5 shadow-xs space-y-4"
+                  >
+                    <div className="flex items-center justify-between border-b border-line pb-3">
+                      <div className="flex items-center gap-2">
+                        <ZohoIconTile icon={Car} colorClass="bg-indigo-50 text-indigo-700 border-indigo-100" />
+                        <div>
+                          <h3 className="text-sm font-black text-ink-900 leading-tight">Travel & Daily Allowance Rates</h3>
+                          <p className="text-[11px] text-ink-400 font-medium">Policy sanctioned rates by employee designation grade</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`grid grid-cols-2 ${showBike && showCar ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-3`}>
+                      <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] text-center space-y-1">
+                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-ink-400 block">IN-DISTRICT DA</span>
+                        <span className="text-sm font-black font-mono text-ink-900 block">₹{allowanceData.daily_in_district || 0} / Day</span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] text-center space-y-1">
+                        <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-ink-400 block">OUT-DISTRICT DA</span>
+                        <span className="text-sm font-black font-mono text-ink-900 block">₹{allowanceData.daily_out_district || 0} / Day</span>
+                      </div>
+
+                      {showBike && (
+                        <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] text-center space-y-1">
+                          <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-ink-400 block">BIKE RATE</span>
+                          <span className="text-sm font-black font-mono text-accent-700 block">₹{allowanceData.rate_bike || 0} / KM</span>
+                        </div>
                       )}
 
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide block">Current Password</label>
-                        <Input.Password
-                          placeholder="Enter current password"
-                          value={oldPassword}
-                          onChange={(e) => setOldPassword(e.target.value)}
-                          className="text-xs h-8"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide block">New Password</label>
-                        <Input.Password
-                          placeholder="Enter new password (min 8 chars)"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          className="text-xs h-8"
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-0.5">
-                        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide block">Confirm New Password</label>
-                        <Input.Password
-                          placeholder="Confirm new password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="text-xs h-8"
-                          required
-                        />
-                      </div>
-
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={passLoading}
-                        className="bg-[#4A6A8A] hover:bg-[#3b556f] text-white text-xs font-semibold h-7 px-4 rounded shadow-2xs flex items-center gap-1.5 cursor-pointer mt-2"
-                      >
-                        <CheckCircle2 size={13} /> Update Password
-                      </Button>
-                    </form>
+                      {showCar && (
+                        <div className="p-3.5 rounded-xl border border-line bg-[#FAFAF9] text-center space-y-1">
+                          <span className="text-[9.5px] font-extrabold uppercase tracking-wider text-ink-400 block">CAR RATE</span>
+                          <span className="text-sm font-black font-mono text-accent-700 block">₹{allowanceData.rate_car || 0} / KM</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                )}
+
+              </div>
+            )}
+
+            {/* ── TAB 3: SECURITY & CREDENTIALS ── */}
+            {activeTab === "password" && (
+              <div className="space-y-3.5">
+                
+                {/* Update Password Form Card */}
+                <div 
+                  className="bg-white border border-line rounded-xl p-4 sm:p-5 shadow-xs space-y-4"
+                >
+                  <div className="flex items-center justify-between border-b border-line pb-3">
+                    <div className="flex items-center gap-2">
+                      <ZohoIconTile icon={Lock} colorClass="bg-accent-50 text-accent-700 border-accent-100" />
+                      <div>
+                        <h3 className="text-sm font-black text-ink-900 leading-tight">Change Password</h3>
+                        <p className="text-[11px] text-ink-400 font-medium">Update your account authentication credentials</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handlePasswordChange} className="space-y-3.5 max-w-lg">
+                    {passNotice && (
+                      <Alert
+                        message={passNotice.text}
+                        type={passNotice.type === "success" ? "success" : "error"}
+                        showIcon
+                        className="rounded-lg text-xs"
+                      />
+                    )}
+
+                    <div className="space-y-1">
+                      <label className="text-[10.5px] font-extrabold text-ink-700 uppercase tracking-wider block">Current Password</label>
+                      <Input.Password
+                        placeholder="Enter current password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        className="rounded-lg text-xs h-9"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10.5px] font-extrabold text-ink-700 uppercase tracking-wider block">New Password</label>
+                      <Input.Password
+                        placeholder="Enter new password (min 8 chars)"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="rounded-lg text-xs h-9"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10.5px] font-extrabold text-ink-700 uppercase tracking-wider block">Confirm New Password</label>
+                      <Input.Password
+                        placeholder="Confirm new password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="rounded-lg text-xs h-9"
+                        required
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={passLoading}
+                      className="px-4.5 py-2 bg-accent-600 hover:bg-accent-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer mt-2"
+                    >
+                      <CheckCircle2 size={14} />
+                      <span>{passLoading ? "Updating..." : "Update Password"}</span>
+                    </button>
+                  </form>
                 </div>
 
                 {/* System Maintenance for Admin */}
                 {user?.role === "Admin" && (
-                  <div className="space-y-1 mt-4">
-                    <div className="bg-[#4A6A8A] text-white px-3 py-1 rounded-t-lg flex items-center justify-between">
-                      <span className="text-[11px] font-medium tracking-normal text-white uppercase flex items-center gap-1.5">
-                        <Database size={13} className="text-white" /> SYSTEM MAINTENANCE (ADMIN ONLY)
-                      </span>
-                    </div>
-                    <div className="bg-white border border-slate-200/80 rounded-b-lg p-3 shadow-2xs space-y-3">
-                      <p className="text-[10.5px] text-slate-600 font-medium leading-tight">
-                        Rebuild database performance indexes, execute structural migrations, and apply base location travel policy deductions.
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button 
-                          type="primary" 
-                          danger 
-                          onClick={handleRunMigrations} 
-                          loading={migrationLoading}
-                          className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium h-7 px-3 rounded shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Database size={12} /> Run DB Migrations
-                        </Button>
-                        <Button 
-                          type="primary" 
-                          onClick={handleRunPolicyAdjustment} 
-                          loading={policyLoading}
-                          className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium h-7 px-3 rounded shadow-2xs flex items-center gap-1.5 cursor-pointer border-0"
-                        >
-                          <RefreshCw size={12} /> Run Policy Adjustments
-                        </Button>
+                  <div 
+                    className="bg-white border border-line rounded-xl p-4 sm:p-5 shadow-xs space-y-4"
+                  >
+                    <div className="flex items-center justify-between border-b border-line pb-3">
+                      <div className="flex items-center gap-2">
+                        <ZohoIconTile icon={Database} colorClass="bg-rose-50 text-rose-700 border-rose-100" />
+                        <div>
+                          <h3 className="text-sm font-black text-ink-900 leading-tight">System Maintenance (Admin Only)</h3>
+                          <p className="text-[11px] text-ink-400 font-medium">Database structural migrations and retroactive policy adjustments</p>
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-xs text-ink-600 font-medium leading-relaxed">
+                        Rebuild database performance indexes, execute structural migrations, and apply base location travel policy deductions across active records.
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-2.5">
+                        <button
+                          type="button"
+                          onClick={handleRunMigrations} 
+                          disabled={migrationLoading}
+                          className="px-4 py-2 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                        >
+                          <Database size={13} />
+                          <span>{migrationLoading ? "Running..." : "Run DB Migrations"}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleRunPolicyAdjustment} 
+                          disabled={policyLoading}
+                          className="px-4 py-2 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                        >
+                          <RefreshCw size={13} />
+                          <span>{policyLoading ? "Adjusting..." : "Run Policy Adjustments"}</span>
+                        </button>
+                      </div>
+
                       {migrationResult && (
-                        <div className={`p-2 rounded text-[10px] font-mono border ${migrationResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
+                        <div className={`p-3 rounded-xl text-xs font-mono border ${migrationResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
                           {migrationResult.message}
                         </div>
                       )}
+                      
                       {policyResult && (
-                        <div className={`p-2 rounded text-[10px] font-mono border ${policyResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
+                        <div className={`p-3 rounded-xl text-xs font-mono border ${policyResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"}`}>
                           {policyResult.message}
                         </div>
                       )}
                     </div>
                   </div>
                 )}
+
               </div>
             )}
-          </div>
-        </Col>
-      </Row>
 
-      {/* Footer - Matching HomePage style */}
-      <div className="mt-4 pt-3 border-t border-slate-200/80 text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex justify-between items-center">
-        <span>Cyrix Healthcare Pvt. Ltd.</span>
-        <span>Designed &amp; Developed by <a href="https://sunilbishnoi.co.in/" target="_blank" rel="noopener noreferrer" className="text-[#4A6A8A] hover:underline">Sunil Bishnoi</a></span>
+          </div>
+        </div>
+
+        {/* ── 4. Clean Footer ──────────────────────────────────────────────── */}
+        <div className="mt-6 pt-4 border-t border-line text-xs font-medium text-ink-400 text-center">
+          <span>Designed &amp; Developed by <a href="https://sunilbishnoi.co.in/" target="_blank" rel="noopener noreferrer" className="text-accent-700 font-bold hover:underline">Sunil Bishnoi</a></span>
+        </div>
+
       </div>
     </div>
   );

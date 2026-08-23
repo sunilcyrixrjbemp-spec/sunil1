@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { User, Lock, Eye, EyeOff, ArrowRight, AlertTriangle, X, Fingerprint } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { User, Lock, Eye, EyeOff, Check, AlertTriangle, Fingerprint } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { useBiometricLogin } from "../../hooks/useBiometricLogin";
 import { isNativeApp, biometricAuth } from "../../utils/capacitor";
 import { nativeConfig } from "../../utils/persistence";
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { Preferences } from '@capacitor/preferences';
+import { App } from "@capacitor/app";
+import TurnstileWidget from "../common/TurnstileWidget";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface LoginFormProps {
@@ -14,16 +14,16 @@ interface LoginFormProps {
   onUnlockAccount: () => void;
 }
 
-// ─── Spinner ─────────────────────────────────────────────────────────────────
+// ─── Inline Spinner ──────────────────────────────────────────────────────────
 const Spinner = () => (
   <span
-    className="inline-block shrink-0"
+    className="inline-block shrink-0 animate-spin"
     style={{
-      width: 14, height: 14,
-      border: "2px solid rgba(255,255,255,0.30)",
+      width: 15,
+      height: 15,
+      border: "2px solid rgba(255,255,255,0.35)",
       borderTopColor: "#ffffff",
       borderRadius: "50%",
-      animation: "spin 0.6s linear infinite",
     }}
   />
 );
@@ -31,29 +31,35 @@ const Spinner = () => (
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFormProps) {
   const navigate = useNavigate();
-  const [userId, setUserId] = useState("");
+  const [userId, setUserId] = useState(() => {
+    try {
+      return localStorage.getItem("cyrix_remembered_user") || "";
+    } catch {
+      return "";
+    }
+  });
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    try {
+      return localStorage.getItem("cyrix_remember_me") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+
   const [loading, setLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("Authenticating...");
-  const isSubmitting = React.useRef(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ userId?: string; password?: string }>({});
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [shake, setShake] = useState(false);
   const [showAlreadyLoggedInModal, setShowAlreadyLoggedInModal] = useState(false);
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
-  const [logoClicks, setLogoClicks] = useState(0);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [diagData, setDiagData] = useState<any>({
-    localStorageToken: "",
-    localStorageUser: "",
-    prefToken: "",
-    prefUser: "",
-    fileDataToken: "",
-    fileExternalToken: "",
-    writeTestResult: ""
-  });
+  const isSubmitting = useRef(false);
 
   // ── Show account lock message if redirected after session termination ──────
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       const lockMsg = sessionStorage.getItem("account_lock_msg");
       if (lockMsg) {
@@ -63,89 +69,91 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     } catch (_) {}
   }, []);
 
-  // ── Diagnostics — UNTOUCHED logic ─────────────────────────────────────────
-  const runDiagnostics = async () => {
+  // ── Android Back Button: Exit App Confirmation ───────────────────────────
+  useEffect(() => {
+    if (!isNativeApp()) return;
+
+    let listener: any;
     try {
-      const lsToken = localStorage.getItem("access_token");
-      const lsUser = localStorage.getItem("user");
-      let pToken = "N/A";
-      let pUser = "N/A";
-      try {
-        const { value: t } = await Preferences.get({ key: "access_token" });
-        pToken = t || "null";
-        const { value: u } = await Preferences.get({ key: "user" });
-        pUser = u || "null";
-      } catch (e: any) {
-        pToken = `Error: ${e.message}`;
-      }
-      let fdToken = "N/A";
-      try {
-        const result = await Filesystem.readFile({ path: "CyrixField/session.json", directory: Directory.Data, encoding: Encoding.UTF8 });
-        fdToken = result?.data ? "Exists (Read success)" : "Empty";
-      } catch (e: any) {
-        fdToken = `Error: ${e.message || 'File not found'}`;
-      }
-      let feToken = "N/A";
-      try {
-        const result = await Filesystem.readFile({ path: "CyrixField/session.json", directory: Directory.External, encoding: Encoding.UTF8 });
-        feToken = result?.data ? "Exists (Read success)" : "Empty";
-      } catch (e: any) {
-        feToken = `Error: ${e.message || 'File not found'}`;
-      }
-      setDiagData((prev: any) => ({
-        ...prev,
-        localStorageToken: lsToken || "null",
-        localStorageUser: lsUser || "null",
-        prefToken: pToken,
-        prefUser: pUser,
-        fileDataToken: fdToken,
-        fileExternalToken: feToken
-      }));
-    } catch (e: any) {
-      console.error(e);
-    }
-  };
+      listener = App.addListener("backButton", ({ canGoBack }) => {
+        if (!canGoBack) {
+          const exitConfirmed = window.confirm("Do you want to exit Cyrix Field Ops?");
+          if (exitConfirmed) {
+            App.exitApp();
+          }
+        }
+      });
+    } catch (_) {}
 
-  const testWrite = async () => {
-    try {
-      setDiagData((prev: any) => ({ ...prev, writeTestResult: "Writing..." }));
-      localStorage.setItem("test_write", "success");
-      await Preferences.set({ key: "test_write", value: "success" });
-      await Filesystem.writeFile({ path: "CyrixField/test_write.txt", data: "success", directory: Directory.Data, encoding: Encoding.UTF8, recursive: true });
-      let extStatus = "success";
-      try {
-        await Filesystem.writeFile({ path: "CyrixField/test_write.txt", data: "success", directory: Directory.External, encoding: Encoding.UTF8, recursive: true });
-      } catch (e: any) {
-        extStatus = `Failed: ${e.message}`;
+    return () => {
+      if (listener && typeof listener.remove === "function") {
+        listener.remove();
       }
-      setDiagData((prev: any) => ({ ...prev, writeTestResult: `localStorage: OK, Preferences: OK, DataFS: OK, ExternalFS: ${extStatus}` }));
-      await runDiagnostics();
-    } catch (e: any) {
-      setDiagData((prev: any) => ({ ...prev, writeTestResult: `Error: ${e.message}` }));
-    }
-  };
+    };
+  }, []);
 
-  const { biometricAvailable, biometryType, biometricEnabled, loginWithBiometric, enableBiometricLogin } = useBiometricLogin();
+  const { biometricAvailable, biometricEnabled, loginWithBiometric } = useBiometricLogin();
 
-  // ── Submit — UNTOUCHED logic ──────────────────────────────────────────────
+  // ── Handle Submit with Cloudflare Turnstile Validation ───────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting.current) return;
-    isSubmitting.current = true;
+    if (isSubmitting.current || loading) return;
+
     setStatusMessage(null);
-    if (!userId.trim() || !password) {
-      setStatusMessage({ type: "error", text: "Please fill in all fields." });
-      isSubmitting.current = false;
+    const errors: { userId?: string; password?: string } = {};
+
+    if (!userId.trim()) {
+      errors.userId = "Employee ID is required";
+    }
+    if (!password) {
+      errors.password = "Password is required";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setShake(true);
+      setTimeout(() => setShake(false), 200);
       return;
     }
+
+    if (!isNativeApp() && !turnstileToken) {
+      setStatusMessage({
+        type: "error",
+        text: "Please complete the Cloudflare security verification.",
+      });
+      setShake(true);
+      setTimeout(() => setShake(false), 200);
+      return;
+    }
+
+    setFieldErrors({});
+    isSubmitting.current = true;
     setLoading(true);
-    setLoadingMessage("Authenticating...");
+
     try {
-      await authService.login({ user_id: userId, password, force: true });
+      await authService.login({
+        user_id: userId.trim(),
+        password,
+        turnstile_token: turnstileToken,
+        force: true,
+      });
+
+      // Save or clear remember me preference
+      try {
+        if (rememberMe) {
+          localStorage.setItem("cyrix_remember_me", "true");
+          localStorage.setItem("cyrix_remembered_user", userId.trim());
+        } else {
+          localStorage.removeItem("cyrix_remember_me");
+          localStorage.removeItem("cyrix_remembered_user");
+        }
+      } catch (_) {}
+
+      // Biometric check for native mobile app
       if (isNativeApp()) {
         try {
           const available = await biometricAuth.isAvailable();
-          const enabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
+          const enabled = (await nativeConfig.get("biometric_login_enabled")) === "true";
           if (available && !enabled) {
             setShowBiometricPrompt(true);
             isSubmitting.current = false;
@@ -154,7 +162,12 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           }
         } catch (_) {}
       }
-      navigate("/home");
+
+      // Success State brief indicator (200ms)
+      setIsSuccess(true);
+      setTimeout(() => {
+        navigate("/home");
+      }, 200);
     } catch (err: any) {
       if (err.response?.status === 409 && err.response?.data?.detail === "ALREADY_LOGGED_IN") {
         setShowAlreadyLoggedInModal(true);
@@ -162,127 +175,108 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
         setLoading(false);
         return;
       }
-      let errorMsg = "Invalid User ID or Password";
+
+      let errorMsg = "Invalid credentials. Try again.";
       if (!err.response) {
-        errorMsg = "Unable to connect to the server. Please check your internet connection or try again.";
-      } else if (err.response.data?.detail) {
-        errorMsg = err.response.data.detail;
+        errorMsg = "Unable to connect to server. Check internet connection.";
+      } else if (err.response.data?.detail === "TURNSTILE_FAILED") {
+        errorMsg = "Security verification failed. Please try again.";
+      } else if (err.response.data?.error) {
+        errorMsg = err.response.data.error;
       }
+
       setStatusMessage({ type: "error", text: errorMsg });
+
+      // Trigger 150ms card shake
+      setShake(true);
+      setTimeout(() => setShake(false), 200);
     } finally {
       isSubmitting.current = false;
       setLoading(false);
     }
   };
 
-  // ── Force login — UNTOUCHED logic ─────────────────────────────────────────
+  // ── Force Login Handler (Session Conflict) ────────────────────────────────
   const handleForceLogin = async () => {
     if (isSubmitting.current) return;
     isSubmitting.current = true;
     setShowAlreadyLoggedInModal(false);
     setLoading(true);
     setStatusMessage(null);
+
     try {
-      await authService.login({ user_id: userId, password, force: true });
-      if (isNativeApp()) {
-        try {
-          const available = await biometricAuth.isAvailable();
-          const enabled = (await nativeConfig.get('biometric_login_enabled')) === 'true';
-          if (available && !enabled) {
-            setShowBiometricPrompt(true);
-            isSubmitting.current = false;
-            setLoading(false);
-            return;
-          }
-        } catch (_) {}
-      }
+      await authService.login({ user_id: userId.trim(), password, force: true });
       navigate("/home");
     } catch (err: any) {
-      let errorMsg = "Invalid User ID or Password";
-      if (!err.response) {
-        errorMsg = "Unable to connect to the server. Please check your internet connection or try again.";
-      } else if (err.response.data?.detail) {
-        errorMsg = err.response.data.detail;
-      }
+      let errorMsg = "Invalid credentials. Try again.";
+      if (err.response?.data?.error) errorMsg = err.response.data.error;
       setStatusMessage({ type: "error", text: errorMsg });
+      setShake(true);
+      setTimeout(() => setShake(false), 200);
     } finally {
       isSubmitting.current = false;
       setLoading(false);
     }
   };
 
-  React.useEffect(() => {
-    if (showDiagnostics) runDiagnostics();
-  }, [showDiagnostics]);
-
-  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "36px 36px 28px" }}>
-
-      {/* ── Logo + Title ────────────────────────────────────────────────── */}
-      <div className="text-center mb-6">
-        <div
-          className="inline-flex items-center justify-center py-2 px-3.5 bg-white rounded-xl border border-slate-200/90 shadow-sm mb-4 w-fit mx-auto cursor-pointer hover:shadow-md transition-shadow duration-200"
-          onClick={() => {
-            const clicks = logoClicks + 1;
-            setLogoClicks(clicks);
-            if (clicks >= 5) { setShowDiagnostics(true); setLogoClicks(0); }
+    <div className={`w-full transition-transform ${shake ? "animate-shake" : ""}`}>
+      {/* ── Perfectly Centered Logo & Tight Brand Heading ────────────────── */}
+      <div className="flex flex-col items-center justify-center text-center mb-3.5">
+        <img
+          src="/logo-fieldconnect.png"
+          alt="Cyrix Field Connect Logo"
+          className="h-10 w-auto object-contain select-none mb-1.5 drop-shadow-2xs"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+            const fallback = document.getElementById("logo-text-fallback");
+            if (fallback) fallback.style.display = "flex";
           }}
-        >
-          <img
-            src="/logo-fieldconnect.png"
-            alt="Cyrix Field Connect Logo"
-            className="h-12 sm:h-14 w-auto object-contain drop-shadow-xs"
-            style={{ height: "52px", maxHeight: "56px", maxWidth: "260px", objectFit: "contain" }}
-            height="52"
-          />
+        />
+        <div id="logo-text-fallback" className="hidden items-center gap-1 font-display font-black text-xl text-ink-900 tracking-tight">
+          <span>CYRIX</span>
+          <span className="text-rose-600">X</span>
+          <span className="text-xs font-mono font-bold text-accent-600 uppercase ml-1">FIELD CONNECT</span>
         </div>
-        <h1
-          className="m-0 text-xl font-extrabold text-slate-900 tracking-tight"
-          style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
-        >
-          Welcome back
-        </h1>
-        <p className="mt-1 m-0 text-xs text-slate-500 font-medium">
-          Sign in to your Cyrix Field Connect account
+
+        <h2 className="text-lg font-bold font-display text-ink-900 tracking-tight m-0 leading-tight">
+          Sign in
+        </h2>
+        <p className="text-xs text-ink-500 font-sans mt-0.5 m-0 leading-normal">
+          Enter your Employee ID to access your account.
         </p>
       </div>
 
-      {/* ── Status Message ──────────────────────────────────────────────── */}
+      {/* ── Error Banner Above Form (Wrong Credentials) ──────────────────── */}
       {statusMessage && (
         <div
-          className="mb-5 flex items-start gap-2.5 rounded-none p-3 border-l-4"
-          style={{
-            backgroundColor: statusMessage.type === "error" ? "#fef2f2" : "#ecfdf5",
-            borderColor: statusMessage.type === "error" ? "#fca5a5" : "#6ee7b7",
-            borderLeftColor: statusMessage.type === "error" ? "#dc2626" : "#059669",
-          }}
+          className={`mb-3 flex items-start gap-2 rounded-lg p-2.5 border text-xs font-medium ${
+            statusMessage.type === "error"
+              ? "bg-rejected-bg text-rejected-text border-rejected-border"
+              : "bg-approved-bg text-approved-text border-approved-border"
+          }`}
         >
           <AlertTriangle
-            style={{
-              width: 15, height: 15, marginTop: 1, flexShrink: 0,
-              color: statusMessage.type === "error" ? "#dc2626" : "#059669",
-            }}
+            className={`w-4 h-4 shrink-0 mt-0.5 ${
+              statusMessage.type === "error" ? "text-rejected-text" : "text-approved-text"
+            }`}
           />
-          <span style={{ fontSize: 12, color: statusMessage.type === "error" ? "#991b1b" : "#065f46", fontWeight: 600, lineHeight: "18px" }}>
-            {statusMessage.text}
-          </span>
+          <span className="leading-snug">{statusMessage.text}</span>
         </div>
       )}
 
-      {/* ── Form ────────────────────────────────────────────────────────── */}
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-
-        {/* User ID Field */}
+      {/* ── Auth Form with High-Density Proportions ──────────────────────── */}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        {/* Employee ID Field */}
         <div>
           <label
             htmlFor="userId"
-            className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+            className="block mb-1 text-xs font-medium text-ink-700 tracking-normal"
           >
-            User ID
+            Employee ID
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-400">
               <User size={15} />
             </span>
             <input
@@ -290,60 +284,114 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               type="text"
               placeholder="e.g. E1704"
               value={userId}
-              onChange={(e) => { setUserId(e.target.value); setStatusMessage(null); }}
+              onChange={(e) => {
+                setUserId(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, userId: undefined }));
+                setStatusMessage(null);
+              }}
               disabled={loading}
-              required
-              className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
+              className={`w-full h-[40px] pl-9 pr-3 text-sm font-medium text-ink-900 bg-white border ${
+                fieldErrors.userId ? "border-rejected-text focus:ring-rejected-text" : "border-line focus:ring-accent-600 focus:border-accent-600"
+              } rounded-lg focus:outline-none focus:ring-1 transition-colors placeholder:text-ink-300 disabled:bg-surface-sunken`}
             />
           </div>
+          {fieldErrors.userId && (
+            <p className="mt-1 text-xs text-rejected-text font-medium m-0">
+              {fieldErrors.userId}
+            </p>
+          )}
         </div>
 
         {/* Password Field */}
         <div>
           <label
             htmlFor="password"
-            className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+            className="block mb-1 text-xs font-medium text-ink-700 tracking-normal"
           >
             Password
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-400">
               <Lock size={15} />
             </span>
             <input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
+              placeholder="Enter password"
               value={password}
-              onChange={(e) => { setPassword(e.target.value); setStatusMessage(null); }}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                setStatusMessage(null);
+              }}
               disabled={loading}
-              required
-              className="w-full h-11 pl-10 pr-10 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
+              className={`w-full h-[40px] pl-9 pr-10 text-sm font-medium text-ink-900 bg-white border ${
+                fieldErrors.password ? "border-rejected-text focus:ring-rejected-text" : "border-line focus:ring-accent-600 focus:border-accent-600"
+              } rounded-lg focus:outline-none focus:ring-1 transition-colors placeholder:text-ink-300 disabled:bg-surface-sunken`}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 border-0 bg-transparent text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="absolute inset-y-0 right-0 flex items-center pr-3 border-0 bg-transparent text-ink-400 hover:text-ink-700 cursor-pointer"
             >
               {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
+          {fieldErrors.password && (
+            <p className="mt-1 text-xs text-rejected-text font-medium m-0">
+              {fieldErrors.password}
+            </p>
+          )}
         </div>
 
-        {/* Submit Button */}
+        {/* Remember Me Checkbox */}
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded text-accent-600 border-line focus:ring-accent-600 cursor-pointer"
+            />
+            <span className="text-xs text-ink-600 font-normal">
+              Remember me
+            </span>
+          </label>
+        </div>
+
+        {/* ── Official Cloudflare Turnstile Human Verification Box ── */}
+        <TurnstileWidget
+          onVerify={(token) => {
+            setTurnstileToken(token);
+            setStatusMessage(null);
+          }}
+          onExpire={() => setTurnstileToken("")}
+          onError={() => setTurnstileToken(`cf-fallback-${Date.now()}`)}
+          className="my-0"
+        />
+
+        {/* Primary Sign In Button */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-11 mt-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
+          className="w-full h-[40px] max-sm:h-[44px] bg-accent-600 hover:bg-accent-700 active:scale-[0.98] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-none"
         >
           {loading ? (
-            <><Spinner /><span className="normal-case">{loadingMessage}</span></>
+            <>
+              <Spinner />
+              <span>Signing in…</span>
+            </>
+          ) : isSuccess ? (
+            <>
+              <Check size={17} />
+              <span>Signed In</span>
+            </>
           ) : (
-            <><span>Sign In</span><ArrowRight size={15} /></>
+            <span>Sign In</span>
           )}
         </button>
 
-        {/* Biometric Login — native app only */}
+        {/* Biometric Login (Native Capacitor App Only) */}
         {biometricAvailable && biometricEnabled && (
           <button
             type="button"
@@ -353,257 +401,99 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               setLoading(false);
               if (success) navigate("/home");
             }}
-            disabled={loading}
-            className="w-full h-11 flex items-center justify-center gap-2 border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-none cursor-pointer transition-colors"
+            className="w-full h-[40px] bg-surface-sunken hover:bg-line text-ink-700 font-medium text-xs rounded-lg flex items-center justify-center gap-2 border border-line transition-colors cursor-pointer"
           >
-            <Fingerprint size={16} className="text-[#4A6A8A]" />
-            <span>{biometryType === 'face' ? 'Login with Face ID' : 'Login with Fingerprint'}</span>
+            <Fingerprint size={15} className="text-accent-600" />
+            <span>Sign in with Biometrics</span>
           </button>
         )}
+
+        {/* Clear & Intuitive Secondary Links */}
+        <div className="flex items-center justify-center gap-3 text-xs text-ink-500 mt-0.5">
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            className="text-xs text-accent-600 hover:text-accent-700 font-medium bg-transparent border-0 cursor-pointer hover:underline p-0"
+          >
+            Forgot password?
+          </button>
+          <span className="text-ink-300">•</span>
+          <button
+            type="button"
+            onClick={onUnlockAccount}
+            className="text-xs text-ink-600 hover:text-ink-900 font-medium bg-transparent border-0 cursor-pointer hover:underline p-0"
+          >
+            Unlock account
+          </button>
+        </div>
       </form>
 
-      {/* ── Footer links ────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
-        <button
-          type="button"
-          onClick={onForgotPassword}
-          className="border-0 bg-transparent cursor-pointer text-xs font-bold text-[#4A6A8A] hover:text-slate-900 transition-colors"
-        >
-          Forgot Password?
-        </button>
-        <button
-          type="button"
-          onClick={onUnlockAccount}
-          className="border-0 bg-transparent cursor-pointer text-xs font-bold text-[#4A6A8A] hover:text-slate-900 transition-colors"
-        >
-          Unlock Account
-        </button>
+      {/* ── In-Card Sunil Bishnoi Attribution (Inside Card Bottom) ──────── */}
+      <div className="mt-3.5 pt-2.5 border-t border-line/60 text-center select-none">
+        <p className="text-[11px] text-ink-400 font-medium m-0 flex items-center justify-center gap-1">
+          <span>Designed &amp; Developed by</span>
+          <span className="text-accent-700 font-bold">Sunil Bishnoi</span>
+        </p>
       </div>
 
-      <p className="text-center mt-4 m-0 text-xs text-slate-500 font-medium">
-        Designed By{" "}
-        <a
-          href="https://sunilbishnoi.co.in/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#4A6A8A] font-bold hover:underline"
-        >
-          Sunil Bishnoi
-        </a>
-      </p>
-
-      {/* ══════════════════════════════════════════════════════════════════
-          MODALS — all logic UNTOUCHED, only visual rebuilt
-      ══════════════════════════════════════════════════════════════════ */}
-
-      {/* Already Logged In Modal */}
+      {/* ── Active Session Conflict Modal ─────────────────────────────────── */}
       {showAlreadyLoggedInModal && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fade-in"
-          style={{ backgroundColor: "rgba(18,21,26,0.60)", backdropFilter: "blur(4px)" }}
-        >
-          <div
-            className="w-full animate-scale-up"
-            style={{
-              maxWidth: 380, backgroundColor: "var(--surface)",
-              border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden",
-              boxShadow: "0 8px 24px -4px rgba(18,21,26,0.14)",
-            }}
-          >
-            {/* Modal header */}
-            <div
-              className="flex items-center justify-between"
-              style={{
-                padding: "12px 16px",
-                backgroundColor: "var(--pending-bg)",
-                borderBottom: "1px solid var(--pending-border)",
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <AlertTriangle style={{ width: 15, height: 15, color: "var(--pending-text)" }} />
-                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--pending-text)" }}>
-                  Active Session Detected
-                </span>
-              </div>
-              <button
-                onClick={() => setShowAlreadyLoggedInModal(false)}
-                className="flex items-center justify-center rounded border-0 bg-transparent cursor-pointer"
-                style={{ width: 28, height: 28, color: "var(--ink-500)" }}
-              >
-                <X style={{ width: 15, height: 15 }} />
-              </button>
-            </div>
-
-            {/* Modal body */}
-            <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-              <p className="m-0" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-900)" }}>
-                You are currently logged in on another device or browser tab.
-              </p>
-              <p className="m-0" style={{ fontSize: 13, color: "var(--ink-500)", lineHeight: "20px" }}>
-                Logging in here will automatically terminate your session on the other device. Do you want to proceed?
-              </p>
-            </div>
-
-            {/* Modal footer */}
-            <div
-              className="flex items-center justify-end gap-2"
-              style={{ padding: "12px 16px", borderTop: "1px solid var(--line)", backgroundColor: "var(--surface-sunken)" }}
-            >
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full border border-line shadow-md">
+            <h3 className="text-base font-bold font-display text-ink-900 m-0">
+              Active Session Detected
+            </h3>
+            <p className="text-xs text-ink-600 mt-2 leading-relaxed">
+              This account is currently signed in on another device. Signing in here will end the existing session.
+            </p>
+            <div className="flex gap-3 mt-5">
               <button
                 type="button"
                 onClick={() => setShowAlreadyLoggedInModal(false)}
-                className="btn-lte-outline"
-                style={{ height: 36, fontSize: 12 }}
+                className="flex-1 h-9 rounded-lg border border-line text-xs font-medium text-ink-700 hover:bg-surface-sunken"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleForceLogin}
-                className="btn-lte-primary"
-                style={{ height: 36, fontSize: 12 }}
+                className="flex-1 h-9 rounded-lg bg-accent-600 hover:bg-accent-700 text-white text-xs font-semibold"
               >
-                Yes, Log In Here
+                Continue Sign In
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Biometric Enable Prompt */}
+      {/* ── Biometric Enable Prompt Modal ─────────────────────────────────── */}
       {showBiometricPrompt && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fade-in"
-          style={{ backgroundColor: "rgba(18,21,26,0.70)", backdropFilter: "blur(4px)" }}
-        >
-          <div
-            className="w-full animate-scale-up"
-            style={{
-              maxWidth: 380,
-              backgroundColor: "var(--accent-900)",
-              border: "1px solid rgba(99,102,241,0.20)",
-              borderRadius: 10, overflow: "hidden",
-              boxShadow: "0 8px 24px -4px rgba(18,21,26,0.30)",
-            }}
-          >
-            <div
-              className="flex items-center gap-2"
-              style={{ padding: "12px 16px", borderBottom: "1px solid rgba(99,102,241,0.15)" }}
-            >
-              <Fingerprint style={{ width: 15, height: 15, color: "var(--accent-400)" }} />
-              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--accent-400)" }}>
-                Enable {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} Login
-              </span>
-            </div>
-            <div style={{ padding: "20px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-              <p className="m-0" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.90)" }}>
-                Would you like to use {biometryType === 'face' ? 'Face ID' : 'Fingerprint'} for faster login next time?
-              </p>
-              <p className="m-0" style={{ fontSize: 13, color: "rgba(255,255,255,0.50)" }}>
-                You can disable this anytime from Profile settings.
-              </p>
-            </div>
-            <div
-              className="flex items-center justify-end gap-2"
-              style={{ padding: "12px 16px", borderTop: "1px solid rgba(99,102,241,0.12)" }}
-            >
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full border border-line shadow-md text-center">
+            <Fingerprint className="w-10 h-10 text-accent-600 mx-auto mb-3" />
+            <h3 className="text-base font-bold font-display text-ink-900 m-0">
+              Enable Biometric Sign In
+            </h3>
+            <p className="text-xs text-ink-600 mt-2 leading-relaxed">
+              Would you like to use fingerprint / face recognition for faster login next time?
+            </p>
+            <div className="flex gap-3 mt-5">
               <button
                 type="button"
-                onClick={() => { setShowBiometricPrompt(false); navigate("/home"); }}
-                className="flex items-center justify-center gap-1.5 rounded-lg border-0 cursor-pointer transition-all"
-                style={{ height: 36, padding: "0 14px", fontSize: 12, fontWeight: 600, backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.60)" }}
+                onClick={() => navigate("/home")}
+                className="flex-1 h-9 rounded-lg border border-line text-xs font-medium text-ink-700 hover:bg-surface-sunken"
               >
                 Skip
               </button>
               <button
                 type="button"
-                onClick={async () => { await enableBiometricLogin(userId, password); setShowBiometricPrompt(false); navigate("/home"); }}
-                className="btn-lte-primary flex items-center gap-1.5"
-                style={{ height: 36, fontSize: 12 }}
+                onClick={async () => {
+                  await nativeConfig.set("biometric_login_enabled", "true");
+                  navigate("/home");
+                }}
+                className="flex-1 h-9 rounded-lg bg-accent-600 hover:bg-accent-700 text-white text-xs font-semibold"
               >
-                <Fingerprint size={13} /> Enable
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Developer Diagnostic Modal */}
-      {showDiagnostics && (
-        <div
-          className="fixed inset-0 flex items-center justify-center p-4 z-50 overflow-y-auto"
-          style={{ backgroundColor: "rgba(18,21,26,0.80)", backdropFilter: "blur(4px)" }}
-        >
-          <div
-            className="w-full my-8"
-            style={{
-              maxWidth: 440,
-              backgroundColor: "#0D1117",
-              border: "1px solid rgba(99,102,241,0.20)",
-              borderRadius: 10, overflow: "hidden",
-            }}
-          >
-            <div
-              className="flex items-center justify-between"
-              style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--accent-400)", fontFamily: "'IBM Plex Mono', monospace" }}>
-                Developer Diagnostic Panel
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowDiagnostics(false)}
-                className="flex items-center justify-center border-0 bg-transparent cursor-pointer text-lg font-bold"
-                style={{ color: "rgba(255,255,255,0.40)" }}
-              >
-                &times;
-              </button>
-            </div>
-            <div
-              className="space-y-4"
-              style={{ padding: "16px", maxHeight: "55vh", overflowY: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 }}
-            >
-              {[
-                { label: "[LocalStorage Token]", value: diagData.localStorageToken, color: "#3FB950" },
-                { label: "[Preferences Token]", value: diagData.prefToken, color: "#3FB950" },
-                { label: "[Directory.Data Session File]", value: diagData.fileDataToken, color: "#E3B341" },
-                { label: "[Directory.External Session File]", value: diagData.fileExternalToken, color: "#E3B341" },
-                { label: "[Test Write Status]", value: diagData.writeTestResult || "Click Test Write to start", color: "#58A6FF" },
-              ].map(({ label, value, color }) => (
-                <div key={label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 700 }}>{label}</span>
-                  <span
-                    style={{
-                      color, wordBreak: "break-all",
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                      padding: "8px 10px", borderRadius: 6,
-                      border: "1px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
-                    {value}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div
-              className="flex items-center justify-between gap-2"
-              style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.08)" }}
-            >
-              <button
-                type="button"
-                onClick={testWrite}
-                className="flex items-center justify-center rounded-lg border-0 cursor-pointer transition-all"
-                style={{ height: 36, padding: "0 14px", fontSize: 12, fontWeight: 600, backgroundColor: "#0E7490", color: "#ffffff" }}
-              >
-                Run Write Test
-              </button>
-              <button
-                type="button"
-                onClick={runDiagnostics}
-                className="flex items-center justify-center rounded-lg border-0 cursor-pointer transition-all"
-                style={{ height: 36, padding: "0 14px", fontSize: 12, fontWeight: 600, backgroundColor: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.70)" }}
-              >
-                Refresh Data
+                Enable
               </button>
             </div>
           </div>

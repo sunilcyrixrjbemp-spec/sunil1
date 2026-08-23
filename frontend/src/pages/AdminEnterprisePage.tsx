@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   BarChart2, Activity, Database, HardDrive, Mail, Users,
-  AlertTriangle, Clock, RefreshCw, Zap, DollarSign, Shield,
+  AlertTriangle, Clock, RefreshCw, Zap, IndianRupee, Shield,
   Settings, Layers, Server, ShieldCheck, CheckCircle2, XCircle
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -43,7 +43,7 @@ const TABS = [
   { id: "storage", label: "R2 Storage", icon: HardDrive },
   { id: "users", label: "Users", icon: Users },
   { id: "audit", label: "Audit Log", icon: Shield },
-  { id: "billing", label: "Billing", icon: DollarSign },
+  { id: "billing", label: "Billing", icon: IndianRupee },
   { id: "migration", label: "Migrations", icon: Layers },
 ];
 
@@ -715,7 +715,7 @@ export default function AdminEnterprisePage() {
       {tab === "billing" && (
         <div className="bg-white rounded-xl border border-slate-200/80 p-5 shadow-2xs">
           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 mb-3">
-            <DollarSign className="w-4 h-4 text-emerald-600" />
+            <IndianRupee className="w-4 h-4 text-emerald-600" />
             <span>Cloudflare Usage Summary</span>
           </div>
           {billing ? (

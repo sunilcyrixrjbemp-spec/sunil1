@@ -11,6 +11,11 @@ export interface TicketCreatePayload {
 }
 
 export const ticketService = {
+  getTicketById: async (ticketId: number): Promise<any> => {
+    const response = await api.get(`/ticket/${ticketId}`);
+    return response.data;
+  },
+
   getTickets: async (): Promise<any[]> => {
     const response = await api.get("/ticket/");
     return response.data;

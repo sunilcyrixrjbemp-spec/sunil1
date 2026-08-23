@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Activity, Mail, AlertTriangle, Clock, TrendingUp,
-  RefreshCw, FileText, Zap, DollarSign, Users, Database, HardDrive,
+  RefreshCw, FileText, Zap, IndianRupee, Users, Database, HardDrive,
   ShieldCheck, Sparkles
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -151,7 +151,7 @@ export default function AdminAnalyticsDashboard() {
       <div className="flex items-center gap-2 bg-slate-200/60 p-1 rounded-xl w-fit mb-6 text-xs font-semibold">
         {[
           { id: "overview", label: "Overview Metrics", icon: Activity },
-          { id: "billing", label: "Cloudflare Usage & Cost", icon: DollarSign },
+          { id: "billing", label: "Cloudflare Usage & Cost", icon: IndianRupee },
           { id: "audit", label: "Security & Audit Log", icon: FileText },
         ].map((t) => {
           const Icon = t.icon;

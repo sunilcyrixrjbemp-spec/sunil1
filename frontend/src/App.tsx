@@ -13,6 +13,7 @@ import { antdTheme } from "./styles/themeConfig";
 
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+import ClaimsHistoryPage from "./pages/ClaimsHistoryPage";
 import ApprovalPage from "./pages/ApprovalPage";
 import ExpensePage from "./pages/ExpensePage";
 import MISReportPage from "./pages/MISReportPage";
@@ -298,6 +299,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/home" element={<HomePage />} />
+                <Route path="/claims-history" element={<ClaimsHistoryPage />} />
                 <Route path="/approval-center" element={<ApprovalPage />} />
                 <Route path="/submit-expense" element={<ExpensePage />} />
                 <Route path="/mis-report" element={<MISReportPage />} />

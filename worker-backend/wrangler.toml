@@ -77,6 +77,7 @@ dead_letter_queue = "fieldops-dlq"
 
 # ─── Environment Variables ─────────────────────────────────────────────
 [vars]
+CF_AI_API_TOKEN = "Y6wwgwz7m5eajll1cOCjUXoogC8hm9RXcw6RzizWaGMbrBMuihoS5DkPF57pnJog"
 # App
 CORS_ORIGIN = "https://indrae.in"
 APP_ENV = "production"
@@ -124,12 +125,18 @@ RATE_LIMIT_EMAIL = "10"
 # ─── Cron Triggers ────────────────────────────────────────────────────────────
 # NOTE: If deploying via GitHub Actions API Token without schedule permissions,
 # configure triggers directly in Cloudflare Dashboard → Workers → fieldops-api → Triggers
-# [triggers]
-# crons = [
-#   "0 0 * * *",      # 05:30 AM IST — Auto-approval expiry check (handleAutoApprovalExpiry)
-#   "30 4 * * *",     # 10:00 AM IST — Manager daily digest emails (handleManagerDigest)
-#   "0 18 * * *",     # 11:30 PM IST — Daily cleanup & system metrics (handleDailyCleanup)
-#   "0 18 * * 0",     # Sunday 11:30 PM IST — Weekly report generation
-#   "30 18 1 * *",    # 1st of month midnight IST — Monthly report generation
-# ]
+[triggers]
+crons = [
+  "30 20 * * *",    # 02:00 AM IST (20:30 UTC) — Daily diagnostic check & SLA alerts (/api/cron/daily-check)
+  "0 0 * * *",      # 05:30 AM IST (00:00 UTC) — Auto-approval expiry check (handleAutoApprovalExpiry)
+  "30 4 * * *",     # 10:00 AM IST (04:30 UTC) — Manager daily digest emails (handleManagerDigest)
+  "0 18 * * *",     # 11:30 PM IST (18:00 UTC) — Daily cleanup & system metrics (handleDailyCleanup)
+  "0 18 * * 0",     # Sunday 11:30 PM IST — Weekly report generation
+  "30 18 1 * *",    # 1st of month midnight IST — Monthly report generation
+]
 
+
+
+# ─── Cloudflare Workers AI Binding ──────────────────────────────────────────
+[ai]
+binding = "AI"

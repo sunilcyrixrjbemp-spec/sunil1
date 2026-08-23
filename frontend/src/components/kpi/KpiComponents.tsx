@@ -366,7 +366,7 @@ export function ScoreHero({ title, subtitle, score, scoreLabel = "Average", chil
   );
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
+// ─── Stat Card (Design System Spec) ───────────────────────────────────────────
 
 interface StatCardProps {
   label: string;
@@ -376,10 +376,10 @@ interface StatCardProps {
 
 export function StatCard({ label, value, sub }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{label}</p>
-      <div className="mt-2 text-xl font-bold text-gray-900">{value}</div>
-      {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+    <div className="bg-white border border-line rounded-[10px] p-5 shadow-none hover:border-[#D4D1CB] transition-colors">
+      <p className="text-[12px] font-mono font-medium text-ink-500 uppercase tracking-[0.03em] m-0">{label}</p>
+      <div className="mt-1.5 text-2xl sm:text-[28px] font-bold font-display text-ink-900 tabular-nums leading-tight">{value}</div>
+      {sub && <p className="mt-2 text-xs font-sans text-ink-400 m-0">{sub}</p>}
     </div>
   );
 }
@@ -396,27 +396,26 @@ interface ActionAlertProps {
 }
 
 export function ActionAlert({ eyebrow = "Action Required", title, body, cta, onClick, variant = "danger" }: ActionAlertProps) {
-  const borderColor = variant === "danger" ? "border-red-600" : variant === "warning" ? "border-amber-500" : "border-blue-500";
-  const ctaColor = "bg-white text-gray-900 hover:bg-red-600 hover:text-white";
+  const borderColor = variant === "danger" ? "border-rose-600" : variant === "warning" ? "border-amber-500" : "border-accent-600";
 
   return (
-    <div className="relative overflow-hidden rounded-xl bg-gray-950 text-white">
-      <span className={`absolute inset-y-0 left-0 w-1 ${borderColor.replace("border-", "bg-")}`} />
-      <div className="flex flex-col gap-4 p-5 pl-7 sm:flex-row sm:items-center sm:gap-5">
-        <div className="flex min-w-0 flex-1 items-start gap-4">
+    <div className="relative overflow-hidden rounded-[10px] bg-ink-900 text-white shadow-none">
+      <span className={`absolute inset-y-0 left-0 w-1.5 ${borderColor.replace("border-", "bg-")}`} />
+      <div className="flex flex-col gap-4 p-5 pl-6 sm:flex-row sm:items-center sm:gap-5">
+        <div className="flex min-w-0 flex-1 items-start gap-3.5">
           <span className="relative mt-1.5 flex h-2.5 w-2.5 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-600 opacity-75" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500" />
           </span>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-red-400">{eyebrow}</p>
-            <p className="mt-1.5 text-base font-semibold sm:text-lg">{title}</p>
-            {body && <div className="mt-1 text-sm text-white/60">{body}</div>}
+            <p className="text-[11px] font-mono font-semibold uppercase tracking-wider text-rose-300 m-0">{eyebrow}</p>
+            <p className="mt-1 text-base font-display font-bold text-white m-0">{title}</p>
+            {body && <div className="mt-1 text-xs text-white/70 font-sans">{body}</div>}
           </div>
         </div>
         <button
           onClick={onClick}
-          className={`shrink-0 rounded-lg px-5 py-2.5 text-[12px] font-bold uppercase tracking-widest transition-colors ${ctaColor}`}
+          className="shrink-0 rounded-lg px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all bg-white text-ink-900 hover:bg-rose-600 hover:text-white cursor-pointer"
         >
           {cta}
         </button>

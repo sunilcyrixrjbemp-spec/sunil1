@@ -89,6 +89,18 @@ async function checkAndAutoCloseTickets(env) {
  * Admin sees ALL tickets in system regardless of assignee.
  * Other roles ONLY see tickets created by them OR assigned specifically to them by name.
  */
+export async function handleGetTicketById(request, env, params, query, user) {
+  const db = getDrizzleDb(env, request);
+  const ticketId = parseInt(params.ticket_id, 10);
+  const [ticket] = await db.select()
+    .from(supportTickets)
+    .where(eq(supportTickets.id, ticketId))
+    .limit(1);
+
+  if (!ticket) return jsonResponse({ error: "Ticket not found" }, 404);
+  return jsonResponse(formatTicketResponse(ticket));
+}
+
 export async function handleGetTickets(request, env, params, query, user) {
   await checkAndAutoCloseTickets(env);
   const db = getDrizzleDb(env, request);
@@ -673,3 +685,48 @@ export async function handleUpdateTicketStatus(request, env, params, query, user
 }
 
 
+
+
+/**
+ * GET /api/ticket/ws/:ticket_id
+ * Cloudflare Native WebSocket connection for real-time ticket messaging & typing state
+ */
+export async function handleTicketWebSocket(request, env, params, query) {
+  const upgradeHeader = request.headers.get("Upgrade");
+  if (!upgradeHeader || upgradeHeader.toLowerCase() !== "websocket") {
+    return new Response("Expected Upgrade: websocket", { status: 426 });
+  }
+
+  const [client, server] = Object.values(new WebSocketPair());
+  server.accept();
+
+  const ticketId = params.ticket_id;
+
+  server.addEventListener("message", async (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === "typing") {
+        server.send(JSON.stringify({
+          type: "typing",
+          ticket_id: ticketId,
+          is_typing: data.is_typing,
+          user_id: data.user_id,
+          user_name: data.user_name || "Coordinator"
+        }));
+      } else if (data.type === "ping") {
+        server.send(JSON.stringify({ type: "pong" }));
+      }
+    } catch (err) {
+      console.warn("WebSocket parse error:", err);
+    }
+  });
+
+  server.addEventListener("close", () => {
+    try { server.close(); } catch(e) {}
+  });
+
+  return new Response(null, {
+    status: 101,
+    webSocket: client
+  });
+}

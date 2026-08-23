@@ -83,3 +83,9 @@ worker-backend/.dev.vars
 !.env.example
 worker-backend/sync-prod-users.sql
 worker-backend/update_all_bills_base64.sql
+
+# Agents & Task Artifacts
+.agents/
+ORIGINAL_REQUEST.md
+PROJECT.md
+

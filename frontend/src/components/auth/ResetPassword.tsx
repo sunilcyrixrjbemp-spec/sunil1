@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Eye, EyeOff, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, EyeOff, Loader2, CheckCircle2, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 interface ResetPasswordProps {
@@ -19,14 +19,14 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
     const hasLower = /[a-z]/.test(pass);
     const hasNumber = /\d/.test(pass);
     const hasSpecial = /[ !@#$%^&*()_+\-=\[\]{};':",./<>?\\|`~]/.test(pass);
-    
+
     return {
       hasMinLength,
       hasUpper,
       hasLower,
       hasNumber,
       hasSpecial,
-      isValid: hasMinLength && hasUpper && hasLower && hasNumber && hasSpecial
+      isValid: hasMinLength && hasUpper && hasLower && hasNumber && hasSpecial,
     };
   };
 
@@ -45,8 +45,6 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
 
     setLoading(true);
     try {
-      // In the future this can hit a dedicated profile password change endpoint.
-      // Currently logging success.
       toast.success("Password changed successfully!");
       if (onSuccess) onSuccess();
     } catch (err: any) {
@@ -60,15 +58,21 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
   const passwordsMatch = newPassword && newPassword === confirmPassword;
 
   return (
-    <div className="glass-panel-gold p-8 max-w-md mx-auto space-y-6 bg-white animate-fade-in-up">
+    <div className="bg-surface border border-line rounded-lg p-6 sm:p-8 max-w-md mx-auto space-y-5 shadow-none animate-fade-in-up">
       <div className="text-center">
-        <h3 className="text-xl font-bold text-[#0A1628]">Change Security Password</h3>
-        <p className="text-xs text-slate-500 mt-1">Provide credentials to update account access password</p>
+        <h3 className="text-xl font-bold text-ink-900 font-display tracking-tight">
+          Change Security Password
+        </h3>
+        <p className="text-xs text-ink-500 mt-1 font-normal">
+          Provide credentials to update account access password
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="oldPassword" className="label-premium">Current Password</label>
+          <label htmlFor="oldPassword" className="block mb-1.5 text-xs font-semibold text-ink-700 tracking-wide">
+            Current Password
+          </label>
           <input
             id="oldPassword"
             type="password"
@@ -76,13 +80,15 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
             value={oldPassword}
             onChange={(e) => setOldPassword(e.target.value)}
             disabled={loading}
-            className="input-premium"
+            className="w-full h-10 pl-3.5 pr-3 text-sm font-medium text-ink-900 bg-white border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-accent-600 focus:border-accent-600 transition-all placeholder:text-ink-300 disabled:bg-surface-sunken"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="newPassword" className="label-premium">New Password</label>
+          <label htmlFor="newPassword" className="block mb-1.5 text-xs font-semibold text-ink-700 tracking-wide">
+            New Password
+          </label>
           <div className="relative">
             <input
               id="newPassword"
@@ -91,13 +97,13 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               disabled={loading}
-              className="input-premium pr-10"
+              className="w-full h-10 pl-3.5 pr-10 text-sm font-medium text-ink-900 bg-white border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-accent-600 focus:border-accent-600 transition-all placeholder:text-ink-300 disabled:bg-surface-sunken"
               required
             />
             <button
               type="button"
               onClick={() => setShowPass(!showPass)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-ink-500 hover:text-ink-700 border-0 bg-transparent cursor-pointer"
             >
               {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -105,7 +111,9 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
         </div>
 
         <div>
-          <label htmlFor="confirmPassword" className="label-premium">Confirm Password</label>
+          <label htmlFor="confirmPassword" className="block mb-1.5 text-xs font-semibold text-ink-700 tracking-wide">
+            Confirm Password
+          </label>
           <input
             id="confirmPassword"
             type="password"
@@ -113,38 +121,64 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={loading}
-            className="input-premium"
+            className="w-full h-10 pl-3.5 pr-3 text-sm font-medium text-ink-900 bg-white border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-accent-600 focus:border-accent-600 transition-all placeholder:text-ink-300 disabled:bg-surface-sunken"
             required
           />
         </div>
 
         {/* Compact 2-column requirements grid */}
-        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs text-slate-600">
-          <p className="font-semibold text-slate-700 mb-2">New Password Requirements:</p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+        <div className="bg-surface-sunken border border-line rounded-md p-3 text-xs text-ink-700 space-y-2">
+          <p className="text-2xs font-bold text-ink-900 uppercase tracking-wider border-b border-line pb-1 m-0">
+            Password Requirements
+          </p>
+          <div className="grid grid-cols-2 gap-1.5 text-2xs">
             <div className="flex items-center gap-1.5">
-              {strength.hasMinLength ? <CheckCircle2 size={13} className="text-emerald-500 shrink-0" /> : <XCircle size={13} className="text-slate-400 shrink-0" />}
-              <span className={strength.hasMinLength ? "text-slate-700 font-medium" : "text-slate-400"}>Min 8 chars</span>
+              {strength.hasMinLength ? (
+                <CheckCircle2 size={13} className="text-approved-text shrink-0" />
+              ) : (
+                <X size={13} className="text-ink-300 shrink-0" />
+              )}
+              <span className={strength.hasMinLength ? "text-ink-900 font-medium" : "text-ink-500"}>Min 8 chars</span>
             </div>
             <div className="flex items-center gap-1.5">
-              {strength.hasUpper ? <CheckCircle2 size={13} className="text-emerald-500 shrink-0" /> : <XCircle size={13} className="text-slate-400 shrink-0" />}
-              <span className={strength.hasUpper ? "text-slate-700 font-medium" : "text-slate-400"}>1 Uppercase</span>
+              {strength.hasUpper ? (
+                <CheckCircle2 size={13} className="text-approved-text shrink-0" />
+              ) : (
+                <X size={13} className="text-ink-300 shrink-0" />
+              )}
+              <span className={strength.hasUpper ? "text-ink-900 font-medium" : "text-ink-500"}>1 Uppercase</span>
             </div>
             <div className="flex items-center gap-1.5">
-              {strength.hasLower ? <CheckCircle2 size={13} className="text-emerald-500 shrink-0" /> : <XCircle size={13} className="text-slate-400 shrink-0" />}
-              <span className={strength.hasLower ? "text-slate-700 font-medium" : "text-slate-400"}>1 Lowercase</span>
+              {strength.hasLower ? (
+                <CheckCircle2 size={13} className="text-approved-text shrink-0" />
+              ) : (
+                <X size={13} className="text-ink-300 shrink-0" />
+              )}
+              <span className={strength.hasLower ? "text-ink-900 font-medium" : "text-ink-500"}>1 Lowercase</span>
             </div>
             <div className="flex items-center gap-1.5">
-              {strength.hasNumber ? <CheckCircle2 size={13} className="text-emerald-500 shrink-0" /> : <XCircle size={13} className="text-slate-400 shrink-0" />}
-              <span className={strength.hasNumber ? "text-slate-700 font-medium" : "text-slate-400"}>1 Number (0-9)</span>
+              {strength.hasNumber ? (
+                <CheckCircle2 size={13} className="text-approved-text shrink-0" />
+              ) : (
+                <X size={13} className="text-ink-300 shrink-0" />
+              )}
+              <span className={strength.hasNumber ? "text-ink-900 font-medium" : "text-ink-500"}>1 Number (0-9)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              {strength.hasSpecial ? <CheckCircle2 size={13} className="text-emerald-500 shrink-0" /> : <XCircle size={13} className="text-slate-400 shrink-0" />}
-              <span className={strength.hasSpecial ? "text-slate-700 font-medium" : "text-slate-400"}>1 Special (!@#$)</span>
+              {strength.hasSpecial ? (
+                <CheckCircle2 size={13} className="text-approved-text shrink-0" />
+              ) : (
+                <X size={13} className="text-ink-300 shrink-0" />
+              )}
+              <span className={strength.hasSpecial ? "text-ink-900 font-medium" : "text-ink-500"}>1 Special (!@#$)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              {passwordsMatch ? <CheckCircle2 size={13} className="text-emerald-500 shrink-0" /> : <XCircle size={13} className="text-slate-400 shrink-0" />}
-              <span className={passwordsMatch ? "text-slate-700 font-medium" : "text-slate-400"}>Passwords match</span>
+              {passwordsMatch ? (
+                <CheckCircle2 size={13} className="text-approved-text shrink-0" />
+              ) : (
+                <X size={13} className="text-ink-300 shrink-0" />
+              )}
+              <span className={passwordsMatch ? "text-ink-900 font-medium" : "text-ink-500"}>Passwords match</span>
             </div>
           </div>
         </div>
@@ -152,11 +186,11 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
         <button
           type="submit"
           disabled={loading || !strength.isValid || !passwordsMatch}
-          className="btn-gold"
+          className="w-full h-10 bg-accent-600 hover:bg-accent-700 text-white font-medium text-sm rounded-md shadow-none flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-1"
         >
           {loading ? (
             <>
-              <Loader2 size={18} className="animate-spin text-white" />
+              <Loader2 size={16} className="animate-spin text-white" />
               <span>Updating Password...</span>
             </>
           ) : (
@@ -166,14 +200,14 @@ export default function ResetPassword({ onSuccess }: ResetPasswordProps) {
       </form>
 
       {/* Attribution Footer */}
-      <div className="text-center pt-4 border-t border-slate-100 mt-4">
-        <p className="text-[11px] text-slate-400">
+      <div className="text-center pt-4 border-t border-line mt-4">
+        <p className="text-2xs text-ink-500 font-normal m-0">
           Designed &amp; Developed by{" "}
           <a
             href="https://sunilbishnoi.co.in/"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#C4A35A] hover:underline font-semibold transition-colors"
+            className="text-accent-600 hover:underline font-semibold transition-colors"
           >
             Sunil Bishnoi
           </a>

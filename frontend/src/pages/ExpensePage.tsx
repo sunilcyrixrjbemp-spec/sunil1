@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import React, { useEffect, useState, useRef } from "react";
 import { formatToIST } from "../utils/timezone";
 import { createPortal } from "react-dom";
@@ -14,7 +15,7 @@ import { getISTDate, getISTMonth } from "../utils/dateUtils";
 import { ALL_INDIAN_STATES, getDistrictsForState } from "../utils/indianStatesDistricts";
 import ClaimDetailsModal, { formatImageUrl } from "../components/common/ClaimDetailsModal";
 import { 
-  Trash2, Plus, Calendar, 
+  Sparkles, Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
   TrendingUp,
   Zap,
@@ -32,7 +33,7 @@ import {
 } from "lucide-react";
 import api from "../services/api";
 import { 
-  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Card, Pagination 
+  DatePicker, ConfigProvider, Modal, Button, Tag, Space, Pagination 
 } from "antd";
 import { 
   EditOutlined, CloseCircleOutlined, FileTextOutlined 
@@ -74,19 +75,6 @@ const formatToDDMMYYYY = (dateStr: any): string => {
   return clean;
 };
 
-const getCardStatusClass = (status: string) => {
-  const s = (status || "").toLowerCase().trim();
-  if (s.includes("approve") || s.includes("approved")) {
-    return "border-l-4 border-l-emerald-600 border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 cursor-pointer transition-all sharp-card shadow-xs";
-  }
-  if (s.includes("reject") || s.includes("rejected")) {
-    return "border-l-4 border-l-rose-600 border border-rose-200 bg-rose-50/60 hover:bg-rose-100/70 cursor-pointer transition-all sharp-card shadow-xs";
-  }
-  if (s.includes("pending") || s.includes("submitted") || s.includes("return")) {
-    return "border-l-4 border-l-amber-500 border border-amber-200 bg-amber-50/60 hover:bg-amber-100/70 cursor-pointer transition-all sharp-card shadow-xs";
-  }
-  return "border-l-4 border-l-slate-400 border border-slate-200 bg-slate-50/70 hover:bg-slate-100/80 cursor-pointer transition-all shadow-xs sharp-card";
-};
 
 const getAttachmentsArray = (attachments: any): string[] => {
   if (!attachments) return [];
@@ -243,6 +231,13 @@ interface LegFiles {
 }
 
 export default function ExpensePage() {
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
   const navigate = useNavigate();
   const getProgressPercentage = (used: number, limit: number) => {
     if (!limit) return 0;
@@ -818,7 +813,7 @@ export default function ExpensePage() {
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     return months[new Date().getMonth()];
   });
-  const [activeClaimsTab, setActiveClaimsTab] = useState<"sheets" | "legs">("sheets");
+  const [_activeClaimsTab, _setActiveClaimsTab] = useState<"sheets" | "legs">("sheets");
 
   useEffect(() => {
     // Unconditionally clear any lingering scroll locks on mount and unmount
@@ -3309,83 +3304,6 @@ export default function ExpensePage() {
     return result;
   };
 
-  const getFilteredLegs = () => {
-    const currentFilteredClaims = getFilteredClaims();
-    if (!Array.isArray(currentFilteredClaims) || currentFilteredClaims.length === 0) return [];
-
-    const legsList: any[] = [];
-    currentFilteredClaims.forEach(c => {
-      if (!c) return;
-
-      const legsArray = (Array.isArray(c.itineraries) && c.itineraries.length > 0)
-        ? c.itineraries
-        : ((Array.isArray(c.legs) && c.legs.length > 0) ? c.legs : null);
-
-      const claimLegs = legsArray || [{
-        leg: 1,
-        from_district: c.district || "Base",
-        to_district: c.district || "Base",
-        from: "",
-        to: "",
-        mode: c.travel_mode || c.category || "Travel",
-        sub_mode: "",
-        sub_amount: 0,
-        km: c.total_km || 0,
-        amount: c.amount || 0,
-        da: c.da_amount || 0,
-        hotel: c.hotel_amount || 0,
-        local_purchase: c.local_purchase_amount || 0,
-        other_amount: c.other_expense_amount || 0,
-        visit_purpose: c.description || "Field visit"
-      }];
-
-      claimLegs.forEach((l: any, idx: number) => {
-        legsList.push({
-          parentCode: c.expense_code || "EXP",
-          parentDate: c.itinerary || c.date || "",
-          parentStatus: c.status || "draft",
-          parentAmount: c.amount || 0,
-          leg: l.leg || l.leg_number || (idx + 1),
-          from_district: l.from_district || c.district || "",
-          to_district: l.to_district || c.district || "",
-          from: l.from || l.from_location || "",
-          to: l.to || l.to_location || "",
-          mode: l.mode || l.travel_mode || c.travel_mode || "Other",
-          sub_mode: l.sub_mode || "",
-          sub_amount: parseFloat(l.sub_amount) || 0,
-          km: parseFloat(l.km || l.distance_km) || 0,
-          amount: parseFloat(l.amount || l.travel_amount) || 0,
-          da: parseFloat(l.da || l.da_amount) || 0,
-          hotel: parseFloat(l.hotel || l.hotel_amount) || 0,
-          local_purchase: parseFloat(l.local_purchase) || 0,
-          local_purchase_remark: l.local_purchase_remark || "",
-          other_amount: parseFloat(l.other_amount || l.other_expense_amount || l.oth_amount) || 0,
-          visit_purpose: l.visit_purpose || l.purpose || c.description || "Field visit"
-        });
-      });
-    });
-
-    // Apply sorting to legs directly
-    if (claimsSortOrder === "date_desc") {
-      legsList.sort((a, b) => new Date(b.parentDate || "1970-01-01").getTime() - new Date(a.parentDate || "1970-01-01").getTime());
-    } else if (claimsSortOrder === "date_asc") {
-      legsList.sort((a, b) => new Date(a.parentDate || "1970-01-01").getTime() - new Date(b.parentDate || "1970-01-01").getTime());
-    } else if (claimsSortOrder === "amount_desc") {
-      legsList.sort((a, b) => {
-        const amtA = (parseFloat(a.amount) || 0) + (parseFloat(a.da) || 0) + (parseFloat(a.hotel) || 0) + (parseFloat(a.local_purchase) || 0) + (parseFloat(a.other_amount) || 0);
-        const amtB = (parseFloat(b.amount) || 0) + (parseFloat(b.da) || 0) + (parseFloat(b.hotel) || 0) + (parseFloat(b.local_purchase) || 0) + (parseFloat(b.other_amount) || 0);
-        return amtB - amtA;
-      });
-    } else if (claimsSortOrder === "amount_asc") {
-      legsList.sort((a, b) => {
-        const amtA = (parseFloat(a.amount) || 0) + (parseFloat(a.da) || 0) + (parseFloat(a.hotel) || 0) + (parseFloat(a.local_purchase) || 0) + (parseFloat(a.other_amount) || 0);
-        const amtB = (parseFloat(b.amount) || 0) + (parseFloat(b.da) || 0) + (parseFloat(b.hotel) || 0) + (parseFloat(b.local_purchase) || 0) + (parseFloat(b.other_amount) || 0);
-        return amtA - amtB;
-      });
-    }
-    return legsList;
-  };
-
   const handleEditFromModal = (claimId: number | string) => {
     const stringId = String(claimId);
     setEditExpenseId(stringId);
@@ -3436,28 +3354,184 @@ export default function ExpensePage() {
 
   return (
     <>
-      <div className="space-y-6 animate-fadeIn text-[#212529] pb-32 md:pb-8 text-xs font-sans">
+      <div className="min-h-screen w-full relative bg-[#FAFAF9] selection:bg-accent-100 selection:text-accent-900 font-sans antialiased text-ink-900 pb-32 md:pb-12 text-xs">
+      
+      {/* Ambient Canvas Mesh (Identical to HomePage) */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-25">
+        <div
+          className="absolute -top-[10%] -left-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-1"
+          style={{
+            background: "radial-gradient(circle, #4338CA 0%, rgba(67, 56, 202, 0) 70%)",
+            filter: "blur(120px)",
+          }}
+        />
+        <div
+          className="absolute -bottom-[10%] -right-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-2"
+          style={{
+            background: "radial-gradient(circle, #6366F1 0%, rgba(99, 102, 241, 0) 70%)",
+            filter: "blur(130px)",
+          }}
+        />
+      </div>
+
+      {/* Delicate Architectural Grid */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
+        style={{
+          backgroundImage:
+            "linear-gradient(#12151A 1px, transparent 1px), linear-gradient(90deg, #12151A 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+
       
       {/* Header Info Bar */}
-      <div className="bg-white border border-slate-200 rounded-md shadow-2xs flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-4 sm:py-2.5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded bg-[#4A6A8A] flex items-center justify-center text-white shrink-0 shadow-2xs">
-            <FileText className="w-4 h-4" />
+      <div 
+        className="bg-white rounded-2xl border border-line p-4 sm:p-5 space-y-3 relative z-10"
+        style={{
+          boxShadow: "0 10px 30px -5px rgba(30, 27, 75, 0.04), 0 4px 12px -2px rgba(30, 27, 75, 0.02)",
+        }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-line">
+          {/* Left: User Avatar & Greetings */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#1E1B4B] text-white font-display font-bold text-xs flex items-center justify-center shadow-xs shrink-0 tracking-wider">
+              {getInitials(user?.name || "User")}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-sm sm:text-base font-bold font-display text-ink-900 tracking-tight m-0 leading-none">
+                  Submit Daily Expense Claim
+                </h1>
+                {user?.role && (
+                  <span className="text-[10px] font-semibold text-accent-700 bg-accent-50 border border-accent-200 px-2 py-0.5 rounded-[4px] leading-tight inline-flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-accent-500" />
+                    <span>{user.role}</span>
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-ink-500 font-sans mt-1.5 m-0 flex items-center gap-1.5 leading-none">
+                <Calendar className="w-3 h-3 text-ink-400" />
+                <span>
+                  {new Date().toLocaleDateString("en-IN", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+                <span className="text-line">•</span>
+                <span>Field Operations Travel &amp; Expense Submission</span>
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight">Submit Daily Expense Claim</h1>
-            <p className="text-[9.5px] text-slate-500 font-medium">Submit daily travel & work details.</p>
+
+          {/* Right: Next Expense ID chip + History Link */}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <div className="flex items-center gap-1.5 bg-surface-sunken border border-line px-2.5 py-1 rounded-lg">
+              <span className="text-[10px] text-ink-500 font-bold uppercase tracking-wider">NEXT ID:</span>
+              <span className="bg-[#1E1B4B] text-white font-black py-0.5 px-2 rounded text-xs font-mono tracking-wide shadow-2xs">
+                {nextExpId}
+              </span>
+            </div>
+            <Link
+              to="/claims-history"
+              className="uiverse-btn h-8 rounded-lg border border-line text-xs font-semibold px-3 flex items-center gap-1.5 hover:border-accent-400 transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5 text-accent-600" />
+              <span>Claims Register</span>
+            </Link>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9.5px] text-slate-500 font-bold uppercase tracking-wider">EXPENSE ID:</span>
-          <span className="bg-[#4A6A8A] text-white font-extrabold py-0.5 px-2.5 rounded text-[10px] sm:text-[11px] font-mono tracking-wide shadow-2xs">
-            {nextExpId}
-          </span>
+
+        {/* 4 Stat Cards in 1 Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+          {/* Profile Card */}
+          <div className="bg-surface-sunken border border-line rounded-xl p-3 flex items-center gap-2.5 hover:border-accent-300 transition-all">
+            <div className="w-8 h-8 rounded-lg bg-accent-50 border border-accent-200 flex items-center justify-center text-accent-700 shrink-0">
+              <User className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-ink-400 leading-none">EMPLOYEE</span>
+              <span className="text-xs font-bold text-ink-900 leading-tight truncate" title={user.name || "—"}>
+                {user.name || "—"}
+              </span>
+              <div className="flex items-center gap-1 text-[9px] text-ink-500 font-mono">
+                <span>{user.e_code || "—"}</span>
+                <span className="text-line">•</span>
+                <span className="text-accent-700 font-bold">Grade {user.grade || "—"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Assigned Home District Card */}
+          <div className="bg-surface-sunken border border-line rounded-xl p-3 flex items-center gap-2.5 hover:border-emerald-300 transition-all">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-ink-400 leading-none">BASE DISTRICT</span>
+              <span className="text-xs font-bold text-ink-900 leading-tight truncate">
+                {user.district || "—"}
+              </span>
+              <span className="text-[8.5px] font-bold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.2 rounded w-fit leading-none mt-0.5">
+                In-District Base
+              </span>
+            </div>
+          </div>
+
+          {/* Monthly Distance Limit Card */}
+          <div className="bg-surface-sunken border border-line rounded-xl p-3 flex items-center gap-2.5 hover:border-blue-300 transition-all">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 shrink-0">
+              {allowance.vehicle_type === "Car" ? (
+                <Car className="w-4 h-4" />
+              ) : allowance.vehicle_type === "Bike" ? (
+                <Bike className="w-4 h-4" />
+              ) : (
+                <Navigation className="w-4 h-4" />
+              )}
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-ink-400 leading-none">
+                {limitPillLabel}
+              </span>
+              <span className="text-xs font-mono font-bold text-ink-900 leading-tight">
+                {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 0) + approvedKm)} KM
+              </span>
+              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden flex items-center">
+                <div 
+                  className="bg-accent-600 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.max(allowance.current_month_km ? 5 : 0, getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 0) + approvedKm)))}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly Auto Cap Card */}
+          <div className="bg-surface-sunken border border-line rounded-xl p-3 flex items-center gap-2.5 hover:border-amber-300 transition-all">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+              <Navigation className="w-4 h-4" />
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-ink-400 leading-none">
+                MONTHLY AUTO CAP
+              </span>
+              <span className="text-xs font-mono font-bold text-ink-900 leading-tight">
+                ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{((allowance.max_auto_per_month || 0) + approvedAuto).toLocaleString()}
+              </span>
+              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden flex items-center">
+                <div 
+                  className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.max(allowance.current_month_auto ? 5 : 0, getProgressPercentage(allowance.current_month_auto || 0, ((allowance.max_auto_per_month || 0) + approvedAuto)))}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       {policyMissing && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-none flex items-start gap-2.5 font-medium shadow-2xs animate-pulse">
+        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-start gap-2.5 font-medium shadow-2xs animate-pulse">
           <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-rose-650" />
           <div className="min-w-0 flex-1">
             <p className="font-bold text-sm">Policy data load नहीं हुआ, कृपया page reload करें</p>
@@ -3465,119 +3539,6 @@ export default function ExpensePage() {
           </div>
         </div>
       )}
-
-      {/* 4 Premium Stat Cards (Compact 2x2 Mobile Grid System) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        {/* Profile Card */}
-        <div className="bg-white border border-slate-200 rounded-md shadow-2xs p-2 sm:p-2.5 flex items-center gap-2 hover:border-indigo-300 transition-all">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-indigo-600 to-blue-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
-            <User className="w-4 h-4" />
-          </div>
-          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">EMPLOYEE PROFILE</span>
-            <span className="text-[11px] sm:text-xs font-extrabold text-slate-900 leading-tight truncate" title={user.name || "—"}>
-              {user.name || "—"}
-            </span>
-            <div className="flex items-center gap-1 text-[8.5px] text-slate-500 font-mono mt-0.5">
-              <span>{user.e_code || "—"}</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-indigo-600 font-bold bg-indigo-50 px-1 py-0.2 rounded text-[8px]">Grade: {user.grade || "—"}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Assigned Home District Card */}
-        <div className="bg-white border border-slate-200 rounded-md shadow-2xs p-2 sm:p-2.5 flex items-center gap-2 hover:border-emerald-300 transition-all">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
-            <MapPin className="w-4 h-4" />
-          </div>
-          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">ASSIGNED DISTRICT</span>
-            <span className="text-[11px] sm:text-xs font-extrabold text-slate-900 leading-tight truncate">
-              {user.district || "—"}
-            </span>
-            <span className="text-[8px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.5 rounded font-mono leading-none w-fit mt-0.5">
-              In-District Boundary
-            </span>
-          </div>
-        </div>
-
-        {/* Monthly Distance Limit Card */}
-        <div className="bg-white border border-slate-200 rounded-md shadow-2xs p-2 sm:p-2.5 flex items-center gap-2 hover:border-blue-300 transition-all">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
-            {allowance.vehicle_type === "Car" ? (
-              <Car className="w-4 h-4" />
-            ) : allowance.vehicle_type === "Bike" ? (
-              <Bike className="w-4 h-4" />
-            ) : (
-              <Navigation className="w-4 h-4" />
-            )}
-          </div>
-          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
-              {limitPillLabel}
-            </span>
-            <span className="text-[11px] sm:text-xs font-mono font-black text-slate-900 leading-tight">
-              {allowance.current_month_km || 0} / {((allowance.max_km_per_month || 0) + approvedKm)} KM
-            </span>
-            <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden flex items-center">
-              <div 
-                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
-                style={{ width: `${Math.max(allowance.current_month_km ? 5 : 0, getProgressPercentage(allowance.current_month_km || 0, ((allowance.max_km_per_month || 0) + approvedKm)))}%` }}
-              ></div>
-            </div>
-            {existingKmReq && (
-              <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8px] font-bold shrink-0">
-                <span className="text-slate-400">Request:</span>
-                <span className={
-                  existingKmReq.status === "Approved" ? "text-green-600 font-black" :
-                  existingKmReq.status === "Rejected" ? "text-rose-600 font-black" :
-                  "text-amber-600 animate-pulse font-black"
-                }>
-                  {existingKmReq.status === "Approved" ? "✓ Approved" :
-                   existingKmReq.status === "Rejected" ? "❌ Rejected" :
-                   "⏳ Pending"}: +{existingKmReq.requested_value} KM
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Monthly Auto Cap Card */}
-        <div className="bg-white border border-slate-200 rounded-md shadow-2xs p-2 sm:p-2.5 flex items-center gap-2 hover:border-amber-300 transition-all">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shrink-0 shadow-2xs">
-            <Navigation className="w-4 h-4" />
-          </div>
-          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none">
-              MONTHLY AUTO CAP
-            </span>
-            <span className="text-[11px] sm:text-xs font-mono font-black text-slate-900 leading-tight">
-              ₹{(allowance.current_month_auto || 0).toLocaleString()} / ₹{((allowance.max_auto_per_month || 0) + approvedAuto).toLocaleString()}
-            </span>
-            <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden flex items-center">
-              <div 
-                className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
-                style={{ width: `${Math.max(allowance.current_month_auto ? 5 : 0, getProgressPercentage(allowance.current_month_auto || 0, ((allowance.max_auto_per_month || 0) + approvedAuto)))}%` }}
-              ></div>
-            </div>
-            {existingAutoReq && (
-              <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[8px] font-bold shrink-0">
-                <span className="text-slate-400">Request:</span>
-                <span className={
-                  existingAutoReq.status === "Approved" ? "text-green-600 font-black" :
-                  existingAutoReq.status === "Rejected" ? "text-rose-600 font-black" :
-                  "text-amber-600 animate-pulse font-black"
-                }>
-                  {existingAutoReq.status === "Approved" ? "✓ Approved" :
-                   existingAutoReq.status === "Rejected" ? "❌ Rejected" :
-                   "⏳ Pending"}: +₹{existingAutoReq.requested_value}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* Main Form container supporting dual layout */}
       <form onSubmit={handleFormSubmit} className="space-y-6">
@@ -3594,8 +3555,8 @@ export default function ExpensePage() {
               const isCurrentDateSubmitted = !!(date && allSubmittedDates.includes(date) && (!editExpenseId || date !== originalExpenseDate));
 
               return (
-                <div className="card-lte-primary bg-white shadow-sm">
-                  <div className="bg-slate-50 border-b border-gray-200 p-3 flex items-center justify-between">
+                <div className="bg-white border border-line rounded-xl shadow-2xs overflow-hidden">
+                  <div className="bg-[#F8FAFC] border-b border-line px-4 py-3 flex items-center justify-between">
                     <h3 className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-blue-600" />
                       Expense Date
@@ -3719,12 +3680,12 @@ export default function ExpensePage() {
                 const distOpts = Array.from(new Set([...rawDistOpts, hDist, "Jaipur", "Kota"])).filter(Boolean).filter(d => d !== "All");
 
                 return (
-                  <div key={leg.leg} className="bg-white text-xs mb-6 border border-slate-200 rounded-none shadow-2xs overflow-hidden border-t-4 border-t-[#4A6A8A]">
+                  <div key={leg.leg} className="bg-white text-xs mb-4 border border-line rounded-xl shadow-2xs overflow-hidden">
                     
                     {/* Leg Header with Solid Theme Styling */}
-                    <div className="px-4 py-2.5 bg-[#4A6A8A] text-white flex items-center justify-between border-b border-[#4A6A8A]">
+                    <div className="px-4 py-2.5 bg-[#4338CA] text-white flex items-center justify-between border-b border-[#4338CA]">
                       <h3 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2.5 m-0">
-                        <span className="h-5 px-2 rounded-none flex items-center justify-center text-[10px] font-black font-mono bg-white text-[#4A6A8A]">
+                        <span className="h-5 px-2 rounded-xl flex items-center justify-center text-[10px] font-black font-mono bg-white text-[#4338CA]">
                           #{legNum}
                         </span>
                         <span>Facility Visit {legNum}</span>
@@ -3733,7 +3694,7 @@ export default function ExpensePage() {
                         <button
                           type="button"
                           onClick={() => removeItinerary(leg.leg)}
-                          className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] uppercase px-2.5 py-1 rounded-none border-0 cursor-pointer flex items-center gap-1 transition-colors shadow-2xs"
+                          className="bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[10px] uppercase px-2.5 py-1 rounded-xl border-0 cursor-pointer flex items-center gap-1 transition-colors shadow-2xs"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> Remove Visit
                         </button>
@@ -3749,9 +3710,9 @@ export default function ExpensePage() {
                             key="In-District"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "In-District")}
-                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center ${
+                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-xl border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center ${
                               leg.travel_type === "In-District"
-                                ? "border-[#4A6A8A] bg-[#4A6A8A] text-white"
+                                ? "border-[#4338CA] bg-[#4338CA] text-white"
                                 : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                             }`}
                           >
@@ -3761,7 +3722,7 @@ export default function ExpensePage() {
                             key="Outdoor"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Outdoor")}
-                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center ${
+                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-xl border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center ${
                               leg.travel_type === "Outdoor"
                                 ? "border-amber-600 bg-amber-500 text-white"
                                 : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
@@ -3773,7 +3734,7 @@ export default function ExpensePage() {
                             key="Out of State"
                             type="button"
                             onClick={() => handleItineraryChange(leg.leg, "travel_type", "Out of State")}
-                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-none border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center whitespace-nowrap ${
+                            className={`px-1.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-extrabold rounded-xl border transition-all cursor-pointer shadow-2xs text-center flex items-center justify-center whitespace-nowrap ${
                               leg.travel_type === "Out of State"
                                 ? "border-purple-600 bg-purple-600 text-white font-bold"
                                 : "border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
@@ -3787,16 +3748,16 @@ export default function ExpensePage() {
                       {/* Locations Row (From and To side by side) */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* From Location block */}
-                        <div className="p-4 bg-white border border-slate-200 rounded-none space-y-3 shadow-2xs">
+                        <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-2xs">
                           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                             <div className="flex items-center gap-1.5">
-                              <div className="w-5 h-5 rounded-none bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold shrink-0">
+                              <div className="w-5 h-5 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold shrink-0">
                                 <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                               </div>
                               <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">STARTING LOCATION (FROM)</span>
                             </div>
                             {isFromLocked && (
-                              <span className="text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-none uppercase tracking-wider flex items-center gap-1">
+                              <span className="text-[9px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-xl uppercase tracking-wider flex items-center gap-1">
                                 🔒 AUTO-LOCKED (VISIT #{prevLeg?.leg} TO)
                               </span>
                             )}
@@ -3817,7 +3778,7 @@ export default function ExpensePage() {
                                     handleItineraryChange(leg.leg, "district_from", stateDists[0] || "");
                                     handleItineraryChange(leg.leg, "from", "");
                                   }}
-                                  className="input-lte font-semibold pr-8 border-purple-300 bg-purple-50/50 rounded-none shadow-2xs disabled:bg-slate-100 mb-2"
+                                  className="input-lte font-semibold pr-8 border-purple-300 bg-purple-50/50 rounded-xl shadow-2xs disabled:bg-slate-100 mb-2"
                                 >
                                   <option value="">Select From State</option>
                                   {ALL_INDIAN_STATES.map(st => (
@@ -3838,7 +3799,7 @@ export default function ExpensePage() {
                                     handleItineraryChange(leg.leg, "district_from", e.target.value);
                                     handleItineraryChange(leg.leg, "from", ""); // reset location on district change
                                   }}
-                                  className="input-lte font-semibold pr-8 border-slate-300 rounded-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                                  className="input-lte font-semibold pr-8 border-slate-300 rounded-xl shadow-2xs disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                                 >
                                   <option value="">Select District</option>
                                   {(leg.travel_type === "Out of State"
@@ -3872,7 +3833,7 @@ export default function ExpensePage() {
                                   readOnly
                                   disabled
                                   value={currentFrom}
-                                  className="input-lte font-semibold border-slate-300 rounded-none disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed shadow-2xs"
+                                  className="input-lte font-semibold border-slate-300 rounded-xl disabled:bg-slate-100 disabled:text-slate-600 disabled:cursor-not-allowed shadow-2xs"
                                 />
                               ) : isFirst && leg.travel_type === "In-District" ? (
                                 <div>
@@ -3882,7 +3843,7 @@ export default function ExpensePage() {
                                     value={leg.from}
                                     placeholder="e.g. My Home / My Room / Hotel Name..."
                                     onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                    className="input-lte font-semibold border-slate-300 rounded-none"
+                                    className="input-lte font-semibold border-slate-300 rounded-xl"
                                   />
                                   <p className="text-[10px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
                                     <span>⚠️</span>
@@ -3894,7 +3855,7 @@ export default function ExpensePage() {
                                   required
                                   value={leg.from}
                                   onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                  className="input-lte font-semibold border-slate-300 rounded-none"
+                                  className="input-lte font-semibold border-slate-300 rounded-xl"
                                 >
                                   <option value="">-- Select Hospital / Location --</option>
                                   {getFacilitiesForDistrict(leg.district_from).map((f: string, fIdx: number) => (
@@ -3908,7 +3869,7 @@ export default function ExpensePage() {
                                   value={leg.from}
                                   placeholder="Enter facility or location..."
                                   onChange={(e) => handleItineraryChange(leg.leg, "from", e.target.value)}
-                                  className="input-lte font-semibold border-slate-300 rounded-none"
+                                  className="input-lte font-semibold border-slate-300 rounded-xl"
                                 />
                               )}
                             </div>
@@ -3936,7 +3897,7 @@ export default function ExpensePage() {
                                     handleItineraryChange(leg.leg, "district", stateDists[0] || "");
                                     handleItineraryChange(leg.leg, "to", "");
                                   }}
-                                  className="input-lte font-semibold pr-8 border-purple-300 bg-purple-50/50 rounded-none shadow-2xs mb-2"
+                                  className="input-lte font-semibold pr-8 border-purple-300 bg-purple-50/50 rounded-xl shadow-2xs mb-2"
                                 >
                                   <option value="">Select State</option>
                                   {ALL_INDIAN_STATES.map(st => (
@@ -3957,7 +3918,7 @@ export default function ExpensePage() {
                                     handleItineraryChange(leg.leg, "district", e.target.value);
                                     handleItineraryChange(leg.leg, "to", ""); // reset location on district change
                                   }}
-                                  className="input-lte font-semibold pr-8 border-slate-300 rounded-none shadow-2xs disabled:bg-slate-100 disabled:text-slate-500"
+                                  className="input-lte font-semibold pr-8 border-slate-300 rounded-xl shadow-2xs disabled:bg-slate-100 disabled:text-slate-500"
                                 >
                                   <option value="">Select District</option>
                                   {(leg.travel_type === "Out of State" || (leg.dest_state && leg.dest_state !== leg.state)
@@ -3989,7 +3950,7 @@ export default function ExpensePage() {
                                   required
                                   value={leg.to}
                                   onChange={(e) => handleItineraryChange(leg.leg, "to", e.target.value)}
-                                  className="input-lte font-semibold border-slate-300 rounded-none"
+                                  className="input-lte font-semibold border-slate-300 rounded-xl"
                                 >
                                   <option value="">-- Select Hospital / Location --</option>
                                   {getFacilitiesForDistrict(leg.district).map((f: string, fIdx: number) => (
@@ -4003,7 +3964,7 @@ export default function ExpensePage() {
                                   value={leg.to}
                                   placeholder="Enter facility or location..."
                                   onChange={(e) => handleItineraryChange(leg.leg, "to", e.target.value)}
-                                  className="input-lte font-semibold border-slate-300 rounded-none"
+                                  className="input-lte font-semibold border-slate-300 rounded-xl"
                                 />
                               )}
                             </div>
@@ -4014,7 +3975,7 @@ export default function ExpensePage() {
                       {/* Travel Mode, KM and Amount details */}
                       <div className="border-t border-slate-200 pt-4 space-y-3">
                         <h4 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider leading-none flex items-center gap-1.5">
-                          <Navigation className="w-3.5 h-3.5 text-[#4A6A8A]" />
+                          <Navigation className="w-3.5 h-3.5 text-[#4338CA]" />
                           TRAVEL DETAILS
                         </h4>
                         
@@ -4025,7 +3986,7 @@ export default function ExpensePage() {
                               value={leg.mode}
                               required
                               onChange={(e) => handleItineraryChange(leg.leg, "mode", e.target.value)}
-                              className="input-lte font-bold border-slate-300 rounded-none"
+                              className="input-lte font-bold border-slate-300 rounded-xl"
                             >
                               <option value="">Select Travel Mode</option>
                               {[
@@ -4054,9 +4015,9 @@ export default function ExpensePage() {
                                 disabled={leg.mode !== "Bike" && leg.mode !== "Car"}
                                 placeholder="0"
                                 onChange={(e) => handleItineraryChange(leg.leg, "km", e.target.value)}
-                                className="input-lte rounded-none font-mono disabled:bg-slate-100 disabled:text-slate-500 border-slate-300"
+                                className="input-lte rounded-xl font-mono disabled:bg-slate-100 disabled:text-slate-500 border-slate-300"
                               />
-                              <span className="inline-flex items-center rounded-none border border-l-0 border-slate-300 bg-slate-100 px-3 text-slate-700 text-[10px] font-mono font-bold uppercase shrink-0">
+                              <span className="inline-flex items-center rounded-xl border border-l-0 border-slate-300 bg-slate-100 px-3 text-slate-700 text-[10px] font-mono font-bold uppercase shrink-0">
                                 KM
                               </span>
                             </div>
@@ -4064,8 +4025,8 @@ export default function ExpensePage() {
 
                           <div>
                             <label className="label-lte">Fare Amount {leg.mode !== "" && <span className="text-red-500">*</span>}</label>
-                            <div className="flex rounded-none shadow-2xs">
-                              <span className="inline-flex items-center rounded-none border border-r-0 border-slate-300 bg-slate-100 px-3 text-slate-700 text-xs font-mono font-bold shrink-0">
+                            <div className="flex rounded-xl shadow-2xs">
+                              <span className="inline-flex items-center rounded-xl border border-r-0 border-slate-300 bg-slate-100 px-3 text-slate-700 text-xs font-mono font-bold shrink-0">
                                 ₹
                               </span>
                               <input
@@ -4077,7 +4038,7 @@ export default function ExpensePage() {
                                 disabled={leg.mode === "Bike" || leg.mode === "Car"}
                                 placeholder="0"
                                 onChange={(e) => handleItineraryChange(leg.leg, "amount", e.target.value)}
-                                className="input-lte rounded-none font-mono disabled:bg-slate-100 disabled:text-slate-500 border-slate-300"
+                                className="input-lte rounded-xl font-mono disabled:bg-slate-100 disabled:text-slate-500 border-slate-300"
                               />
                             </div>
                           </div>
@@ -4576,7 +4537,7 @@ export default function ExpensePage() {
                       <div className="border-t border-slate-200 pt-4 flex flex-col gap-3">
                         <div>
                           <label className="label-lte font-extrabold text-[10px] uppercase tracking-wider text-slate-500 block mb-1.5">VISIT ACTIVITIES / TASKS</label>
-                          <div className="flex flex-wrap gap-x-6 gap-y-2.5 bg-slate-50 p-3 rounded-none border border-slate-200 shadow-2xs">
+                          <div className="flex flex-wrap gap-x-6 gap-y-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-2xs">
                             {/* We check if calibration user or regular */}
                             {(() => {
                               const isCalib = (user?.designation || "").toLowerCase().includes("calibration");
@@ -4587,7 +4548,7 @@ export default function ExpensePage() {
                                       type="checkbox"
                                       checked={true}
                                       disabled={true}
-                                      className="rounded-none text-[#4A6A8A] focus:ring-0 w-4 h-4"
+                                      className="rounded-xl text-[#4338CA] focus:ring-0 w-4 h-4"
                                     />
                                     <span>Calibration</span>
                                   </label>
@@ -4607,7 +4568,7 @@ export default function ExpensePage() {
                               return options.map(opt => {
                                 const checked = (leg.selected_activities || []).includes(opt.val);
                                 return (
-                                  <label key={opt.val} className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer hover:text-[#4A6A8A] transition-colors select-none">
+                                  <label key={opt.val} className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer hover:text-[#4338CA] transition-colors select-none">
                                     <input
                                       type="checkbox"
                                       checked={checked}
@@ -4621,7 +4582,7 @@ export default function ExpensePage() {
                                         }
                                         handleItineraryChange(leg.leg, "selected_activities", next);
                                       }}
-                                      className="rounded-none text-[#4A6A8A] focus:ring-0 w-4 h-4 cursor-pointer"
+                                      className="rounded-xl text-[#4338CA] focus:ring-0 w-4 h-4 cursor-pointer"
                                     />
                                     <span>{opt.label}</span>
                                   </label>
@@ -5650,7 +5611,7 @@ export default function ExpensePage() {
         <div className="bg-gradient-to-br from-white via-slate-50/50 to-slate-100/50 border border-slate-200/90 rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col gap-4 text-xs font-semibold mt-6 w-full">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-[#4A6A8A] flex items-center justify-center text-white shadow-2xs">
+              <div className="w-7 h-7 rounded-lg bg-[#4338CA] flex items-center justify-center text-white shadow-2xs">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
@@ -5736,37 +5697,37 @@ export default function ExpensePage() {
         {/* Visit Activities Metrics Summary Grid of Box Cards */}
         <div className="mt-3 grid grid-cols-6 gap-1.5 w-full text-xs font-semibold">
           {/* Card 1: Calls Attended */}
-          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md">
+          <div className="bg-white border border-gray-200 rounded-xl rounded-xl p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Attended</span>
             <span className="text-gray-900 font-mono font-black text-xs leading-none">{totalCallsAttended}</span>
           </div>
 
           {/* Card 2: Calls Closed */}
-          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-green-500">
+          <div className="bg-white border border-gray-200 rounded-xl rounded-xl p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-green-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Closed</span>
             <span className="text-green-700 font-mono font-black text-xs leading-none">{totalCallsClosed}</span>
           </div>
 
           {/* Card 3: PMs Done */}
-          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-amber-500">
+          <div className="bg-white border border-gray-200 rounded-xl rounded-xl p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-amber-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">PMs</span>
             <span className="text-amber-700 font-mono font-black text-xs leading-none">{totalPmsDone}</span>
           </div>
 
           {/* Card 4: Assets Tagged */}
-          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-emerald-500">
+          <div className="bg-white border border-gray-200 rounded-xl rounded-xl p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-emerald-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Tagged</span>
             <span className="text-emerald-700 font-mono font-black text-xs leading-none">{totalAssetsTagged}</span>
           </div>
 
           {/* Card 5: Mobilise Assets */}
-          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-indigo-500">
+          <div className="bg-white border border-gray-200 rounded-xl rounded-xl p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-indigo-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Mobilise</span>
             <span className="text-indigo-700 font-mono font-black text-xs leading-none">{totalMobiliseAsset}</span>
           </div>
 
           {/* Card 6: Calibrations */}
-          <div className="bg-white border border-gray-200 sharp-card rounded-none p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-purple-500">
+          <div className="bg-white border border-gray-200 rounded-xl rounded-xl p-1 shadow-xs text-center flex flex-col justify-center items-center h-11 transition-all hover:shadow-md border-t-2 border-t-purple-500">
             <span className="text-gray-400 uppercase text-[6px] tracking-wider font-black mb-0.5 block leading-tight">Calib</span>
             <span className="text-purple-700 font-mono font-black text-xs leading-none">{totalCalibration}</span>
           </div>
@@ -5774,63 +5735,50 @@ export default function ExpensePage() {
 
       </form>
 
-      {/* Full Width Bottom Section: Recent Submissions table with Ant Design Tabs and Filters */}
-      <Card
-        className="sharp-card rounded-none border-slate-200/80 shadow-xs overflow-hidden mt-6"
-        bodyStyle={{ padding: 0 }}
+      {/* Full Width Bottom Section: My Claims Register (Pure Zoho Expense Sheets) */}
+      <div
+        className="bg-white rounded-2xl border border-line overflow-hidden mt-6 shadow-xs"
+        style={{
+          boxShadow: "0 10px 30px -5px rgba(30, 27, 75, 0.04), 0 4px 12px -2px rgba(30, 27, 75, 0.02)",
+        }}
       >
-        {/* Card Header with Sharp Tab Switcher */}
-        <div className="px-4 py-3 bg-[#4A6A8A] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#4A6A8A]">
-          <div className="flex items-center gap-2">
-            <FileText className="text-white w-4 h-4" />
-            <h3 className="text-xs font-black text-white uppercase tracking-wider m-0">MY CLAIMS DASHBOARD</h3>
+        {/* Card Header with Solid Theme Styling */}
+        <div className="px-5 py-3.5 bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-line/40">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center text-white shrink-0">
+              <FileText className="text-white w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-black text-white uppercase tracking-wider m-0">MY EXPENSE CLAIMS REGISTER</h3>
+              <p className="text-[10px] text-white/70 font-medium m-0">Review submitted expense sheets & operational claims</p>
+            </div>
           </div>
           
-          {/* Custom Sharp Tab Buttons */}
-          <div className="flex gap-1.5 bg-black/20 p-1 rounded-lg border border-white/10">
-            <button
-              type="button"
-              onClick={() => { setActiveClaimsTab("sheets"); setMyClaimsPage(1); }}
-              className={`px-3 py-1 text-xs font-extrabold rounded-md transition-all cursor-pointer ${
-                activeClaimsTab === "sheets"
-                  ? "bg-white text-[#4A6A8A] shadow-xs"
-                  : "bg-transparent text-white/80 hover:bg-white/10"
-              }`}
-            >
-              Expense Sheets ({getFilteredClaims().length})
-            </button>
-            <button
-              type="button"
-              onClick={() => { setActiveClaimsTab("legs"); setMyClaimsPage(1); }}
-              className={`px-3 py-1 text-xs font-extrabold rounded-md transition-all cursor-pointer ${
-                activeClaimsTab === "legs"
-                  ? "bg-white text-[#4A6A8A] shadow-xs"
-                  : "bg-transparent text-white/80 hover:bg-white/10"
-              }`}
-            >
-              Legs Details ({getFilteredLegs().length})
-            </button>
+          <div className="flex items-center gap-2">
+            <span className="bg-white/15 text-white font-mono text-xs font-bold px-3 py-1 rounded-lg border border-white/20">
+              Total Sheets: {getFilteredClaims().length}
+            </span>
           </div>
         </div>
 
         {/* High-Density Responsive Filter Toolbar */}
-        <div className="p-3 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="p-3.5 bg-surface-sunken border-b border-line flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Box with Non-Overlapping Magnifying Glass */}
           <div className="relative w-full md:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
+            <Search className="w-4 h-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
             <input
               type="text"
-              placeholder="Search code, route, amount..."
+              placeholder="Search claim code, route, amount..."
               value={claimsSearch}
               onChange={(e) => { setClaimsSearch(e.target.value); setMyClaimsPage(1); }}
               style={{ paddingLeft: "2.25rem", paddingRight: "2rem" }}
-              className="w-full h-9 rounded-lg font-semibold text-xs border border-slate-300 bg-white shadow-2xs focus:border-blue-500 focus:outline-none"
+              className="w-full h-9 rounded-xl font-semibold text-xs border border-line bg-white shadow-2xs focus:border-accent-500 focus:outline-none"
             />
             {claimsSearch && (
               <button
                 type="button"
                 onClick={() => { setClaimsSearch(""); setMyClaimsPage(1); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 border-0 bg-transparent cursor-pointer text-xs font-bold"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600 border-0 bg-transparent cursor-pointer text-xs font-bold"
               >
                 ✕
               </button>
@@ -5840,11 +5788,11 @@ export default function ExpensePage() {
           {/* Filters Grid with Full Width Option Support */}
           <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
             <div className="flex flex-col gap-0.5 w-full md:w-auto">
-              <span className="text-[8.5px] font-extrabold uppercase text-slate-500 tracking-wider">MONTH</span>
+              <span className="text-[8.5px] font-extrabold uppercase text-ink-500 tracking-wider">MONTH</span>
               <select
                 value={claimsMonthFilter}
                 onChange={(e) => { setClaimsMonthFilter(e.target.value); setMyClaimsPage(1); }}
-                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-slate-300 bg-white rounded-lg cursor-pointer focus:border-blue-500 focus:outline-none"
+                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-line bg-white rounded-lg cursor-pointer focus:border-accent-500 focus:outline-none"
               >
                 <option value="all">All Months</option>
                 {getUniqueMonths().map(m => (
@@ -5854,11 +5802,11 @@ export default function ExpensePage() {
             </div>
 
             <div className="flex flex-col gap-0.5 w-full md:w-auto">
-              <span className="text-[8.5px] font-extrabold uppercase text-slate-500 tracking-wider">STATUS</span>
+              <span className="text-[8.5px] font-extrabold uppercase text-ink-500 tracking-wider">STATUS</span>
               <select
                 value={claimsStatusFilter}
                 onChange={(e) => { setClaimsStatusFilter(e.target.value as any); setMyClaimsPage(1); }}
-                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-slate-300 bg-white rounded-lg cursor-pointer focus:border-blue-500 focus:outline-none"
+                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-line bg-white rounded-lg cursor-pointer focus:border-accent-500 focus:outline-none"
               >
                 <option value="all">All Status</option>
                 <option value="draft">Draft</option>
@@ -5870,11 +5818,11 @@ export default function ExpensePage() {
             </div>
 
             <div className="flex flex-col gap-0.5 w-full md:w-auto">
-              <span className="text-[8.5px] font-extrabold uppercase text-slate-500 tracking-wider">SORT</span>
+              <span className="text-[8.5px] font-extrabold uppercase text-ink-500 tracking-wider">SORT</span>
               <select
                 value={claimsSortOrder}
                 onChange={(e) => { setClaimsSortOrder(e.target.value as any); setMyClaimsPage(1); }}
-                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-slate-300 bg-white rounded-lg cursor-pointer focus:border-blue-500 focus:outline-none"
+                className="w-full md:w-32 h-8 px-2 text-[11px] font-bold border border-line bg-white rounded-lg cursor-pointer focus:border-accent-500 focus:outline-none"
               >
                 <option value="date_desc">Newest</option>
                 <option value="date_asc">Oldest</option>
@@ -5892,108 +5840,54 @@ export default function ExpensePage() {
           ) : (
             (() => {
               const filteredClaims = getFilteredClaims();
-              const filteredLegs = getFilteredLegs();
-              const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
-              const totalItems = itemsList.length;
-              const slicedItems = itemsList.slice((myClaimsPage - 1) * myClaimsPageSize, myClaimsPage * myClaimsPageSize);
+              const totalItems = filteredClaims.length;
+              const slicedItems = filteredClaims.slice((myClaimsPage - 1) * myClaimsPageSize, myClaimsPage * myClaimsPageSize);
 
               if (totalItems === 0) {
                 return (
-                  <div className="py-12 text-center text-slate-400 text-xs font-bold uppercase tracking-wider">
-                    No matching claim records found.
+                  <div className="py-12 text-center text-ink-400 text-xs font-bold uppercase tracking-wider">
+                    No matching expense sheets recorded.
                   </div>
                 );
               }
 
-              if (activeClaimsTab === "sheets") {
-                return (
-                  <>
-                    <div className="overflow-x-auto w-full border border-slate-200 shadow-2xs rounded-none">
-                      <table className="hidden md:table table-lte w-full text-xs min-w-[850px]">
-                        <thead>
-                          <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
-                            <th className="py-2.5 px-3 text-left">Claim ID</th>
-                            <th className="py-2.5 px-3 text-left">Date</th>
-                            <th className="py-2.5 px-3 text-left">Purpose</th>
-                            <th className="py-2.5 px-3 text-left">Travel Mode</th>
-                            <th className="py-2.5 px-3 text-left">Amount</th>
-                            <th className="py-2.5 px-3 text-left">Status</th>
-                            <th className="py-2.5 px-3 text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {slicedItems.map((exp: any) => (
-                            <tr
-                              key={exp.id}
-                              onClick={() => handleViewDetails(exp.id)}
-                              className="hover:bg-slate-50 cursor-pointer transition-colors"
-                            >
-                              <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{exp.expense_code}</td>
-                              <td className="py-3 px-3 text-slate-600 font-medium whitespace-nowrap">{exp.itinerary}</td>
-                              <td className="py-3 px-3 font-semibold text-slate-800 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description}</td>
-                              <td className="py-3 px-3 text-slate-600 whitespace-nowrap">{exp.travel_mode}</td>
-                              <td className="py-3 px-3 font-black text-slate-900 whitespace-nowrap text-blue-700">₹{exp.amount.toLocaleString()}</td>
-                              <td className="py-3 px-3 whitespace-nowrap">
-                                {renderAntdStatusTag(exp.status)}
-                              </td>
-                              <td className="py-3 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                                {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
-                                  <Space size="small">
-                                    <Button
-                                      size="small"
-                                      type="primary"
-                                      icon={<EditOutlined />}
-                                      onClick={() => handleEditFromModal(exp.id)}
-                                      className="bg-amber-500 hover:bg-amber-600 font-bold text-[10px] border-0"
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      size="small"
-                                      danger
-                                      icon={<CloseCircleOutlined />}
-                                      onClick={() => handleDeleteClaim(exp.id)}
-                                      className="font-bold text-[10px]">
-                                       Cancel
-                                     </Button>
-                                  </Space>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Mobile Card List View */}
-                    <div className="block md:hidden space-y-3 text-xs">
-                      {slicedItems.map((exp: any) => (
-                        <div
-                          key={exp.id}
-                          onClick={() => handleViewDetails(exp.id)}
-                          className={`rounded-xl p-3.5 space-y-3 transition-all cursor-pointer text-xs ${getCardStatusClass(exp.status)}`}
-                        >
-                          <div className="flex justify-between items-center border-b border-slate-100 pb-2 flex-wrap gap-1">
-                            <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{exp.expense_code}</span>
-                            {renderAntdStatusTag(exp.status)}
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            <div>
-                              <span className="text-slate-400 font-bold uppercase text-[9px] block">Travel Date</span>
-                              <span className="text-slate-700 font-semibold">{exp.itinerary}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 font-bold uppercase text-[9px] block">Travel Mode</span>
-                              <span className="text-slate-700 font-semibold">{exp.travel_mode || "Other"}</span>
-                            </div>
-                            <div>
-                              <span className="text-slate-400 font-bold uppercase text-[9px] block">Total Claimed</span>
-                              <span className="text-slate-900 font-black text-sm text-blue-700">₹{exp.amount.toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                              {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
-                                <>
+              return (
+                <>
+                  <div className="overflow-x-auto w-full border border-line shadow-2xs rounded-xl">
+                    <table className="hidden md:table table-lte w-full text-xs min-w-[850px]">
+                      <thead>
+                        <tr className="bg-surface-sunken text-ink-700 text-[10px] uppercase font-bold tracking-wider border-b border-line">
+                          <th className="py-2.5 px-3.5 text-left">Claim ID</th>
+                          <th className="py-2.5 px-3 text-left">Travel Date</th>
+                          <th className="py-2.5 px-3 text-left">Purpose / Summary</th>
+                          <th className="py-2.5 px-3 text-left">Mode</th>
+                          <th className="py-2.5 px-3 text-left">Claimed Amount</th>
+                          <th className="py-2.5 px-3 text-left">Status</th>
+                          <th className="py-2.5 px-3.5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-line/60 bg-white">
+                        {slicedItems.map((exp: any) => (
+                          <tr
+                            key={exp.id}
+                            onClick={() => handleViewDetails(exp.id)}
+                            className="hover:bg-surface-sunken/60 cursor-pointer transition-colors"
+                          >
+                            <td className="py-3 px-3.5 font-bold font-mono text-accent-700 uppercase whitespace-nowrap">{exp.expense_code}</td>
+                            <td className="py-3 px-3 text-ink-600 font-medium whitespace-nowrap">{exp.itinerary}</td>
+                            <td className="py-3 px-3 font-semibold text-ink-900 truncate max-w-[200px] whitespace-nowrap" title={exp.description}>{exp.description || "Operational field visit"}</td>
+                            <td className="py-3 px-3 text-ink-600 whitespace-nowrap">
+                              <span className="bg-surface-sunken px-2 py-0.5 rounded border border-line font-medium text-[11px]">
+                                {exp.travel_mode || "Standard"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 font-black text-ink-900 whitespace-nowrap font-mono text-xs text-accent-700">₹{exp.amount.toLocaleString()}</td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              {renderAntdStatusTag(exp.status)}
+                            </td>
+                            <td className="py-3 px-3.5 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") ? (
+                                <Space size="small">
                                   <Button
                                     size="small"
                                     type="primary"
@@ -6011,134 +5905,85 @@ export default function ExpensePage() {
                                     className="font-bold text-[10px]">
                                        Cancel
                                      </Button>
-                                </>
+                                </Space>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewDetails(exp.id)}
+                                  className="text-[11px] font-semibold text-accent-600 hover:text-accent-700 bg-accent-50 border border-accent-200 px-2.5 py-1 rounded-md transition-colors"
+                                >
+                                  View Details
+                                </button>
                               )}
-                            </div>
-                          </div>
-
-                          {exp.description && (
-                            <div className="border-t border-slate-100 pt-2 text-[10px]">
-                              <span className="text-slate-400 font-bold uppercase text-[8px] block">Purpose / Work Summary</span>
-                              <p className="text-slate-700 font-medium mt-0.5 truncate m-0">{exp.description}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                );
-              } else {
-                return (
-                  <>
-                    <div className="overflow-x-auto w-full border border-slate-200 shadow-2xs rounded-none">
-                      <table className="hidden md:table table-lte w-full text-xs min-w-[1100px]">
-                        <thead>
-                          <tr className="bg-slate-800 text-slate-100 text-[9px] uppercase font-black tracking-wider border-b border-slate-700">
-                            <th className="py-2.5 px-3 text-left">Parent ID</th>
-                            <th className="py-2.5 px-3 text-left">Travel Date</th>
-                            <th className="py-2.5 px-3 text-center">Leg</th>
-                            <th className="py-2.5 px-3 text-left">Route</th>
-                            <th className="py-2.5 px-3 text-left">Mode</th>
-                            <th className="py-2.5 px-3 text-right">KM</th>
-                            <th className="py-2.5 px-3 text-right">Fare</th>
-                            <th className="py-2.5 px-3 text-right">DA</th>
-                            <th className="py-2.5 px-3 text-right">Hotel</th>
-                            <th className="py-2.5 px-3 text-right">Local Purchase</th>
-                            <th className="py-2.5 px-3 text-right">Other</th>
-                            <th className="py-2.5 px-3 text-left">Purpose</th>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {slicedItems.map((leg: any, idx: number) => {
-                            const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
-                            return (
-                              <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                <td className="py-3 px-3 font-semibold font-mono text-indigo-600 uppercase whitespace-nowrap">{leg.parentCode}</td>
-                                <td className="py-3 px-3 text-slate-500 whitespace-nowrap">{leg.parentDate}</td>
-                                <td className="py-3 px-3 text-center font-bold text-slate-400 whitespace-nowrap">
-                                  <Tag color="blue" className="font-bold text-[10px] uppercase">Visit {leg.leg}</Tag>
-                                </td>
-                                <td className="py-3 px-3 whitespace-nowrap">
-                                  <span className="font-bold text-slate-800">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                  <span className="text-[9px] text-slate-400 block">{leg.from || "Start"} → {leg.to || "End"}</span>
-                                </td>
-                                <td className="py-3 px-3 whitespace-nowrap">
-                                  <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{leg.mode || "Other"}</span>
-                                  {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 ml-1">+{leg.sub_mode}</span>}
-                                </td>
-                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-650 whitespace-nowrap">{leg.km || 0} KM</td>
-                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.amount) || 0).toLocaleString()}</td>
-                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.da) || 0).toLocaleString()}</td>
-                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.hotel) || 0).toLocaleString()}</td>
-                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
-                                  ₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()}
-                                  {leg.local_purchase_remark && (
-                                    <span className="text-[9.5px] text-amber-700 font-sans block font-normal truncate max-w-[120px]" title={leg.local_purchase_remark}>"{leg.local_purchase_remark}"</span>
-                                  )}
-                                </td>
-                                <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}</td>
-                                <td className="py-3 px-3 text-slate-600 max-w-[150px] truncate whitespace-nowrap" title={leg.visit_purpose}>{leg.visit_purpose || "Field visit"}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                    {/* Mobile Card List View */}
-                    <div className="block md:hidden space-y-3 text-xs">
-                      {slicedItems.map((leg: any, idx: number) => {
-                        const hasSub = leg.sub_mode && (parseFloat(leg.sub_amount) || 0) > 0;
-                        return (
-                          <div
-                            key={idx}
-                            className={`rounded-xl p-3.5 space-y-3 transition-all cursor-pointer text-xs ${getCardStatusClass(leg.parentStatus)}`}
-                          >
-                            <div className="flex justify-between items-center border-b border-slate-100 pb-2">
-                              <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">{leg.parentCode}</span>
-                              <Tag color="blue" className="font-bold text-[10px] px-2 py-0.5 rounded-full uppercase">Visit {leg.leg}</Tag>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-[11px]">
-                              <div>
-                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Travel Date</span>
-                                <span className="text-slate-700 font-semibold">{leg.parentDate}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Route</span>
-                                <span className="text-slate-800 font-bold block leading-tight">{leg.from_district === leg.to_district ? leg.to_district : `${leg.from_district} → ${leg.to_district}`}</span>
-                                <span className="text-[9px] text-slate-400 block mt-0.5">{leg.from || "Start"} → {leg.to || "End"}</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Mode / Distance</span>
-                                <span className="text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 inline-block mr-1">{leg.mode || "Other"}</span>
-                                {hasSub && <span className="text-[9px] font-bold uppercase bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100 inline-block mr-1">+{leg.sub_mode}</span>}
-                                <span className="text-slate-700 font-semibold">{leg.km || 0} KM</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Fare / DA / Hotel</span>
-                                <span className="text-slate-700 font-semibold">
-                                  ₹{(parseFloat(leg.amount) || 0).toLocaleString()} / ₹{(parseFloat(leg.da) || 0).toLocaleString()} / ₹{(parseFloat(leg.hotel) || 0).toLocaleString()}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Local Purchase / Other</span>
-                                <span className="text-slate-700 font-semibold">
-                                  ₹{(parseFloat(leg.local_purchase) || 0).toLocaleString()} / ₹{(parseFloat(leg.other_amount) || 0).toLocaleString()}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 font-bold uppercase text-[9px] block">Purpose</span>
-                                <span className="text-slate-600 font-semibold leading-snug block">{leg.visit_purpose || "Field visit"}</span>
-                              </div>
-                            </div>
+                  {/* Mobile Card List View */}
+                  <div className="block md:hidden space-y-3 text-xs">
+                    {slicedItems.map((exp: any) => (
+                      <div
+                        key={exp.id}
+                        onClick={() => handleViewDetails(exp.id)}
+                        className="rounded-xl p-3.5 space-y-3 transition-all cursor-pointer text-xs border border-line bg-white shadow-2xs hover:border-accent-300"
+                      >
+                        <div className="flex justify-between items-center border-b border-line/60 pb-2 flex-wrap gap-1">
+                          <span className="font-extrabold font-mono text-accent-700 text-xs uppercase">{exp.expense_code}</span>
+                          {renderAntdStatusTag(exp.status)}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div>
+                            <span className="text-ink-400 font-bold uppercase text-[9px] block">Travel Date</span>
+                            <span className="text-ink-700 font-semibold">{exp.itinerary}</span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                );
-              }
+                          <div>
+                            <span className="text-ink-400 font-bold uppercase text-[9px] block">Travel Mode</span>
+                            <span className="text-ink-700 font-semibold">{exp.travel_mode || "Other"}</span>
+                          </div>
+                          <div>
+                            <span className="text-ink-400 font-bold uppercase text-[9px] block">Total Claimed</span>
+                            <span className="text-ink-900 font-black text-sm font-mono text-accent-700">₹{exp.amount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            {(exp.status === "draft" || exp.status === "submitted" || exp.status === "returned_to_draft") && (
+                              <>
+                                <Button
+                                  size="small"
+                                  type="primary"
+                                  icon={<EditOutlined />}
+                                  onClick={() => handleEditFromModal(exp.id)}
+                                  className="bg-amber-500 hover:bg-amber-600 font-bold text-[10px] border-0"
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  size="small"
+                                  danger
+                                  icon={<CloseCircleOutlined />}
+                                  onClick={() => handleDeleteClaim(exp.id)}
+                                  className="font-bold text-[10px]">
+                                     Cancel
+                                   </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {exp.description && (
+                          <div className="border-t border-line/60 pt-2 text-[10px]">
+                            <span className="text-ink-400 font-bold uppercase text-[8px] block">Purpose / Work Summary</span>
+                            <p className="text-ink-700 font-medium mt-0.5 truncate m-0">{exp.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
             })()
           )}
         </div>
@@ -6147,14 +5992,12 @@ export default function ExpensePage() {
         {!claimsLoading && (
           (() => {
             const filteredClaims = getFilteredClaims();
-            const filteredLegs = getFilteredLegs();
-            const itemsList = activeClaimsTab === "sheets" ? filteredClaims : filteredLegs;
-            const totalItems = itemsList.length;
+            const totalItems = filteredClaims.length;
 
             if (totalItems === 0) return null;
 
             return (
-              <div className="px-5 py-3.5 border-t border-slate-200/80 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 mb-2 md:mb-0">
+              <div className="px-5 py-3.5 border-t border-line bg-surface-sunken flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-ink-500 mb-2 md:mb-0">
                 <span>Showing {((myClaimsPage - 1) * myClaimsPageSize) + 1} to {Math.min(myClaimsPage * myClaimsPageSize, totalItems)} of {totalItems} entries</span>
                 <Pagination
                   current={myClaimsPage}
@@ -6166,27 +6009,23 @@ export default function ExpensePage() {
                       setMyClaimsPageSize(size);
                     }
                   }}
-                  onShowSizeChange={(_, size) => {
-                    setMyClaimsPageSize(size);
-                    setMyClaimsPage(1);
-                  }}
-                  showSizeChanger={true}
-                  pageSizeOptions={["10", "25", "50", "100"]}
+                  showSizeChanger
+                  pageSizeOptions={["5", "10", "20", "50"]}
                   size="small"
                 />
               </div>
             );
           })()
         )}
-      </Card>
+      </div>
       </div>
 
       {/* ================= STEP 3 CONFIRMATION SUBMIT DIALOG ================= */}
       {showConfirmModal && (
         <div className="modal-lte-overlay z-[99999]">
-          <div className="modal-lte-content max-w-md p-0 overflow-hidden rounded-none border border-slate-300 shadow-2xl bg-white">
+          <div className="modal-lte-content max-w-md p-0 overflow-hidden rounded-xl border border-slate-300 shadow-2xl bg-white">
             {/* Solid Theme Header */}
-            <div className="px-4 py-3 bg-[#4A6A8A] text-white flex items-center justify-between border-b border-[#4A6A8A]">
+            <div className="px-4 py-3 bg-[#4338CA] text-white flex items-center justify-between border-b border-[#4338CA]">
               <h3 className="text-xs font-black uppercase tracking-wider text-white m-0 flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-white" />
                 <span>CONFIRM REIMBURSEMENT SUBMISSION</span>
@@ -6195,7 +6034,7 @@ export default function ExpensePage() {
 
             <div className="p-4 space-y-4 text-xs font-semibold">
               {/* Breakdown Details Card */}
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-none space-y-2 shadow-2xs">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 shadow-2xs">
                 <div className="flex items-center justify-between text-slate-700">
                   <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider">TRAVEL DATE</span>
                   <span className="font-extrabold text-slate-900 font-mono">{formatToDDMMYYYY(date)}</span>
@@ -6232,7 +6071,7 @@ export default function ExpensePage() {
                 )}
                 <div className="border-t border-slate-200 pt-2 mt-2 flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase text-slate-900 tracking-wider">TOTAL CLAIM AMOUNT</span>
-                  <span className="text-[#4A6A8A] font-black font-mono text-base">₹{totalAmt.toLocaleString()}</span>
+                  <span className="text-[#4338CA] font-black font-mono text-base">₹{totalAmt.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -6242,7 +6081,7 @@ export default function ExpensePage() {
                 const totalDA = baseLocDeductions.items.reduce((s, i) => s + i.daDeducted, 0);
                 const totalDeducted = totalTA + totalDA;
                 return (
-                  <div className="rounded-none border border-amber-300 overflow-hidden shadow-2xs">
+                  <div className="rounded-xl border border-amber-300 overflow-hidden shadow-2xs">
                     {/* Card Header */}
                     <div className="bg-amber-600 px-3.5 py-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -6251,7 +6090,7 @@ export default function ExpensePage() {
                           Policy Deductions Summary
                         </span>
                       </div>
-                      <span className="bg-white/20 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-none">
+                      <span className="bg-white/20 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-xl">
                         -₹{totalDeducted.toFixed(0)}
                       </span>
                     </div>
@@ -6268,12 +6107,12 @@ export default function ExpensePage() {
                           </p>
                           <div className="flex gap-2 flex-wrap">
                             {item.taDeducted > 0 && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-none border border-rose-200 font-mono">
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-xl border border-rose-200 font-mono">
                                 Commute TA: -₹{item.taDeducted.toFixed(0)}
                               </span>
                             )}
                             {item.daDeducted > 0 && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-none border border-rose-200 font-mono">
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-xl border border-rose-200 font-mono">
                                 Base Location DA: -₹{item.daDeducted.toFixed(0)}
                               </span>
                             )}
@@ -6295,7 +6134,7 @@ export default function ExpensePage() {
                 );
               })()}
 
-              <div className="p-3 bg-blue-50/80 border border-blue-200 text-blue-900 rounded-none flex items-start gap-2 text-[11px] leading-relaxed font-medium shadow-2xs">
+              <div className="p-3 bg-blue-50/80 border border-blue-200 text-blue-900 rounded-xl flex items-start gap-2 text-[11px] leading-relaxed font-medium shadow-2xs">
                 <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <p>
                   {totalAmt <= 0
@@ -6311,7 +6150,7 @@ export default function ExpensePage() {
                   type="button"
                   onClick={() => setShowConfirmModal(false)}
                   disabled={submitting}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold uppercase tracking-wider py-2 px-5 rounded-none border border-slate-300 shadow-2xs cursor-pointer text-xs transition-colors"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold uppercase tracking-wider py-2 px-5 rounded-xl border border-slate-300 shadow-2xs cursor-pointer text-xs transition-colors"
                 >
                   CANCEL
                 </button>
@@ -6319,7 +6158,7 @@ export default function ExpensePage() {
                   type="button"
                   onClick={doSubmit}
                   disabled={submitting}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-wider py-2 px-6 rounded-none shadow-2xs border border-emerald-600 flex items-center justify-center gap-2 cursor-pointer text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-accent-600 hover:bg-accent-700 text-white font-black uppercase tracking-wider py-2.5 px-6 rounded-xl shadow-xs border border-accent-600 flex items-center justify-center gap-2 cursor-pointer text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? (
                     <>
@@ -6342,7 +6181,7 @@ export default function ExpensePage() {
       {/* ================= SUBMISSION STATUS MODAL (SUCCESS/ERROR) ================= */}
       {submitStatus && (
         <div className="modal-lte-overlay z-[99999]">
-          <div className="modal-lte-content max-w-sm p-0 overflow-hidden rounded-none shadow-2xl border border-slate-300 bg-white">
+          <div className="modal-lte-content max-w-sm p-0 overflow-hidden rounded-xl shadow-2xl border border-slate-300 bg-white">
 
             {/* Solid Header Strip */}
             <div className={`px-6 pt-5 pb-4 text-center ${
@@ -6352,7 +6191,7 @@ export default function ExpensePage() {
                   : "bg-emerald-600"
                 : "bg-rose-600"
             }`}>
-              <div className="mx-auto w-12 h-12 rounded-none bg-white/20 flex items-center justify-center mb-2.5 border border-white/30 shadow-2xs">
+              <div className="mx-auto w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-2.5 border border-white/30 shadow-2xs">
                 {submitStatus.type === "success"
                   ? <ShieldCheck className="h-6 w-6 text-white" />
                   : <AlertTriangle className="h-6 w-6 text-white" />
@@ -6362,7 +6201,7 @@ export default function ExpensePage() {
                 {submitStatus.type === "success" ? submitStatus.title : "SUBMISSION FAILED"}
               </h3>
               {submitStatus.type === "success" && submitStatus.claimCode && (
-                <p className="mt-1.5 inline-block bg-white/25 text-white font-mono text-[11px] font-bold px-3 py-1 rounded-none tracking-widest uppercase border border-white/30 shadow-2xs">
+                <p className="mt-1.5 inline-block bg-white/25 text-white font-mono text-[11px] font-bold px-3 py-1 rounded-xl tracking-widest uppercase border border-white/30 shadow-2xs">
                   #{submitStatus.claimCode}
                 </p>
               )}
@@ -6372,7 +6211,7 @@ export default function ExpensePage() {
             <div className="px-5 py-4 bg-white space-y-4 text-xs font-semibold">
 
               {/* Main Message */}
-              <p className="text-xs text-slate-700 font-semibold leading-relaxed text-center bg-slate-50 p-3 rounded-none border border-slate-200 shadow-2xs">
+              <p className="text-xs text-slate-700 font-semibold leading-relaxed text-center bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-2xs">
                 {submitStatus.message}
               </p>
 
@@ -6381,7 +6220,7 @@ export default function ExpensePage() {
                 const totalTA = submitStatus.deductions.items.reduce((s, i) => s + i.taDeducted, 0);
                 const totalDA = submitStatus.deductions.items.reduce((s, i) => s + i.daDeducted, 0);
                 return (
-                  <div className="rounded-none border border-amber-300 overflow-hidden shadow-2xs">
+                  <div className="rounded-xl border border-amber-300 overflow-hidden shadow-2xs">
                     {/* Card Header */}
                     <div className="bg-amber-600 px-3 py-1.5 flex items-center gap-2">
                       <AlertTriangle className="w-3.5 h-3.5 text-white shrink-0" />
@@ -6401,12 +6240,12 @@ export default function ExpensePage() {
                           </p>
                           <div className="flex gap-2 flex-wrap">
                             {item.taDeducted > 0 && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-none border border-rose-200 font-mono">
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-xl border border-rose-200 font-mono">
                                 TA -₹{item.taDeducted.toFixed(0)}
                               </span>
                             )}
                             {item.daDeducted > 0 && (
-                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-none border border-rose-200 font-mono">
+                              <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 text-[9px] font-bold px-2 py-0.5 rounded-xl border border-rose-200 font-mono">
                                 DA -₹{item.daDeducted.toFixed(0)}
                               </span>
                             )}
@@ -6431,7 +6270,7 @@ export default function ExpensePage() {
                 onClick={() => {
                   setSubmitStatus(null);
                 }}
-                className={`w-full py-2.5 px-4 rounded-none text-xs font-black uppercase tracking-wider transition-all border cursor-pointer shadow-2xs flex items-center justify-center gap-2 ${
+                className={`w-full py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all border cursor-pointer shadow-2xs flex items-center justify-center gap-2 ${
                   submitStatus.type === "success"
                     ? submitStatus.title === "Auto Approved!"
                       ? "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
@@ -6546,7 +6385,7 @@ export default function ExpensePage() {
       {/* ================= CUSTOM VALIDATION WARNING MODAL ================= */}
       {validationModal.show && (
         <div className="modal-lte-overlay z-[99999]">
-          <div className="modal-lte-content max-w-md w-full bg-white sharp-card rounded-none shadow-2xl p-5 border border-red-100 transform transition-all duration-300 scale-100 flex flex-col gap-4">
+          <div className="modal-lte-content max-w-md w-full bg-white rounded-xl rounded-xl shadow-2xl p-5 border border-red-100 transform transition-all duration-300 scale-100 flex flex-col gap-4">
             {/* Header Icon + Title */}
             <div className="flex items-center gap-3 pb-2 border-b border-red-50">
               <span className="w-10 h-10 rounded-full bg-rose-50 text-rose-500 border border-rose-100 flex items-center justify-center text-lg shrink-0">

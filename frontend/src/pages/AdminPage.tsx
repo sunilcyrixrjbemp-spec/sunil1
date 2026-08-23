@@ -6,7 +6,31 @@ import { authService } from "../services/authService";
 import { formatToIST } from "../utils/timezone";
 import { safeStorageSetItem } from "../utils/safeStorage";
 
-import { UploadCloud, Pencil, Trash2, Plus, Download, Zap } from "lucide-react";
+import { 
+  UploadCloud, 
+  Pencil, 
+  Trash2, 
+  Plus, 
+  Download, 
+  Zap, 
+  Users, 
+  ShieldCheck, 
+  BarChart3, 
+  Settings, 
+  Building2, 
+  MessageCircle, 
+  ChevronRight, 
+  Search, 
+  RefreshCw, 
+  FileSpreadsheet, 
+  LogOut, 
+  Lock, 
+  Unlock, 
+  AlertTriangle, 
+  X, 
+  Check,
+  LucideIcon
+} from "lucide-react";
 import ResetApprovalLevelModal from "../components/admin/ResetApprovalLevelModal";
 import { 
   Table, 
@@ -19,23 +43,13 @@ import {
 import { SaaSDonutChart } from "../components/common/SaaSCharts";
 
 import { 
-  PlusOutlined, 
   EditOutlined, 
   LogoutOutlined, 
-  ControlOutlined,
-  FileExcelOutlined,
-  UserOutlined,
-  SafetyCertificateOutlined,
-  DatabaseOutlined,
-  TeamOutlined,
-  SettingOutlined,
-  BarChartOutlined,
-  PieChartOutlined,
-  ReloadOutlined
+  PieChartOutlined
 } from "@ant-design/icons";
 
 const LteSpinner = () => (
-  <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-blue-600 inline-block mr-1.5 shrink-0"></span>
+  <span className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-200 border-t-accent-600 inline-block mr-1.5 shrink-0"></span>
 );
 
 const parseSelectedLocations = (raw: string, availableOptions: string[] = []): string[] => {
@@ -106,12 +120,12 @@ const MultiSelectDropdown = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between input-lte text-left cursor-pointer bg-white min-h-[38px] px-3 py-1.5 border border-gray-300 rounded shadow-sm focus:outline-none"
+        className="w-full flex items-center justify-between input-lte text-left cursor-pointer bg-surface min-h-[36px] px-3 py-1.5 border border-line rounded-md shadow-none focus:border-accent-600 focus:outline-none"
       >
-        <span className="block truncate text-xs font-semibold text-gray-700">
+        <span className="block truncate text-xs font-semibold text-ink-700">
           {cleanSelected.length > 0 ? cleanSelected.join(", ") : placeholder}
         </span>
-        <span className="ml-2 flex items-center pointer-events-none text-gray-500">
+        <span className="ml-2 flex items-center pointer-events-none text-ink-400">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
           </svg>
@@ -119,17 +133,17 @@ const MultiSelectDropdown = ({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-md bg-white shadow-lg border border-gray-200 max-h-60 overflow-y-auto py-1 text-xs">
+        <div className="absolute z-50 mt-1 w-full rounded-lg bg-surface shadow-md border border-line max-h-60 overflow-y-auto py-1 text-xs animate-scale-up">
           {cleanOptions.map((opt) => (
             <label
               key={opt}
-              className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer select-none text-gray-700 font-medium"
+              className="flex items-center px-3 py-2 hover:bg-surface-sunken cursor-pointer select-none text-ink-700 font-medium transition-colors"
             >
               <input
                 type="checkbox"
                 checked={cleanSelected.includes(opt)}
                 onChange={() => handleToggle(opt)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 mr-2"
+                className="rounded border-line text-accent-600 focus:ring-accent-600 h-4 w-4 mr-2.5 cursor-pointer"
               />
               <span>{opt}</span>
             </label>
@@ -186,7 +200,14 @@ const normalizeDateToYYYYMMDD = (dateStr: any): string => {
   return s;
 };
 
-const GALLERY_COLORS = ["#2f5bb7", "#2b7d50", "#d28b2a", "#854aa5", "#d83b01", "#00a2ad", "#e81123"];
+const getInitials = (name: string) => {
+  if (!name) return "U";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const LEDGER_CHART_COLORS = ["#4338CA", "#0F7A4C", "#B7791F", "#7C3AED", "#0E7490", "#B3261E", "#3B82F6"];
 
 const ALL_WINDOWS = [
   { id: "home", name: "Home" },
@@ -208,11 +229,68 @@ const ALL_WINDOWS = [
   { id: "profile", name: "Profile" }
 ];
 
+type AdminTab = "users" | "approvals" | "analytics" | "settings" | "facilities" | "whatsapp";
+
+interface NavItemConfig {
+  id: AdminTab;
+  label: string;
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+}
+
+const NAV_ITEMS: NavItemConfig[] = [
+  { 
+    id: "users", 
+    label: "Users Directory", 
+    icon: Users,
+    title: "Users Directory",
+    subtitle: "Manage employee roster, credential updates, bulk approvals, and permissions."
+  },
+  { 
+    id: "approvals", 
+    label: "Role Mappings", 
+    icon: ShieldCheck,
+    title: "Role Mappings & Approval Hierarchy",
+    subtitle: "Configure team approval sequences, requester bindings, and multi-tier routing lines."
+  },
+  { 
+    id: "analytics", 
+    label: "Analytics Dashboard", 
+    icon: BarChart3,
+    title: "Workforce Analytics & Distributions",
+    subtitle: "Interactive distribution charts and governance KPIs with real-time filters."
+  },
+  { 
+    id: "settings", 
+    label: "System Settings", 
+    icon: Settings,
+    title: "System Settings & Allowance Master",
+    subtitle: "Configure submission windows, monthly cutoff rules, auto-expiry logic, and TA/DA rates."
+  },
+  { 
+    id: "facilities", 
+    label: "Facilities & No TA/DA", 
+    icon: Building2,
+    title: "Facilities Directory & Policy Exception Master",
+    subtitle: "Manage Expense Page facilities (facility_details) and No TA/DA policy exceptions (no_ta_da_hospitals)."
+  },
+  { 
+    id: "whatsapp", 
+    label: "WhatsApp Gateway", 
+    icon: MessageCircle,
+    title: "WhatsApp Bot & Pairing Code Console",
+    subtitle: "Connect company WhatsApp gateway with 8-digit pairing code and configure automated event dispatches."
+  },
+];
+
 export default function AdminPage() {
   const [adminUserPageSize, setAdminUserPageSize] = useState(25);
-  const [activeTab, setActiveTab] = useState<"users" | "approvals" | "analytics" | "settings" | "facilities">((() => {
-    return (localStorage.getItem("admin_active_tab") as "users" | "approvals" | "analytics" | "settings" | "facilities") || "users";
+  const [activeTab, setActiveTab] = useState<AdminTab>((() => {
+    return (localStorage.getItem("admin_active_tab") as AdminTab) || "users";
   }));
+
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const [standardFacilities, setStandardFacilities] = useState<any[]>([]);
   const [waPhoneNumber, setWaPhoneNumber] = useState("9037962828");
@@ -349,7 +427,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleTabChange = (tab: "users" | "approvals" | "analytics" | "settings" | "facilities") => {
+  const handleTabChange = (tab: AdminTab) => {
     setActiveTab(tab);
     localStorage.setItem("admin_active_tab", tab);
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -359,6 +437,7 @@ export default function AdminPage() {
       fetchFacilities();
     }
   };
+
   const [users, setUsers] = useState<any[]>(() => {
     try {
       const cached = localStorage.getItem("cache_admin_users");
@@ -526,10 +605,6 @@ export default function AdminPage() {
     fetchInitialData();
   }, []);
 
-
-
-  // No auto-population of allowedWindows by role. By default no window is mapped unless explicitly checked.
-
   const fetchInitialData = async () => {
     const cachedUsers = localStorage.getItem("cache_admin_users");
     const cachedDropdowns = localStorage.getItem("cache_dropdowns");
@@ -582,13 +657,30 @@ export default function AdminPage() {
     }
   };
 
+  const handleSyncData = async () => {
+    setIsSyncing(true);
+    try {
+      await fetchInitialData();
+      if (activeTab === "facilities") {
+        await fetchFacilities();
+      } else if (activeTab === "settings") {
+        await fetchAllowanceRates();
+      }
+      toast.success("✓ Governance data synchronized with D1 database!");
+    } catch (e: any) {
+      toast.error("Failed to sync data: " + (e.message || "Unknown error"));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingSettings(true);
     setError(null);
     try {
       await adminService.saveSettings(settings);
-      alert("System Settings saved successfully!");
+      toast.success("System Settings saved successfully!");
     } catch (err: any) {
       setError(getErrorMessage(err, "Failed to save system settings."));
     } finally {
@@ -596,7 +688,6 @@ export default function AdminPage() {
     }
   };
 
-  // Filter eligible managers, zonal managers, and coordinators dynamically from the database users
   const getEligibleManagers = () => {
     return users;
   };
@@ -609,7 +700,6 @@ export default function AdminPage() {
     return users;
   };
 
-  // Handle Zone Change to update District
   const handleZoneChange = (zName: string) => {
     setZone(zName);
     if (zName === "All") {
@@ -694,7 +784,6 @@ export default function AdminPage() {
   };
 
   const handleForceLogoutAll = async () => {
-    if (!window.confirm("Are you sure you want to force logout ALL users in the system? They will be logged out instantly on their next action.")) return;
     try {
       await adminService.logoutAllUsers();
       toast.success("All active user sessions have been invalidated successfully.");
@@ -704,7 +793,6 @@ export default function AdminPage() {
   };
 
   const handleForceLogoutSingle = async (userCode: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to force logout user '${name}' (${userCode})?`)) return;
     try {
       await adminService.logoutSingleUser(userCode);
       toast.success(`User '${name}' session has been invalidated.`);
@@ -879,7 +967,6 @@ export default function AdminPage() {
     document.body.removeChild(link);
   };
 
-  // CSV parser for compulsory fields
   const handleCSVFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1296,7 +1383,6 @@ export default function AdminPage() {
   };
 
   const handleDeleteHierarchy = async (hqId: number) => {
-    if (!window.confirm("Are you sure you want to delete this approval hierarchy team configuration?")) return;
     try {
       await adminService.deleteHierarchy(hqId);
       toast.success("Hierarchy deleted successfully.");
@@ -1451,9 +1537,6 @@ export default function AdminPage() {
     }
   };
 
-
-
-  // Helper to filter users for charts
   const getFilteredUsersForCharts = () => {
     return safeUsers.filter(u => {
       if (chartRoleFilter !== "all" && u.role?.toLowerCase() !== chartRoleFilter.toLowerCase()) return false;
@@ -1463,14 +1546,12 @@ export default function AdminPage() {
     });
   };
 
-  // Districts available for the currently selected zone (for the filter dropdown)
   const chartZoneDistricts = Array.from(
     new Set(safeUsers
       .filter(u => chartZoneFilter === "all" || u.zone?.trim().toLowerCase() === chartZoneFilter.toLowerCase())
       .map(u => u.district?.trim()).filter(Boolean))
   ).sort((a, b) => a!.localeCompare(b!));
 
-  // Helper to group long distribution lists into Top N + "Others" to prevent label overlapping
   const groupTopItems = (list: { name: string; value: number }[], topN: number = 6) => {
     if (list.length <= topN) return list;
     const top = list.slice(0, topN);
@@ -1482,7 +1563,6 @@ export default function AdminPage() {
     return top;
   };
 
-  // 1. Calculate District-wise distribution
   const getDistrictData = () => {
     const counts: Record<string, number> = {};
     getFilteredUsersForCharts().forEach(u => {
@@ -1495,7 +1575,6 @@ export default function AdminPage() {
     return groupTopItems(sorted, 6);
   };
 
-  // 2. Calculate Designation-wise distribution
   const getDesignationData = () => {
     const counts: Record<string, number> = {};
     getFilteredUsersForCharts().forEach(u => {
@@ -1508,7 +1587,6 @@ export default function AdminPage() {
     return groupTopItems(sorted, 6);
   };
 
-  // 3. Calculate Zone-wise distribution
   const getZoneData = () => {
     const counts: Record<string, number> = {};
     getFilteredUsersForCharts().forEach(u => {
@@ -1521,7 +1599,6 @@ export default function AdminPage() {
     return groupTopItems(sorted, 6);
   };
 
-  // 4. Calculate Manager-wise distribution
   const getManagerData = () => {
     const counts: Record<string, number> = {};
     getFilteredUsersForCharts().forEach(u => {
@@ -1538,1595 +1615,1680 @@ export default function AdminPage() {
   const zmList = getEligibleZonalManagers();
   const cList = getEligibleCoordinators();
 
+  const currentTabConfig = NAV_ITEMS.find(n => n.id === activeTab) || NAV_ITEMS[0];
+  const CurrentSectionIcon = currentTabConfig.icon;
+
+  const getNavCount = (tabId: AdminTab) => {
+    if (tabId === "users") return users.length;
+    if (tabId === "approvals") return hierarchies.length;
+    if (tabId === "facilities") return standardFacilities.length + noTaDaHospitals.length;
+    return undefined;
+  };
+
   return (
     <>
-      <div className="space-y-4 text-[#212529] animate-fadeIn p-2 sm:p-4 pb-32 sm:pb-24 lg:pb-8 max-w-[1600px] mx-auto min-h-screen font-sans">
-        
-        {/* Compact Actionable Governance Quick Metrics & Controls Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          
-          {/* Card 1: Total & Active Roster */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all">
-            <div className="min-w-0">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none">Total Employees</span>
-              <div className="flex items-baseline gap-1.5 mt-1">
-                <span className="text-sm sm:text-base font-mono font-black text-slate-900 leading-none">{users.length}</span>
-                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
-                  {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active
-                </span>
-              </div>
-            </div>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold shrink-0">
-              <UserOutlined className="text-xs" />
-            </div>
+      <div className="min-h-screen bg-canvas text-ink-900 font-sans pb-24 sm:pb-16 lg:pb-8 animate-fadeIn">
+        {/* ================= TOP CONTEXT BAR ================= */}
+        <header className="bg-surface border-b border-line px-4 sm:px-6 py-2.5 sticky top-0 z-30 flex items-center justify-between gap-3 shadow-none">
+          {/* Breadcrumbs */}
+          <div className="flex items-center gap-1.5 text-xs text-ink-500 font-medium">
+            <span className="text-ink-500 hover:text-ink-700 cursor-default">Admin Console</span>
+            <ChevronRight className="w-3.5 h-3.5 text-ink-300 shrink-0" />
+            <span className="text-ink-900 font-bold tracking-tight">{currentTabConfig.label}</span>
           </div>
 
-          {/* Card 2: Field vs Office Staff */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all">
-            <div className="min-w-0">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none">Role Breakdown</span>
-              <div className="flex items-center gap-1 mt-1 text-[10.5px] font-extrabold font-mono text-slate-800">
-                <span className="text-emerald-700 bg-emerald-50 px-1 rounded">{users.filter(u => u.role?.toLowerCase().includes('engineer')).length} Eng</span>
-                <span>·</span>
-                <span className="text-cyan-700 bg-cyan-50 px-1 rounded">{users.filter(u => u.role?.toLowerCase().includes('manager')).length} Mng</span>
-                <span>·</span>
-                <span className="text-amber-700 bg-amber-50 px-1 rounded">{users.filter(u => u.role?.toLowerCase().includes('admin')).length} Adm</span>
-              </div>
+          {/* Quick Filter Search & Instant D1 Synchronization */}
+          <div className="flex items-center gap-2">
+            <div className="relative hidden sm:block">
+              <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder={activeTab === "facilities" ? "Search facility / district..." : "Quick filter roster..."}
+                value={activeTab === "facilities" ? facilitySearch : userSearchTerm}
+                onChange={(e) => {
+                  if (activeTab === "facilities") setFacilitySearch(e.target.value);
+                  else setUserSearchTerm(e.target.value);
+                }}
+                className="input-lte pl-8 h-8 text-xs w-44 md:w-56 lg:w-64"
+              />
             </div>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
-              <TeamOutlined className="text-xs" />
-            </div>
-          </div>
 
-          {/* Card 3: Regional Coverage */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all">
-            <div className="min-w-0">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none">Regional Matrix</span>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-xs sm:text-sm font-mono font-black text-slate-900 leading-none">{availableUserZones.length} Zones</span>
-                <span className="text-[10px] text-slate-500 font-bold">({availableUserDistricts.length} Districts)</span>
-              </div>
-            </div>
-            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
-              <DatabaseOutlined className="text-xs" />
-            </div>
-          </div>
-
-          {/* Card 4: Unmapped Routing Audit & Quick Sync */}
-          <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex items-center justify-between shadow-2xs hover:shadow-sm transition-all">
-            <div className="min-w-0">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block leading-none">Hierarchy Rules</span>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-xs sm:text-sm font-mono font-black text-slate-900 leading-none">{hierarchies.length} Mapped</span>
-                {users.filter(u => !u.manager || u.manager === 'N/A').length > 0 && (
-                  <span className="text-[8.5px] font-extrabold text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-200">
-                    {users.filter(u => !u.manager || u.manager === 'N/A').length} Pending
-                  </span>
-                )}
-              </div>
-            </div>
             <button
               type="button"
-              onClick={() => {
-                fetchInitialData();
-                toast.success("Refreshed Governance Data!");
-              }}
-              className="w-7 h-7 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center font-bold shrink-0 cursor-pointer border-0 shadow-2xs transition-all active:scale-95"
-              title="Sync D1 Database"
+              onClick={handleSyncData}
+              disabled={isSyncing}
+              className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer"
+              title="Synchronize D1 Database"
             >
-              <ReloadOutlined className="text-xs text-white" />
+              <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${isSyncing ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{isSyncing ? "Syncing..." : "Sync D1"}</span>
             </button>
           </div>
+        </header>
 
-        </div>
+        {/* ================= MOBILE SUB-NAVIGATION PILLS (<768px) ================= */}
+        <nav className="block md:hidden bg-surface border-b border-line p-2 overflow-x-auto no-scrollbar sticky top-[45px] z-20">
+          <div className="flex items-center gap-1.5">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              const count = getNavCount(item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleTabChange(item.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-colors cursor-pointer ${
+                    isActive
+                      ? "bg-accent-600 text-white border-accent-600 shadow-none"
+                      : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span>{item.label}</span>
+                  {count !== undefined && count > 0 && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-2xs font-mono font-bold ${
+                      isActive ? "bg-white/20 text-white" : "bg-surface-sunken text-ink-600"
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
-        {/* Enterprise Ultra-Compact Segmented Tab Switcher Bar */}
-        <div className="bg-slate-200/70 p-1 rounded-xl flex flex-wrap sm:flex-nowrap gap-1 border border-slate-300/60 shadow-inner">
-          <button
-            type="button"
-            onClick={() => handleTabChange("users")}
-            className={`flex-1 py-1.5 px-2.5 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === "users"
-                ? "bg-white text-[#1e3a8a] shadow-xs scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
-            }`}
-          >
-            <TeamOutlined className="text-xs" />
-            <span>Users Directory ({users.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("approvals")}
-            className={`flex-1 py-1.5 px-2.5 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === "approvals"
-                ? "bg-white text-[#1e3a8a] shadow-xs scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
-            }`}
-          >
-            <SafetyCertificateOutlined className="text-xs" />
-            <span>Role Mappings ({hierarchies.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("analytics")}
-            className={`flex-1 py-1.5 px-2.5 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === "analytics"
-                ? "bg-white text-[#1e3a8a] shadow-xs scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
-            }`}
-          >
-            <BarChartOutlined className="text-xs" />
-            <span>Dashboard Charts</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("settings")}
-            className={`flex-1 py-1.5 px-2.5 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === "settings"
-                ? "bg-white text-[#1e3a8a] shadow-xs scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
-            }`}
-          >
-            <SettingOutlined className="text-xs" />
-            <span>System Settings</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("facilities")}
-            className={`flex-1 py-1.5 px-2.5 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              activeTab === "facilities"
-                ? "bg-white text-[#1e3a8a] shadow-xs scale-[1.01]"
-                : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
-            }`}
-          >
-            <DatabaseOutlined className="text-xs" />
-            <span>Facilities & No TA/DA ({standardFacilities.length + noTaDaHospitals.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("whatsapp" as any)}
-            className={`flex-1 py-1.5 px-2.5 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-1.5 whitespace-nowrap ${
-              (activeTab as any) === "whatsapp"
-                ? "bg-emerald-600 text-white shadow-xs scale-[1.01]"
-                : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>📲 WhatsApp Gateway</span>
-          </button>
-        </div>
-
-        {error && (
-          <Alert message={error} type="error" showIcon className="rounded-xl font-bold" />
-        )}
-
-        {activeTab === "users" ? (
-          /* ================= USERS LIST TAB ================= */
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
-            {/* Ultra-Compact High-Density Filters & Actions Bar */}
-            <div className="p-2 sm:p-2.5 border-b border-slate-200/90 bg-slate-50/90 space-y-2">
-              {/* Row 1: High-Density Filters */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2">
-                {/* Search Input */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Search</span>
-                  <input
-                    type="text"
-                    placeholder="Name, Code, Mobile..."
-                    value={userSearchTerm}
-                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                    className="w-full px-2 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7 leading-none"
-                  />
-                </div>
-
-                {/* Zone Filter */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Zone</span>
-                  <select
-                    value={userZoneFilter}
-                    onChange={(e) => {
-                      setUserZoneFilter(e.target.value);
-                      setUserDistrictFilter("all");
-                    }}
-                    className="w-full px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
-                  >
-                    <option value="all">All Zones ({availableUserZones.length})</option>
-                    {availableUserZones.map((z: string) => (
-                      <option key={z} value={z}>{z}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* District Filter */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">District</span>
-                  <select
-                    value={userDistrictFilter}
-                    onChange={(e) => setUserDistrictFilter(e.target.value)}
-                    className="w-full px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
-                  >
-                    <option value="all">All Districts ({availableUserDistricts.length})</option>
-                    {availableUserDistricts.map((d: string) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Manager Filter */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Manager</span>
-                  <select
-                    value={userManagerFilter}
-                    onChange={(e) => setUserManagerFilter(e.target.value)}
-                    className="w-full px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
-                  >
-                    <option value="all">All Managers ({availableUserManagers.length})</option>
-                    {availableUserManagers.map((m: string) => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Role Filter */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Role</span>
-                  <select
-                    value={userRoleFilter}
-                    onChange={(e) => setUserRoleFilter(e.target.value)}
-                    className="w-full px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
-                  >
-                    <option value="all">All Roles ({availableUserRoles.length})</option>
-                    {availableUserRoles.map((r: string) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Status Filter & Reset */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[8px] font-extrabold uppercase text-slate-400 leading-none">Status</span>
-                  <div className="flex items-center gap-1">
-                    <select
-                      value={userStatusFilter}
-                      onChange={(e) => setUserStatusFilter(e.target.value)}
-                      className="flex-1 min-w-0 px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none cursor-pointer shadow-2xs h-7 leading-none"
+        {/* ================= MAIN TWO-COLUMN ZOHO SHELL ================= */}
+        <div className="flex flex-col md:flex-row max-w-[1680px] mx-auto">
+          {/* Tablet 56px Collapsed Icon Rail (768px–1024px) */}
+          <aside className="hidden md:block lg:hidden w-14 shrink-0 bg-surface border-r border-line py-3 sticky top-[45px] h-[calc(100vh-45px)] overflow-y-auto">
+            <div className="flex flex-col items-center gap-1.5">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <div key={item.id} className="relative group">
+                    <button
+                      type="button"
+                      onClick={() => handleTabChange(item.id)}
+                      className={`w-10 h-10 rounded-md flex items-center justify-center transition-colors cursor-pointer border-0 ${
+                        isActive
+                          ? "bg-accent-50 text-accent-600 border-l-[3px] border-accent-600 rounded-l-none"
+                          : "bg-transparent text-ink-500 hover:bg-surface-sunken hover:text-ink-900"
+                      }`}
+                      title={item.label}
                     >
-                      <option value="all">All Status</option>
-                      {availableUserStatuses.map((st: string) => (
-                        <option key={st} value={st}>{st.toUpperCase()}</option>
-                      ))}
-                    </select>
+                      <Icon className="w-5 h-5" />
+                    </button>
+                    <div className="absolute left-14 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1 bg-ink-900 text-white text-xs font-semibold rounded-md shadow-md whitespace-nowrap hidden group-hover:block z-50 pointer-events-none">
+                      {item.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* Desktop 240px Persistent Sidebar (≥1024px) */}
+          <aside className="hidden lg:block w-60 shrink-0 bg-surface border-r border-line py-4 px-2.5 sticky top-[45px] h-[calc(100vh-45px)] overflow-y-auto">
+            <div className="px-3 pb-2 text-2xs font-bold uppercase tracking-wider text-ink-500">
+              Admin Console
+            </div>
+            <nav className="space-y-1">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                const count = getNavCount(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleTabChange(item.id)}
+                    className={`w-full h-10 px-3 flex items-center justify-between text-xs font-semibold rounded-md transition-colors cursor-pointer border-0 ${
+                      isActive
+                        ? "bg-[#EEF0FF] text-[#4338CA] font-semibold border-l-[3px] border-[#4338CA] rounded-l-none"
+                        : "bg-transparent text-ink-700 hover:bg-surface-sunken hover:text-ink-900 font-medium"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-[#4338CA]" : "text-ink-500"}`} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {count !== undefined && (
+                      <span className={`px-2 py-0.5 text-2xs font-mono font-bold rounded-full ${
+                        isActive
+                          ? "bg-accent-100 text-accent-700 border border-accent-400/30"
+                          : "bg-surface border border-line text-ink-600"
+                      }`}>
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          {/* Main Content Pane */}
+          <main className="flex-1 min-w-0 p-3 sm:p-5 lg:p-6 space-y-4">
+            {/* Standardized Content Pane Header */}
+            <div className="bg-surface border border-line rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-none">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center font-bold shrink-0 border border-accent-100">
+                  <CurrentSectionIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold font-display text-ink-900 leading-tight m-0">
+                    {currentTabConfig.title}
+                  </h2>
+                  <p className="text-xs text-ink-500 mt-0.5 font-medium m-0">
+                    {currentTabConfig.subtitle}
+                  </p>
+                </div>
+              </div>
+
+              {/* Top-Right Contextual Primary / Secondary Actions */}
+              <div className="flex flex-wrap items-center gap-2">
+                {activeTab === "users" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkUploadModal(true)}
+                      className="btn-lte-secondary text-xs h-8 px-3 flex items-center gap-1.5 cursor-pointer font-semibold"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5 text-ink-600" />
+                      <span>Bulk CSV</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
-                        setUserSearchTerm("");
-                        setUserZoneFilter("all");
-                        setUserDistrictFilter("all");
-                        setUserManagerFilter("all");
-                        setUserRoleFilter("all");
-                        setUserStatusFilter("all");
+                        setSingleUserError(null);
+                        setShowSingleUserModal(true);
                       }}
-                      className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-[10px] font-extrabold uppercase rounded-lg border border-slate-300 h-7 cursor-pointer transition-colors shrink-0"
+                      className="btn-lte-primary text-xs h-8 px-3.5 flex items-center gap-1.5 cursor-pointer font-bold"
                     >
-                      Reset
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Add User</span>
                     </button>
-                  </div>
-                </div>
-              </div>
+                  </>
+                )}
 
-              {/* Row 2: Actions & Count Row */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-200/80">
-                <div className="text-[10.5px] font-mono font-extrabold text-slate-600">
-                  Showing <span className="text-blue-700">{filteredUsers.length}</span> of {safeUsers.length} Employees
-                </div>
-
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={handleExportUsersExcel}
-                    className="px-2.5 py-1 bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-all h-7"
-                  >
-                    <FileExcelOutlined className="text-xs" />
-                    <span>Export Excel</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSingleUserError(null);
-                      setShowSingleUserModal(true);
-                    }}
-                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-all h-7"
-                  >
-                    <PlusOutlined className="text-xs" />
-                    <span>+ Single User</span>
-                  </button>
-                  <Popconfirm
-                    title="Force Logout All Users?"
-                    description="This will instantly invalidate session tokens for all users (except yourself)."
-                    onConfirm={handleForceLogoutAll}
-                    okText="Yes, Logout All"
-                    cancelText="Cancel"
-                    okButtonProps={{ danger: true, size: "small" }}
-                  >
+                {activeTab === "approvals" && (
+                  <>
                     <button
-                      className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-all h-7"
+                      type="button"
+                      onClick={() => setShowBulkHierarchyModal(true)}
+                      className="btn-lte-secondary text-xs h-8 px-3 flex items-center gap-1.5 cursor-pointer font-semibold"
                     >
-                      <LogoutOutlined className="text-xs" />
-                      <span>Force Logout All</span>
+                      <UploadCloud className="w-3.5 h-3.5 text-ink-600" />
+                      <span>Bulk Import</span>
                     </button>
-                  </Popconfirm>
-                </div>
-              </div>
-            </div>
-
-          {/* Ant Design Table Container */}
-          <div className="p-3">
-            {selectedUserIds.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 p-2.5 flex flex-wrap items-center justify-between gap-2 animate-fadeIn mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="bg-amber-600 text-white font-extrabold text-xs px-2 py-0.5 font-mono">
-                    {selectedUserIds.length} SELECTED
-                  </span>
-                  <span className="text-xs font-bold text-slate-700">Batch Bulk Approval Actions:</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleBatchToggleBulkApproval(true)}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-colors"
-                  >
-                    <span>⚡ Grant Bulk Approval Access</span>
-                  </button>
-                  <button
-                    onClick={() => handleBatchToggleBulkApproval(false)}
-                    className="px-3 py-1 bg-slate-600 hover:bg-slate-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs flex items-center gap-1 transition-colors"
-                  >
-                    <span>🔒 Revoke Bulk Approval Access</span>
-                  </button>
-                </div>
-              </div>
-            )}
-            {loading ? (
-              <div className="py-16 text-center bg-white border border-slate-300 rounded-none">
-                <Spin size="large" tip="Loading system employees database..." />
-              </div>
-            ) : (
-              <Table
-                dataSource={filteredUsers}
-                rowKey={(record) => record.user_id || record.e_code || record.id}
-                rowSelection={{
-                  selectedRowKeys: selectedUserIds,
-                  onChange: (keys) => setSelectedUserIds(keys)
-                }}
-                pagination={{
-                  pageSize: adminUserPageSize,
-                  onChange: (_, size) => setAdminUserPageSize(size),
-                  onShowSizeChange: (_, size) => setAdminUserPageSize(size),
-                  showSizeChanger: true,
-                  pageSizeOptions: ["10", "25", "50", "100"],
-                  showTotal: (total, range) => `Showing ${range[0]}-${range[1]} of ${total} employees`
-                }}
-                className="ant-table-striped"
-                scroll={{ x: 850 }}
-                columns={[
-                  {
-                    title: "EMP CODE",
-                    dataIndex: "e_code",
-                    key: "e_code",
-                    render: (code: string) => (
-                      <span className="bg-slate-100 text-slate-800 font-mono font-extrabold text-xs px-2.5 py-1 rounded-lg border border-slate-200/90 shadow-2xs">
-                        {code || "—"}
-                      </span>
-                    )
-                  },
-                  {
-                    title: "FULL NAME",
-                    dataIndex: "name",
-                    key: "name",
-                    render: (name: string, record: any) => (
-                      <div>
-                        <div className="font-extrabold text-slate-900 text-xs sm:text-sm leading-tight">{name}</div>
-                        <div className="text-[10px] font-extrabold text-slate-500 bg-slate-100/80 px-1.5 py-0.2 rounded w-fit mt-0.5 border border-slate-200/60 leading-none">
-                          {record.designation || "Engineer"}
-                        </div>
-                      </div>
-                    )
-                  },
-                  {
-                    title: "ROLE",
-                    dataIndex: "role",
-                    key: "role",
-                    render: (roleStr: string) => {
-                      const r = (roleStr || "").toLowerCase();
-                      let style = "bg-slate-100 text-slate-700 border-slate-200";
-                      if (r.includes("engineer")) style = "bg-teal-50 text-teal-700 border-teal-200";
-                      else if (r.includes("manager") || r.includes("zm")) style = "bg-blue-50 text-blue-700 border-blue-200";
-                      else if (r.includes("admin") || r.includes("mis")) style = "bg-amber-50 text-amber-700 border-amber-200";
-                      else if (r.includes("coordinator")) style = "bg-purple-50 text-purple-700 border-purple-200";
-
-                      return (
-                        <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-lg border ${style}`}>
-                          {roleStr || "—"}
-                        </span>
-                      );
-                    }
-                  },
-                  {
-                    title: "MOBILE / EMAIL",
-                    key: "contact",
-                    render: (_: any, record: any) => (
-                      <div className="space-y-0.5 text-xs">
-                        <div className="font-extrabold text-slate-800 font-mono text-[11.5px]">{record.mobile_number || "—"}</div>
-                        <div className="text-slate-400 font-mono text-[10px] truncate max-w-[170px]">{record.mail_id || "—"}</div>
-                      </div>
-                    )
-                  },
-                  {
-                    title: "DISTRICT / ZONE",
-                    key: "location",
-                    render: (_: any, record: any) => (
-                      <div className="space-y-0.5">
-                        <div className="font-extrabold text-slate-900 text-xs leading-tight">{record.district || "—"}</div>
-                        <span className="inline-block px-1.5 py-0.2 text-[8.5px] font-extrabold uppercase tracking-wider rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 leading-none">
-                          {record.zone || "NO ZONE"}
-                        </span>
-                      </div>
-                    )
-                  },
-                  {
-                    title: "STATUS",
-                    dataIndex: "user_status",
-                    key: "user_status",
-                    render: (status: string) => {
-                      const st = (status || "active").toLowerCase();
-                      if (st === "active") {
-                        return (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wider rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/90 shadow-2xs">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> ACTIVE
-                          </span>
-                        );
-                      }
-                      if (st === "locked") {
-                        return (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wider rounded-full bg-amber-50 text-amber-700 border border-amber-200/90 shadow-2xs">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> LOCKED
-                          </span>
-                        );
-                      }
-                      return (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wider rounded-full bg-rose-50 text-rose-700 border border-rose-200/90 shadow-2xs">
-                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> INACTIVE
-                        </span>
-                      );
-                    }
-                  },
-                  {
-                    title: "ACTIONS",
-                    key: "actions",
-                    align: "right",
-                    render: (_: any, record: any) => (
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenEditUserModal(record)}
-                          className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg transition-all cursor-pointer shadow-2xs"
-                          title="Edit User Profile"
-                        >
-                          <EditOutlined className="text-xs" />
-                        </button>
-                        <Popconfirm
-                          title="Force logout user?"
-                          description={`Log out ${record.name} from active session?`}
-                          onConfirm={() => handleForceLogoutSingle(record.user_id, record.name)}
-                          okText="Logout"
-                          cancelText="Cancel"
-                          okButtonProps={{ danger: true }}
-                        >
-                          <button
-                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg transition-all cursor-pointer shadow-2xs"
-                            title="Force Logout Session"
-                          >
-                            <LogoutOutlined className="text-xs" />
-                          </button>
-                        </Popconfirm>
-                      </div>
-                    )
-                  }
-                ]}
-              />
-            )}
-          </div>
-        </div>
-      ) : activeTab === "analytics" ? (
-        /* ================= ANALYTICS DASHBOARD TAB ================= */
-        <div className="space-y-4 animate-fadeIn">
-          {/* Filters Bar */}
-          <div className="bg-white border border-slate-300 rounded-none p-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider m-0">Dashboard Charts &amp; Analytics</h3>
-              <p className="text-slate-500 text-[10px] mt-0.5 font-bold">Interactive distribution charts with real-time zone &amp; role filtering.</p>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Role Filter */}
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] font-extrabold uppercase text-slate-600">Role:</label>
-                <select
-                  value={chartRoleFilter}
-                  onChange={(e) => setChartRoleFilter(e.target.value)}
-                  className="px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer h-8"
-                >
-                  <option value="all">All Roles</option>
-                  <option value="engineer">Engineer</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
-                  <option value="coordinator">Coordinator</option>
-                </select>
-              </div>
-
-              {/* Zone Filter */}
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] font-extrabold uppercase text-slate-600">Zone:</label>
-                <select
-                  value={chartZoneFilter}
-                  onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
-                  className="px-2 py-1 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none cursor-pointer h-8"
-                >
-                  <option value="all">All Zones</option>
-                  {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
-                    <option key={zone} value={zone}>{zone}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* District Filter (dependent on Zone) */}
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] font-extrabold uppercase text-slate-600">District:</label>
-                <select
-                  value={chartDistrictFilter}
-                  onChange={(e) => setChartDistrictFilter(e.target.value)}
-                  disabled={chartZoneFilter === "all"}
-                  className={`px-2 py-1 text-xs font-extrabold bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none h-8 ${
-                    chartZoneFilter === "all" ? "text-slate-400 cursor-not-allowed opacity-60" : "text-slate-900 cursor-pointer"
-                  }`}
-                >
-                  <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
-                  {chartZoneDistricts.map(d => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Zone-wise Donut Chart (Analysis Page Style) */}
-            <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <PieChartOutlined style={{ fontSize: 13 }} />
-                  ZONE DISTRIBUTION
-                </span>
-                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 font-bold">
-                  {getZoneData().reduce((s, x) => s + x.value, 0)} Total
-                </span>
-              </div>
-              <div className="p-3 flex flex-col justify-between" style={{ minHeight: 310 }}>
-                <SaaSDonutChart
-                  data={getZoneData().map((z, i) => ({
-                    name: z.name,
-                    value: z.value,
-                    count: z.value,
-                    color: GALLERY_COLORS[i % GALLERY_COLORS.length]
-                  }))}
-                  height={290}
-                  centerTitle="Total Users"
-                  valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                />
-              </div>
-            </div>
-
-            {/* District-wise Donut Chart (Analysis Page Style) */}
-            <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <PieChartOutlined style={{ fontSize: 13 }} />
-                  DISTRICT DISTRIBUTION
-                </span>
-                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 font-bold">
-                  {getDistrictData().reduce((s, x) => s + x.value, 0)} Total
-                </span>
-              </div>
-              <div className="p-3 flex flex-col justify-between" style={{ minHeight: 310 }}>
-                <SaaSDonutChart
-                  data={getDistrictData().map((d, i) => ({
-                    name: d.name,
-                    value: d.value,
-                    count: d.value,
-                    color: GALLERY_COLORS[i % GALLERY_COLORS.length]
-                  }))}
-                  height={290}
-                  centerTitle="Total Users"
-                  valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                />
-              </div>
-            </div>
-
-            {/* Manager-wise Donut Chart (Analysis Page Style) */}
-            <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <PieChartOutlined style={{ fontSize: 13 }} />
-                  MANAGER DISTRIBUTION
-                </span>
-                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 font-bold">
-                  {getManagerData().reduce((s, x) => s + x.value, 0)} Total
-                </span>
-              </div>
-              <div className="p-3 flex flex-col justify-between" style={{ minHeight: 310 }}>
-                <SaaSDonutChart
-                  data={getManagerData().map((m, i) => ({
-                    name: m.name,
-                    value: m.value,
-                    count: m.value,
-                    color: GALLERY_COLORS[i % GALLERY_COLORS.length]
-                  }))}
-                  height={290}
-                  centerTitle="Total Users"
-                  valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                />
-              </div>
-            </div>
-
-            {/* Designation-wise Donut Chart (Analysis Page Style) */}
-            <div className="bg-white border border-slate-300 rounded-none shadow-2xs overflow-hidden">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <PieChartOutlined style={{ fontSize: 13 }} />
-                  DESIGNATION DISTRIBUTION
-                </span>
-                <span className="text-[10px] font-mono bg-white/20 px-2 py-0.5 font-bold">
-                  {getDesignationData().reduce((s, x) => s + x.value, 0)} Total
-                </span>
-              </div>
-              <div className="p-3 flex flex-col justify-between" style={{ minHeight: 310 }}>
-                <SaaSDonutChart
-                  data={getDesignationData().map((d, i) => ({
-                    name: d.name,
-                    value: d.value,
-                    count: d.value,
-                    color: GALLERY_COLORS[i % GALLERY_COLORS.length]
-                  }))}
-                  height={290}
-                  centerTitle="Total Users"
-                  valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : activeTab === "approvals" ? (
-        /* ================= ROLE MAPPINGS TAB ================= */
-        <div className="space-y-3">
-          <div className="flex flex-wrap justify-between items-center bg-white border border-slate-200/90 rounded-xl p-2.5 sm:p-3 shadow-2xs gap-2">
-            <div>
-              <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider leading-none m-0">Team Hierarchy Mappings</h3>
-              <p className="text-slate-500 text-[10px] mt-0.5 font-semibold leading-none">Add approval groups with named requesters and level-by-level approvers flow.</p>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={handleExportHierarchies}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-extrabold uppercase tracking-wider rounded-lg border border-slate-200 cursor-pointer transition-all flex items-center gap-1 h-7"
-                title="Export all team hierarchies to CSV"
-              >
-                <Download className="w-3 h-3 text-[#4A6A8A]" />
-                Export CSV
-              </button>
-              <button
-                onClick={() => handleOpenHierarchyModal()}
-                className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs transition-all flex items-center gap-1 h-7"
-              >
-                + Create Team
-              </button>
-            </div>
-          </div>
-
-          {safeHierarchies.length === 0 ? (
-            <div className="bg-white border border-slate-200/90 rounded-xl p-6 text-center text-xs uppercase tracking-wider text-slate-400 font-extrabold shadow-2xs">
-              No team hierarchy configurations created. Click "+ Create Team" to define one.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-2.5">
-              {safeHierarchies.map((hq) => (
-                <div key={hq.id} className="bg-white border border-slate-200/90 rounded-xl p-3 shadow-2xs hover:shadow-sm transition-all space-y-2">
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-1.5">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-black text-slate-900 text-xs sm:text-sm m-0 uppercase tracking-wide">{hq.name}</h4>
-                      <span className="text-[9.5px] text-blue-700 bg-blue-50 px-2 py-0.2 rounded-full font-bold font-mono border border-blue-200">
-                        {hq.approvers.length} Levels Approval Sequence
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleOpenHierarchyModal(hq)}
-                        className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg transition-all cursor-pointer shadow-2xs"
-                        title="Edit Mappings"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteHierarchy(hq.id)}
-                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg transition-all cursor-pointer shadow-2xs"
-                        title="Delete Team"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Requesters Box */}
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Mapped Requesters ({hq.requesters.length}):</span>
-                    {hq.requesters.length === 0 ? (
-                      <span className="text-[10px] text-slate-400 font-semibold italic">No employees mapped</span>
-                    ) : (
-                      hq.requesters.map((r) => (
-                        <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10.5px] font-extrabold font-mono border border-slate-200/90">
-                          {r.user_name} <span className="text-slate-400 ml-1">({r.user_code})</span>
-                        </span>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Approvers Pipeline Flow */}
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1.5 border-t border-slate-100">
-                    <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Approval Sequence:</span>
-                    {hq.approvers.length === 0 ? (
-                      <span className="text-[10px] text-slate-400 font-semibold italic">No approvers mapped</span>
-                    ) : (
-                      hq.approvers.map((a, idx) => (
-                        <React.Fragment key={a.id}>
-                          {idx > 0 && <span className="text-slate-300 font-bold px-0.5 select-none font-mono">→</span>}
-                          <div className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 rounded-lg px-2 py-0.5 shadow-2xs">
-                            <span className="h-4.5 px-1.5 rounded bg-blue-600 text-white flex items-center justify-center text-[9.5px] font-mono font-black">
-                              L{a.level_number}
-                            </span>
-                            <div className="text-[11px] font-extrabold text-slate-800 leading-none">
-                              {a.approver_name} <span className="text-[9.5px] text-slate-500 font-normal">({a.approver_code})</span>
-                            </div>
-                          </div>
-                        </React.Fragment>
-                      ))
-                    )}
-                  </div>
-
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : activeTab === "settings" ? (
-        /* ================= SYSTEM SETTINGS TAB ================= */
-        <div className="space-y-4 animate-fadeIn max-w-5xl">
-          <div className="bg-white border border-slate-200/90 rounded-xl shadow-2xs p-3.5 space-y-3">
-            <div className="border-b border-slate-200 pb-2.5 flex items-center justify-between">
-              <div>
-                <h2 className="text-xs font-black text-slate-900 m-0 uppercase tracking-wider flex items-center gap-2 font-mono">
-                  <ControlOutlined className="text-blue-600" /> Global System Settings &amp; Policies
-                </h2>
-                <p className="text-slate-500 text-[10px] mt-0.5 font-semibold leading-none">
-                  Configure global expense submission windows, monthly cutoff dates, auto-approval rules, and grade allowance rates.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleSaveSettings} className="space-y-3">
-              
-              {/* Section 1: Expense Submission Policies */}
-              <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/90 space-y-2">
-                <span className="text-xs font-black uppercase tracking-wider text-blue-700 block border-b border-slate-200 pb-1 font-mono leading-none">
-                  1. Expense Submission Window &amp; Cutoff Policies
-                </span>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
-                      Allowed Past Days Submission Window *
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      required
-                      value={settings.max_past_days_limit || "15"}
-                      onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
-                      className="w-full px-2.5 py-1 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5"
-                      placeholder="e.g. 15"
-                    />
-                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
-                      Past calendar days allowed for engineers to log claims.
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
-                      Monthly Cutoff Day (of next month) *
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={28}
-                      required
-                      value={settings.monthly_cutoff_day || "3"}
-                      onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
-                      className="w-full px-2.5 py-1 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5"
-                      placeholder="e.g. 3"
-                    />
-                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
-                      Day of month after which previous month claims are blocked.
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Auto-Expiry & Approval System Rules */}
-              <div className="bg-slate-50/80 p-2.5 rounded-xl border border-slate-200/90 space-y-2">
-                <span className="text-xs font-black uppercase tracking-wider text-blue-700 block border-b border-slate-200 pb-1 font-mono leading-none">
-                  2. Auto-Approval / Expiry Rules &amp; Routing Levels
-                </span>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
-                      Pending Days Threshold *
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      required
-                      value={settings.pending_auto_expiry_days || "5"}
-                      onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
-                      className="w-full px-2.5 py-1 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5"
-                      placeholder="e.g. 5"
-                    />
-                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
-                      Days pending before system auto-action triggers (0 = disabled).
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
-                      Auto-Expiry Action Type *
-                    </label>
-                    <select
-                      value={settings.pending_auto_action || "approve"}
-                      onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
-                      className="w-full px-2 py-1 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5 cursor-pointer"
+                    <button
+                      type="button"
+                      onClick={handleExportHierarchies}
+                      className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 cursor-pointer font-semibold"
                     >
-                      <option value="approve">⚡ Auto Approve Current Level</option>
-                      <option value="reject">❌ Auto Reject Claim</option>
-                      <option value="disabled">🚫 Disabled (Manual Action Only)</option>
-                    </select>
-                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
-                      System behavior when threshold days are reached without manager action.
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
-                      Auto-Approve Target Routing Level
-                    </label>
-                    <select
-                      value={settings.auto_approve_target_level || "next_level"}
-                      onChange={(e) => setSettings({ ...settings, auto_approve_target_level: e.target.value })}
-                      className="w-full px-2 py-1 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5 cursor-pointer"
+                      <Download className="w-3.5 h-3.5 text-ink-600" />
+                      <span>Export CSV</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenHierarchyModal()}
+                      className="btn-lte-primary text-xs h-8 px-3.5 flex items-center gap-1.5 cursor-pointer font-bold"
                     >
-                      <option value="next_level">⏩ Forward to Next Manager Level (L1 → L2)</option>
-                      <option value="l1_only">1️⃣ Auto-Approve L1 Only</option>
-                      <option value="full_final">✅ Complete Final Auto-Approval (All Levels)</option>
-                    </select>
-                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
-                      Target destination level when auto-approved.
-                    </span>
-                  </div>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Create Team</span>
+                    </button>
+                  </>
+                )}
 
-                  <div>
-                    <label className="block text-[9px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5">
-                      Rejection Fallback Routing Level
-                    </label>
-                    <select
-                      value={settings.rejection_fallback_level || "creator"}
-                      onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
-                      className="w-full px-2 py-1 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-lg focus:border-blue-500 outline-none shadow-2xs h-7.5 cursor-pointer"
-                    >
-                      <option value="creator">↩️ Return to Submitter / Drafts (For Edit &amp; Re-submit)</option>
-                      <option value="previous_level">◀️ Return to Previous Manager Level</option>
-                      <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
-                    </select>
-                    <span className="text-[9.5px] text-slate-400 font-semibold mt-0.5 block leading-tight">
-                      Target destination when a claim is rejected.
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Allowance Master TA/DA Rates & Hotel Caps */}
-              <div className="bg-slate-50 p-3 rounded-none border border-slate-300 space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-300 pb-2">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-[#4A6A8A] block font-mono">
-                    3. Allowance Master — TA / DA Rates &amp; Hotel Caps
-                  </span>
+                {activeTab === "facilities" && (
                   <button
                     type="button"
-                    disabled={savingRates}
-                    onClick={handleSaveAllowanceRates}
-                    className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors disabled:opacity-60"
+                    onClick={() => {
+                      setNewFacilityTargetTable(facilitySubTab === "expense" ? "standard" : "no_ta_da");
+                      setIsAddFacilityModalOpen(true);
+                    }}
+                    className="btn-lte-primary text-xs h-8 px-3.5 flex items-center gap-1.5 cursor-pointer font-bold"
                   >
-                    {savingRates ? "Saving..." : "Save Allowance Rates"}
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>{facilitySubTab === "expense" ? "+ Add Facility" : "+ Add Hospital"}</span>
                   </button>
-                </div>
-
-                <div className="overflow-x-auto border border-slate-300 rounded-none">
-                  <Table
-                    dataSource={allowanceRates}
-                    rowKey="id"
-                    loading={loadingRates}
-                    pagination={false}
-                    size="small"
-                    className="ant-table-sharp"
-                    columns={[
-                      {
-                        title: "GRADE / LEVEL",
-                        key: "grade_level",
-                        render: (_: any, r: any) => (
-                          <div className="space-y-0.5">
-                            <span className="px-1.5 py-0.5 bg-[#4A6A8A]/10 text-[#4A6A8A] border border-[#4A6A8A]/20 font-extrabold text-[10px] uppercase rounded-none inline-block font-mono">
-                              {r.grade ? `Grade ${r.grade}` : (r.level || "—")}
-                            </span>
-                            <div className="text-[10px] text-slate-500 font-extrabold">{r.category || ""}</div>
-                          </div>
-                        )
-                      },
-                      {
-                        title: "VEHICLE",
-                        key: "vehicle_type",
-                        render: (_: any, r: any, idx: number) => (
-                          <select
-                            value={r.vehicle_type || "Bike"}
-                            onChange={(e) => {
-                              const updated = [...allowanceRates];
-                              updated[idx].vehicle_type = e.target.value;
-                              setAllowanceRates(updated);
-                            }}
-                            className="px-2 py-1 text-xs font-extrabold border border-slate-300 rounded-none bg-white text-slate-900 cursor-pointer h-8"
-                          >
-                            <option value="Bike">Bike</option>
-                            <option value="Car">Car</option>
-                            <option value="Public">Public</option>
-                          </select>
-                        )
-                      },
-                      {
-                        title: "RATE / KM (₹)",
-                        key: "rate_per_km",
-                        render: (_: any, r: any, idx: number) => (
-                          <InputNumber
-                            min={0}
-                            step={0.1}
-                            size="small"
-                            value={r.rate_per_km}
-                            onChange={(val) => {
-                              const updated = [...allowanceRates];
-                              updated[idx].rate_per_km = val || 0;
-                              setAllowanceRates(updated);
-                            }}
-                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
-                          />
-                        )
-                      },
-                      {
-                        title: "IN-DIST DA (₹)",
-                        key: "daily_in_district",
-                        render: (_: any, r: any, idx: number) => (
-                          <InputNumber
-                            min={0}
-                            size="small"
-                            value={r.daily_in_district}
-                            onChange={(val) => {
-                              const updated = [...allowanceRates];
-                              updated[idx].daily_in_district = val || 0;
-                              setAllowanceRates(updated);
-                            }}
-                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
-                          />
-                        )
-                      },
-                      {
-                        title: "OUT-DIST DA (₹)",
-                        key: "daily_out_district",
-                        render: (_: any, r: any, idx: number) => (
-                          <InputNumber
-                            min={0}
-                            size="small"
-                            value={r.daily_out_district}
-                            onChange={(val) => {
-                              const updated = [...allowanceRates];
-                              updated[idx].daily_out_district = val || 0;
-                              setAllowanceRates(updated);
-                            }}
-                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
-                          />
-                        )
-                      },
-                      {
-                        title: "HOTEL DA (₹)",
-                        key: "daily_hotel",
-                        render: (_: any, r: any, idx: number) => (
-                          <InputNumber
-                            min={0}
-                            size="small"
-                            value={r.daily_hotel}
-                            onChange={(val) => {
-                              const updated = [...allowanceRates];
-                              updated[idx].daily_hotel = val || 0;
-                              setAllowanceRates(updated);
-                            }}
-                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
-                          />
-                        )
-                      },
-                      {
-                        title: "HOTEL CAP IN-STATE S/D (₹)",
-                        key: "hotel_in_state",
-                        render: (_: any, r: any, idx: number) => (
-                          <div className="flex gap-1">
-                            <InputNumber
-                              min={0}
-                              size="small"
-                              placeholder="Single"
-                              value={r.hotel_in_state_s}
-                              onChange={(val) => {
-                                const updated = [...allowanceRates];
-                                updated[idx].hotel_in_state_s = val || 0;
-                                setAllowanceRates(updated);
-                              }}
-                              className="w-16 font-mono font-bold text-xs rounded-none border-slate-300"
-                            />
-                            <InputNumber
-                              min={0}
-                              size="small"
-                              placeholder="Double"
-                              value={r.hotel_in_state_d}
-                              onChange={(val) => {
-                                const updated = [...allowanceRates];
-                                updated[idx].hotel_in_state_d = val || 0;
-                                setAllowanceRates(updated);
-                              }}
-                              className="w-16 font-mono font-bold text-xs rounded-none border-slate-300"
-                            />
-                          </div>
-                        )
-                      },
-                      {
-                        title: "MAX KM / MO",
-                        key: "max_km_per_month",
-                        render: (_: any, r: any, idx: number) => (
-                          <InputNumber
-                            min={0}
-                            size="small"
-                            value={r.max_km_per_month}
-                            onChange={(val) => {
-                              const updated = [...allowanceRates];
-                              updated[idx].max_km_per_month = val || 0;
-                              setAllowanceRates(updated);
-                            }}
-                            className="w-20 font-mono font-bold text-xs rounded-none border-slate-300"
-                          />
-                        )
-                      }
-                    ]}
-                  />
-                </div>
+                )}
               </div>
-
-              {/* Modern Enterprise Submit Action Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200/90 mt-4">
-                <span className="text-[10.5px] font-bold text-slate-500 flex items-center gap-1.5 font-mono">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Settings Auto-Applied Globally Across All Workflows
-                </span>
-                <button
-                  type="submit"
-                  disabled={savingSettings}
-                  className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-black text-xs uppercase tracking-wider rounded-xl py-2.5 px-6 shadow-md hover:shadow-lg transition-all active:scale-95 border border-blue-400/30 flex items-center gap-2 cursor-pointer disabled:opacity-60"
-                >
-                  <Zap className="w-4 h-4 text-amber-300" />
-                  <span>{savingSettings ? "Saving Settings..." : "Save System Settings"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : activeTab === "facilities" ? (
-        /* ================= FACILITIES & NO TA/DA TAB ================= */
-        <div className="space-y-3">
-          {/* Header Bar with Sub-Tab Switcher */}
-          <div className="flex flex-wrap justify-between items-center bg-white border border-slate-200/90 rounded-xl p-3 shadow-2xs gap-2">
-            <div>
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider leading-none m-0 flex items-center gap-2 font-mono">
-                <DatabaseOutlined className="text-blue-700" /> Facilities Directory & Policy Exception Master
-              </h3>
-              <p className="text-slate-500 text-[10px] mt-1 font-semibold leading-none">
-                Manage Expense Page facilities (<span className="font-mono text-blue-700 font-bold">facility_details</span>) and No TA/DA exception list (<span className="font-mono text-rose-700 font-bold">no_ta_da_hospitals</span>) in separate windows.
-              </p>
             </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="text"
-                value={facilitySearch}
-                onChange={(e) => setFacilitySearch(e.target.value)}
-                placeholder="Search facility name or district..."
-                className="px-2.5 py-1 text-xs font-semibold text-slate-900 bg-white border border-slate-300 rounded-lg outline-none h-8 w-56"
-              />
-              {facilitySubTab === "expense" ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewFacilityTargetTable("standard");
-                    setIsAddFacilityModalOpen(true);
-                  }}
-                  className="px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white font-black text-xs uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs transition-all flex items-center gap-1.5 h-8"
-                >
-                  <Plus size={14} /> Add Expense Facility
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewFacilityTargetTable("no_ta_da");
-                    setIsAddFacilityModalOpen(true);
-                  }}
-                  className="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white font-black text-xs uppercase tracking-wider rounded-lg border-0 cursor-pointer shadow-2xs transition-all flex items-center gap-1.5 h-8"
-                >
-                  <Plus size={14} /> Add No TA/DA Hospital
-                </button>
-              )}
-            </div>
-          </div>
 
-          {/* Sub-Tab Navigation Bar */}
-          <div className="bg-slate-200/80 p-1 rounded-xl flex gap-1 border border-slate-300/70 shadow-inner">
-            <button
-              type="button"
-              onClick={() => setFacilitySubTab("expense")}
-              className={`flex-1 py-1.5 px-3 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-2 ${
-                facilitySubTab === "expense"
-                  ? "bg-white text-blue-900 shadow-xs scale-[1.01]"
-                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
-              }`}
-            >
-              <span>🏢 Expense Page Facilities (facility_details)</span>
-              <span className="bg-blue-100 text-blue-800 px-2 py-0.2 rounded-full text-[9.5px] font-mono font-bold">
-                {standardFacilities.length}
-              </span>
-            </button>
+            {error && (
+              <Alert message={error} type="error" showIcon className="rounded-lg font-semibold border-rose-200" />
+            )}
 
-            <button
-              type="button"
-              onClick={() => setFacilitySubTab("notada")}
-              className={`flex-1 py-1.5 px-3 text-[11px] font-black uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-2 ${
-                facilitySubTab === "notada"
-                  ? "bg-white text-rose-900 shadow-xs scale-[1.01]"
-                  : "bg-transparent text-slate-600 hover:text-slate-900 hover:bg-white/50"
-              }`}
-            >
-              <span>🛑 No TA / DA Exception List (no_ta_da_hospitals)</span>
-              <span className="bg-rose-100 text-rose-800 px-2 py-0.2 rounded-full text-[9.5px] font-mono font-bold">
-                {noTaDaHospitals.length}
-              </span>
-            </button>
-          </div>
+            {/* ================= SECTION 1: USERS DIRECTORY ================= */}
+            {activeTab === "users" && (
+              <div className="space-y-3 animate-fadeIn">
+                {/* Search & 5-Dropdown Filter Bar */}
+                <div className="bg-surface border border-line rounded-lg p-3 sm:p-3.5 space-y-3 shadow-none">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
+                    {/* Search Input */}
+                    <div className="space-y-1">
+                      <label className="label-lte text-2xs block">Search</label>
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="Name, Code, Mobile..."
+                          value={userSearchTerm}
+                          onChange={(e) => setUserSearchTerm(e.target.value)}
+                          className="input-lte pl-8 h-8 text-xs w-full"
+                        />
+                      </div>
+                    </div>
 
-          {/* WINDOW 1: EXPENSE PAGE FACILITIES (facility_details) */}
-          {facilitySubTab === "expense" && (
-            <div className="bg-white border border-slate-300 rounded-xl shadow-2xs overflow-hidden">
-              <div className="bg-slate-50 px-3.5 py-2 border-b border-slate-200 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider m-0 font-mono flex items-center gap-1.5">
-                    <span className="text-blue-600">🏢</span> Window 1: Expense Page Facilities Directory
-                  </h4>
-                  <p className="text-[10px] text-slate-500 font-semibold m-0 mt-0.5">
-                    Saved in DB table: <code className="bg-slate-200 text-slate-900 px-1 py-0.2 rounded text-[9.5px] font-mono font-bold">facility_details</code> (Columns: <code className="font-mono text-blue-800 font-bold">id</code>, <code className="font-mono text-blue-800 font-bold">district_name</code>, <code className="font-mono text-blue-800 font-bold">facility_name</code>). Selectable on Expense Page.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewFacilityTargetTable("standard");
-                    setIsAddFacilityModalOpen(true);
-                  }}
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10.5px] font-black uppercase tracking-wider cursor-pointer border-0 shadow-2xs"
-                >
-                  + Add Expense Facility
-                </button>
-              </div>
-
-              {facilityLoading ? (
-                <div className="p-8 text-center text-slate-500 font-bold text-xs">
-                  <LteSpinner /> Loading Expense Facilities...
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-800 text-white border-b border-slate-700 font-black text-[10px] uppercase tracking-wider font-mono">
-                        <th className="py-2.5 px-3"># ID</th>
-                        <th className="py-2.5 px-3">Facility Name (facility_name)</th>
-                        <th className="py-2.5 px-3">District (district_name)</th>
-                        <th className="py-2.5 px-3">Facility Type (facility_type)</th>
-                        <th className="py-2.5 px-3">Zone (zone_name)</th>
-                        <th className="py-2.5 px-3">Facility Incharge (facility_incharge)</th>
-                        <th className="py-2.5 px-3">DM Name (dm_name)</th>
-                        <th className="py-2.5 px-3">Coordinator (coordinator_name)</th>
-                        <th className="py-2.5 px-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 font-medium text-slate-800">
-                      {standardFacilities
-                        .filter((f) => {
-                          if (!facilitySearch.trim()) return true;
-                          const q = facilitySearch.toLowerCase();
-                          return (
-                            (f.facility_name || "").toLowerCase().includes(q) ||
-                            (f.district_name || "").toLowerCase().includes(q) ||
-                            (f.facility_incharge || "").toLowerCase().includes(q) ||
-                            (f.dm_name || "").toLowerCase().includes(q) ||
-                            (f.coordinator_name || "").toLowerCase().includes(q) ||
-                            (f.facility_type || "").toLowerCase().includes(q) ||
-                            (f.zone_name || "").toLowerCase().includes(q)
-                          );
-                        })
-                        .map((f, idx) => (
-                          <tr key={f.id || idx} className="hover:bg-blue-50/40 transition-colors">
-                            <td className="py-2 px-3 font-mono font-bold text-slate-500">#{f.id}</td>
-                            <td className="py-2 px-3 font-extrabold text-slate-900">{f.facility_name}</td>
-                            <td className="py-2 px-3 font-bold text-blue-800 font-mono">{f.district_name}</td>
-                            <td className="py-2 px-3 font-bold text-slate-700">{f.facility_type || "Hospital"}</td>
-                            <td className="py-2 px-3 font-bold text-slate-600">{f.zone_name || "Rajasthan"}</td>
-                            <td className="py-2 px-3 font-semibold text-slate-800">{f.facility_incharge || "N/A"}</td>
-                            <td className="py-2 px-3 font-semibold text-slate-800">{f.dm_name || "N/A"}</td>
-                            <td className="py-2 px-3 font-semibold text-slate-800">{f.coordinator_name || "N/A"}</td>
-                            <td className="py-2 px-3 text-right">
-                              <Popconfirm
-                                title="Delete Expense Facility"
-                                description="Are you sure you want to remove this facility from facility_details?"
-                                onConfirm={() => handleDeleteFacility(f.id, "standard")}
-                                okText="Yes, Delete"
-                                cancelText="Cancel"
-                              >
-                                <button type="button" className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded border border-rose-200 text-[10.5px] font-extrabold cursor-pointer transition-all">
-                                  Delete
-                                </button>
-                              </Popconfirm>
-                            </td>
-                          </tr>
+                    {/* Zone Filter */}
+                    <div className="space-y-1">
+                      <label className="label-lte text-2xs block">Zone</label>
+                      <select
+                        value={userZoneFilter}
+                        onChange={(e) => {
+                          setUserZoneFilter(e.target.value);
+                          setUserDistrictFilter("all");
+                        }}
+                        className="input-lte h-8 text-xs w-full cursor-pointer py-0.5 px-2"
+                      >
+                        <option value="all">All Zones ({availableUserZones.length})</option>
+                        {availableUserZones.map((z: string) => (
+                          <option key={z} value={z}>{z}</option>
                         ))}
-                      {standardFacilities.length === 0 && (
-                        <tr>
-                          <td colSpan={9} className="py-6 text-center text-slate-400 font-bold">
-                            No Expense Facilities found in facility_details table.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+                      </select>
+                    </div>
 
-          {/* WINDOW 2: NO TA / DA EXCEPTION HOSPITALS (no_ta_da_hospitals) */}
-          {facilitySubTab === "notada" && (
-            <div className="bg-white border border-slate-300 rounded-xl shadow-2xs overflow-hidden">
-              <div className="bg-rose-50/90 px-3.5 py-2 border-b border-rose-200 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-black text-rose-950 uppercase tracking-wider m-0 font-mono flex items-center gap-1.5">
-                    <span className="text-rose-600">🛑</span> Window 2: No TA / DA Policy Exception Hospitals
-                  </h4>
-                  <p className="text-[10px] text-rose-800 font-semibold m-0 mt-0.5">
-                    Saved in DB table: <code className="bg-rose-100 text-rose-900 px-1 py-0.2 rounded text-[9.5px] font-mono font-bold">no_ta_da_hospitals</code> (Columns: <code className="font-mono text-rose-900 font-bold">id</code>, <code className="font-mono text-rose-900 font-bold">district_name</code>, <code className="font-mono text-rose-900 font-bold">hospital_name</code>, <code className="font-mono text-rose-900 font-bold">created_at</code>). Visits attract ₹0 TA / ₹0 DA.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewFacilityTargetTable("no_ta_da");
-                    setIsAddFacilityModalOpen(true);
-                  }}
-                  className="px-2.5 py-1 bg-rose-700 hover:bg-rose-800 text-white rounded text-[10.5px] font-black uppercase tracking-wider cursor-pointer border-0 shadow-2xs"
-                >
-                  + Add No TA/DA Hospital
-                </button>
-              </div>
-
-              {facilityLoading ? (
-                <div className="p-8 text-center text-slate-500 font-bold text-xs">
-                  <LteSpinner /> Loading No TA/DA Exception Hospitals...
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-rose-950 text-white border-b border-rose-900 font-black text-[10px] uppercase tracking-wider font-mono">
-                        <th className="py-2.5 px-3"># ID</th>
-                        <th className="py-2.5 px-3">Hospital Name (hospital_name)</th>
-                        <th className="py-2.5 px-3">District Name (district_name)</th>
-                        <th className="py-2.5 px-3">Created At (created_at)</th>
-                        <th className="py-2.5 px-3">Policy Exception Status</th>
-                        <th className="py-2.5 px-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 font-medium text-slate-800">
-                      {noTaDaHospitals
-                        .filter((f) => {
-                          if (!facilitySearch.trim()) return true;
-                          const q = facilitySearch.toLowerCase();
-                          return (
-                            (f.hospital_name || "").toLowerCase().includes(q) ||
-                            (f.district_name || "").toLowerCase().includes(q)
-                          );
-                        })
-                        .map((f, idx) => (
-                          <tr key={f.id || idx} className="hover:bg-rose-50/40 transition-colors">
-                            <td className="py-2 px-3 font-mono font-bold text-slate-500">#{f.id}</td>
-                            <td className="py-2 px-3 font-extrabold text-slate-900">{f.hospital_name}</td>
-                            <td className="py-2 px-3 font-bold text-blue-800 font-mono">{f.district_name}</td>
-                            <td className="py-2 px-3 text-[11px] text-slate-500 font-mono">{f.created_at || "--"}</td>
-                            <td className="py-2 px-3">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 text-rose-900 border border-rose-300 text-[10px] font-black">
-                                🛑 ₹0 TA & ₹0 DA Exception
-                              </span>
-                            </td>
-                            <td className="py-2 px-3 text-right">
-                              <Popconfirm
-                                title="Delete No TA/DA Hospital"
-                                description="Are you sure you want to remove this hospital from No TA/DA exception list?"
-                                onConfirm={() => handleDeleteFacility(f.id, "no_ta_da")}
-                                okText="Yes, Delete"
-                                cancelText="Cancel"
-                              >
-                                <button type="button" className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded border border-rose-200 text-[10.5px] font-extrabold cursor-pointer transition-all">
-                                  Delete
-                                </button>
-                              </Popconfirm>
-                            </td>
-                          </tr>
+                    {/* District Filter */}
+                    <div className="space-y-1">
+                      <label className="label-lte text-2xs block">District</label>
+                      <select
+                        value={userDistrictFilter}
+                        onChange={(e) => setUserDistrictFilter(e.target.value)}
+                        className="input-lte h-8 text-xs w-full cursor-pointer py-0.5 px-2"
+                      >
+                        <option value="all">All Districts ({availableUserDistricts.length})</option>
+                        {availableUserDistricts.map((d: string) => (
+                          <option key={d} value={d}>{d}</option>
                         ))}
-                      {noTaDaHospitals.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="py-6 text-center text-slate-400 font-bold">
-                            No Hospitals found in no_ta_da_hospitals table.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                      </select>
+                    </div>
+
+                    {/* Manager Filter */}
+                    <div className="space-y-1">
+                      <label className="label-lte text-2xs block">Manager</label>
+                      <select
+                        value={userManagerFilter}
+                        onChange={(e) => setUserManagerFilter(e.target.value)}
+                        className="input-lte h-8 text-xs w-full cursor-pointer py-0.5 px-2"
+                      >
+                        <option value="all">All Managers ({availableUserManagers.length})</option>
+                        {availableUserManagers.map((m: string) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Role Filter */}
+                    <div className="space-y-1">
+                      <label className="label-lte text-2xs block">Role</label>
+                      <select
+                        value={userRoleFilter}
+                        onChange={(e) => setUserRoleFilter(e.target.value)}
+                        className="input-lte h-8 text-xs w-full cursor-pointer py-0.5 px-2"
+                      >
+                        <option value="all">All Roles ({availableUserRoles.length})</option>
+                        {availableUserRoles.map((r: string) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Status Filter & Reset */}
+                    <div className="space-y-1">
+                      <label className="label-lte text-2xs block">Status</label>
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={userStatusFilter}
+                          onChange={(e) => setUserStatusFilter(e.target.value)}
+                          className="input-lte h-8 text-xs flex-1 cursor-pointer py-0.5 px-2"
+                        >
+                          <option value="all">All Status</option>
+                          {availableUserStatuses.map((st: string) => (
+                            <option key={st} value={st}>{st.toUpperCase()}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserSearchTerm("");
+                            setUserZoneFilter("all");
+                            setUserDistrictFilter("all");
+                            setUserManagerFilter("all");
+                            setUserRoleFilter("all");
+                            setUserStatusFilter("all");
+                          }}
+                          className="btn-lte-secondary h-8 px-2.5 text-2xs font-bold uppercase cursor-pointer shrink-0"
+                          title="Reset Filters"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Summary Count & Table Export Toolbar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-line">
+                    <span className="text-xs font-mono text-ink-500 font-semibold">
+                      Showing <strong className="text-accent-600">{filteredUsers.length}</strong> of {safeUsers.length} Employees
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleExportUsersExcel}
+                        className="btn-lte-outline text-xs h-7.5 px-2.5 flex items-center gap-1 font-semibold cursor-pointer"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Export Excel</span>
+                      </button>
+                      <Popconfirm
+                        title="Force Logout All Users?"
+                        description="This will instantly invalidate session tokens for all users (except yourself)."
+                        onConfirm={handleForceLogoutAll}
+                        okText="Yes, Logout All"
+                        cancelText="Cancel"
+                        okButtonProps={{ danger: true, size: "small" }}
+                      >
+                        <button
+                          type="button"
+                          className="btn-lte-danger text-xs h-7.5 px-2.5 flex items-center gap-1 font-semibold cursor-pointer"
+                        >
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Force Logout All</span>
+                        </button>
+                      </Popconfirm>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      ) : (activeTab as any) === "whatsapp" ? (
-        /* ================= WHATSAPP BOT & AUTOMATION TAB (EXACT ADMIN PANEL DESIGN DITTO) ================= */
-        <div className="space-y-3">
-          {/* Header Banner - Ditto Admin Console Style */}
-          <div className="bg-white border border-slate-300 rounded-none p-3.5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="bg-[#4A6A8A] text-white text-[9.5px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-none tracking-wider">
-                  OFFICIAL AUTOMATION GATEWAY
-                </span>
-                <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200">
-                  🛡️ ANTI-BAN QUEUE ACTIVE (3.5s DELAY)
-                </span>
-              </div>
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mt-1.5 mb-0">
-                WHATSAPP BOT & PAIRING CODE CONSOLE
-              </h3>
-              <p className="text-[10px] text-slate-500 font-bold m-0 mt-0.5">
-                Connect company WhatsApp number once using 8-Digit Pairing Code (No camera QR scan needed). Automatic In-Chat Interactive Approvals enabled.
-              </p>
-            </div>
 
-            <div className="bg-slate-50 border border-slate-300 p-2.5 rounded-none text-right shrink-0">
-              <span className="text-[9px] font-mono font-extrabold text-slate-500 uppercase tracking-wider block">GATEWAY STATUS</span>
-              <span className="text-xs font-mono font-black text-emerald-700 flex items-center gap-1.5 justify-end mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                CONNECTED (+91 {waPhoneNumber})
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-            {/* Left Box: 8-Digit Pairing Code Linker (7 Cols) */}
-            <div className="lg:col-span-7 bg-white border border-slate-300 rounded-none shadow-2xs p-4 space-y-4">
-              <div className="bg-[#4A6A8A] text-white px-3 py-2 flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider font-mono text-white flex items-center gap-2">
-                  <Zap className="w-3.5 h-3.5" />
-                  1-TIME WHATSAPP PHONE NUMBER PAIRING
-                </span>
-                <span className="text-[9.5px] font-mono bg-white/20 px-2 py-0.5 font-bold">
-                  NO CAMERA SCAN REQUIRED
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div className="sm:col-span-2">
-                    <label className="block text-[10px] font-extrabold uppercase text-slate-600 mb-1">Company WhatsApp Phone Number *</label>
-                    <div className="flex">
-                      <span className="inline-flex items-center px-2.5 bg-slate-100 border border-r-0 border-slate-300 text-xs font-mono font-bold text-slate-700">
-                        +91
+                {/* Batch Bulk Approval Actions Banner */}
+                {selectedUserIds.length > 0 && (
+                  <div className="bg-pending-bg border border-pending-border rounded-lg p-3 flex flex-wrap items-center justify-between gap-2 animate-fadeIn">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-pending text-white font-bold text-2xs px-2 py-0.5 rounded font-mono">
+                        {selectedUserIds.length} SELECTED
                       </span>
-                      <input
-                        type="text"
-                        value={waPhoneNumber}
-                        onChange={(e) => setWaPhoneNumber(e.target.value)}
-                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none h-9"
-                        placeholder="9829012001"
+                      <span className="text-xs font-bold text-pending-text">
+                        Batch Bulk Approval Permissions:
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleBatchToggleBulkApproval(true)}
+                        className="btn-lte-primary text-xs h-7.5 px-3 flex items-center gap-1 bg-[#0F7A4C] hover:bg-[#0B5C39] cursor-pointer"
+                      >
+                        <span>⚡ Grant Bulk Approval Access</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleBatchToggleBulkApproval(false)}
+                        className="btn-lte-secondary text-xs h-7.5 px-3 flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>🔒 Revoke Bulk Approval Access</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* High-Density Users Data Table */}
+                <div className="bg-surface border border-line rounded-lg overflow-hidden shadow-none">
+                  {loading ? (
+                    <div className="py-16 text-center bg-surface">
+                      <Spin size="large" tip="Loading employees database..." />
+                    </div>
+                  ) : (
+                    <Table
+                      dataSource={filteredUsers}
+                      rowKey={(record) => record.user_id || record.e_code || record.id}
+                      rowSelection={{
+                        selectedRowKeys: selectedUserIds,
+                        onChange: (keys) => setSelectedUserIds(keys)
+                      }}
+                      pagination={{
+                        pageSize: adminUserPageSize,
+                        onChange: (_, size) => setAdminUserPageSize(size),
+                        onShowSizeChange: (_, size) => setAdminUserPageSize(size),
+                        showSizeChanger: true,
+                        pageSizeOptions: ["10", "25", "50", "100"],
+                        showTotal: (total, range) => `Showing ${range[0]}-${range[1]} of ${total} employees`
+                      }}
+                      className="ant-table-striped"
+                      scroll={{ x: 850 }}
+                      columns={[
+                        {
+                          title: "EMP CODE",
+                          dataIndex: "e_code",
+                          key: "e_code",
+                          width: 120,
+                          render: (code: string) => (
+                            <span className="font-mono text-xs font-bold text-ink-900 bg-surface-sunken px-2 py-0.5 rounded border border-line tabular-nums inline-block">
+                              {code || "—"}
+                            </span>
+                          )
+                        },
+                        {
+                          title: "FULL NAME",
+                          dataIndex: "name",
+                          key: "name",
+                          render: (name: string, record: any) => (
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-accent-100 text-accent-700 font-bold text-xs flex items-center justify-center shrink-0 border border-accent-400/20">
+                                {getInitials(name)}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-ink-900 text-xs sm:text-sm leading-tight truncate">{name}</div>
+                                <div className="text-2xs text-ink-500 font-medium truncate mt-0.5">
+                                  {record.designation || "Engineer"}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        },
+                        {
+                          title: "ROLE",
+                          dataIndex: "role",
+                          key: "role",
+                          width: 130,
+                          render: (roleStr: string) => {
+                            const r = (roleStr || "").toLowerCase();
+                            let badgeClass = "bg-surface-sunken text-ink-700 border-line";
+                            if (r.includes("engineer")) badgeClass = "bg-teal-50 text-teal-800 border-teal-200";
+                            else if (r.includes("manager") || r.includes("zm")) badgeClass = "bg-accent-50 text-accent-700 border-accent-100";
+                            else if (r.includes("admin") || r.includes("mis")) badgeClass = "bg-amber-50 text-amber-800 border-amber-200";
+                            else if (r.includes("coordinator")) badgeClass = "bg-purple-50 text-purple-800 border-purple-200";
+
+                            return (
+                              <span className={`inline-flex items-center px-2 py-0.5 text-2xs font-semibold rounded-full border ${badgeClass}`}>
+                                {roleStr || "—"}
+                              </span>
+                            );
+                          }
+                        },
+                        {
+                          title: "MOBILE / EMAIL",
+                          key: "contact",
+                          render: (_: any, record: any) => (
+                            <div className="space-y-0.5 text-xs">
+                              <div className="font-mono text-xs font-bold text-ink-700 tabular-nums">{record.mobile_number || "—"}</div>
+                              <div className="font-mono text-2xs text-ink-500 truncate max-w-[170px]">{record.mail_id || "—"}</div>
+                            </div>
+                          )
+                        },
+                        {
+                          title: "DISTRICT / ZONE",
+                          key: "location",
+                          render: (_: any, record: any) => (
+                            <div className="space-y-0.5">
+                              <div className="font-bold text-ink-900 text-xs leading-tight">{record.district || "—"}</div>
+                              <span className="inline-block px-1.5 py-0.2 text-2xs font-bold uppercase rounded bg-surface-sunken text-ink-600 border border-line leading-none">
+                                {record.zone || "NO ZONE"}
+                              </span>
+                            </div>
+                          )
+                        },
+                        {
+                          title: "STATUS",
+                          dataIndex: "user_status",
+                          key: "user_status",
+                          width: 110,
+                          render: (status: string) => {
+                            const st = (status || "active").toLowerCase();
+                            if (st === "active") {
+                              return (
+                                <span className="badge-status badge-approved text-2xs inline-flex items-center gap-1.5">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#0F7A4C]" /> ACTIVE
+                                </span>
+                              );
+                            }
+                            if (st === "locked") {
+                              return (
+                                <span className="badge-status badge-pending text-2xs inline-flex items-center gap-1.5">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[#B7791F]" /> LOCKED
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="badge-status badge-rejected text-2xs inline-flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#B3261E]" /> INACTIVE
+                              </span>
+                            );
+                          }
+                        },
+                        {
+                          title: "ACTIONS",
+                          key: "actions",
+                          align: "right",
+                          width: 90,
+                          render: (_: any, record: any) => (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditUserModal(record)}
+                                className="p-1.5 bg-surface hover:bg-surface-sunken text-ink-700 hover:text-accent-600 border border-line rounded-md transition-all cursor-pointer"
+                                title="Edit User Profile"
+                              >
+                                <EditOutlined className="text-xs" />
+                              </button>
+                              <Popconfirm
+                                title="Force logout user?"
+                                description={`Log out ${record.name} from active session?`}
+                                onConfirm={() => handleForceLogoutSingle(record.user_id, record.name)}
+                                okText="Logout"
+                                cancelText="Cancel"
+                                okButtonProps={{ danger: true, size: "small" }}
+                              >
+                                <button
+                                  type="button"
+                                  className="p-1.5 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 border border-line rounded-md transition-all cursor-pointer"
+                                  title="Force Logout Session"
+                                >
+                                  <LogoutOutlined className="text-xs" />
+                                </button>
+                              </Popconfirm>
+                            </div>
+                          )
+                        }
+                      ]}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ================= SECTION 2: ROLE MAPPINGS (APPROVAL HIERARCHY) ================= */}
+            {activeTab === "approvals" && (
+              <div className="space-y-3 animate-fadeIn">
+                {safeHierarchies.length === 0 ? (
+                  <div className="bg-surface border border-line rounded-lg p-8 text-center text-xs uppercase tracking-wider text-ink-400 font-bold">
+                    No team hierarchy configurations created. Click "+ Create Team" to define one.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {safeHierarchies.map((hq) => (
+                      <div key={hq.id} className="bg-surface border border-line hover:border-line-strong rounded-lg p-4 space-y-3 transition-colors shadow-none">
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between pb-2.5 border-b border-line">
+                          <div className="flex items-center gap-2.5">
+                            <h4 className="font-bold text-ink-900 text-sm tracking-tight m-0">{hq.name}</h4>
+                            <span className="badge-status badge-approved text-2xs font-mono">
+                              {hq.approvers.length} Levels Approval Flow
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenHierarchyModal(hq)}
+                              className="p-1.5 bg-surface hover:bg-surface-sunken text-ink-700 hover:text-accent-600 border border-line rounded-md transition-all cursor-pointer"
+                              title="Edit Team Mappings"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <Popconfirm
+                              title="Delete Approval Team?"
+                              description={`Delete hierarchy configuration for '${hq.name}'?`}
+                              onConfirm={() => handleDeleteHierarchy(hq.id)}
+                              okText="Delete"
+                              cancelText="Cancel"
+                              okButtonProps={{ danger: true, size: "small" }}
+                            >
+                              <button
+                                type="button"
+                                className="p-1.5 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 border border-line rounded-md transition-all cursor-pointer"
+                                title="Delete Team"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </Popconfirm>
+                          </div>
+                        </div>
+
+                        {/* Requesters Box */}
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 shrink-0 mr-1">
+                            Mapped Requesters ({hq.requesters.length}):
+                          </span>
+                          {hq.requesters.length === 0 ? (
+                            <span className="text-xs text-ink-400 italic">No employees mapped</span>
+                          ) : (
+                            hq.requesters.map((r) => (
+                              <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded-md bg-surface-sunken text-ink-700 text-xs font-semibold border border-line font-mono">
+                                {r.user_name} <span className="text-ink-400 ml-1">({r.user_code})</span>
+                              </span>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Approvers Pipeline Flow */}
+                        <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-line">
+                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 shrink-0 mr-1">
+                            Approval Sequence:
+                          </span>
+                          {hq.approvers.length === 0 ? (
+                            <span className="text-xs text-ink-400 italic">No approvers mapped</span>
+                          ) : (
+                            hq.approvers.map((a, idx) => (
+                              <React.Fragment key={a.id}>
+                                {idx > 0 && <span className="text-ink-300 font-bold px-0.5 select-none font-mono">→</span>}
+                                <div className="inline-flex items-center gap-1.5 bg-surface-sunken border border-line rounded-md px-2.5 py-1">
+                                  <span className="h-4 px-1.5 rounded bg-accent-600 text-white flex items-center justify-center text-2xs font-mono font-bold">
+                                    L{a.level_number}
+                                  </span>
+                                  <div className="text-xs font-bold text-ink-900 leading-none">
+                                    {a.approver_name} <span className="text-2xs text-ink-500 font-normal">({a.approver_code})</span>
+                                  </div>
+                                </div>
+                              </React.Fragment>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ================= SECTION 3: ANALYTICS DASHBOARD ================= */}
+            {activeTab === "analytics" && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* 4 KPI Governance Stat Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-surface border border-line rounded-lg p-3.5">
+                    <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 block">Total Employees</span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-2xl font-bold font-mono text-ink-900 tabular-nums">{users.length}</span>
+                      <span className="badge-status badge-approved text-2xs">
+                        {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-surface border border-line rounded-lg p-3.5">
+                    <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 block">Role Breakdown</span>
+                    <div className="flex items-center gap-1.5 mt-1.5 text-xs font-bold font-mono text-ink-700">
+                      <span className="text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60">
+                        {users.filter(u => u.role?.toLowerCase().includes('engineer')).length} Eng
+                      </span>
+                      <span>·</span>
+                      <span className="text-accent-700 bg-accent-50 px-1.5 py-0.5 rounded border border-accent-200/60">
+                        {users.filter(u => u.role?.toLowerCase().includes('manager')).length} Mng
+                      </span>
+                      <span>·</span>
+                      <span className="text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/60">
+                        {users.filter(u => u.role?.toLowerCase().includes('admin')).length} Adm
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-surface border border-line rounded-lg p-3.5">
+                    <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 block">Regional Matrix</span>
+                    <div className="flex items-baseline gap-1.5 mt-1">
+                      <span className="text-2xl font-bold font-mono text-ink-900 tabular-nums">{availableUserZones.length}</span>
+                      <span className="text-xs text-ink-500 font-medium">Zones ({availableUserDistricts.length} Districts)</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-surface border border-line rounded-lg p-3.5">
+                    <span className="text-2xs font-bold uppercase tracking-wider text-ink-500 block">Hierarchy Rules</span>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-2xl font-bold font-mono text-ink-900 tabular-nums">{hierarchies.length}</span>
+                      {users.filter(u => !u.manager || u.manager === 'N/A').length > 0 ? (
+                        <span className="badge-status badge-pending text-2xs">
+                          {users.filter(u => !u.manager || u.manager === 'N/A').length} Pending
+                        </span>
+                      ) : (
+                        <span className="badge-status badge-approved text-2xs">100% Mapped</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filters Bar */}
+                <div className="bg-surface border border-line rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-none">
+                  <div>
+                    <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0">Dashboard Charts &amp; Analytics</h4>
+                    <p className="text-ink-500 text-2xs mt-0.5 font-medium">Interactive distribution charts with real-time zone &amp; role filtering.</p>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Role Filter */}
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-2xs font-bold uppercase text-ink-600">Role:</label>
+                      <select
+                        value={chartRoleFilter}
+                        onChange={(e) => setChartRoleFilter(e.target.value)}
+                        className="input-lte h-8 text-xs py-0.5 px-2 cursor-pointer"
+                      >
+                        <option value="all">All Roles</option>
+                        <option value="engineer">Engineer</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Admin</option>
+                        <option value="coordinator">Coordinator</option>
+                      </select>
+                    </div>
+
+                    {/* Zone Filter */}
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-2xs font-bold uppercase text-ink-600">Zone:</label>
+                      <select
+                        value={chartZoneFilter}
+                        onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
+                        className="input-lte h-8 text-xs py-0.5 px-2 cursor-pointer"
+                      >
+                        <option value="all">All Zones</option>
+                        {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
+                          <option key={zone} value={zone}>{zone}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* District Filter (dependent on Zone) */}
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-2xs font-bold uppercase text-ink-600">District:</label>
+                      <select
+                        value={chartDistrictFilter}
+                        onChange={(e) => setChartDistrictFilter(e.target.value)}
+                        disabled={chartZoneFilter === "all"}
+                        className={`input-lte h-8 text-xs py-0.5 px-2 ${
+                          chartZoneFilter === "all" ? "text-ink-300 cursor-not-allowed opacity-60" : "text-ink-900 cursor-pointer"
+                        }`}
+                      >
+                        <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
+                        {chartZoneDistricts.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 Donut Charts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Zone Distribution */}
+                  <div className="bg-surface border border-line rounded-lg shadow-none overflow-hidden">
+                    <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
+                        <PieChartOutlined className="text-accent-600" />
+                        ZONE DISTRIBUTION
+                      </span>
+                      <span className="text-2xs font-mono font-bold bg-surface-sunken px-2 py-0.5 rounded border border-line text-ink-700">
+                        {getZoneData().reduce((s, x) => s + x.value, 0)} Total
+                      </span>
+                    </div>
+                    <div className="p-4 flex flex-col justify-between" style={{ minHeight: 310 }}>
+                      <SaaSDonutChart
+                        data={getZoneData().map((z, i) => ({
+                          name: z.name,
+                          value: z.value,
+                          count: z.value,
+                          color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                        }))}
+                        height={280}
+                        centerTitle="Total Users"
+                        valueFormatter={(v) => `${v.toLocaleString()} Users`}
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-end">
+                  {/* District Distribution */}
+                  <div className="bg-surface border border-line rounded-lg shadow-none overflow-hidden">
+                    <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
+                        <PieChartOutlined className="text-accent-600" />
+                        DISTRICT DISTRIBUTION
+                      </span>
+                      <span className="text-2xs font-mono font-bold bg-surface-sunken px-2 py-0.5 rounded border border-line text-ink-700">
+                        {getDistrictData().reduce((s, x) => s + x.value, 0)} Total
+                      </span>
+                    </div>
+                    <div className="p-4 flex flex-col justify-between" style={{ minHeight: 310 }}>
+                      <SaaSDonutChart
+                        data={getDistrictData().map((d, i) => ({
+                          name: d.name,
+                          value: d.value,
+                          count: d.value,
+                          color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                        }))}
+                        height={280}
+                        centerTitle="Total Users"
+                        valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Manager Distribution */}
+                  <div className="bg-surface border border-line rounded-lg shadow-none overflow-hidden">
+                    <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
+                        <PieChartOutlined className="text-accent-600" />
+                        MANAGER DISTRIBUTION
+                      </span>
+                      <span className="text-2xs font-mono font-bold bg-surface-sunken px-2 py-0.5 rounded border border-line text-ink-700">
+                        {getManagerData().reduce((s, x) => s + x.value, 0)} Total
+                      </span>
+                    </div>
+                    <div className="p-4 flex flex-col justify-between" style={{ minHeight: 310 }}>
+                      <SaaSDonutChart
+                        data={getManagerData().map((m, i) => ({
+                          name: m.name,
+                          value: m.value,
+                          count: m.value,
+                          color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                        }))}
+                        height={280}
+                        centerTitle="Total Users"
+                        valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Designation Distribution */}
+                  <div className="bg-surface border border-line rounded-lg shadow-none overflow-hidden">
+                    <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
+                        <PieChartOutlined className="text-accent-600" />
+                        DESIGNATION DISTRIBUTION
+                      </span>
+                      <span className="text-2xs font-mono font-bold bg-surface-sunken px-2 py-0.5 rounded border border-line text-ink-700">
+                        {getDesignationData().reduce((s, x) => s + x.value, 0)} Total
+                      </span>
+                    </div>
+                    <div className="p-4 flex flex-col justify-between" style={{ minHeight: 310 }}>
+                      <SaaSDonutChart
+                        data={getDesignationData().map((d, i) => ({
+                          name: d.name,
+                          value: d.value,
+                          count: d.value,
+                          color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                        }))}
+                        height={280}
+                        centerTitle="Total Users"
+                        valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ================= SECTION 4: SYSTEM SETTINGS & ALLOWANCE MASTER ================= */}
+            {activeTab === "settings" && (
+              <div className="space-y-4 animate-fadeIn max-w-5xl">
+                <form onSubmit={handleSaveSettings} className="space-y-4">
+                  {/* Card 1: Expense Submission Policies */}
+                  <div className="bg-surface border border-line rounded-lg p-4 space-y-3 shadow-none">
+                    <div className="flex items-center gap-2 border-b border-line pb-2">
+                      <span className="w-5 h-5 rounded bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">1</span>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 m-0">
+                        Expense Submission Window &amp; Cutoff Policies
+                      </h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Allowed Past Days Submission Window *
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          value={settings.max_past_days_limit || "15"}
+                          onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
+                          className="input-lte h-8 text-xs font-mono font-bold w-full"
+                          placeholder="e.g. 15"
+                        />
+                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
+                          Past calendar days allowed for engineers to log claims.
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Monthly Cutoff Day (of next month) *
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={28}
+                          required
+                          value={settings.monthly_cutoff_day || "3"}
+                          onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
+                          className="input-lte h-8 text-xs font-mono font-bold w-full"
+                          placeholder="e.g. 3"
+                        />
+                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
+                          Day of month after which previous month claims are blocked.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Auto-Expiry & Approval System Rules */}
+                  <div className="bg-surface border border-line rounded-lg p-4 space-y-3 shadow-none">
+                    <div className="flex items-center gap-2 border-b border-line pb-2">
+                      <span className="w-5 h-5 rounded bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">2</span>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 m-0">
+                        Auto-Approval / Expiry Rules &amp; Routing Levels
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Pending Days Threshold *
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          required
+                          value={settings.pending_auto_expiry_days || "5"}
+                          onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
+                          className="input-lte h-8 text-xs font-mono font-bold w-full"
+                          placeholder="e.g. 5"
+                        />
+                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
+                          Days pending before system auto-action triggers (0 = disabled).
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Auto-Expiry Action Type *
+                        </label>
+                        <select
+                          value={settings.pending_auto_action || "approve"}
+                          onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
+                          className="input-lte h-8 text-xs font-semibold w-full cursor-pointer py-0.5 px-2"
+                        >
+                          <option value="approve">⚡ Auto Approve Current Level</option>
+                          <option value="reject">❌ Auto Reject Claim</option>
+                          <option value="disabled">🚫 Disabled (Manual Action Only)</option>
+                        </select>
+                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
+                          System behavior when threshold days are reached without manager action.
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Auto-Approve Target Routing Level
+                        </label>
+                        <select
+                          value={settings.auto_approve_target_level || "next_level"}
+                          onChange={(e) => setSettings({ ...settings, auto_approve_target_level: e.target.value })}
+                          className="input-lte h-8 text-xs font-semibold w-full cursor-pointer py-0.5 px-2"
+                        >
+                          <option value="next_level">⏩ Forward to Next Manager Level (L1 → L2)</option>
+                          <option value="l1_only">1️⃣ Auto-Approve L1 Only</option>
+                          <option value="full_final">✅ Complete Final Auto-Approval (All Levels)</option>
+                        </select>
+                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
+                          Target destination level when auto-approved.
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Rejection Fallback Routing Level
+                        </label>
+                        <select
+                          value={settings.rejection_fallback_level || "creator"}
+                          onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
+                          className="input-lte h-8 text-xs font-semibold w-full cursor-pointer py-0.5 px-2"
+                        >
+                          <option value="creator">↩️ Return to Submitter / Drafts (For Edit &amp; Re-submit)</option>
+                          <option value="previous_level">◀️ Return to Previous Manager Level</option>
+                          <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
+                        </select>
+                        <span className="text-2xs text-ink-500 font-medium mt-1 block">
+                          Target destination when a claim is rejected.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Allowance Master TA/DA Rates & Hotel Caps */}
+                  <div className="bg-surface border border-line rounded-lg p-4 space-y-3 shadow-none">
+                    <div className="flex items-center justify-between border-b border-line pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">3</span>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 m-0">
+                          Allowance Master — TA / DA Rates &amp; Hotel Caps
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={savingRates}
+                        onClick={handleSaveAllowanceRates}
+                        className="btn-lte-primary text-xs h-7.5 px-3 flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                      >
+                        {savingRates ? <LteSpinner /> : <Check className="w-3.5 h-3.5" />}
+                        <span>Save Allowance Rates</span>
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto border border-line rounded-md">
+                      <Table
+                        dataSource={allowanceRates}
+                        rowKey="id"
+                        loading={loadingRates}
+                        pagination={false}
+                        size="small"
+                        className="ant-table-striped"
+                        columns={[
+                          {
+                            title: "GRADE / LEVEL",
+                            key: "grade_level",
+                            render: (_: any, r: any) => (
+                              <div className="space-y-0.5">
+                                <span className="px-2 py-0.5 bg-accent-50 text-accent-700 border border-accent-100 font-bold text-2xs uppercase rounded font-mono inline-block">
+                                  {r.grade ? `Grade ${r.grade}` : (r.level || "—")}
+                                </span>
+                                <div className="text-2xs text-ink-500 font-semibold">{r.category || ""}</div>
+                              </div>
+                            )
+                          },
+                          {
+                            title: "VEHICLE",
+                            key: "vehicle_type",
+                            render: (_: any, r: any, idx: number) => (
+                              <select
+                                value={r.vehicle_type || "Bike"}
+                                onChange={(e) => {
+                                  const updated = [...allowanceRates];
+                                  updated[idx].vehicle_type = e.target.value;
+                                  setAllowanceRates(updated);
+                                }}
+                                className="input-lte h-7.5 text-xs py-0.5 px-2 cursor-pointer"
+                              >
+                                <option value="Bike">Bike</option>
+                                <option value="Car">Car</option>
+                                <option value="Public">Public</option>
+                              </select>
+                            )
+                          },
+                          {
+                            title: "RATE / KM (₹)",
+                            key: "rate_per_km",
+                            render: (_: any, r: any, idx: number) => (
+                              <InputNumber
+                                min={0}
+                                step={0.1}
+                                size="small"
+                                value={r.rate_per_km}
+                                onChange={(val) => {
+                                  const updated = [...allowanceRates];
+                                  updated[idx].rate_per_km = val || 0;
+                                  setAllowanceRates(updated);
+                                }}
+                                className="w-20 font-mono font-bold text-xs"
+                              />
+                            )
+                          },
+                          {
+                            title: "IN-DIST DA (₹)",
+                            key: "daily_in_district",
+                            render: (_: any, r: any, idx: number) => (
+                              <InputNumber
+                                min={0}
+                                size="small"
+                                value={r.daily_in_district}
+                                onChange={(val) => {
+                                  const updated = [...allowanceRates];
+                                  updated[idx].daily_in_district = val || 0;
+                                  setAllowanceRates(updated);
+                                }}
+                                className="w-20 font-mono font-bold text-xs"
+                              />
+                            )
+                          },
+                          {
+                            title: "OUT-DIST DA (₹)",
+                            key: "daily_out_district",
+                            render: (_: any, r: any, idx: number) => (
+                              <InputNumber
+                                min={0}
+                                size="small"
+                                value={r.daily_out_district}
+                                onChange={(val) => {
+                                  const updated = [...allowanceRates];
+                                  updated[idx].daily_out_district = val || 0;
+                                  setAllowanceRates(updated);
+                                }}
+                                className="w-20 font-mono font-bold text-xs"
+                              />
+                            )
+                          },
+                          {
+                            title: "HOTEL DA (₹)",
+                            key: "daily_hotel",
+                            render: (_: any, r: any, idx: number) => (
+                              <InputNumber
+                                min={0}
+                                size="small"
+                                value={r.daily_hotel}
+                                onChange={(val) => {
+                                  const updated = [...allowanceRates];
+                                  updated[idx].daily_hotel = val || 0;
+                                  setAllowanceRates(updated);
+                                }}
+                                className="w-20 font-mono font-bold text-xs"
+                              />
+                            )
+                          },
+                          {
+                            title: "HOTEL CAP IN-STATE S/D (₹)",
+                            key: "hotel_in_state",
+                            render: (_: any, r: any, idx: number) => (
+                              <div className="flex gap-1.5">
+                                <InputNumber
+                                  min={0}
+                                  size="small"
+                                  placeholder="Single"
+                                  value={r.hotel_in_state_s}
+                                  onChange={(val) => {
+                                    const updated = [...allowanceRates];
+                                    updated[idx].hotel_in_state_s = val || 0;
+                                    setAllowanceRates(updated);
+                                  }}
+                                  className="w-18 font-mono font-bold text-xs"
+                                />
+                                <InputNumber
+                                  min={0}
+                                  size="small"
+                                  placeholder="Double"
+                                  value={r.hotel_in_state_d}
+                                  onChange={(val) => {
+                                    const updated = [...allowanceRates];
+                                    updated[idx].hotel_in_state_d = val || 0;
+                                    setAllowanceRates(updated);
+                                  }}
+                                  className="w-18 font-mono font-bold text-xs"
+                                />
+                              </div>
+                            )
+                          },
+                          {
+                            title: "MAX KM / MO",
+                            key: "max_km_per_month",
+                            render: (_: any, r: any, idx: number) => (
+                              <InputNumber
+                                min={0}
+                                size="small"
+                                value={r.max_km_per_month}
+                                onChange={(val) => {
+                                  const updated = [...allowanceRates];
+                                  updated[idx].max_km_per_month = val || 0;
+                                  setAllowanceRates(updated);
+                                }}
+                                className="w-20 font-mono font-bold text-xs"
+                              />
+                            )
+                          }
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Form Submit Action Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-line">
+                    <span className="text-2xs font-bold text-ink-500 flex items-center gap-1.5 font-mono">
+                      <span className="h-2 w-2 rounded-full bg-approved animate-pulse" />
+                      Settings Auto-Applied Globally Across All Workflows
+                    </span>
+                    <button
+                      type="submit"
+                      disabled={savingSettings}
+                      className="btn-lte-primary text-xs h-9 px-5 flex items-center gap-2 cursor-pointer font-bold disabled:opacity-60"
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>{savingSettings ? "Saving Settings..." : "Save System Settings"}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* ================= SECTION 5: FACILITIES & NO TA/DA TAB ================= */}
+            {activeTab === "facilities" && (
+              <div className="space-y-3 animate-fadeIn">
+                {/* Sub-Tab Navigation Bar */}
+                <div className="bg-surface-sunken p-1 rounded-lg flex gap-1 border border-line">
+                  <button
+                    type="button"
+                    onClick={() => setFacilitySubTab("expense")}
+                    className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-md flex items-center justify-center gap-2 ${
+                      facilitySubTab === "expense"
+                        ? "bg-surface text-accent-700 shadow-none border border-line"
+                        : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
+                    }`}
+                  >
+                    <span>🏢 Expense Facilities (facility_details)</span>
+                    <span className="bg-accent-100 text-accent-700 px-2 py-0.2 rounded-full text-2xs font-mono font-bold">
+                      {standardFacilities.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFacilitySubTab("notada")}
+                    className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-md flex items-center justify-center gap-2 ${
+                      facilitySubTab === "notada"
+                        ? "bg-surface text-rose-700 shadow-none border border-line"
+                        : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
+                    }`}
+                  >
+                    <span>🛑 No TA / DA Exception List (no_ta_da_hospitals)</span>
+                    <span className="bg-rose-100 text-rose-700 px-2 py-0.2 rounded-full text-2xs font-mono font-bold">
+                      {noTaDaHospitals.length}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Sub-Tab 1: Standard Facilities */}
+                {facilitySubTab === "expense" && (
+                  <div className="bg-surface border border-line rounded-lg overflow-hidden shadow-none">
+                    <div className="bg-surface-sunken px-4 py-2.5 border-b border-line flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0 font-mono flex items-center gap-1.5">
+                          <span>🏢 Window 1: Expense Page Facilities Directory</span>
+                        </h4>
+                        <p className="text-2xs text-ink-500 font-medium m-0 mt-0.5">
+                          Saved in DB table: <code className="bg-surface text-ink-700 px-1 py-0.2 rounded text-2xs font-mono font-bold border border-line">facility_details</code>. Selectable on Expense Page.
+                        </p>
+                      </div>
+                    </div>
+
+                    {facilityLoading ? (
+                      <div className="p-8 text-center text-ink-500 font-bold text-xs bg-surface">
+                        <LteSpinner /> Loading Expense Facilities...
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-surface-sunken text-ink-500 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                              <th className="py-2.5 px-3"># ID</th>
+                              <th className="py-2.5 px-3">Facility Name</th>
+                              <th className="py-2.5 px-3">District</th>
+                              <th className="py-2.5 px-3">Facility Type</th>
+                              <th className="py-2.5 px-3">Zone</th>
+                              <th className="py-2.5 px-3">Facility Incharge</th>
+                              <th className="py-2.5 px-3">DM Name</th>
+                              <th className="py-2.5 px-3">Coordinator</th>
+                              <th className="py-2.5 px-3 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-line text-ink-700">
+                            {standardFacilities
+                              .filter((f) => {
+                                if (!facilitySearch.trim()) return true;
+                                const q = facilitySearch.toLowerCase();
+                                return (
+                                  (f.facility_name || "").toLowerCase().includes(q) ||
+                                  (f.district_name || "").toLowerCase().includes(q) ||
+                                  (f.facility_incharge || "").toLowerCase().includes(q) ||
+                                  (f.dm_name || "").toLowerCase().includes(q) ||
+                                  (f.coordinator_name || "").toLowerCase().includes(q) ||
+                                  (f.facility_type || "").toLowerCase().includes(q) ||
+                                  (f.zone_name || "").toLowerCase().includes(q)
+                                );
+                              })
+                              .map((f, idx) => (
+                                <tr key={f.id || idx} className="hover:bg-accent-50/40 transition-colors">
+                                  <td className="py-2 px-3 font-mono font-bold text-ink-500">#{f.id}</td>
+                                  <td className="py-2 px-3 font-bold text-ink-900">{f.facility_name}</td>
+                                  <td className="py-2 px-3 font-bold text-accent-700 font-mono">{f.district_name}</td>
+                                  <td className="py-2 px-3 font-medium text-ink-700">{f.facility_type || "Hospital"}</td>
+                                  <td className="py-2 px-3 font-medium text-ink-600">{f.zone_name || "Rajasthan"}</td>
+                                  <td className="py-2 px-3 text-ink-700">{f.facility_incharge || "N/A"}</td>
+                                  <td className="py-2 px-3 text-ink-700">{f.dm_name || "N/A"}</td>
+                                  <td className="py-2 px-3 text-ink-700">{f.coordinator_name || "N/A"}</td>
+                                  <td className="py-2 px-3 text-right">
+                                    <Popconfirm
+                                      title="Delete Expense Facility?"
+                                      description="Are you sure you want to remove this facility from facility_details?"
+                                      onConfirm={() => handleDeleteFacility(f.id, "standard")}
+                                      okText="Yes, Delete"
+                                      cancelText="Cancel"
+                                      okButtonProps={{ danger: true, size: "small" }}
+                                    >
+                                      <button type="button" className="p-1 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 rounded border border-line text-2xs font-bold cursor-pointer transition-all">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </Popconfirm>
+                                  </td>
+                                </tr>
+                              ))}
+                            {standardFacilities.length === 0 && (
+                              <tr>
+                                <td colSpan={9} className="py-6 text-center text-ink-400 font-medium">
+                                  No Expense Facilities found in facility_details table.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sub-Tab 2: No TA/DA Hospitals */}
+                {facilitySubTab === "notada" && (
+                  <div className="bg-surface border border-line rounded-lg overflow-hidden shadow-none">
+                    <div className="bg-rose-50/70 px-4 py-2.5 border-b border-rose-200 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-rose-950 uppercase tracking-wider m-0 font-mono flex items-center gap-1.5">
+                          <span>🛑 Window 2: No TA / DA Policy Exception Hospitals</span>
+                        </h4>
+                        <p className="text-2xs text-rose-800 font-medium m-0 mt-0.5">
+                          Saved in DB table: <code className="bg-rose-100 text-rose-900 px-1 py-0.2 rounded text-2xs font-mono font-bold">no_ta_da_hospitals</code>. Visits attract ₹0 TA / ₹0 DA.
+                        </p>
+                      </div>
+                    </div>
+
+                    {facilityLoading ? (
+                      <div className="p-8 text-center text-ink-500 font-bold text-xs bg-surface">
+                        <LteSpinner /> Loading No TA/DA Exception Hospitals...
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-surface-sunken text-ink-500 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                              <th className="py-2.5 px-3"># ID</th>
+                              <th className="py-2.5 px-3">Hospital Name</th>
+                              <th className="py-2.5 px-3">District Name</th>
+                              <th className="py-2.5 px-3">Created At</th>
+                              <th className="py-2.5 px-3">Policy Exception Status</th>
+                              <th className="py-2.5 px-3 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-line text-ink-700">
+                            {noTaDaHospitals
+                              .filter((f) => {
+                                if (!facilitySearch.trim()) return true;
+                                const q = facilitySearch.toLowerCase();
+                                return (
+                                  (f.hospital_name || "").toLowerCase().includes(q) ||
+                                  (f.district_name || "").toLowerCase().includes(q)
+                                );
+                              })
+                              .map((f, idx) => (
+                                <tr key={f.id || idx} className="hover:bg-rose-50/40 transition-colors">
+                                  <td className="py-2 px-3 font-mono font-bold text-ink-500">#{f.id}</td>
+                                  <td className="py-2 px-3 font-bold text-ink-900">{f.hospital_name}</td>
+                                  <td className="py-2 px-3 font-bold text-accent-700 font-mono">{f.district_name}</td>
+                                  <td className="py-2 px-3 text-2xs text-ink-500 font-mono">{f.created_at || "--"}</td>
+                                  <td className="py-2 px-3">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 text-2xs font-bold">
+                                      🛑 ₹0 TA &amp; ₹0 DA Exception
+                                    </span>
+                                  </td>
+                                  <td className="py-2 px-3 text-right">
+                                    <Popconfirm
+                                      title="Delete No TA/DA Hospital?"
+                                      description="Are you sure you want to remove this hospital from No TA/DA exception list?"
+                                      onConfirm={() => handleDeleteFacility(f.id, "no_ta_da")}
+                                      okText="Yes, Delete"
+                                      cancelText="Cancel"
+                                      okButtonProps={{ danger: true, size: "small" }}
+                                    >
+                                      <button type="button" className="p-1 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 rounded border border-line text-2xs font-bold cursor-pointer transition-all">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    </Popconfirm>
+                                  </td>
+                                </tr>
+                              ))}
+                            {noTaDaHospitals.length === 0 && (
+                              <tr>
+                                <td colSpan={6} className="py-6 text-center text-ink-400 font-medium">
+                                  No Hospitals found in no_ta_da_hospitals table.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ================= SECTION 6: WHATSAPP GATEWAY ================= */}
+            {activeTab === "whatsapp" && (
+              <div className="space-y-4 animate-fadeIn">
+                {/* Header Banner */}
+                <div className="bg-surface border border-line rounded-lg p-4 shadow-none flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-accent-600 text-white text-2xs font-mono font-bold uppercase px-2 py-0.5 rounded tracking-wider">
+                        OFFICIAL AUTOMATION GATEWAY
+                      </span>
+                      <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 border border-approved-border rounded">
+                        🛡️ ANTI-BAN QUEUE ACTIVE (3.5s DELAY)
+                      </span>
+                    </div>
+                    <h3 className="text-sm font-bold text-ink-900 uppercase tracking-wider mt-2 mb-0 font-display">
+                      WhatsApp Bot &amp; Pairing Code Console
+                    </h3>
+                    <p className="text-xs text-ink-500 font-medium m-0 mt-0.5">
+                      Connect company WhatsApp number once using 8-Digit Pairing Code (No camera QR scan needed). Automatic In-Chat Interactive Approvals enabled.
+                    </p>
+                  </div>
+
+                  <div className="bg-surface-sunken border border-line p-3 rounded-lg text-right shrink-0">
+                    <span className="text-2xs font-mono font-bold text-ink-500 uppercase tracking-wider block">GATEWAY STATUS</span>
+                    <span className="text-xs font-mono font-bold text-approved flex items-center gap-1.5 justify-end mt-0.5">
+                      <span className="w-2 h-2 rounded-full bg-approved animate-pulse" />
+                      CONNECTED (+91 {waPhoneNumber})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                  {/* Left Box: 8-Digit Pairing Code Linker (7 Cols) */}
+                  <div className="lg:col-span-7 bg-surface border border-line rounded-lg shadow-none p-4 space-y-4">
+                    <div className="flex items-center justify-between border-b border-line pb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider font-mono text-ink-900 flex items-center gap-2">
+                        <Zap className="w-3.5 h-3.5 text-accent-600" />
+                        1-TIME WHATSAPP PHONE NUMBER PAIRING
+                      </span>
+                      <span className="text-2xs font-mono bg-accent-50 text-accent-700 border border-accent-100 px-2 py-0.5 font-bold rounded">
+                        NO CAMERA SCAN REQUIRED
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="sm:col-span-2">
+                          <label className="label-lte text-2xs block mb-1">Company WhatsApp Phone Number *</label>
+                          <div className="flex">
+                            <span className="inline-flex items-center px-2.5 bg-surface-sunken border border-r-0 border-line text-xs font-mono font-bold text-ink-700 rounded-l-md">
+                              +91
+                            </span>
+                            <input
+                              type="text"
+                              value={waPhoneNumber}
+                              onChange={(e) => setWaPhoneNumber(e.target.value)}
+                              className="input-lte rounded-l-none h-9 text-xs font-mono font-bold w-full"
+                              placeholder="9829012001"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-end">
+                          <button
+                            type="button"
+                            onClick={handleGeneratePairingCode}
+                            disabled={waIsGeneratingCode}
+                            className="btn-lte-primary w-full h-9 px-3 text-xs uppercase tracking-wider font-bold cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
+                          >
+                            {waIsGeneratingCode ? <LteSpinner /> : <span>Get Pairing Code</span>}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 8-Digit Pairing Code Display Box */}
+                      <div className="p-5 bg-surface-sunken border border-line rounded-lg text-center space-y-2.5">
+                        <span className="text-2xs font-mono font-bold text-ink-500 uppercase tracking-widest block">
+                          8-DIGIT WHATSAPP PAIRING CODE
+                        </span>
+                        
+                        <div className="inline-block bg-[#1E1B4B] text-emerald-400 font-mono text-2xl font-black px-6 py-2.5 rounded-lg border border-accent-700 tracking-[0.2em] shadow-inner">
+                          {waPairingCode}
+                        </div>
+
+                        <div className="text-xs font-medium text-ink-700 space-y-1 pt-1">
+                          <p className="m-0">1. Open WhatsApp on mobile phone ➔ Tap <b>Settings (⋮)</b></p>
+                          <p className="m-0">2. Tap <b>Linked Devices</b> ➔ Tap <b>Link with phone number instead</b></p>
+                          <p className="m-0 text-accent-700 font-semibold">3. Enter code <b>{waPairingCode}</b> ➔ Connection completes instantly!</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Box: UltraMsg Credentials & Automatic Event Triggers (5 Cols) */}
+                  <div className="lg:col-span-5 bg-surface border border-line rounded-lg shadow-none p-4 space-y-4">
+                    <div className="flex items-center justify-between border-b border-line pb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider font-mono text-ink-900">
+                        ULTRAMSG GATEWAY CREDENTIALS
+                      </span>
+                      <span className="text-2xs font-mono bg-approved-bg text-approved border border-approved-border px-2 py-0.5 font-bold rounded">
+                        SOLUTION 2 ACTIVE
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5 text-xs font-mono">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">UltraMsg Instance ID *</label>
+                        <input
+                          type="text"
+                          value={waInstanceId}
+                          onChange={(e) => setWaInstanceId(e.target.value)}
+                          className="input-lte h-8 text-xs font-bold w-full"
+                          placeholder="instance1001"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">UltraMsg Token *</label>
+                        <input
+                          type="text"
+                          value={waToken}
+                          onChange={(e) => setWaToken(e.target.value)}
+                          className="input-lte h-8 text-xs font-bold w-full"
+                          placeholder="token_xyz123"
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSaveWhatsappConfigSubmit}
+                        disabled={waConfigSaving}
+                        className="btn-lte-primary w-full py-2 text-xs uppercase tracking-wider font-bold cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-60"
+                      >
+                        {waConfigSaving ? <LteSpinner /> : <span>💾 Save Gateway Credentials</span>}
+                      </button>
+                    </div>
+
+                    <div className="border-t border-line pt-3">
+                      <span className="text-xs font-bold uppercase tracking-wider font-mono text-ink-900 block mb-2">
+                        AUTOMATIC EVENT DISPATCH SETTINGS
+                      </span>
+
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center justify-between p-2.5 bg-surface-sunken border border-line rounded-md">
+                          <div>
+                            <span className="font-bold text-ink-900 block">Expense Claim Submission</span>
+                            <span className="text-2xs text-ink-500 font-medium">Dispatches In-Chat Card to Manager &amp; Submitter</span>
+                          </div>
+                          <Switch defaultChecked />
+                        </div>
+
+                        <div className="flex items-center justify-between p-2.5 bg-surface-sunken border border-line rounded-md">
+                          <div>
+                            <span className="font-bold text-ink-900 block">Manager In-Chat Action Buttons</span>
+                            <span className="text-2xs text-ink-500 font-medium">Renders [✅ Approve] &amp; [❌ Reject] inside WhatsApp</span>
+                          </div>
+                          <Switch defaultChecked />
+                        </div>
+
+                        <div className="flex items-center justify-between p-2.5 bg-surface-sunken border border-line rounded-md">
+                          <div>
+                            <span className="font-bold text-ink-900 block">Approval &amp; Rejection Alerts</span>
+                            <span className="text-2xs text-ink-500 font-medium">Notifies Engineer when manager actions claim</span>
+                          </div>
+                          <Switch defaultChecked />
+                        </div>
+                      </div>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={handleGeneratePairingCode}
-                      disabled={waIsGeneratingCode}
-                      className="w-full h-9 px-3 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
+                      onClick={async () => {
+                        try {
+                          const res = await adminService.testWhatsappDispatch(waPhoneNumber);
+                          if (res && res.status === "success") {
+                            toast.success(res.message);
+                          } else {
+                            toast.error(res?.message || "Test dispatch failed");
+                          }
+                        } catch (e: any) {
+                          toast.error(e.message || "Error running test dispatch");
+                        }
+                      }}
+                      className="btn-lte-secondary w-full py-2 text-xs uppercase tracking-wider font-bold cursor-pointer flex items-center justify-center gap-2"
                     >
-                      {waIsGeneratingCode ? <LteSpinner /> : <span>Get Pairing Code</span>}
+                      <span>🧪 Dispatch Test WhatsApp Alert</span>
                     </button>
                   </div>
                 </div>
-
-                {/* 8-Digit Pairing Code Display Box - Ditto Enterprise Mono Style */}
-                <div className="p-4 bg-slate-50 border border-slate-300 rounded-none text-center space-y-2">
-                  <span className="text-[10px] font-mono font-extrabold text-slate-500 uppercase tracking-widest block">
-                    8-DIGIT WHATSAPP PAIRING CODE
-                  </span>
-                  
-                  <div className="inline-block bg-slate-900 text-emerald-400 font-mono text-2xl font-black px-6 py-2.5 rounded-none border border-slate-800 tracking-[0.2em] shadow-inner">
-                    {waPairingCode}
-                  </div>
-
-                  <div className="text-[10px] font-extrabold text-slate-600 space-y-0.5 pt-1">
-                    <p className="m-0">1. Open WhatsApp on mobile phone ➔ Tap <b>Settings (⋮)</b></p>
-                    <p className="m-0">2. Tap <b>Linked Devices</b> ➔ Tap <b>Link with phone number instead</b></p>
-                    <p className="m-0 text-emerald-700">3. Enter code <b>{waPairingCode}</b> ➔ Connection completes instantly!</p>
-                  </div>
-                </div>
               </div>
-            </div>
-
-            {/* Right Box: UltraMsg Credentials & Automatic Event Triggers Table (5 Cols) */}
-            <div className="lg:col-span-5 bg-white border border-slate-300 rounded-none shadow-2xs p-4 space-y-4">
-              <div className="bg-[#4A6A8A] text-white px-3 py-2 flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider font-mono text-white">
-                  ULTRAMSG GATEWAY CREDENTIALS
-                </span>
-                <span className="text-[9.5px] font-mono bg-white/20 px-2 py-0.5 font-bold">
-                  SOLUTION 2 ACTIVE
-                </span>
-              </div>
-
-              <div className="space-y-2 text-xs font-mono">
-                <div>
-                  <label className="block text-[9.5px] font-extrabold uppercase text-slate-600 mb-1">UltraMsg Instance ID *</label>
-                  <input
-                    type="text"
-                    value={waInstanceId}
-                    onChange={(e) => setWaInstanceId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none h-8"
-                    placeholder="instance1001"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[9.5px] font-extrabold uppercase text-slate-600 mb-1">UltraMsg Token *</label>
-                  <input
-                    type="text"
-                    value={waToken}
-                    onChange={(e) => setWaToken(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none h-8"
-                    placeholder="token_xyz123"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleSaveWhatsappConfigSubmit}
-                  disabled={waConfigSaving}
-                  className="w-full py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-1.5"
-                >
-                  {waConfigSaving ? <LteSpinner /> : <span>💾 Save Gateway Credentials</span>}
-                </button>
-              </div>
-
-              <div className="bg-[#4A6A8A] text-white px-3 py-2 flex items-center justify-between border-t border-slate-200 pt-3">
-                <span className="text-xs font-extrabold uppercase tracking-wider font-mono text-white">
-                  AUTOMATIC EVENT DISPATCH SETTINGS
-                </span>
-              </div>
-
-              <div className="space-y-2.5 text-xs">
-                <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200">
-                  <div>
-                    <span className="font-extrabold text-slate-900 block">Expense Claim Submission</span>
-                    <span className="text-[10px] text-slate-500 font-bold">Dispatches In-Chat Card to Manager & Submitter</span>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200">
-                  <div>
-                    <span className="font-extrabold text-slate-900 block">Manager In-Chat Action Buttons</span>
-                    <span className="text-[10px] text-slate-500 font-bold">Renders [✅ Approve] & [❌ Reject] inside WhatsApp</span>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200">
-                  <div>
-                    <span className="font-extrabold text-slate-900 block">Approval & Rejection Alerts</span>
-                    <span className="text-[10px] text-slate-500 font-bold">Notifies Engineer when manager actions claim</span>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const res = await adminService.testWhatsappDispatch(waPhoneNumber);
-                    if (res && res.status === "success") {
-                      toast.success(res.message);
-                    } else {
-                      toast.error(res?.message || "Test dispatch failed");
-                    }
-                  } catch (e: any) {
-                    toast.error(e.message || "Error running test dispatch");
-                  }
-                }}
-                className="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center justify-center gap-2"
-              >
-                <span>🧪 Dispatch Test WhatsApp Alert</span>
-              </button>
-            </div>
-          </div>
+            )}
+          </main>
         </div>
-      ) : null}
       </div>
 
       {/* ================= MODAL: ADD FACILITY / NO TA DA HOSPITAL ================= */}
       {isAddFacilityModalOpen && (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-md overflow-hidden">
-            <div className={`px-4 py-3 flex items-center justify-between border-b text-white ${
-              newFacilityTargetTable === "standard" ? "bg-[#4A6A8A] border-slate-300" : "bg-rose-900 border-rose-950"
-            }`}>
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono flex items-center gap-2">
-                <DatabaseOutlined /> {newFacilityTargetTable === "standard" ? "Add Expense Facility (facility_details)" : "Add No TA/DA Hospital (no_ta_da_hospitals)"}
-              </h3>
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-surface border border-line rounded-xl shadow-md w-full max-w-md overflow-hidden animate-scale-up flex flex-col">
+            {/* Standardized Header */}
+            <div className="bg-surface border-b border-line px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center font-bold border border-accent-100">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900 m-0">
+                  {newFacilityTargetTable === "standard" ? "Add Expense Facility" : "Add No TA/DA Hospital"}
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsAddFacilityModalOpen(false)}
-                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+                className="p-1 rounded-md text-ink-400 hover:text-ink-700 hover:bg-surface-sunken transition-colors cursor-pointer border-0 bg-transparent"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -3135,153 +3297,154 @@ export default function AdminPage() {
                 e.preventDefault();
                 handleCreateFacility();
               }}
-              className="p-4 space-y-4"
+              className="flex-1 flex flex-col overflow-hidden"
             >
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                  Target Master Table *
-                </label>
-                <select
-                  value={newFacilityTargetTable}
-                  onChange={(e) => setNewFacilityTargetTable(e.target.value as any)}
-                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                >
-                  <option value="standard">🏢 facility_details (Expense Page Facilities)</option>
-                  <option value="no_ta_da">🛑 no_ta_da_hospitals (No TA/DA Exception List)</option>
-                </select>
-              </div>
+              <div className="p-5 space-y-3.5 overflow-y-auto max-h-[70vh]">
+                <div>
+                  <label className="label-lte text-2xs block mb-1">
+                    Target Master Table *
+                  </label>
+                  <select
+                    value={newFacilityTargetTable}
+                    onChange={(e) => setNewFacilityTargetTable(e.target.value as any)}
+                    className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                  >
+                    <option value="standard">🏢 facility_details (Expense Page Facilities)</option>
+                    <option value="no_ta_da">🛑 no_ta_da_hospitals (No TA/DA Exception List)</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                  {newFacilityTargetTable === "standard" ? "Facility Name (facility_name) *" : "Hospital Name (hospital_name) *"}
-                </label>
-                <input
-                  type="text"
-                  value={newFacilityName}
-                  onChange={(e) => setNewFacilityName(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                  placeholder="e.g. Mathura Das Mathur Hospital"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="label-lte text-2xs block mb-1">
+                    {newFacilityTargetTable === "standard" ? "Facility Name (facility_name) *" : "Hospital Name (hospital_name) *"}
+                  </label>
+                  <input
+                    type="text"
+                    value={newFacilityName}
+                    onChange={(e) => setNewFacilityName(e.target.value)}
+                    className="input-lte w-full h-8 text-xs font-semibold"
+                    placeholder="e.g. Mathura Das Mathur Hospital"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                  District Name (district_name) *
-                </label>
-                <select
-                  value={newFacilityDistrict}
-                  onChange={(e) => setNewFacilityDistrict(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  required
-                >
-                  <option value="">-- Select District --</option>
-                  {["Ajmer", "Alwar", "Banswara", "Baran", "Barmer", "Bharatpur", "Bhilwara", "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Dholpur", "Dungarpur", "Hanumangarh", "Jaipur", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu", "Jodhpur", "Karauli", "Kota", "Nagaur", "Pali", "Pratapgarh", "Rajsamand", "Sawai Madhopur", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur"].map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label className="label-lte text-2xs block mb-1">
+                    District Name (district_name) *
+                  </label>
+                  <select
+                    value={newFacilityDistrict}
+                    onChange={(e) => setNewFacilityDistrict(e.target.value)}
+                    className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    required
+                  >
+                    <option value="">-- Select District --</option>
+                    {["Ajmer", "Alwar", "Banswara", "Baran", "Barmer", "Bharatpur", "Bhilwara", "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Dholpur", "Dungarpur", "Hanumangarh", "Jaipur", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu", "Jodhpur", "Karauli", "Kota", "Nagaur", "Pali", "Pratapgarh", "Rajsamand", "Sawai Madhopur", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur"].map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {newFacilityTargetTable === "standard" && (
-                <>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                        Facility Type (facility_type)
-                      </label>
-                      <select
-                        value={newFacilityType}
-                        onChange={(e) => setNewFacilityType(e.target.value)}
-                        className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9 cursor-pointer"
-                      >
-                        <option value="District Hospital (DH)">District Hospital (DH)</option>
-                        <option value="Sub-District Hospital (SDH)">Sub-District Hospital (SDH)</option>
-                        <option value="Medical College / Hospital">Medical College / Hospital</option>
-                        <option value="Community Health Centre (CHC)">Community Health Centre (CHC)</option>
-                        <option value="Primary Health Centre (PHC)">Primary Health Centre (PHC)</option>
-                        <option value="Base Working Location / Hub">Base Working Location / Hub</option>
-                        <option value="Other Facility">Other Facility</option>
-                      </select>
+                {newFacilityTargetTable === "standard" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Facility Type
+                        </label>
+                        <select
+                          value={newFacilityType}
+                          onChange={(e) => setNewFacilityType(e.target.value)}
+                          className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                        >
+                          <option value="District Hospital (DH)">District Hospital (DH)</option>
+                          <option value="Sub-District Hospital (SDH)">Sub-District Hospital (SDH)</option>
+                          <option value="Medical College / Hospital">Medical College / Hospital</option>
+                          <option value="Community Health Centre (CHC)">Community Health Centre (CHC)</option>
+                          <option value="Primary Health Centre (PHC)">Primary Health Centre (PHC)</option>
+                          <option value="Base Working Location / Hub">Base Working Location / Hub</option>
+                          <option value="Other Facility">Other Facility</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Zone Name
+                        </label>
+                        <select
+                          value={newFacilityZone}
+                          onChange={(e) => setNewFacilityZone(e.target.value)}
+                          className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                        >
+                          <option value="Zone Jaipur">Zone Jaipur</option>
+                          <option value="Zone Jodhpur">Zone Jodhpur</option>
+                          <option value="Zone Bikaner">Zone Bikaner</option>
+                          <option value="Zone Ajmer">Zone Ajmer</option>
+                          <option value="Zone Udaipur">Zone Udaipur</option>
+                          <option value="Zone Kota">Zone Kota</option>
+                          <option value="Zone Bharatpur">Zone Bharatpur</option>
+                        </select>
+                      </div>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                        Zone Name (zone_name)
-                      </label>
-                      <select
-                        value={newFacilityZone}
-                        onChange={(e) => setNewFacilityZone(e.target.value)}
-                        className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9 cursor-pointer"
-                      >
-                        <option value="Zone Jaipur">Zone Jaipur</option>
-                        <option value="Zone Jodhpur">Zone Jodhpur</option>
-                        <option value="Zone Bikaner">Zone Bikaner</option>
-                        <option value="Zone Ajmer">Zone Ajmer</option>
-                        <option value="Zone Udaipur">Zone Udaipur</option>
-                        <option value="Zone Kota">Zone Kota</option>
-                        <option value="Zone Bharatpur">Zone Bharatpur</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                      Facility Incharge (facility_incharge)
-                    </label>
-                    <input
-                      type="text"
-                      value={newFacilityIncharge}
-                      onChange={(e) => setNewFacilityIncharge(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9"
-                      placeholder="e.g. Dr. R. K. Sharma / MoIC"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                        DM Name (dm_name)
+                      <label className="label-lte text-2xs block mb-1">
+                        Facility Incharge
                       </label>
                       <input
                         type="text"
-                        value={newFacilityDmName}
-                        onChange={(e) => setNewFacilityDmName(e.target.value)}
-                        className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9"
-                        placeholder="District Manager"
+                        value={newFacilityIncharge}
+                        onChange={(e) => setNewFacilityIncharge(e.target.value)}
+                        className="input-lte w-full h-8 text-xs font-semibold"
+                        placeholder="e.g. Dr. R. K. Sharma / MoIC"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                        Coordinator Name (coordinator_name)
-                      </label>
-                      <input
-                        type="text"
-                        value={newFacilityCoordinatorName}
-                        onChange={(e) => setNewFacilityCoordinatorName(e.target.value)}
-                        className="w-full px-2 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none h-9"
-                        placeholder="Coordinator Name"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          DM Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newFacilityDmName}
+                          onChange={(e) => setNewFacilityDmName(e.target.value)}
+                          className="input-lte w-full h-8 text-xs font-semibold"
+                          placeholder="District Manager"
+                        />
+                      </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">
+                          Coordinator Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newFacilityCoordinatorName}
+                          onChange={(e) => setNewFacilityCoordinatorName(e.target.value)}
+                          className="input-lte w-full h-8 text-xs font-semibold"
+                          placeholder="Coordinator Name"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Sunken Footer */}
+              <div className="bg-surface-sunken border-t border-line px-5 py-3 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsAddFacilityModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className={`px-5 py-2 text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors ${
-                    newFacilityTargetTable === "standard" ? "bg-[#4A6A8A] hover:bg-[#3b5570]" : "bg-rose-700 hover:bg-rose-800"
-                  }`}
+                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold"
                 >
-                  Save to {newFacilityTargetTable === "standard" ? "facility_details" : "no_ta_da_hospitals"}
+                  Save Facility
                 </button>
               </div>
             </form>
@@ -3292,771 +3455,801 @@ export default function AdminPage() {
       {/* ================= MODAL: CREATE SINGLE USER ================= */}
       {showSingleUserModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Solid Enterprise Header Bar */}
-            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 flex items-center gap-2 font-mono">
-                <span>Register New Employee</span>
-              </h3>
+          <div className="bg-surface border border-line rounded-xl shadow-md w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
+            {/* Standardized Header */}
+            <div className="bg-surface border-b border-line px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center font-bold border border-accent-100">
+                  <Users className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900 m-0">
+                  Register New Employee
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowSingleUserModal(false)}
-                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+                className="p-1 rounded-md text-ink-400 hover:text-ink-700 hover:bg-surface-sunken transition-colors cursor-pointer border-0 bg-transparent"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handleCreateSingleUser} className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
-              {singleUserError && (
-                <div className="p-3 border border-rose-300 bg-rose-50 text-rose-800 font-extrabold text-xs rounded-none">
-                  {singleUserError}
-                </div>
-              )}
-
-              {/* Grid 1 - Core Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Employee Code *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. RJCYR045"
-                    value={eCode}
-                    onChange={(e) => setECode(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. SUBHASH YADAV"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Password *</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Grid 2 - Role and Designations */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">System Role *</label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    {dropdowns?.roles?.map((r: string) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Designation *</label>
-                  <select
-                    value={designation}
-                    onChange={(e) => setDesignation(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    {dropdowns?.designations?.map((d: string) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Grade *</label>
-                  <select
-                    value={grade}
-                    onChange={(e) => setGrade(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    {(dropdowns?.grades && dropdowns.grades.length > 0 ? dropdowns.grades : ["A", "B", "C", "D"]).map((g: string) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Grid 3 - Zone and District */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Zone *</label>
-                  <select
-                    value={zone}
-                    onChange={(e) => handleZoneChange(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="All">All</option>
-                    {dropdowns?.zones && Object.keys(dropdowns.zones).map((z) => (
-                      <option key={z} value={z}>{z}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">District *</label>
-                  <select
-                    value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="All">All</option>
-                    {zone !== "All" && dropdowns?.zones?.[zone]?.map((d: string) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">User Type *</label>
-                  <select
-                    value={userType}
-                    onChange={(e) => setUserType(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="Employee">Employee</option>
-                    <option value="Contractor">Contractor</option>
-                    <option value="System">System</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Grid 4 - Hierarchy Reporting Managers */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Reporting Manager</label>
-                  <select
-                    value={manager}
-                    onChange={(e) => setManager(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="">-- None / Select Reporting Manager --</option>
-                    {mList.map((u) => (
-                      <option key={u.id} value={u.name}>
-                        {u.name} ({u.e_code || u.user_id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Zonal Manager</label>
-                  <select
-                    value={zonalManager}
-                    onChange={(e) => setZonalManager(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="">-- None / Select Zonal Manager --</option>
-                    {zmList.map((u) => (
-                      <option key={u.id} value={u.name}>
-                        {u.name} ({u.e_code || u.user_id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Coordinator</label>
-                  <select
-                    value={coordinator}
-                    onChange={(e) => setCoordinator(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="">-- None / Select Coordinator --</option>
-                    {cList.map((u) => (
-                      <option key={u.id} value={u.name}>
-                        {u.name} ({u.e_code || u.user_id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Grid 5 - Mobile, Email, and Upkaran */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Mobile Number *</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 9876543210"
-                    value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Email ID *</label>
-                  <input
-                    type="email"
-                    placeholder="e.g. subhash@cyrix.com"
-                    value={mailId}
-                    onChange={(e) => setMailId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Device / Upkaran ID *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. UPK-9988-XY"
-                    value={eUpkaranId}
-                    onChange={(e) => setEUpkaranId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Base Reporting Location Section */}
-              <div className="space-y-1">
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Base Reporting Location(s) *</label>
-                {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
-                  <MultiSelectDropdown
-                    options={dropdowns.facilities[district]}
-                    selectedValues={parseSelectedLocations(baseReportingLocation, dropdowns.facilities[district] || [])}
-                    onChange={(vals) => setBaseReportingLocation(vals.join(", "))}
-                    placeholder="-- Select Base Reporting Location(s) --"
-                  />
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="e.g. PHC Location or custom hospital"
-                    value={baseReportingLocation}
-                    onChange={(e) => setBaseReportingLocation(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                )}
-              </div>
-
-              {/* Grid 6 - Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Date of Joining *</label>
-                  <input
-                    type="date"
-                    value={dateOfJoining}
-                    onChange={(e) => setDateOfJoining(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 [color-scheme:light]"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Date of Birth *</label>
-                  <input
-                    type="date"
-                    value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 [color-scheme:light]"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Screen permissions grid checkboxes */}
-              <div className="space-y-1.5 pt-2 border-t border-slate-200">
-                <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">Allowed Navigation Screens</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 bg-slate-50 rounded-none border border-slate-200">
-                  {ALL_WINDOWS.map((win) => (
-                    <label key={win.id} className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={allowedWindows.includes(win.id)}
-                        onChange={() => handleToggleWindow(win.id, false)}
-                        className="rounded-none border-slate-300 text-[#4A6A8A] focus:ring-[#4A6A8A] h-4 w-4 cursor-pointer"
-                      />
-                      {win.name}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => setShowSingleUserModal(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={singleUserLoading}
-                className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
-              >
-                {singleUserLoading && <LteSpinner />}
-                <span>Register Employee</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )}
-              {showEditUserModal && editingUser && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Solid Enterprise Header Bar */}
-            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 flex items-center gap-2 font-mono">
-                <span>Update Employee:</span>
-                <button
-                  type="button"
-                  onClick={() => setShowUnlockModal(true)}
-                  title="Click to change ID/Code/Password"
-                  className="bg-white/20 hover:bg-white/30 text-white font-mono font-extrabold px-2 py-0.5 rounded-none cursor-pointer border-0"
-                >
-                  {editingUser.user_id}
-                </button>
-              </h3>
-              {!isSensitiveSectionUnlocked ? (
-                <button
-                  type="button"
-                  onClick={() => setShowUnlockModal(true)}
-                  className="text-[10px] bg-rose-600 hover:bg-rose-700 text-white font-extrabold uppercase px-2.5 py-1 rounded-none border-0 cursor-pointer shadow-2xs transition-colors"
-                >
-                  🔒 Unlock Credentials
-                </button>
-              ) : (
-                <span className="text-[10px] bg-emerald-600 text-white font-extrabold uppercase px-2.5 py-1 rounded-none shadow-2xs">
-                  🔓 Unlocked
-                </span>
-              )}
-            </div>
-            
-            <form onSubmit={handleUpdateUserSubmit} className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
-              {editUserError && (
-                <div className="p-3 border border-rose-300 bg-rose-50 text-rose-800 font-extrabold text-xs rounded-none">
-                  {editUserError}
-                </div>
-              )}
-
-              {/* Sensitive Fields (User ID, Employee Code, Password) — Shown only when unlocked */}
-              {isSensitiveSectionUnlocked && (
-                <div className="p-3 bg-amber-50 border border-amber-300 rounded-none space-y-3 text-left">
-                  <span className="text-[10px] font-extrabold text-amber-900 uppercase tracking-wider block">🔓 Edit Credentials (Unlocked)</span>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">User ID *</label>
-                      <input
-                        type="text"
-                        value={editUserId}
-                        onChange={(e) => setEditUserId(e.target.value)}
-                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Employee Code *</label>
-                      <input
-                        type="text"
-                        value={editECode}
-                        onChange={(e) => setEditECode(e.target.value)}
-                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                        required
-                      />
-                    </div>
+            <form onSubmit={handleCreateSingleUser} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin">
+                {singleUserError && (
+                  <div className="p-3 border border-rose-200 bg-rose-50 text-rose-800 font-bold text-xs rounded-lg">
+                    {singleUserError}
                   </div>
+                )}
 
+                {/* Grid 1 - Core Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">New Password (Leave blank to keep current password)</label>
+                    <label className="label-lte text-2xs block mb-1">Employee Code *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. RJCYR045"
+                      value={eCode}
+                      onChange={(e) => setECode(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-mono font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Full Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. SUBHASH YADAV"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Password *</label>
                     <input
                       type="password"
-                      value={editUserPassword}
-                      onChange={(e) => setEditUserPassword(e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                      placeholder="Enter new password for this user"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold"
+                      required
                     />
                   </div>
                 </div>
-              )}
 
-              {/* Grid 1 - Core Fields */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Full Name *</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
+                {/* Grid 2 - Role and Designations */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">System Role *</label>
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      {dropdowns?.roles?.map((r: string) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Designation *</label>
+                    <select
+                      value={designation}
+                      onChange={(e) => setDesignation(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      {dropdowns?.designations?.map((d: string) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Grade *</label>
+                    <select
+                      value={grade}
+                      onChange={(e) => setGrade(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      {(dropdowns?.grades && dropdowns.grades.length > 0 ? dropdowns.grades : ["A", "B", "C", "D"]).map((g: string) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">System Status *</label>
-                  <select
-                    value={editUserStatus}
-                    onChange={(e) => setEditUserStatus(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="active">Active</option>
-                    <option value="locked">Locked</option>
-                    <option value="disabled">Disabled</option>
-                  </select>
+
+                {/* Grid 3 - Zone and District */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Zone *</label>
+                    <select
+                      value={zone}
+                      onChange={(e) => handleZoneChange(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="All">All</option>
+                      {dropdowns?.zones && Object.keys(dropdowns.zones).map((z) => (
+                        <option key={z} value={z}>{z}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">District *</label>
+                    <select
+                      value={district}
+                      onChange={(e) => setDistrict(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="All">All</option>
+                      {zone !== "All" && dropdowns?.zones?.[zone]?.map((d: string) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">User Type *</label>
+                    <select
+                      value={userType}
+                      onChange={(e) => setUserType(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="Employee">Employee</option>
+                      <option value="Contractor">Contractor</option>
+                      <option value="System">System</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Grid 4 - Hierarchy Reporting Managers */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Reporting Manager</label>
+                    <select
+                      value={manager}
+                      onChange={(e) => setManager(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="">-- None / Select Manager --</option>
+                      {mList.map((u) => (
+                        <option key={u.id} value={u.name}>
+                          {u.name} ({u.e_code || u.user_id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Zonal Manager</label>
+                    <select
+                      value={zonalManager}
+                      onChange={(e) => setZonalManager(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="">-- None / Select Zonal Manager --</option>
+                      {zmList.map((u) => (
+                        <option key={u.id} value={u.name}>
+                          {u.name} ({u.e_code || u.user_id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Coordinator</label>
+                    <select
+                      value={coordinator}
+                      onChange={(e) => setCoordinator(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="">-- None / Select Coordinator --</option>
+                      {cList.map((u) => (
+                        <option key={u.id} value={u.name}>
+                          {u.name} ({u.e_code || u.user_id})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Grid 5 - Mobile, Email, and Upkaran */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Mobile Number *</label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. 9876543210"
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-mono font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Email ID *</label>
+                    <input
+                      type="email"
+                      placeholder="e.g. subhash@cyrix.com"
+                      value={mailId}
+                      onChange={(e) => setMailId(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-mono font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Device / Upkaran ID *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. UPK-9988-XY"
+                      value={eUpkaranId}
+                      onChange={(e) => setEUpkaranId(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-mono font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Base Reporting Location Section */}
+                <div className="space-y-1">
+                  <label className="label-lte text-2xs block mb-1">Base Reporting Location(s) *</label>
+                  {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
+                    <MultiSelectDropdown
+                      options={dropdowns.facilities[district]}
+                      selectedValues={parseSelectedLocations(baseReportingLocation, dropdowns.facilities[district] || [])}
+                      onChange={(vals) => setBaseReportingLocation(vals.join(", "))}
+                      placeholder="-- Select Base Reporting Location(s) --"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. PHC Location or custom hospital"
+                      value={baseReportingLocation}
+                      onChange={(e) => setBaseReportingLocation(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold"
+                      required
+                    />
+                  )}
+                </div>
+
+                {/* Grid 6 - Dates */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Date of Joining *</label>
+                    <input
+                      type="date"
+                      value={dateOfJoining}
+                      onChange={(e) => setDateOfJoining(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold [color-scheme:light]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Date of Birth *</label>
+                    <input
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold [color-scheme:light]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Screen permissions grid checkboxes */}
+                <div className="space-y-1.5 pt-2 border-t border-line">
+                  <span className="text-2xs font-bold text-ink-500 uppercase tracking-wider block">Allowed Navigation Screens</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-surface-sunken rounded-lg border border-line">
+                    {ALL_WINDOWS.map((win) => (
+                      <label key={win.id} className="flex items-center gap-2 text-xs font-semibold text-ink-800 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={allowedWindows.includes(win.id)}
+                          onChange={() => handleToggleWindow(win.id, false)}
+                          className="rounded border-line text-accent-600 focus:ring-accent-600 h-4 w-4 cursor-pointer"
+                        />
+                        {win.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Grid 2 - Role and Designations */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">System Role *</label>
-                  <select
-                    value={editRole}
-                    onChange={(e) => setEditRole(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    {dropdowns?.roles?.map((r: string) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
+              {/* Sunken Footer */}
+              <div className="bg-surface-sunken border-t border-line px-5 py-3 flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowSingleUserModal(false)}
+                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={singleUserLoading}
+                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold flex items-center gap-2 disabled:opacity-60"
+                >
+                  {singleUserLoading && <LteSpinner />}
+                  <span>Register Employee</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT USER PROFILE ================= */}
+      {showEditUserModal && editingUser && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
+          <div className="bg-surface border border-line rounded-xl shadow-md w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
+            {/* Standardized Header */}
+            <div className="bg-surface border-b border-line px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center font-bold border border-accent-100">
+                  <Users className="w-4 h-4" />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Designation *</label>
-                  <select
-                    value={editDesignation}
-                    onChange={(e) => setEditDesignation(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    {dropdowns?.designations?.map((d: string) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Grade *</label>
-                  <select
-                    value={editGrade}
-                    onChange={(e) => setEditGrade(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    {(dropdowns?.grades && dropdowns.grades.length > 0 ? dropdowns.grades : ["A", "B", "C", "D"]).map((g: string) => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-ink-900 m-0">Update Employee:</h3>
+                  <span className="font-mono text-xs font-bold text-accent-700 bg-accent-50 px-2 py-0.5 rounded border border-accent-100">
+                    {editingUser.user_id}
+                  </span>
                 </div>
               </div>
-
-              {/* Grid 3 - Zone and District */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Zone *</label>
-                  <select
-                    value={editZone}
-                    onChange={(e) => handleEditZoneChange(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
+              <div className="flex items-center gap-2">
+                {!isSensitiveSectionUnlocked ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowUnlockModal(true)}
+                    className="btn-lte-secondary text-2xs h-7 px-2.5 flex items-center gap-1 text-rose-700 hover:text-rose-800 font-bold border-rose-200 cursor-pointer"
                   >
-                    <option value="All">All</option>
-                    {dropdowns?.zones && Object.keys(dropdowns.zones).map((z) => (
-                      <option key={z} value={z}>{z}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">District *</label>
-                  <select
-                    value={editDistrict}
-                    onChange={(e) => setEditDistrict(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="All">All</option>
-                    {editZone !== "All" && dropdowns?.zones?.[editZone]?.map((d: string) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">User Type *</label>
-                  <select
-                    value={editUserType}
-                    onChange={(e) => setEditUserType(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="Employee">Employee</option>
-                    <option value="Contractor">Contractor</option>
-                    <option value="System">System</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Grid 4 - Reporting Managers (Dropdown selection showing names) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Reporting Manager</label>
-                  <select
-                    value={editManager}
-                    onChange={(e) => setEditManager(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="">-- None / Clear Reporting Manager --</option>
-                    {mList.map((u) => (
-                      <option key={u.id} value={u.name}>
-                        {u.name} ({u.e_code || u.user_id})
-                      </option>
-                    ))}
-                    {editManager && !mList.some((m) => m.name === editManager) && (
-                      <option value={editManager}>{editManager}</option>
-                    )}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Zonal Manager</label>
-                  <select
-                    value={editZonalManager}
-                    onChange={(e) => setEditZonalManager(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="">-- None / Clear Zonal Manager --</option>
-                    {zmList.map((u) => (
-                      <option key={u.id} value={u.name}>
-                        {u.name} ({u.e_code || u.user_id})
-                      </option>
-                    ))}
-                    {editZonalManager && !zmList.some((zm) => zm.name === editZonalManager) && (
-                      <option value={editZonalManager}>{editZonalManager}</option>
-                    )}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Coordinator</label>
-                  <select
-                    value={editCoordinator}
-                    onChange={(e) => setEditCoordinator(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer"
-                  >
-                    <option value="">-- None / Clear Coordinator --</option>
-                    {cList.map((u) => (
-                      <option key={u.id} value={u.name}>
-                        {u.name} ({u.e_code || u.user_id})
-                      </option>
-                    ))}
-                    {editCoordinator && !cList.some((c) => c.name === editCoordinator) && (
-                      <option value={editCoordinator}>{editCoordinator}</option>
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              {/* Grid 5 - Mobile, Email, and Device */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Mobile Number *</label>
-                  <input
-                    type="tel"
-                    value={editMobileNumber}
-                    onChange={(e) => setEditMobileNumber(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Email ID *</label>
-                  <input
-                    type="email"
-                    value={editMailId}
-                    onChange={(e) => setEditMailId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Device / Upkaran ID *</label>
-                  <input
-                    type="text"
-                    value={editEUpkaranId}
-                    onChange={(e) => setEditEUpkaranId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Base Reporting Location Section */}
-              <div className="space-y-1">
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Base Reporting Location(s) *</label>
-                {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
-                  <MultiSelectDropdown
-                    options={[
-                      ...(dropdowns.facilities[editDistrict] || []),
-                      ...parseSelectedLocations(editBaseReportingLocation, dropdowns.facilities[editDistrict] || [])
-                    ]}
-                    selectedValues={parseSelectedLocations(editBaseReportingLocation, dropdowns.facilities[editDistrict] || [])}
-                    onChange={(vals) => setEditBaseReportingLocation(vals.join(", "))}
-                    placeholder="-- Select Base Reporting Location(s) --"
-                  />
+                    <Lock className="w-3 h-3" />
+                    <span>Unlock Credentials</span>
+                  </button>
                 ) : (
-                  <input
-                    type="text"
-                    placeholder="e.g. PHC Location or custom hospital"
-                    value={editBaseReportingLocation}
-                    onChange={(e) => setEditBaseReportingLocation(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                    required
-                  />
+                  <span className="text-2xs bg-approved-bg text-approved font-bold uppercase px-2 py-0.5 rounded border border-approved-border flex items-center gap-1">
+                    <Unlock className="w-3 h-3" /> Unlocked
+                  </span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditUserModal(false);
+                    setEditingUser(null);
+                  }}
+                  className="p-1 rounded-md text-ink-400 hover:text-ink-700 hover:bg-surface-sunken transition-colors cursor-pointer border-0 bg-transparent"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
+            </div>
+            
+            <form onSubmit={handleUpdateUserSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin">
+                {editUserError && (
+                  <div className="p-3 border border-rose-200 bg-rose-50 text-rose-800 font-bold text-xs rounded-lg">
+                    {editUserError}
+                  </div>
+                )}
 
-              {/* Grid 6 - Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Date of Joining *</label>
-                  <input
-                    type="date"
-                    value={editDateOfJoining}
-                    onChange={(e) => setEditDateOfJoining(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 [color-scheme:light]"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Date of Birth *</label>
-                  <input
-                    type="date"
-                    value={editDateOfBirth}
-                    onChange={(e) => setEditDateOfBirth(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 [color-scheme:light]"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Checkboxes edit */}
-              <div className="space-y-1.5 pt-2 border-t border-slate-200">
-                <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">Allowed Navigation Screens</span>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 bg-slate-50 rounded-none border border-slate-200">
-                  {ALL_WINDOWS.map((win) => (
-                    <label key={win.id} className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={editAllowedWindows.includes(win.id)}
-                        onChange={() => handleToggleWindow(win.id, true)}
-                        className="rounded-none border-slate-300 text-[#4A6A8A] focus:ring-[#4A6A8A] h-4 w-4 cursor-pointer"
-                      />
-                      {win.name}
-                    </label>
-                  ))}
-                </div>
-
-                {/* Bulk Approval Rights Governance - ONLY shown if Approval Center window is assigned or user has approver role */}
-                {(editAllowedWindows.includes("approval") || ["manager", "zonal head", "state head", "project head", "coordinator", "approver", "admin"].includes((editRole || "").toLowerCase().trim())) && (
-                  <div className="mt-4">
-                    <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-                      <Zap size={14} className={editCanBulkApprove ? "text-emerald-600" : "text-slate-400"} />
-                      <span>Bulk Approval Permission Governance</span>
-                    </label>
-
-                    <div className={`p-3 rounded-none border transition-all flex flex-wrap items-center justify-between gap-3 ${
-                      editCanBulkApprove
-                        ? "bg-emerald-50/90 border-emerald-400 shadow-2xs"
-                        : "bg-rose-50/90 border-rose-300 shadow-2xs"
-                    }`}>
-                      <div className="flex-1 min-w-[200px]">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className={`text-xs font-black uppercase tracking-wide px-2 py-0.5 rounded-none font-mono ${
-                            editCanBulkApprove
-                              ? "bg-emerald-600 text-white"
-                              : "bg-rose-600 text-white"
-                          }`}>
-                            {editCanBulkApprove ? "⚡ ENABLED — BULK ACCESS GRANTED" : "🔒 DISABLED — INDIVIDUAL ONLY"}
-                          </span>
-                        </div>
-                        <div className="text-[11px] font-bold text-slate-800 mt-1">
-                          {editCanBulkApprove
-                            ? "User HAS permission to select multiple claims and bulk approve/reject in 1-click."
-                            : "User DOES NOT have bulk approval rights. Access is restricted to single claim review only."}
-                        </div>
+                {/* Sensitive Credentials Unlocked Warning Card */}
+                {isSensitiveSectionUnlocked && (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span className="text-2xs font-bold text-amber-900 uppercase tracking-wider">
+                        Sensitive Credentials Modification (Unlocked)
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">User ID *</label>
+                        <input
+                          type="text"
+                          value={editUserId}
+                          onChange={(e) => setEditUserId(e.target.value)}
+                          className="input-lte w-full h-8 text-xs font-mono font-bold"
+                          required
+                        />
                       </div>
-
-                      <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-none border border-slate-300 shadow-2xs">
-                        <span className={`text-xs font-black ${editCanBulkApprove ? "text-emerald-700" : "text-rose-700"}`}>
-                          {editCanBulkApprove ? "ON (Granted)" : "OFF (Revoked)"}
-                        </span>
-                        <Switch
-                          checked={editCanBulkApprove}
-                          onChange={(checked: boolean) => setEditCanBulkApprove(checked)}
-                          checkedChildren="ON"
-                          unCheckedChildren="OFF"
-                          style={{ backgroundColor: editCanBulkApprove ? "#10b981" : "#ef4444" }}
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">Employee Code *</label>
+                        <input
+                          type="text"
+                          value={editECode}
+                          onChange={(e) => setEditECode(e.target.value)}
+                          className="input-lte w-full h-8 text-xs font-mono font-bold"
+                          required
                         />
                       </div>
                     </div>
+
+                    <div>
+                      <label className="label-lte text-2xs block mb-1">New Password (Leave blank to keep current password)</label>
+                      <input
+                        type="password"
+                        value={editUserPassword}
+                        onChange={(e) => setEditUserPassword(e.target.value)}
+                        className="input-lte w-full h-8 text-xs font-bold"
+                        placeholder="Enter new password for this user"
+                      />
+                    </div>
                   </div>
                 )}
-              </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEditUserModal(false);
-                  setEditingUser(null);
-                }}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={editUserLoading}
-                className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
-              >
-                {editUserLoading && <LteSpinner />}
-                <span>Save Updates</span>
-              </button>
-            </div>
-          </form>
+                {/* Grid 1 - Core Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Full Name *</label>
+                    <input
+                      type="text"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">System Status *</label>
+                    <select
+                      value={editUserStatus}
+                      onChange={(e) => setEditUserStatus(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="active">Active</option>
+                      <option value="locked">Locked</option>
+                      <option value="disabled">Disabled</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Grid 2 - Role and Designations */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">System Role *</label>
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      {dropdowns?.roles?.map((r: string) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Designation *</label>
+                    <select
+                      value={editDesignation}
+                      onChange={(e) => setEditDesignation(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      {dropdowns?.designations?.map((d: string) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Grade *</label>
+                    <select
+                      value={editGrade}
+                      onChange={(e) => setEditGrade(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      {(dropdowns?.grades && dropdowns.grades.length > 0 ? dropdowns.grades : ["A", "B", "C", "D"]).map((g: string) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Grid 3 - Zone and District */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Zone *</label>
+                    <select
+                      value={editZone}
+                      onChange={(e) => handleEditZoneChange(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="All">All</option>
+                      {dropdowns?.zones && Object.keys(dropdowns.zones).map((z) => (
+                        <option key={z} value={z}>{z}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">District *</label>
+                    <select
+                      value={editDistrict}
+                      onChange={(e) => setEditDistrict(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="All">All</option>
+                      {editZone !== "All" && dropdowns?.zones?.[editZone]?.map((d: string) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">User Type *</label>
+                    <select
+                      value={editUserType}
+                      onChange={(e) => setEditUserType(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="Employee">Employee</option>
+                      <option value="Contractor">Contractor</option>
+                      <option value="System">System</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Grid 4 - Reporting Managers */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Reporting Manager</label>
+                    <select
+                      value={editManager}
+                      onChange={(e) => setEditManager(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="">-- None / Clear Manager --</option>
+                      {mList.map((u) => (
+                        <option key={u.id} value={u.name}>
+                          {u.name} ({u.e_code || u.user_id})
+                        </option>
+                      ))}
+                      {editManager && !mList.some((m) => m.name === editManager) && (
+                        <option value={editManager}>{editManager}</option>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Zonal Manager</label>
+                    <select
+                      value={editZonalManager}
+                      onChange={(e) => setEditZonalManager(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="">-- None / Clear Zonal Manager --</option>
+                      {zmList.map((u) => (
+                        <option key={u.id} value={u.name}>
+                          {u.name} ({u.e_code || u.user_id})
+                        </option>
+                      ))}
+                      {editZonalManager && !zmList.some((zm) => zm.name === editZonalManager) && (
+                        <option value={editZonalManager}>{editZonalManager}</option>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Coordinator</label>
+                    <select
+                      value={editCoordinator}
+                      onChange={(e) => setEditCoordinator(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
+                    >
+                      <option value="">-- None / Clear Coordinator --</option>
+                      {cList.map((u) => (
+                        <option key={u.id} value={u.name}>
+                          {u.name} ({u.e_code || u.user_id})
+                        </option>
+                      ))}
+                      {editCoordinator && !cList.some((c) => c.name === editCoordinator) && (
+                        <option value={editCoordinator}>{editCoordinator}</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Grid 5 - Mobile, Email, and Device */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Mobile Number *</label>
+                    <input
+                      type="tel"
+                      value={editMobileNumber}
+                      onChange={(e) => setEditMobileNumber(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-mono font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Email ID *</label>
+                    <input
+                      type="email"
+                      value={editMailId}
+                      onChange={(e) => setEditMailId(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-mono font-bold"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Device / Upkaran ID *</label>
+                    <input
+                      type="text"
+                      value={editEUpkaranId}
+                      onChange={(e) => setEditEUpkaranId(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-mono font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Base Reporting Location Section */}
+                <div className="space-y-1">
+                  <label className="label-lte text-2xs block mb-1">Base Reporting Location(s) *</label>
+                  {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
+                    <MultiSelectDropdown
+                      options={[
+                        ...(dropdowns.facilities[editDistrict] || []),
+                        ...parseSelectedLocations(editBaseReportingLocation, dropdowns.facilities[editDistrict] || [])
+                      ]}
+                      selectedValues={parseSelectedLocations(editBaseReportingLocation, dropdowns.facilities[editDistrict] || [])}
+                      onChange={(vals) => setEditBaseReportingLocation(vals.join(", "))}
+                      placeholder="-- Select Base Reporting Location(s) --"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. PHC Location or custom hospital"
+                      value={editBaseReportingLocation}
+                      onChange={(e) => setEditBaseReportingLocation(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold"
+                      required
+                    />
+                  )}
+                </div>
+
+                {/* Grid 6 - Dates */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Date of Joining *</label>
+                    <input
+                      type="date"
+                      value={editDateOfJoining}
+                      onChange={(e) => setEditDateOfJoining(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold [color-scheme:light]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label-lte text-2xs block mb-1">Date of Birth *</label>
+                    <input
+                      type="date"
+                      value={editDateOfBirth}
+                      onChange={(e) => setEditDateOfBirth(e.target.value)}
+                      className="input-lte w-full h-8 text-xs font-bold [color-scheme:light]"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Checkboxes edit */}
+                <div className="space-y-1.5 pt-2 border-t border-line">
+                  <span className="text-2xs font-bold text-ink-500 uppercase tracking-wider block">Allowed Navigation Screens</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-surface-sunken rounded-lg border border-line">
+                    {ALL_WINDOWS.map((win) => (
+                      <label key={win.id} className="flex items-center gap-2 text-xs font-semibold text-ink-800 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={editAllowedWindows.includes(win.id)}
+                          onChange={() => handleToggleWindow(win.id, true)}
+                          className="rounded border-line text-accent-600 focus:ring-accent-600 h-4 w-4 cursor-pointer"
+                        />
+                        {win.name}
+                      </label>
+                    ))}
+                  </div>
+
+                  {/* Bulk Approval Rights Governance */}
+                  {(editAllowedWindows.includes("approval") || ["manager", "zonal head", "state head", "project head", "coordinator", "approver", "admin"].includes((editRole || "").toLowerCase().trim())) && (
+                    <div className="mt-3.5">
+                      <label className="text-2xs font-bold text-ink-700 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                        <Zap size={14} className={editCanBulkApprove ? "text-approved" : "text-ink-400"} />
+                        <span>Bulk Approval Permission Governance</span>
+                      </label>
+
+                      <div className={`p-3 rounded-lg border transition-all flex flex-wrap items-center justify-between gap-3 ${
+                        editCanBulkApprove
+                          ? "bg-approved-bg border-approved-border"
+                          : "bg-surface-sunken border-line"
+                      }`}>
+                        <div className="flex-1 min-w-[200px]">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className={`text-2xs font-bold uppercase tracking-wide px-2 py-0.5 rounded font-mono ${
+                              editCanBulkApprove
+                                ? "bg-approved text-white"
+                                : "bg-ink-700 text-white"
+                            }`}>
+                              {editCanBulkApprove ? "⚡ ENABLED — BULK ACCESS GRANTED" : "🔒 DISABLED — INDIVIDUAL ONLY"}
+                            </span>
+                          </div>
+                          <div className="text-xs font-semibold text-ink-800 mt-1">
+                            {editCanBulkApprove
+                              ? "User HAS permission to select multiple claims and bulk approve/reject in 1-click."
+                              : "User DOES NOT have bulk approval rights. Access is restricted to single claim review only."}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-md border border-line">
+                          <span className={`text-xs font-bold ${editCanBulkApprove ? "text-approved" : "text-ink-500"}`}>
+                            {editCanBulkApprove ? "ON" : "OFF"}
+                          </span>
+                          <Switch
+                            checked={editCanBulkApprove}
+                            onChange={(checked: boolean) => setEditCanBulkApprove(checked)}
+                            checkedChildren="ON"
+                            unCheckedChildren="OFF"
+                            style={{ backgroundColor: editCanBulkApprove ? "#0F7A4C" : "#6B7280" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Sunken Footer */}
+              <div className="bg-surface-sunken border-t border-line px-5 py-3 flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditUserModal(false);
+                    setEditingUser(null);
+                  }}
+                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editUserLoading}
+                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold flex items-center gap-2 disabled:opacity-60"
+                >
+                  {editUserLoading && <LteSpinner />}
+                  <span>Save Updates</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
       {/* ================= MODAL: CSV BULK IMPORT ================= */}
       {showBulkUploadModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Solid Enterprise Header Bar */}
-            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono">
-                Import Employees via CSV
-              </h3>
+          <div className="bg-surface border border-line rounded-xl shadow-md w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
+            {/* Standardized Header */}
+            <div className="bg-surface border-b border-line px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center font-bold border border-accent-100">
+                  <UploadCloud className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900 m-0">
+                  Import Employees via CSV
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowBulkUploadModal(false)}
-                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+                className="p-1 rounded-md text-ink-400 hover:text-ink-700 hover:bg-surface-sunken transition-colors cursor-pointer border-0 bg-transparent"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+            <div className="flex-1 flex flex-col overflow-hidden p-5 space-y-4">
               <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
-                <div className="text-xs text-slate-600 space-y-1">
-                  <p className="font-bold">Upload a comma-separated values (.csv) file containing employee details.</p>
-                  <p className="font-bold text-[#4A6A8A] uppercase tracking-wider text-[10px] font-mono">
+                <div className="text-xs text-ink-600 space-y-1">
+                  <p className="font-semibold text-ink-800">Upload a comma-separated values (.csv) file containing employee details.</p>
+                  <p className="font-mono text-2xs text-accent-700 bg-accent-50 p-2 rounded border border-accent-100 leading-relaxed">
                     Required Headers: e_code, name, password, role, designation, grade, district, zone, manager, zonal_manager, coordinator, mobile_number, mail_id, type, date_of_joining, date_of_birth, e_upkaran_id
                   </p>
-                  <p className="text-[10px] text-rose-600 font-extrabold">All fields are compulsory for every row.</p>
+                  <p className="text-2xs text-rose-600 font-bold">All fields are compulsory for every row.</p>
                 </div>
 
-                {/* Upload Input */}
-                <div className="p-4 border-2 border-dashed border-slate-300 bg-slate-50 rounded-none text-center">
+                {/* Upload Input Box */}
+                <div className="p-5 border-2 border-dashed border-line bg-surface-sunken rounded-lg text-center space-y-3">
                   <input
                     type="file"
                     accept=".csv"
@@ -4064,41 +4257,43 @@ export default function AdminPage() {
                     onChange={handleCSVFileSelect}
                     className="hidden"
                   />
-                  <div className="flex justify-center gap-3">
+                  <div className="flex justify-center gap-2.5">
                     <button
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                      className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer font-semibold"
                     >
                       Choose CSV File
                     </button>
                     <button
+                      type="button"
                       onClick={downloadSampleCSV}
-                      className="px-4 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-1.5"
+                      className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-semibold flex items-center gap-1.5"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Download Template</span>
                     </button>
                   </div>
                   {csvText && (
-                    <p className="text-[11px] text-emerald-700 mt-2 font-mono truncate max-w-md mx-auto font-bold">
-                      Loaded CSV ({csvText.split("\n").length - 1} rows)
+                    <p className="text-2xs text-approved font-mono truncate max-w-md mx-auto font-bold mt-2">
+                      ✓ Loaded CSV ({csvText.split("\n").length - 1} rows)
                     </p>
                   )}
                 </div>
 
                 {/* Bulk Results Summary */}
                 {bulkResult && (
-                  <div className="p-3 bg-slate-50 rounded-none border border-slate-300 max-h-48 overflow-y-auto text-xs space-y-1.5 font-mono">
+                  <div className="p-3.5 bg-surface-sunken rounded-lg border border-line max-h-48 overflow-y-auto text-xs space-y-1.5 font-mono">
                     {bulkResult.error && <p className="text-rose-600 font-bold">{bulkResult.error}</p>}
                     {bulkResult.rowErrors?.map((err: string, i: number) => (
                       <p key={i} className="text-rose-600">{err}</p>
                     ))}
                     {bulkResult.status === "success" && (
-                      <div className="text-emerald-700 font-bold space-y-0.5">
+                      <div className="text-approved font-bold space-y-0.5">
                         <p>Import Status: SUCCESS</p>
-                        <p>Created: {bulkResult.created_count}</p>
+                        <p>Created / Updated: {bulkResult.created_count}</p>
                         <p>Failed: {bulkResult.failed_count}</p>
-                        {bulkResult.errors.map((err: string, idx: number) => (
+                        {bulkResult.errors?.map((err: string, idx: number) => (
                           <p key={idx} className="text-amber-700 font-normal">{err}</p>
                         ))}
                       </div>
@@ -4107,12 +4302,12 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Footer */}
-              <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
+              {/* Sunken Footer */}
+              <div className="bg-surface-sunken border-t border-line -mx-5 -mb-5 px-5 py-3 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowBulkUploadModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
                 >
                   Close
                 </button>
@@ -4120,7 +4315,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={handleBulkUploadSubmit}
                   disabled={bulkLoading || !csvText}
-                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
+                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold flex items-center gap-2 disabled:opacity-60"
                 >
                   {bulkLoading && <LteSpinner />}
                   <span>Start Import</span>
@@ -4134,35 +4329,40 @@ export default function AdminPage() {
       {/* ================= MODAL: CSV BULK HIERARCHY IMPORT ================= */}
       {showBulkHierarchyModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Solid Enterprise Header Bar */}
-            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono">
-                Import Team Hierarchies via CSV
-              </h3>
+          <div className="bg-surface border border-line rounded-xl shadow-md w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
+            {/* Standardized Header */}
+            <div className="bg-surface border-b border-line px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center font-bold border border-accent-100">
+                  <UploadCloud className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900 m-0">
+                  Import Team Hierarchies via CSV
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowBulkHierarchyModal(false)}
-                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+                className="p-1 rounded-md text-ink-400 hover:text-ink-700 hover:bg-surface-sunken transition-colors cursor-pointer border-0 bg-transparent"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+            <div className="flex-1 flex flex-col overflow-hidden p-5 space-y-4">
               <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
-                <div className="text-xs text-slate-600 space-y-1">
-                  <p className="font-bold">Upload a comma-separated values (.csv) file containing team hierarchy details.</p>
-                  <p className="font-bold text-[#4A6A8A] uppercase tracking-wider text-[10px] font-mono">
+                <div className="text-xs text-ink-600 space-y-1">
+                  <p className="font-semibold text-ink-800">Upload a comma-separated values (.csv) file containing team hierarchy details.</p>
+                  <p className="font-mono text-2xs text-accent-700 bg-accent-50 p-2 rounded border border-accent-100 leading-relaxed">
                     Required Headers: hierarchy_name, requester_e_codes, level_1_approver, level_2_approver, level_3_approver, level_4_approver, level_5_approver
                   </p>
-                  <p className="text-[10px] text-slate-500 font-extrabold">
-                    Note: Multiple requester employee codes can be separated by commas (e.g. &quot;E001,E002,E003&quot;). Approver fields accept a single employee code.
+                  <p className="text-2xs text-ink-500 font-medium">
+                    Note: Multiple requester employee codes can be separated by commas (e.g. "E001,E002,E003"). Approver fields accept a single employee code.
                   </p>
                 </div>
 
-                {/* Upload Input */}
-                <div className="p-4 border-2 border-dashed border-slate-300 bg-slate-50 rounded-none text-center">
+                {/* Upload Input Box */}
+                <div className="p-5 border-2 border-dashed border-line bg-surface-sunken rounded-lg text-center">
                   <input
                     type="file"
                     accept=".csv"
@@ -4181,54 +4381,54 @@ export default function AdminPage() {
                   />
                   <label
                     htmlFor="hierarchy-file-upload"
-                    className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 shadow-2xs transition-colors"
+                    className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer font-semibold inline-flex items-center gap-1.5"
                   >
-                    <UploadCloud className="w-4 h-4 text-[#4A6A8A]" />
+                    <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
                     <span>Choose CSV File</span>
                   </label>
                 </div>
 
                 {/* Raw CSV Text Area */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
+                  <label className="label-lte text-2xs block">
                     Or Paste Raw CSV Data:
                   </label>
                   <textarea
                     value={hierarchyCsvText}
                     onChange={(e) => setHierarchyCsvText(e.target.value)}
                     placeholder="hierarchy_name,requester_e_codes,level_1_approver,level_2_approver,level_3_approver,level_4_approver,level_5_approver&#10;Team Rajasthan,E001,E100,E200,E300,,&#10;Team Jodhpur,E002,E100,E200,,,"
-                    rows={6}
-                    className="w-full text-xs font-mono p-3 border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] shadow-2xs bg-white resize-y"
+                    rows={5}
+                    className="input-lte w-full text-xs font-mono p-2.5 resize-y h-auto"
                   />
                 </div>
 
                 {/* Bulk Results Summary */}
                 {bulkHierarchyResult && (
-                  <div className={`p-4 rounded-none border text-xs font-bold font-mono max-h-48 overflow-y-auto ${
+                  <div className={`p-3.5 rounded-lg border text-xs font-bold font-mono max-h-48 overflow-y-auto ${
                     bulkHierarchyResult.error 
-                      ? "bg-rose-50 border-rose-300 text-rose-800" 
-                      : "bg-emerald-50 border-emerald-300 text-emerald-800"
+                      ? "bg-rose-50 border-rose-200 text-rose-800" 
+                      : "bg-approved-bg border-approved-border text-approved"
                   }`}>
-                    {bulkHierarchyResult.error && <p className="text-rose-700 font-extrabold mb-1">{bulkHierarchyResult.error}</p>}
+                    {bulkHierarchyResult.error && <p className="text-rose-700 font-bold mb-1">{bulkHierarchyResult.error}</p>}
                     {bulkHierarchyResult.rowErrors?.map((err: string, i: number) => (
-                      <div key={i} className="text-rose-600 text-[10px] mt-0.5">{err}</div>
+                      <div key={i} className="text-rose-600 text-2xs mt-0.5">{err}</div>
                     ))}
                     {bulkHierarchyResult.errors?.map((err: string, i: number) => (
-                      <div key={i} className="text-rose-600 text-[10px] mt-0.5">{err}</div>
+                      <div key={i} className="text-rose-600 text-2xs mt-0.5">{err}</div>
                     ))}
                     {!bulkHierarchyResult.error && !bulkHierarchyResult.errors && (
-                      <p className="text-emerald-700 font-extrabold">Successfully imported and updated all team hierarchies!</p>
+                      <p className="text-approved font-bold">Successfully imported and updated all team hierarchies!</p>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Footer Actions */}
-              <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
+              {/* Sunken Footer */}
+              <div className="bg-surface-sunken border-t border-line -mx-5 -mb-5 px-5 py-3 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowBulkHierarchyModal(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
                 >
                   Close
                 </button>
@@ -4236,7 +4436,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={handleBulkHierarchySubmit}
                   disabled={bulkHierarchyLoading || !hierarchyCsvText}
-                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
+                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold flex items-center gap-2 disabled:opacity-60"
                 >
                   {bulkHierarchyLoading && <LteSpinner />}
                   <span>Start Import</span>
@@ -4247,55 +4447,59 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ================= MODAL: USER UPDATE ROLE MAPPING (HIERARCHY CONFIG) ================= */}
+      {/* ================= MODAL: ROLE MAPPING (HIERARCHY CONFIG) ================= */}
       {showHierarchyModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Solid Enterprise Header Bar */}
-            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono">
-                User Update Role Mapping
-              </h3>
+          <div className="bg-surface border border-line rounded-xl shadow-md w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-up">
+            {/* Standardized Header */}
+            <div className="bg-surface border-b border-line px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center font-bold border border-accent-100">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900 m-0">
+                  {editingHierarchy ? "Edit Role Mapping Flow" : "Create New Role Mapping Team"}
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => {
                   setShowHierarchyModal(false);
                   setEditingHierarchy(null);
                 }}
-                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+                className="p-1 rounded-md text-ink-400 hover:text-ink-700 hover:bg-surface-sunken transition-colors cursor-pointer border-0 bg-transparent"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col overflow-hidden p-4 space-y-4">
+            <div className="flex-1 flex flex-col overflow-hidden p-5 space-y-4">
               <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
                 {hierarchyError && (
-                  <div className="p-3 border border-rose-300 bg-rose-50 text-rose-800 font-extrabold text-xs rounded-none">
+                  <div className="p-3 border border-rose-200 bg-rose-50 text-rose-800 font-bold text-xs rounded-lg">
                     {hierarchyError}
                   </div>
                 )}
 
-                {/* Hierarchy Type Input */}
+                {/* Hierarchy Team Name Input */}
                 <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Hierarchy Type</label>
+                  <label className="label-lte text-2xs block mb-1">Hierarchy Team Name *</label>
                   <input
                     type="text"
-                    placeholder="e.g. Bikaner Zone DI"
+                    placeholder="e.g. Bikaner Zone DI Team"
                     value={hierarchyName}
                     onChange={(e) => setHierarchyName(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
+                    className="input-lte w-full h-8 text-xs font-bold"
                   />
                 </div>
 
-                {/* Requester User Container Box */}
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">Requester User</label>
+                {/* Requester User Chips List */}
+                <div className="space-y-1.5">
+                  <label className="label-lte text-2xs block">Mapped Requesters (Employees)</label>
                   
-                  {/* Chip List Container */}
-                  <div className="min-h-[50px] max-h-36 overflow-y-auto p-2 bg-slate-50 border border-slate-300 rounded-none flex flex-wrap gap-1.5 items-center">
+                  <div className="min-h-[46px] max-h-36 overflow-y-auto p-2 bg-surface-sunken border border-line rounded-lg flex flex-wrap gap-1.5 items-center">
                     {selectedRequesterIds.length === 0 ? (
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider pl-1 select-none font-bold">
+                      <span className="text-2xs text-ink-400 font-semibold select-none pl-1">
                         No employees mapped as requesters
                       </span>
                     ) : (
@@ -4304,13 +4508,13 @@ export default function AdminPage() {
                         return (
                           <span 
                             key={rid} 
-                            className="inline-flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-none bg-slate-200 text-slate-900 text-xs font-extrabold border border-slate-300 font-mono shadow-2xs"
+                            className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 rounded-md bg-surface text-ink-800 text-xs font-bold border border-line font-mono shadow-none"
                           >
                             {u ? `${u.name} (${u.user_id})` : `User ID ${rid}`}
                             <button
                               type="button"
                               onClick={() => handleRemoveRequesterChip(rid)}
-                              className="h-4 w-4 rounded-none flex items-center justify-center hover:bg-rose-200 text-slate-600 hover:text-rose-800 font-bold transition-all text-xs cursor-pointer border-0 p-0 leading-none bg-transparent"
+                              className="h-4 w-4 rounded flex items-center justify-center hover:bg-rose-50 text-ink-400 hover:text-rose-600 font-bold transition-all text-xs cursor-pointer border-0 p-0 leading-none bg-transparent"
                             >
                               ✕
                             </button>
@@ -4327,9 +4531,9 @@ export default function AdminPage() {
                       handleAddRequesterChip(e.target.value);
                       e.target.value = "";
                     }}
-                    className="w-full px-2.5 py-1.5 text-xs font-extrabold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9 cursor-pointer mt-1.5"
+                    className="input-lte w-full h-8 text-xs font-semibold cursor-pointer py-0.5 px-2"
                   >
-                    <option value="" disabled>-- Select an employee to map as requester --</option>
+                    <option value="" disabled>-- Select an employee to add as requester --</option>
                     {getEligibleRequesters().map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.name} ({u.user_id}) | {u.role}
@@ -4338,58 +4542,59 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* Checkbox / Rel Level / Approvers Table */}
-                <div className="space-y-2 pt-2 border-t border-slate-200">
-                  
-                  {/* Row actions */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleAddApproverRow}
-                      className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-extrabold uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors flex items-center gap-1.5"
-                      title="Add level row"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-[#4A6A8A]" />
-                      Add Level
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDeleteCheckedRows}
-                      className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-extrabold uppercase tracking-wider rounded-none border border-rose-300 cursor-pointer transition-colors flex items-center gap-1.5"
-                      title="Delete checked rows"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                      Delete Selected
-                    </button>
+                {/* Dynamic Approver Sequence Table */}
+                <div className="space-y-2 pt-2 border-t border-line">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xs font-bold text-ink-700 uppercase tracking-wider">
+                      Level-by-Level Approver Flow
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddApproverRow}
+                        className="btn-lte-secondary text-xs h-7 px-2.5 flex items-center gap-1 font-semibold cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-accent-600" />
+                        <span>Add Level</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteCheckedRows}
+                        className="btn-lte-danger text-xs h-7 px-2.5 flex items-center gap-1 font-semibold cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Selected</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Table */}
-                  <div className="border border-slate-300 rounded-none overflow-hidden shadow-2xs">
+                  <div className="border border-line rounded-lg overflow-hidden shadow-none">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="bg-[#4A6A8A] text-white border-b border-slate-300 font-extrabold uppercase tracking-wider text-[10px]">
-                          <th className="py-2.5 px-3 w-12 text-center text-white font-mono">SELECT</th>
-                          <th className="py-2.5 px-3 w-32 text-white font-mono">REL LEVEL</th>
-                          <th className="py-2.5 px-3 text-white font-mono">APPROVER</th>
+                        <tr className="bg-surface-sunken text-ink-500 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                          <th className="py-2.5 px-3 w-12 text-center">SELECT</th>
+                          <th className="py-2.5 px-3 w-28">LEVEL</th>
+                          <th className="py-2.5 px-3">APPROVER</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 bg-white">
+                      <tbody className="divide-y divide-line bg-surface">
                         {approverRows.length === 0 ? (
                           <tr>
-                            <td colSpan={3} className="py-6 text-center text-slate-400 uppercase tracking-wider text-[10px] font-extrabold">
-                              No levels configured. Click 'Add Level' to add a level.
+                            <td colSpan={3} className="py-6 text-center text-ink-400 uppercase tracking-wider text-2xs font-bold">
+                              No levels configured. Click 'Add Level' to add an approval step.
                             </td>
                           </tr>
                         ) : (
                           approverRows.map((row, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                            <tr key={idx} className="hover:bg-surface-sunken transition-colors">
                               {/* Checkbox */}
                               <td className="py-2 px-3 text-center">
                                 <input
                                   type="checkbox"
                                   checked={row.checked}
                                   onChange={() => handleRowCheckboxToggle(idx)}
-                                  className="rounded-none border-slate-300 text-[#4A6A8A] focus:ring-[#4A6A8A] h-4 w-4 cursor-pointer"
+                                  className="rounded border-line text-accent-600 focus:ring-accent-600 h-4 w-4 cursor-pointer"
                                 />
                               </td>
                               {/* Rel Level Number */}
@@ -4398,7 +4603,7 @@ export default function AdminPage() {
                                   type="number"
                                   value={row.level}
                                   onChange={(e) => handleRowLevelChange(idx, e.target.value)}
-                                  className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-none text-xs font-mono font-bold text-slate-900 focus:border-[#4A6A8A] outline-none"
+                                  className="input-lte w-16 h-7.5 text-xs font-mono font-bold text-center"
                                 />
                               </td>
                               {/* Approvers select list */}
@@ -4406,7 +4611,7 @@ export default function AdminPage() {
                                 <select
                                   value={row.approverId}
                                   onChange={(e) => handleRowApproverChange(idx, e.target.value)}
-                                  className="w-full max-w-md px-2 py-1 bg-white border border-slate-300 rounded-none text-xs font-extrabold text-slate-900 focus:border-[#4A6A8A] outline-none h-8 cursor-pointer"
+                                  className="input-lte w-full max-w-md h-7.5 text-xs font-semibold cursor-pointer py-0.5 px-2"
                                 >
                                   <option value="">-- Select level approver --</option>
                                   {getUsersByRole(["Manager", "Zonal Manager", "Coordinator", "VP", "Project Head", "MIS", "Admin"]).map((u) => (
@@ -4422,20 +4627,18 @@ export default function AdminPage() {
                       </tbody>
                     </table>
                   </div>
-
                 </div>
-
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-2 p-3 bg-slate-50 border-t border-slate-200">
+              {/* Sunken Footer */}
+              <div className="bg-surface-sunken border-t border-line -mx-5 -mb-5 px-5 py-3 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setShowHierarchyModal(false);
                     setEditingHierarchy(null);
                   }}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
                 >
                   Close
                 </button>
@@ -4443,7 +4646,7 @@ export default function AdminPage() {
                   type="button"
                   onClick={handleSaveHierarchySubmit}
                   disabled={hierarchyLoading}
-                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors flex items-center gap-2 disabled:opacity-60"
+                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold flex items-center gap-2 disabled:opacity-60"
                 >
                   {hierarchyLoading && <LteSpinner />}
                   <span>Save Mapping</span>
@@ -4453,56 +4656,68 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
       {/* ================= MODAL: UNLOCK SENSITIVE FIELDS ================= */}
       {showUnlockModal && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3">
-          <div className="bg-white border border-slate-300 rounded-none shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="bg-[#4A6A8A] text-white px-4 py-3 flex items-center justify-between border-b border-slate-300">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-white m-0 font-mono">
-                Enter Admin Security Password
-              </h3>
+          <div className="bg-surface border border-line rounded-xl shadow-md w-full max-w-md overflow-hidden animate-scale-up flex flex-col">
+            <div className="bg-surface border-b border-line px-5 py-3.5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold border border-amber-200">
+                  <Lock className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-ink-900 m-0">
+                  Enter Admin Security Password
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => {
                   setShowUnlockModal(false);
                   setUnlockPassword("");
                 }}
-                className="text-white hover:text-slate-200 text-lg font-bold bg-transparent border-0 cursor-pointer"
+                className="p-1 rounded-md text-ink-400 hover:text-ink-700 hover:bg-surface-sunken transition-colors cursor-pointer border-0 bg-transparent"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleUnlockSensitiveSubmit} className="p-4 space-y-4">
-              <div>
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-slate-600 mb-1">
-                  Admin Security Password *
-                </label>
-                <input
-                  type="password"
-                  value={unlockPassword}
-                  onChange={(e) => setUnlockPassword(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded-none focus:border-[#4A6A8A] outline-none shadow-2xs h-9"
-                  placeholder="Enter security password to unlock fields"
-                  required
-                  autoFocus
-                />
+            <form onSubmit={handleUnlockSensitiveSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="p-5 space-y-3">
+                <p className="text-xs text-ink-600 font-medium m-0">
+                  Editing sensitive employee credentials (User ID, Employee Code, or Password) requires authorization.
+                </p>
+                <div>
+                  <label className="label-lte text-2xs block mb-1">
+                    Admin Security Password *
+                  </label>
+                  <input
+                    type="password"
+                    value={unlockPassword}
+                    onChange={(e) => setUnlockPassword(e.target.value)}
+                    className="input-lte w-full h-9 text-xs font-bold"
+                    placeholder="Enter security password to unlock fields"
+                    required
+                    autoFocus
+                  />
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+              {/* Sunken Footer */}
+              <div className="bg-surface-sunken border-t border-line px-5 py-3 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setShowUnlockModal(false);
                     setUnlockPassword("");
                   }}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-none border border-slate-300 cursor-pointer transition-colors"
+                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-extrabold text-xs uppercase tracking-wider rounded-none border-0 cursor-pointer shadow-2xs transition-colors"
+                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold"
                 >
                   Unlock
                 </button>
@@ -4512,6 +4727,7 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Reset Approval Level Modal */}
       <ResetApprovalLevelModal
         isOpen={resetModalState.isOpen}
         onClose={() => setResetModalState({ isOpen: false, expenseId: 0, expenseCode: "" })}

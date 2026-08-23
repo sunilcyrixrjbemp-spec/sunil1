@@ -23,7 +23,6 @@ import {
   BarChart3,
   Zap,
   Target,
-  TrendingDown,
   Lightbulb,
   Wrench,
   Timer,
@@ -100,36 +99,43 @@ const parseFlexibleDate = (dateStr: string | null | undefined): number => {
 const formatRupees = (val: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val);
 
-// â”€â”€â”€ Nivo shared theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Nivo Shared Design System Theme ────────────────────────────────────────
 const nivoTheme = {
-  background: "transparent",
-  text: { fontSize: 11, fill: "#64748b", fontFamily: "inherit" },
+  fontFamily: "Inter, sans-serif",
+  fontSize: 12,
+  textColor: "#3A3F47",
   axis: {
-    domain: { line: { stroke: "#e2e8f0", strokeWidth: 1 } },
-    ticks: { line: { stroke: "#e2e8f0", strokeWidth: 1 }, text: { fill: "#94a3b8", fontSize: 10 } },
-    legend: { text: { fill: "#64748b", fontSize: 11, fontWeight: 700 } },
+    domain: { line: { stroke: "#E7E5E1", strokeWidth: 1 } },
+    ticks: {
+      line: { stroke: "#E7E5E1", strokeWidth: 1 },
+      text: { fontSize: 11, fill: "#6B7280", fontFamily: "Inter, sans-serif" },
+    },
+    legend: {
+      text: { fontSize: 12, fill: "#3A3F47", fontWeight: 600, fontFamily: "Inter, sans-serif" },
+    },
   },
-  grid: { line: { stroke: "#f1f5f9", strokeWidth: 1 } },
-  legends: { text: { fill: "#64748b", fontSize: 11 } },
+  grid: { line: { stroke: "#F4F3F1", strokeWidth: 1 } },
+  legends: { text: { fontSize: 11, fill: "#6B7280", fontFamily: "Inter, sans-serif" } },
   tooltip: {
     container: {
-      background: "#0f172a",
-      color: "#f8fafc",
+      background: "#12151A",
+      color: "#FFFFFF",
+      borderRadius: 8,
       fontSize: 12,
-      borderRadius: 10,
-      boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
-      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 4px 12px rgba(18, 21, 26, 0.15)",
+      border: "1px solid #3A3F47",
+      padding: "8px 12px",
     },
   },
 };
 
-// â”€â”€â”€ KPI Card Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── KPI Stat Card Component (Design System Spec) ───────────────────────────
 const KpiCard = ({
   label,
   value,
   subtext,
   icon: Icon,
-  color = "slate",
+  color = "indigo",
   trend,
 }: {
   label: string;
@@ -139,33 +145,59 @@ const KpiCard = ({
   color?: "red" | "green" | "indigo" | "slate" | "amber";
   trend?: { dir: "up" | "down"; label: string };
 }) => {
-  const palettes: Record<string, { bg: string; iconBg: string; iconText: string; valueCls: string; badge: string }> = {
-    red:    { bg: "from-red-600/10 via-red-500/5 to-transparent",    iconBg: "bg-red-100",    iconText: "text-red-600",    valueCls: "text-red-800",   badge: "bg-red-100 text-red-700" },
-    green:  { bg: "from-emerald-600/10 via-emerald-500/5 to-transparent", iconBg: "bg-emerald-100", iconText: "text-emerald-600", valueCls: "text-emerald-800", badge: "bg-emerald-100 text-emerald-700" },
-    indigo: { bg: "from-indigo-600/10 via-indigo-500/5 to-transparent", iconBg: "bg-indigo-100", iconText: "text-indigo-600", valueCls: "text-indigo-800", badge: "bg-indigo-100 text-indigo-700" },
-    slate:  { bg: "from-slate-600/8 via-slate-500/4 to-transparent",  iconBg: "bg-slate-100",  iconText: "text-slate-600",  valueCls: "text-slate-900", badge: "bg-slate-100 text-slate-600" },
-    amber:  { bg: "from-amber-600/10 via-amber-500/5 to-transparent", iconBg: "bg-amber-100",  iconText: "text-amber-600",  valueCls: "text-amber-800", badge: "bg-amber-100 text-amber-700" },
+  const iconPalettes: Record<string, { bg: string; text: string }> = {
+    red: { bg: "bg-rose-50 border-rose-200/60", text: "text-[#B3261E]" },
+    green: { bg: "bg-emerald-50 border-emerald-200/60", text: "text-[#0F7A4C]" },
+    indigo: { bg: "bg-accent-50 border-accent-200/60", text: "text-accent-700" },
+    slate: { bg: "bg-surface-sunken border-line", text: "text-ink-600" },
+    amber: { bg: "bg-amber-50 border-amber-200/60", text: "text-[#B7791F]" },
   };
-  const p = palettes[color];
+
+  const iconP = iconPalettes[color] || iconPalettes.indigo;
+
   return (
-    <div className={`relative bg-gradient-to-br ${p.bg} bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden`}>
-      <div className="absolute inset-0 rounded-2xl bg-white opacity-60 pointer-events-none" />
-      <div className="relative z-10">
-        <div className="flex items-start justify-between mb-3">
-          <div className={`p-2.5 rounded-xl ${p.iconBg} ${p.iconText} shadow-sm group-hover:scale-110 transition-transform duration-300`}>
+    <div className="bg-white border border-line hover:border-[#D4D1CB] rounded-[10px] p-5 transition-colors shadow-none relative">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[12px] font-mono font-medium text-ink-500 tracking-[0.03em] uppercase truncate m-0">
+            {label}
+          </p>
+          <h3 className="text-2xl sm:text-[28px] lg:text-[30px] font-bold font-display text-ink-900 mt-1.5 tracking-tight tabular-nums leading-none m-0">
+            {value}
+          </h3>
+        </div>
+        {Icon && (
+          <div className={`p-2.5 rounded-lg border ${iconP.bg} ${iconP.text} shrink-0`}>
             <Icon className="w-5 h-5" />
           </div>
+        )}
+      </div>
+
+      {(trend || subtext) && (
+        <div className="mt-3.5 pt-3 flex items-center gap-2 border-t border-line/60 text-xs">
           {trend && (
-            <div className={`flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full ${trend.dir === "up" ? "bg-red-50 text-red-600" : "bg-green-50 text-green-600"}`}>
-              {trend.dir === "up" ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {trend.label}
-            </div>
+            <span
+              className={`inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded-full text-[11px] border ${
+                trend.dir === "up"
+                  ? "bg-rose-50 text-[#B3261E] border-rose-200/60"
+                  : "bg-emerald-50 text-[#0F7A4C] border-emerald-200/60"
+              }`}
+            >
+              {trend.dir === "up" ? (
+                <ArrowUp className="w-3 h-3 stroke-[2.5]" />
+              ) : (
+                <ArrowDown className="w-3 h-3 stroke-[2.5]" />
+              )}
+              <span>{trend.label}</span>
+            </span>
+          )}
+          {subtext && (
+            <span className="text-ink-500 truncate text-[11px] font-sans">
+              {subtext}
+            </span>
           )}
         </div>
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-        <h3 className={`text-2xl font-black tracking-tight ${p.valueCls} leading-none`}>{value}</h3>
-        {subtext && <p className="text-[10px] font-semibold text-slate-500 mt-2">{subtext}</p>}
-      </div>
+      )}
     </div>
   );
 };
@@ -812,84 +844,90 @@ export default function NewDashboardPage() {
     { id: "analytics", label: "Deep Analytics", icon: FlaskConical },
   ];
 
-  const selectCls = "w-full h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all";
+  const selectCls = "w-full h-9 px-3 bg-white border border-line rounded-lg text-xs font-medium text-ink-900 focus:outline-none focus:ring-1 focus:ring-accent-600 transition-colors";
 
   return (
-    <div className="p-4 md:p-6 bg-slate-50 min-h-screen font-sans antialiased text-slate-800">
+    <div className="space-y-6 text-ink-900 font-sans antialiased">
+      {/* ── Header Banner (Clean Surface Card) ─────────────────────────── */}
+      <div className="bg-white border border-line rounded-[10px] p-5 shadow-none flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
+        {backgroundSyncing && (
+          <div className="absolute top-0 left-0 w-full h-1 bg-accent-600 animate-pulse rounded-t-[10px]" />
+        )}
 
-      {/* Header Banner */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 mb-6 shadow-xl border border-slate-800/80">
-        {backgroundSyncing && <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 animate-pulse" />}
-        {/* Decorative ambient glowing orbs */}
-        <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/10 backdrop-blur rounded-2xl border border-white/15 shadow-lg">
-              <TrendingUp className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-                Operations Command Center
-                {backgroundSyncing && (
-                  <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-full animate-pulse border border-indigo-500/30">
-                    ⚡ Refreshing...
-                  </span>
-                )}
-              </h1>
-              <p className="text-slate-300 text-xs font-medium mt-0.5">
-                Live Data &amp; Operational Metrics • <span className="text-white font-black">{penaltyFile.length.toLocaleString()}</span> records
-              </p>
-            </div>
+        <div className="flex items-center gap-3.5">
+          <div className="p-2.5 rounded-lg bg-accent-50 text-accent-700 border border-accent-200/60 shrink-0">
+            <TrendingUp className="w-6 h-6" />
           </div>
-
-          <div className="flex items-center gap-2">
-            <CurrentTimeWidget variant="badge" format="12h" className="hidden md:flex" />
-            <button
-              onClick={() => loadAllDashboardData(true)}
-              disabled={backgroundSyncing}
-              className="flex items-center gap-2 h-10 px-5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer border border-indigo-400/30"
-            >
-              <RefreshCw className={`w-4 h-4 ${backgroundSyncing ? "animate-spin" : ""}`} />
-              Sync Live
-            </button>
+          <div>
+            <h1 className="text-xl font-bold font-display text-ink-900 tracking-tight flex items-center gap-2 m-0">
+              Operations Command Center
+              {backgroundSyncing && (
+                <span className="text-[10px] font-bold font-mono text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
+                  ⚡ Refreshing...
+                </span>
+              )}
+            </h1>
+            <p className="text-ink-500 text-xs font-sans mt-0.5 m-0">
+              Live Data &amp; Operational Metrics • <span className="text-ink-800 font-bold font-mono">{penaltyFile.length.toLocaleString()}</span> records
+            </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 shrink-0">
+          <CurrentTimeWidget variant="badge" format="12h" className="hidden md:flex" />
+          <button
+            onClick={() => loadAllDashboardData(true)}
+            disabled={backgroundSyncing}
+            className="flex items-center gap-2 h-9 px-4 bg-accent-600 hover:bg-accent-700 active:scale-[0.98] text-white text-xs font-semibold rounded-lg transition-all shadow-none cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${backgroundSyncing ? "animate-spin" : ""}`} />
+            <span>Sync Live</span>
+          </button>
         </div>
       </div>
 
       {error && (
-        <div className="mb-5 p-4 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
+        <div className="p-3.5 bg-rose-50 text-[#B3261E] border border-rose-200/80 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-none">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* â”€â”€ Smart Insights Banner â”€â”€ */}
+      {/* ── Smart Insights Row ─────────────────────────────────────────── */}
       {smartInsights.length > 0 && (
-        <div className="mb-6">
+        <div>
           <div className="flex items-center gap-2 mb-2.5">
-            <div className="p-1.5 bg-violet-100 rounded-lg"><Lightbulb className="w-3.5 h-3.5 text-violet-600" /></div>
-            <h2 className="text-xs font-black text-slate-600 uppercase tracking-widest">Auto-Detected Insights from Sheet Data</h2>
+            <div className="p-1 bg-accent-50 text-accent-700 rounded-md border border-accent-200/60">
+              <Lightbulb className="w-3.5 h-3.5" />
+            </div>
+            <h2 className="text-[11px] font-bold font-mono text-ink-500 uppercase tracking-wider m-0">
+              Auto-Detected Sheet Insights
+            </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {smartInsights.map((ins, i) => {
               const palMap: Record<string, { card: string; dot: string; val: string }> = {
-                red:    { card: "bg-red-50 border-red-200",     dot: "bg-red-500",    val: "text-red-800" },
-                amber:  { card: "bg-amber-50 border-amber-200", dot: "bg-amber-500",  val: "text-amber-800" },
-                orange: { card: "bg-orange-50 border-orange-200", dot: "bg-orange-500", val: "text-orange-800" },
-                green:  { card: "bg-emerald-50 border-emerald-200", dot: "bg-emerald-500", val: "text-emerald-800" },
-                violet: { card: "bg-violet-50 border-violet-200", dot: "bg-violet-500", val: "text-violet-800" },
+                red:    { card: "bg-rose-50/50 border-rose-200/60",     dot: "bg-[#B3261E]",    val: "text-[#B3261E]" },
+                amber:  { card: "bg-amber-50/50 border-amber-200/60", dot: "bg-[#B7791F]",  val: "text-[#B7791F]" },
+                orange: { card: "bg-orange-50/50 border-orange-200/60", dot: "bg-orange-600", val: "text-orange-900" },
+                green:  { card: "bg-emerald-50/50 border-emerald-200/60", dot: "bg-[#0F7A4C]", val: "text-[#0F7A4C]" },
+                violet: { card: "bg-purple-50/50 border-purple-200/60", dot: "bg-purple-600", val: "text-purple-900" },
               };
               const pal = palMap[ins.icon] || palMap.amber;
               return (
-                <div key={i} className={`${pal.card} border rounded-2xl p-4 flex flex-col gap-2`}>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${pal.dot} shrink-0`} />
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-tight">{ins.label}</p>
+                <div key={i} className={`${pal.card} bg-white border rounded-[10px] p-3.5 flex flex-col gap-1.5 shadow-none`}>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${pal.dot} shrink-0`} />
+                    <p className="text-[10px] font-mono font-medium text-ink-500 uppercase tracking-wider m-0 truncate">
+                      {ins.label}
+                    </p>
                   </div>
-                  <p className={`text-sm font-black ${pal.val} leading-tight`}>{ins.value}</p>
-                  <p className="text-[10px] font-semibold text-slate-500">{ins.sub}</p>
+                  <p className={`text-sm font-bold font-display ${pal.val} leading-tight m-0 truncate`}>
+                    {ins.value}
+                  </p>
+                  <p className="text-[11px] font-mono text-ink-400 m-0">
+                    {ins.sub}
+                  </p>
                 </div>
               );
             })}
@@ -897,48 +935,83 @@ export default function NewDashboardPage() {
         </div>
       )}
 
-      {/* â”€â”€ KPI Cards â”€â”€ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* ── Navigation Tabs Bar ────────────────────────────────────────── */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer shrink-0 border ${
+                isActive
+                  ? "bg-accent-50 text-accent-700 border-accent-200"
+                  : "bg-white text-ink-600 hover:text-ink-900 hover:bg-surface-sunken border-line"
+              }`}
+            >
+              <Icon size={14} className={isActive ? "text-accent-600" : "text-ink-400"} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── KPI Cards ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Outstanding Penalty" value={formatRupees(summary.totalPenalty)} subtext="Incl. dynamic estimations" icon={IndianRupee} color="red" />
         <KpiCard label="Total Logged" value={summary.totalLogged.toLocaleString()} subtext="Sheet complaint records" icon={FileText} color="slate" />
         <KpiCard label="Closed / Resolved" value={summary.totalClosed.toLocaleString()} subtext={`Resolution rate: ${summary.totalLogged > 0 ? ((summary.totalClosed / summary.totalLogged) * 100).toFixed(0) : "0"}%`} icon={CheckCircle} color="green" />
         <KpiCard label="FTFR Rate" value={`${summary.ftfrRate}%`} subtext="Fixed within 24 hours" icon={Zap} color="indigo" />
       </div>
 
-      {/* â”€â”€ Projection Mini-Widgets â”€â”€ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 bg-amber-100 rounded-xl text-amber-600 shrink-0"><Target className="w-5 h-5" /></div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">MTD Penalty</p>
-            <h4 className="text-xl font-black text-slate-900">{formatRupees(projections.currentMonthPenalty)}</h4>
+      {/* ── Projection Mini-Widgets ───────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-[10px] border border-line p-4 flex items-center gap-3.5 shadow-none">
+          <div className="p-2.5 bg-amber-50 text-[#B7791F] border border-amber-200/60 rounded-lg shrink-0">
+            <Target className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-mono font-medium text-ink-500 uppercase tracking-wider m-0">MTD Penalty</p>
+            <h4 className="text-xl font-bold font-display text-ink-900 tabular-nums m-0 mt-0.5">{formatRupees(projections.currentMonthPenalty)}</h4>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 bg-orange-100 rounded-xl text-orange-600 shrink-0"><Activity className="w-5 h-5" /></div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Daily Burn Rate</p>
-            <h4 className="text-xl font-black text-slate-900">{formatRupees(projections.dailyRunRate)}<span className="text-xs font-semibold text-slate-400">/day</span></h4>
+
+        <div className="bg-white rounded-[10px] border border-line p-4 flex items-center gap-3.5 shadow-none">
+          <div className="p-2.5 bg-orange-50 text-orange-700 border border-orange-200/60 rounded-lg shrink-0">
+            <Activity className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-mono font-medium text-ink-500 uppercase tracking-wider m-0">Daily Burn Rate</p>
+            <h4 className="text-xl font-bold font-display text-ink-900 tabular-nums m-0 mt-0.5">
+              {formatRupees(projections.dailyRunRate)}
+              <span className="text-xs font-normal text-ink-400 font-sans ml-1">/day</span>
+            </h4>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-2xl shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 bg-red-100 rounded-xl text-red-600 shrink-0"><TrendingUp className="w-5 h-5" /></div>
-          <div>
-            <p className="text-[10px] font-black text-red-500 uppercase tracking-wider">Projected Month-End</p>
-            <h4 className="text-xl font-black text-red-800">{formatRupees(projections.projectedPenalty)}</h4>
+
+        <div className="bg-white rounded-[10px] border border-rose-200/80 p-4 flex items-center gap-3.5 shadow-none">
+          <div className="p-2.5 bg-rose-50 text-[#B3261E] border border-rose-200/60 rounded-lg shrink-0">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-mono font-medium text-[#B3261E] uppercase tracking-wider m-0">Projected Month-End</p>
+            <h4 className="text-xl font-bold font-display text-[#B3261E] tabular-nums m-0 mt-0.5">{formatRupees(projections.projectedPenalty)}</h4>
           </div>
         </div>
       </div>
 
-      {/* â”€â”€ Global Filters â”€â”€ */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6">
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+      {/* ── Global Enterprise Filters ──────────────────────────────────── */}
+      <div className="bg-white p-5 rounded-[10px] border border-line shadow-none">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-line">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-indigo-100 rounded-lg"><SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" /></div>
-            <h2 className="text-xs font-black text-slate-700 uppercase tracking-wider">Enterprise Filters</h2>
+            <div className="p-1.5 bg-accent-50 text-accent-700 rounded-md border border-accent-200/60">
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+            </div>
+            <h2 className="text-[11px] font-bold font-mono text-ink-700 uppercase tracking-wider m-0">Enterprise Filters</h2>
           </div>
-          <button onClick={handleResetFilters} className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-wider transition border-0 bg-transparent cursor-pointer">
-            <FilterX className="w-3.5 h-3.5" /> Reset
+          <button onClick={handleResetFilters} className="flex items-center gap-1 text-[11px] font-semibold text-accent-700 hover:text-accent-800 transition cursor-pointer border-0 bg-transparent">
+            <FilterX className="w-3.5 h-3.5" /> Reset Filters
           </button>
         </div>
 
@@ -951,7 +1024,7 @@ export default function NewDashboardPage() {
             { label: "Month", value: selectedMonth, options: filterOptions.months, onChange: (v: string) => setSelectedMonth(v), placeholder: "All Months" },
           ].map((f: any) => (
             <div key={f.label}>
-              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">{f.label}</label>
+              <label className="block text-[10px] font-mono font-medium text-ink-500 uppercase mb-1">{f.label}</label>
               <select value={f.value} onChange={(e) => f.onChange(e.target.value)} disabled={f.disabled} className={selectCls}>
                 <option value="">{f.placeholder}</option>
                 {f.options.map((o: string) => <option key={o} value={o}>{o}</option>)}
@@ -962,25 +1035,25 @@ export default function NewDashboardPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Hospital Type</label>
+            <label className="block text-[10px] font-mono font-medium text-ink-500 uppercase mb-1">Hospital Type</label>
             <select value={selectedHospitalType} onChange={(e) => setSelectedHospitalType(e.target.value)} className={selectCls}>
               <option value="">All Types</option>
               {filterOptions.hospitalTypes.map((h: string) => <option key={h} value={h}>{h}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Equipment Type</label>
+            <label className="block text-[10px] font-mono font-medium text-ink-500 uppercase mb-1">Equipment Type</label>
             <select value={selectedEquipmentType} onChange={(e) => setSelectedEquipmentType(e.target.value)} className={selectCls}>
               <option value="">All Types</option>
               {filterOptions.equipmentTypes.map((e: string) => <option key={e} value={e}>{e}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Raise Date From</label>
+            <label className="block text-[10px] font-mono font-medium text-ink-500 uppercase mb-1">Raise Date From</label>
             <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={selectCls} />
           </div>
           <div>
-            <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5">Raise Date To</label>
+            <label className="block text-[10px] font-mono font-medium text-ink-500 uppercase mb-1">Raise Date To</label>
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={selectCls} />
           </div>
         </div>

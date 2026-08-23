@@ -31,7 +31,7 @@ import {
   ArrowUpRight,
   ShieldCheck,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Users,
   Activity,
   Plus,
@@ -470,7 +470,7 @@ export default function DesignSystemPage() {
                       value="1,492"
                       change="+12.5%"
                       changeType="increase"
-                      icon={<DollarSign size={20} />}
+                      icon={<IndianRupee size={20} />}
                       badge="July 2026"
                       accentColor="indigo"
                     />

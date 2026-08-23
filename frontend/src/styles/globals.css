@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════
-   CYRIX LEDGER 2.0 — ENTERPRISE SAAS DESIGN SYSTEM (2026)
-   Typography: Inter / Inter Tight (Variable Weight)
-   Radii: Inputs (12px), Cards (18px), Buttons (12px), Modals (20px)
-   Palette: Slate 50 Canvas, Crisp White Surface, Sharp Blue Primary
+   CYRIX LEDGER — FINANCIAL-GRADE DESIGN SYSTEM (2026)
+   Typography: Inter / Inter Tight / IBM Plex Mono
+   Radii: Inputs/Buttons (8px), Cards (10px), Modals (14px)
+   Palette: Warm Off-White Canvas (#FAFAF9), Ledger Indigo (#4338CA)
  ═══════════════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Inter+Tight:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
@@ -13,58 +13,62 @@
 @layer base {
   :root {
     /* Canvas & Surfaces */
-    --canvas:         #F8FAFC;
+    --canvas:         #FAFAF9;
     --surface:        #FFFFFF;
-    --surface-hover:  #F1F5F9;
-    --surface-sunken: #F8FAFC;
+    --surface-hover:  #F4F3F1;
+    --surface-sunken: #F4F3F1;
 
     /* Text & Ink */
-    --ink-900: #111827;
-    --ink-700: #374151;
+    --ink-900: #12151A;
+    --ink-700: #3A3F47;
     --ink-500: #6B7280;
-    --ink-300: #9CA3AF;
+    --ink-300: #A9AFB8;
 
     /* Borders */
-    --line:       #E5E7EB;
-    --line-strong:#D1D5DB;
+    --line:       #E7E5E1;
+    --line-strong:#D4D1CB;
 
-    /* Primary Brand — Sharp 2026 Blue */
-    --accent-50:  #EFF6FF;
-    --accent-100: #DBEAFE;
-    --accent-500: #3B82F6;
-    --accent-600: #2563EB;
-    --accent-700: #1D4ED8;
-    --accent-900: #1E3A8A;
+    /* Primary Brand — Ledger Indigo */
+    --accent-50:  #EEF0FF;
+    --accent-100: #DEE1FF;
+    --accent-400: #6366F1;
+    --accent-500: #4F46E5;
+    --accent-600: #4338CA;
+    --accent-700: #362FA0;
+    --accent-800: #2E2882;
+    --accent-900: #1E1B4B;
 
-    /* Semantic Status */
-    --approved-text:   #16A34A;
-    --approved-bg:     #F0FDF4;
-    --approved-border: #BBF7D0;
+    /* Semantic Status — Data Ink */
+    --approved-text:   #0F7A4C;
+    --approved-bg:     #EBF7F1;
+    --approved-border: #C9EBDA;
 
-    --pending-text:    #D97706;
-    --pending-bg:      #FFFBEB;
-    --pending-border:  #FDE68A;
+    --pending-text:    #B7791F;
+    --pending-bg:      #FCF6EB;
+    --pending-border:  #F1E1BC;
 
-    --rejected-text:   #DC2626;
-    --rejected-bg:     #FEF2F2;
-    --rejected-border: #FCA5A5;
+    --rejected-text:   #B3261E;
+    --rejected-bg:     #FBEEEC;
+    --rejected-border: #F0CFC9;
 
     --escalated-text:  #7C3AED;
     --escalated-bg:    #F3EEFD;
     --escalated-border:#DECBFA;
 
     /* Design System Radii Tokens */
-    --radius-input:  12px;
-    --radius-card:   18px;
-    --radius-button: 12px;
-    --radius-modal:  20px;
+    --radius-sm:     4px;
+    --radius-input:  8px;
+    --radius-card:   10px;
+    --radius-button: 8px;
+    --radius-modal:  14px;
+    --radius-pill:   9999px;
   }
 
   body {
     @apply antialiased min-h-screen overflow-x-hidden;
     background-color: var(--canvas);
     color: var(--ink-900);
-    font-family: 'Inter', 'Inter Tight', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -72,7 +76,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Inter Tight', 'Inter', system-ui, sans-serif;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.015em;
     color: var(--ink-900);
     font-weight: 700;
   }
@@ -250,3 +254,233 @@ select.input-lte {
   position: relative;
   z-index: 100000;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   CYRIX AUTH ANIMATION SYSTEM
+   Pure CSS Mesh Gradients, Floating Grid, Staggered Entrances
+═══════════════════════════════════════════════════════════ */
+@keyframes meshBlob1 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(40px, -60px) scale(1.15); }
+  66% { transform: translate(-30px, 30px) scale(0.95); }
+}
+
+@keyframes meshBlob2 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(-50px, 50px) scale(1.2); }
+  66% { transform: translate(35px, -40px) scale(0.9); }
+}
+
+@keyframes meshBlob3 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, 40px) scale(0.9); }
+  66% { transform: translate(-40px, -30px) scale(1.15); }
+}
+
+@keyframes gridFloatDrift {
+  0% { background-position: 0px 0px; }
+  100% { background-position: 64px 64px; }
+}
+
+@keyframes fadeInUpStagger {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes formPanelEntrance {
+  0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes subtleShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-3px); }
+  40%, 80% { transform: translateX(3px); }
+}
+
+.animate-mesh-blob-1 {
+  animation: meshBlob1 20s ease-in-out infinite;
+}
+
+.animate-mesh-blob-2 {
+  animation: meshBlob2 25s ease-in-out infinite;
+}
+
+.animate-mesh-blob-3 {
+  animation: meshBlob3 22s ease-in-out infinite;
+}
+
+.animate-grid-drift {
+  animation: gridFloatDrift 60s linear infinite;
+}
+
+.animate-stagger-1 {
+  animation: fadeInUpStagger 400ms cubic-bezier(0.16, 1, 0.3, 1) 0ms forwards;
+}
+
+.animate-stagger-2 {
+  animation: fadeInUpStagger 400ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+.animate-stagger-3 {
+  animation: fadeInUpStagger 400ms cubic-bezier(0.16, 1, 0.3, 1) 160ms both;
+}
+
+.animate-form-card {
+  animation: formPanelEntrance 300ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+}
+
+.animate-shake,
+.animate-shake-gentle {
+  animation: subtleShake 300ms ease-in-out;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-mesh-blob-1,
+  .animate-mesh-blob-2,
+  .animate-mesh-blob-3,
+  .animate-grid-drift,
+  .animate-stagger-1,
+  .animate-stagger-2,
+  .animate-stagger-3,
+  .animate-form-card,
+  .animate-shake-gentle {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UIVERSE GEOMETRIC & LIQUID BUBBLE BUTTON STYLES (4px Radius)
+   ═══════════════════════════════════════════════════════════ */
+.uiverse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid #4f4f4f;
+  border-radius: 4px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #12151A;
+  background-color: #ffffff;
+  z-index: 1;
+}
+
+.uiverse-btn::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%) scaleY(1) scaleX(1.25);
+  top: 100%;
+  width: 140%;
+  height: 180%;
+  background-color: rgba(67, 56, 202, 0.08);
+  border-radius: 50%;
+  display: block;
+  transition: all 0.4s cubic-bezier(0.55, 0, 0.1, 1);
+  z-index: -1;
+}
+
+.uiverse-btn::after {
+  content: "";
+  position: absolute;
+  left: 55%;
+  transform: translateX(-50%) scaleY(1) scaleX(1.45);
+  top: 180%;
+  width: 160%;
+  height: 190%;
+  background-color: #4338CA;
+  border-radius: 50%;
+  display: block;
+  transition: all 0.4s cubic-bezier(0.55, 0, 0.1, 1);
+  z-index: -1;
+}
+
+.uiverse-btn:hover {
+  color: #ffffff !important;
+  border-color: #4338CA;
+  box-shadow: 0 4px 12px rgba(67, 56, 202, 0.2);
+}
+
+.uiverse-btn:hover::before {
+  top: -35%;
+  background-color: #4338CA;
+  transform: translateX(-50%) scaleY(1.3) scaleX(0.8);
+}
+
+.uiverse-btn:hover::after {
+  top: -45%;
+  background-color: #3730A3;
+  transform: translateX(-50%) scaleY(1.3) scaleX(0.8);
+}
+
+/* Emerald / Approve variation */
+.uiverse-btn-emerald {
+  border-color: #0F7A4C;
+}
+.uiverse-btn-emerald::after {
+  background-color: #0F7A4C;
+}
+.uiverse-btn-emerald:hover {
+  border-color: #0F7A4C;
+  box-shadow: 0 4px 12px rgba(15, 122, 76, 0.25);
+}
+.uiverse-btn-emerald:hover::before,
+.uiverse-btn-emerald:hover::after {
+  background-color: #0F7A4C;
+}
+
+/* Rose / Reject variation */
+.uiverse-btn-rose {
+  border-color: #DC2626;
+  color: #DC2626;
+}
+.uiverse-btn-rose::after {
+  background-color: #DC2626;
+}
+.uiverse-btn-rose:hover {
+  border-color: #DC2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+}
+.uiverse-btn-rose:hover::before,
+.uiverse-btn-rose:hover::after {
+  background-color: #DC2626;
+}
+
+/* Teal variation */
+.uiverse-btn-teal {
+  border-color: #39bda7;
+}
+.uiverse-btn-teal::after {
+  background-color: #39bda7;
+}
+.uiverse-btn-teal:hover {
+  border-color: #39bda7;
+}
+.uiverse-btn-teal:hover::before,
+.uiverse-btn-teal:hover::after {
+  background-color: #39bda7;
+}
+
+/* Geometric Crisp Card (4px radius) */
+.uiverse-card {
+  border: 1px solid #E7E5E1;
+  border-radius: 4px;
+  background-color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+.uiverse-card:hover {
+  border-color: #4338CA;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+

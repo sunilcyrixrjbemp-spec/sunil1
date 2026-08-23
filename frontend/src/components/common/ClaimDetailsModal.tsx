@@ -21,7 +21,7 @@ import {
   X, Calendar, User, ShieldCheck, AlertTriangle, Package,
   FileText, Eye, Pencil, CheckCircle2, XCircle, Trash2, Route,
   Zap, MapPin, Building2, PhoneCall, Wrench, Crosshair, Truck, Tag,
-  ArrowRight, Info, Navigation, RotateCcw
+  ArrowRight, Info, Navigation, RotateCcw, Clock, Download, ZoomIn, ZoomOut, RotateCw
 } from "lucide-react";
 import api from "../../services/api";
 import ResetApprovalLevelModal from "../admin/ResetApprovalLevelModal";
@@ -36,6 +36,19 @@ const isValidText = (val: any): boolean => {
   if (str.length === 0 || str === "0" || str === "null" || str === "undefined" || str === "false" || str === "—") return false;
   if (str.toLowerCase() === "other" || str.toLowerCase() === "activities: other" || str.toLowerCase() === "activities:other") return false;
   return true;
+};
+
+export const handleDownloadFile = (url: string, filename?: string) => {
+  if (!url) return;
+  const cleanUrl = formatImageUrl(url);
+  if (!cleanUrl) return;
+  const a = document.createElement("a");
+  a.href = cleanUrl;
+  a.download = filename || cleanUrl.split("/").pop()?.split("?")[0] || "attachment.jpg";
+  a.target = "_blank";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 };
 
 export const formatImageUrl = (url: any): string => {
@@ -286,11 +299,63 @@ const parseItineraryList = (raw: any): any[] => {
     const trimmed = raw.trim();
     if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
       try {
-        const parsed = JSON.parse(trimmed);
+        let parsed = JSON.parse(trimmed);
+        if (typeof parsed === "string") {
+          try { parsed = JSON.parse(parsed); } catch (e) {}
+        }
         if (Array.isArray(parsed)) return parsed;
-        if (parsed && typeof parsed === "object") return [parsed];
+        if (parsed && typeof parsed === "object") {
+          if (Array.isArray(parsed.legs)) return parsed.legs;
+          if (Array.isArray(parsed.itineraries)) return parsed.itineraries;
+          if (Array.isArray(parsed.itinerary)) return parsed.itinerary;
+          return [parsed];
+        }
       } catch (e) {}
     }
+  }
+  if (raw && typeof raw === "object") {
+    if (Array.isArray(raw.legs)) return raw.legs;
+    if (Array.isArray(raw.itineraries)) return raw.itineraries;
+    if (Array.isArray(raw.itinerary)) return raw.itinerary;
+    return [raw];
+  }
+  return [];
+};
+
+const getResolvedItineraries = (c: any): any[] => {
+  if (!c) return [];
+  const sources = [c.itineraries, c.legs, c.itinerary_list, c.itinerary, c.claim_itinerary, c.claim_legs];
+  for (const src of sources) {
+    const list = parseItineraryList(src);
+    if (Array.isArray(list) && list.length > 0) {
+      // Deduplicate by leg number or unique route to guarantee NO duplicate cards
+      const seen = new Set();
+      const deduped: any[] = [];
+      list.forEach((item: any, idx: number) => {
+        const key = item.leg !== undefined ? `leg_${item.leg}` : `idx_${idx}_${item.from}_${item.to}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push(item);
+        }
+      });
+      return deduped.length > 0 ? deduped : list;
+    }
+  }
+  if (c.from || c.from_location || c.to || c.to_location || c.km || c.total_km || c.travel_amount || c.amount || c.da || c.daily_allowance) {
+    return [{
+      leg: 1,
+      from: c.from || c.from_location || "Source",
+      to: c.to || c.to_location || "Destination",
+      from_district: c.from_district || c.district || "",
+      to_district: c.to_district || c.district || "",
+      mode: c.travel_mode || c.category || "Bike",
+      km: parseFloat(c.km || c.total_km || c.distance_km || 0),
+      amount: parseFloat(c.travel_amount || c.ta_amount || c.amount || 0),
+      da: parseFloat(c.da || c.daily_allowance || c.da_amount || 0),
+      other_expenses: parseFloat(c.other_expenses || c.other_amount || 0),
+      other_expenses_remark: c.other_expenses_remark || c.other_reason || c.remark || "",
+      activity_details: c.activity_details || c.meta || {},
+    }];
   }
   return [];
 };
@@ -343,11 +408,11 @@ const SectionHeader = ({ icon: Icon, label, accent = "#4A6A8A", count }: { icon:
 
 // ─── MINIMAL AMOUNT STAT BOX ──────────────────────────────────────────────────
 
-const MiniAmountBox = ({ label, value, subtext, color = "#4A6A8A" }: { label: string; value: string; subtext?: string; color?: string }) => (
-  <div className="flex flex-col items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-1.5 flex-1 min-w-[80px] shadow-2xs">
-    <span className="text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400 text-center leading-none mb-0.5">{label}</span>
-    <span className="text-[12px] font-black leading-tight" style={{ color }}>{value}</span>
-    {subtext && <span className="text-[8px] text-slate-400 font-semibold">{subtext}</span>}
+const MiniAmountBox = ({ label, value, subtext, color = "#4338CA" }: { label: string; value: string; subtext?: string; color?: string }) => (
+  <div className="flex flex-col items-center justify-center rounded-[4px] border border-line/80 bg-white px-2.5 py-2 flex-1 min-w-[85px] shadow-2xs hover:border-line-strong transition-all">
+    <span className="text-[9px] font-bold uppercase tracking-wider text-ink-500 text-center leading-none mb-1 font-sans">{label}</span>
+    <span className="text-[12.5px] font-bold font-mono leading-tight" style={{ color }}>{value}</span>
+    {subtext && <span className="text-[8.5px] text-ink-400 font-mono font-medium mt-0.5">{subtext}</span>}
   </div>
 );
 
@@ -363,19 +428,19 @@ const AttachmentCard = ({ att, index, setLightboxImage }: { att: any; index: num
 
   return (
     <div
-      className="group relative rounded-lg border border-slate-200 bg-white hover:bg-slate-50/80 overflow-hidden shadow-2xs hover:border-[#4A6A8A] transition-all cursor-pointer flex items-center justify-between gap-2 p-2"
+      className="group relative rounded-[4px] border border-line/80 bg-white hover:bg-surface-sunken overflow-hidden shadow-2xs hover:border-accent-400 transition-all cursor-pointer flex items-center justify-between gap-2 p-2.5"
       onClick={() => isPdf ? window.open(fullUrl, "_blank") : setLightboxImage(fullUrl)}
     >
-      <div className="flex items-center gap-2.5 min-w-0 flex-1">
-        <div className="w-8 h-8 rounded-lg bg-slate-100/90 flex items-center justify-center shrink-0 border border-slate-200/80">
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        <div className="w-8 h-8 rounded-[3px] bg-surface-sunken flex items-center justify-center shrink-0 border border-line">
           {isPdf ? (
             <FileText size={16} className="text-rose-500" />
           ) : (
-            <FileText size={16} className="text-[#4A6A8A]" />
+            <FileText size={16} className="text-accent-600" />
           )}
         </div>
         <div className="flex-1 min-w-0 leading-tight">
-          <div className="text-[10.5px] font-bold text-slate-800 truncate">
+          <div className="text-[11px] font-bold text-ink-900 truncate">
             {billType ? `${billType} Bill` : `Attachment #${index + 1}`}
           </div>
           <div className="text-[8.5px] text-slate-400 font-semibold truncate">
@@ -394,7 +459,7 @@ const AttachmentCard = ({ att, index, setLightboxImage }: { att: any; index: num
 
 const LegDetailCard = ({
   leg, index, totalLegsCount, setLightboxImage, barcodeMap, claimDistrictType, userAllowance, claimMaster, allAttachments,
-  canEditAmounts, editedLeg, onLegAmountChange, onLegRemarkChange, routeBenchmark
+  canEditAmounts, editedLeg, onLegAmountChange, onLegRemarkChange, routeBenchmark, auditLogs
 }: {
   leg: any; index: number; totalLegsCount: number; setLightboxImage: (u: string) => void;
   barcodeMap: Record<string, { equipment: string; hospital: string }>;
@@ -407,6 +472,7 @@ const LegDetailCard = ({
   onLegAmountChange?: (index: number, field: string, value: string | number) => void;
   onLegRemarkChange?: (index: number, field: string, remark: string) => void;
   routeBenchmark?: any;
+  auditLogs?: any[];
 }) => {
   const legNum = leg.leg || leg.leg_number || index + 1;
   const isFirstLeg = index === 0; // STRICT: DA is attached ONLY to the 1st Leg of the day!
@@ -515,6 +581,16 @@ const LegDetailCard = ({
   
   // DA is edited ONLY if isFirstLeg is true!
   const isDaEdited = isFirstLeg && (estimatedSubmittedDa > daAmt);
+
+  // Match manager manual edit from audit logs (Fix 1b)
+  const matchingManagerEdit = (auditLogs || []).find((log: any) => {
+    if (log.action_type !== "MANAGER_EDIT") return false;
+    const fn = (log.field_name || "").toLowerCase();
+    if (isTaEdited && (fn.includes("ta") || fn.includes("travel") || fn.includes("km") || fn.includes(`leg_${index + 1}`))) return true;
+    if (isDaEdited && (fn.includes("da") || fn.includes("daily") || fn.includes(`leg_${index + 1}`))) return true;
+    if (fn.includes(`leg_${index + 1}`) || fn.includes(`leg${index + 1}`)) return true;
+    return false;
+  }) || (auditLogs || []).find((log: any) => log.action_type === "MANAGER_EDIT");
 
   // STRICT PER-LEG DEDUCTION CHECK: Only show if there's an explicit per-leg adjustment
   const hasLegDeduction = (calculatedDeduction > 0 || isTaEdited || isDaEdited || isKmEdited || isValidText(kmDeductionReason) || isValidText(daDeductionReason) || (isFirstLeg && isValidText(baseLocationDeductionReason)));
@@ -702,34 +778,34 @@ const LegDetailCard = ({
   );
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-2xs space-y-2">
+    <div className="rounded-[4px] border border-line/80 bg-white p-2 shadow-2xs space-y-2.5 hover:border-line-strong transition-all">
       {/* Leg Header */}
-      <div className="flex items-center justify-between flex-wrap gap-1.5 pb-1.5 border-b border-slate-100">
-        <div className="flex items-center gap-1.5">
-          <span className="w-5 h-5 rounded bg-[#4A6A8A] text-white flex items-center justify-center text-[9.5px] font-extrabold shrink-0">
+      <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-line/60">
+        <div className="flex items-center gap-2">
+          <span className="w-5 h-5 rounded-[3px] bg-accent-900 text-white flex items-center justify-center text-[10px] font-bold font-mono shrink-0 shadow-2xs">
             #{legNum}
           </span>
-          <div className="flex items-center gap-1 text-[11px] font-extrabold text-slate-800">
+          <div className="flex items-center gap-1 text-xs font-bold text-ink-900 font-display">
             <span>{fromDist}</span>
-            <ArrowRight size={10} className="text-slate-400" />
+            <ArrowRight size={11} className="text-ink-400" />
             <span>{toDist}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <ModeChip mode={mode} />
-          {subMode && <span className="text-[8.5px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">Sub: {subMode}</span>}
+          {subMode && <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-accent-50 text-accent-700 border border-accent-200">Sub: {subMode}</span>}
           {km > 0 && (
-            <span className={`text-[9.5px] font-extrabold px-1.5 py-0.2 rounded border ${isKmEdited ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-slate-100 text-slate-700 border-slate-200"}`}>
+            <span className={`text-[10px] font-semibold font-mono px-2 py-0.5 rounded-full border ${isKmEdited ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-surface-sunken text-ink-700 border-line"}`}>
               {km} km (@ ₹{ratePerKm}/km) {isKmEdited ? `(Orig: ${origKm}km)` : ""}
             </span>
           )}
           {submittedLegAmt > netLegAmt && (
-            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 border border-slate-200">
+            <span className="text-[9.5px] font-medium font-mono px-2 py-0.5 rounded-full bg-surface-sunken text-ink-500 border border-line">
               Claimed: {rupee(submittedLegAmt)}
             </span>
           )}
-          <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="text-[10.5px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
             Net: {rupee(netLegAmt)}
           </span>
         </div>
@@ -750,7 +826,7 @@ const LegDetailCard = ({
       </div>
 
       {/* PER-LEG FINANCIAL BREAKDOWN STRIP WITH STRICT CATEGORY & PER-LEG ISOLATED BILL ATTACHMENT MAPPINGS */}
-      <div className="bg-slate-50/80 p-1.5 rounded-lg border border-slate-200 flex flex-wrap gap-1 items-center justify-between text-[9.5px]">
+      <div className="bg-slate-50/80 p-1.5 rounded-[3px] border border-slate-200 flex flex-wrap gap-1 items-center justify-between text-[9.5px]">
         <div className="flex flex-wrap gap-2 items-center">
           
           {/* 1. TRAVEL TA & ITS BUS/TRAIN/TRAVEL TICKET (STRICTLY FOR THIS LEG ONLY) */}
@@ -839,7 +915,7 @@ const LegDetailCard = ({
 
       {/* PER-LEG ADJUSTMENTS CARD (ONLY IF EXPLICIT LEG KM/TA EDITS EXIST) */}
       {hasLegDeduction && (
-        <div className="bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 space-y-1.5 text-[9.5px]">
+        <div className="bg-rose-50/90 p-2.5 rounded-[3px] border border-rose-200 space-y-1.5 text-[9.5px]">
           {/* Header */}
           <div className="flex items-center justify-between font-extrabold text-rose-900 border-b border-rose-200/80 pb-1">
             <span className="flex items-center gap-1.5 text-[10px]">
@@ -923,12 +999,21 @@ const LegDetailCard = ({
               </span>
             </div>
           )}
+
+          {/* Manager Manual Override Attribution (Fix 1b) */}
+          {matchingManagerEdit && (
+            <div className="text-[9.5px] text-slate-500 font-sans pt-1 mt-1 border-t border-rose-200/60 flex items-center gap-1 flex-wrap">
+              <span>
+                ✏️ Manually adjusted by <b>{matchingManagerEdit.actor_name || "Manager"}</b> {matchingManagerEdit.actor_role ? `(${matchingManagerEdit.actor_role})` : ""} {matchingManagerEdit.created_at ? `on ${new Date(matchingManagerEdit.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : ""} {matchingManagerEdit.change_reason ? `— "${matchingManagerEdit.change_reason}"` : ""}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
       {/* Reason for Other Mode / Category Banner (If Present) */}
       {isOtherCategory && otherReason && (
-        <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-amber-950 font-semibold text-[10.5px] flex items-center gap-2">
+        <div className="bg-amber-50 p-2.5 rounded-[3px] border border-amber-200 text-amber-950 font-semibold text-[10.5px] flex items-center gap-2">
           <Info size={14} className="text-amber-700 shrink-0" />
           <div>
             <span className="text-amber-800 font-bold block text-[9px] uppercase">Reason for Other Mode / Category:</span>
@@ -937,32 +1022,152 @@ const LegDetailCard = ({
         </div>
       )}
 
-      {/* HOSPITAL & EQUIPMENT DETAILS BOX (ONLY IF HOSPITAL NAME OR EQUIPMENT NAME EXISTS) */}
-      {(hospitalName || equipmentName || barcode) && (
-        <div className="bg-slate-50 p-2 rounded border border-slate-200/80 space-y-1 text-[10px]">
-          {hospitalName && (
-            <div className="font-bold text-slate-700 border-b border-slate-200 pb-1 flex items-center justify-between">
-              <span className="flex items-center gap-1 text-emerald-800 font-extrabold"><Building2 size={11} /> {hospitalName}</span>
-              {travelTaBillUrl && (
-                <button
-                  onClick={() => setLightboxImage(travelTaBillUrl)}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#4A6A8A] text-white text-[8.5px] font-bold hover:bg-[#3b546e] transition-colors"
-                >
-                  <Eye size={10} /> View Photo
-                </button>
-              )}
-            </div>
-          )}
+      {/* ASSET TAGGING WORK LIST - EXCEL TABLE FORMAT (IDENTICAL TO CALLS/PMS) */}
+      {(() => {
+        const rawAssets = (act.assetsList && act.assetsList.length > 0) ? act.assetsList : (
+          (hospitalName || equipmentName || barcode || act.assetEquipment || department || schedule || act.parsed?.asset_tagging_equipment || leg.asset_tagging_equipment || leg.asset_tagging_barcode || leg.asset_tagging_hospital) ? [{
+            equipment_name: equipmentName || act.assetEquipment || act.parsed?.asset_tagging_equipment || leg.asset_tagging_equipment || leg.equipment_name || "",
+            barcode: barcode || act.parsed?.asset_tagging_barcode || leg.asset_tagging_barcode || (leg.asset_tagging_suffix ? `(8004890615671) ${leg.asset_tagging_suffix}` : "") || "",
+            hospital_name: hospitalName || act.parsed?.asset_tagging_hospital || leg.asset_tagging_hospital || leg.hospital_name || toLoc || "",
+            make: act.parsed?.make || act.parsed?.asset_tagging_make || act.parsed?.brand || leg.asset_tagging_make || leg.make || leg.brand || "",
+            model: equipmentModel || act.parsed?.model || act.parsed?.asset_tagging_model || leg.asset_tagging_model || leg.model || "",
+            serial_number: act.parsed?.serial_no || act.parsed?.serial_number || act.parsed?.asset_tagging_serial || leg.asset_tagging_serial || leg.serial_number || leg.serial_no || "",
+            department: department || act.parsed?.department || act.parsed?.ward || leg.department || "",
+            schedule: schedule || act.pmsFrequency || leg.schedule || "",
+            has_warranty: act.parsed?.has_warranty || act.parsed?.asset_tagging_has_warranty || leg.asset_tagging_has_warranty || leg.has_warranty || "No",
+            warranty_start: act.parsed?.warranty_start || act.parsed?.asset_tagging_warranty_start || leg.asset_tagging_warranty_start || leg.warranty_start || "",
+            warranty_end: act.parsed?.warranty_end || act.parsed?.asset_tagging_warranty_end || leg.asset_tagging_warranty_end || leg.warranty_end || "",
+            barcode_photo: act.parsed?.barcode_photo || act.parsed?.asset_tagging_barcode_photo || leg.asset_tagging_barcode_photo || leg.barcode_photo || "",
+            serial_photo: act.parsed?.serial_photo || act.parsed?.asset_tagging_serial_photo || leg.asset_tagging_serial_photo || leg.serial_photo || "",
+            model_photo: act.parsed?.model_photo || act.parsed?.asset_tagging_model_photo || leg.asset_tagging_model_photo || leg.model_photo || "",
+            attachment_url: act.attachmentUrl || leg.service_report_url || leg.photo_url || leg.asset_photo_url || travelTaBillUrl || "",
+          }] : []
+        );
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 pt-0.5 text-[9.5px]">
-            {equipmentName && <div><b className="text-slate-500 uppercase text-[8.5px]">Equipment:</b> <span className="font-bold text-slate-900">{equipmentName}</span></div>}
-            {equipmentModel && <div><b className="text-slate-500 uppercase text-[8.5px]">Model:</b> <span className="font-semibold text-slate-800">{equipmentModel}</span></div>}
-            {barcode && <div><b className="text-slate-500 uppercase text-[8.5px]">Barcode:</b> <span className="font-mono font-bold text-[#4A6A8A]">{barcode}</span></div>}
-            {schedule && <div><b className="text-slate-500 uppercase text-[8.5px]">Schedule:</b> <span className="font-bold text-emerald-700">{schedule}</span></div>}
-            {department && <div><b className="text-slate-500 uppercase text-[8.5px]">Department:</b> <span className="font-semibold text-slate-800">{department}</span></div>}
+        if (rawAssets.length === 0) return null;
+
+        const validAssets = rawAssets.filter((item: any) => {
+          const eq = item.equipment_name || item.equipment || "";
+          const bar = item.barcode || item.code || "";
+          const hosp = item.hospital_name || item.hospital || "";
+          const make = item.make || item.brand || "";
+          const model = item.model || "";
+          const serial = item.serial_number || item.serial_no || "";
+          return isValidText(eq) || isValidText(bar) || isValidText(hosp) || isValidText(make) || isValidText(model) || isValidText(serial) || item.barcode_photo || item.serial_photo || item.model_photo;
+        });
+
+        if (validAssets.length === 0) return null;
+
+        return (
+          <div className="space-y-1 text-[9.5px]">
+            <div className="flex items-center justify-between font-bold text-emerald-900 border-b border-emerald-100 pb-1">
+              <span className="flex items-center gap-1">
+                <Tag size={10} /> Asset Tagging Work List ({validAssets.length})
+              </span>
+            </div>
+
+            <div className="overflow-x-auto border border-emerald-200 rounded-[3px] shadow-2xs">
+              <table className="w-full text-left border-collapse text-[10px]">
+                <thead>
+                  <tr className="bg-emerald-50/80 text-emerald-950 font-extrabold uppercase border-b border-emerald-200 text-[9px]">
+                    <th className="py-1 px-2">#</th>
+                    <th className="py-1 px-2">Barcode</th>
+                    <th className="py-1 px-2">Equipment Name</th>
+                    <th className="py-1 px-2">Hospital Name</th>
+                    <th className="py-1 px-2">Make / Brand</th>
+                    <th className="py-1 px-2">Model</th>
+                    <th className="py-1 px-2">Serial Number</th>
+                    <th className="py-1 px-2">Warranty</th>
+                    <th className="py-1 px-2 text-center">Attachments</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-emerald-100 bg-white">
+                  {validAssets.map((assetItem: any, aIdx: number) => {
+                    const bar = assetItem.barcode || assetItem.code || "—";
+                    const eq = assetItem.equipment_name || assetItem.equipment || "—";
+                    const hosp = assetItem.hospital_name || assetItem.hospital || hospitalName || "—";
+                    const make = assetItem.make || assetItem.brand || "—";
+                    const model = assetItem.model || assetItem.model_no || "—";
+                    const serial = assetItem.serial_number || assetItem.serial_no || "—";
+                    const hasWarr = assetItem.has_warranty || "No";
+                    const wStart = assetItem.warranty_start || "";
+                    const wEnd = assetItem.warranty_end || "";
+
+                    const bPhoto = formatImageUrl(assetItem.barcode_photo);
+                    const sPhoto = formatImageUrl(assetItem.serial_photo);
+                    const mPhoto = formatImageUrl(assetItem.model_photo);
+                    const gPhoto = formatImageUrl(assetItem.attachment_url);
+
+                    const hasPhotos = !!(bPhoto || sPhoto || mPhoto || gPhoto);
+
+                    return (
+                      <tr key={aIdx} className="hover:bg-emerald-50/40 font-medium">
+                        <td className="py-1 px-2 font-bold text-emerald-800">{aIdx + 1}</td>
+                        <td className="py-1 px-2 font-mono font-bold text-[#4A6A8A]">{bar}</td>
+                        <td className="py-1 px-2 font-bold text-slate-800">{eq}</td>
+                        <td className="py-1 px-2 text-slate-700">{hosp}</td>
+                        <td className="py-1 px-2 text-slate-700">{make}</td>
+                        <td className="py-1 px-2 text-slate-700">{model}</td>
+                        <td className="py-1 px-2 font-mono text-slate-700">{serial}</td>
+                        <td className="py-1 px-2 font-semibold">
+                          {String(hasWarr).toLowerCase() === "yes" ? (
+                            <span className="text-emerald-700 font-bold bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200">
+                              Yes {wStart && wEnd ? `(${wStart} to ${wEnd})` : ""}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">No</span>
+                          )}
+                        </td>
+                        <td className="py-1 px-2 text-center">
+                          <div className="flex items-center justify-center gap-1 flex-wrap">
+                            {bPhoto && (
+                              <button
+                                type="button"
+                                onClick={() => setLightboxImage(bPhoto)}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-700 text-white text-[8px] font-bold hover:bg-emerald-800 transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <Eye size={9} /> Barcode
+                              </button>
+                            )}
+                            {sPhoto && (
+                              <button
+                                type="button"
+                                onClick={() => setLightboxImage(sPhoto)}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-700 text-white text-[8px] font-bold hover:bg-cyan-800 transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <Eye size={9} /> Serial
+                              </button>
+                            )}
+                            {mPhoto && (
+                              <button
+                                type="button"
+                                onClick={() => setLightboxImage(mPhoto)}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-700 text-white text-[8px] font-bold hover:bg-blue-800 transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <Eye size={9} /> Model
+                              </button>
+                            )}
+                            {gPhoto && !bPhoto && !sPhoto && !mPhoto && (
+                              <button
+                                type="button"
+                                onClick={() => setLightboxImage(gPhoto)}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-700 text-white text-[8px] font-bold hover:bg-slate-800 transition-colors cursor-pointer shadow-2xs"
+                              >
+                                <Eye size={9} /> Photo
+                              </button>
+                            )}
+                            {!hasPhotos && <span className="text-slate-400 font-medium">—</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Work Badges Summary - ONLY SHOW TAGS IF WORK COMPLETED IS STRICTLY > 0 */}
       {(hasCalls || hasPms || hasCalib || hasMobi || hasAssetTagging) && (
@@ -1002,7 +1207,7 @@ const LegDetailCard = ({
             <span className="flex items-center gap-1"><PhoneCall size={10} /> Calls Work List ({effectiveCallsList.length})</span>
           </div>
 
-          <div className="overflow-x-auto border border-blue-200 rounded-lg shadow-2xs">
+          <div className="overflow-x-auto border border-blue-200 rounded-[3px] shadow-2xs">
             <table className="w-full text-left border-collapse text-[10px]">
               <thead>
                 <tr className="bg-blue-50/80 text-blue-900 font-extrabold uppercase border-b border-blue-200 text-[9px]">
@@ -1105,7 +1310,7 @@ const LegDetailCard = ({
             <span className="flex items-center gap-1"><Wrench size={10} /> PMS Work List ({act.pmsList.length})</span>
           </div>
 
-          <div className="overflow-x-auto border border-emerald-200 rounded-lg shadow-2xs">
+          <div className="overflow-x-auto border border-emerald-200 rounded-[3px] shadow-2xs">
             <table className="w-full text-left border-collapse text-[10px]">
               <thead>
                 <tr className="bg-emerald-50/80 text-emerald-900 font-extrabold uppercase border-b border-emerald-200 text-[9px]">
@@ -1173,7 +1378,7 @@ const LegDetailCard = ({
           const curAmt = parseFloat(String(taAmt)) || 0;
 
           return (
-            <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-2.5 mt-2 space-y-2 shadow-xs select-none">
+            <div className="bg-emerald-50 border-2 border-emerald-300 rounded-[3px] p-2.5 mt-2 space-y-2 shadow-xs select-none">
               <div className="flex items-center justify-between font-extrabold text-emerald-950 text-[10.5px] border-b border-emerald-200 pb-1 flex-wrap gap-1">
                 <span className="flex items-center gap-1.5 uppercase tracking-wider text-emerald-900">
                   🏆 Historical Minimum Route Match ({globalObj.from_location} ↔ {globalObj.to_location})
@@ -1237,7 +1442,7 @@ const LegDetailCard = ({
 
       {/* MANAGER & COORDINATOR EXPENSE AMOUNT EDIT PANEL */}
       {canEditAmounts && onLegAmountChange && (
-        <div className="bg-[#4A6A8A]/10 p-2.5 rounded-lg border-2 border-[#4A6A8A]/30 mt-2 space-y-2 select-none">
+        <div className="bg-[#4A6A8A]/10 p-2.5 rounded-[3px] border-2 border-[#4A6A8A]/30 mt-2 space-y-2 select-none">
           <div className="flex items-center justify-between font-extrabold text-[#4A6A8A] border-b border-[#4A6A8A]/20 pb-1 text-[10.5px] flex-wrap gap-1">
             <span className="flex items-center gap-1.5 uppercase tracking-wider">
               <Pencil size={12} className="text-[#4A6A8A]" />
@@ -1498,7 +1703,7 @@ const ApprovalStep = ({ step, index }: { step: any; index: number }) => {
   else if (s === "pending") { dotColor = "#f59e0b"; label = "Pending"; bg = "bg-amber-50 border-amber-200"; textColor = "text-amber-700"; }
 
   return (
-    <div className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 ${bg}`}>
+    <div className={`flex items-start gap-2 rounded-[3px] border px-2.5 py-2 ${bg}`}>
       <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8.5px] font-bold text-white shrink-0 mt-0.5" style={{ background: dotColor }}>
         {step.level_number || index + 1}
       </div>
@@ -1548,41 +1753,68 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   open, claimDetails, user,
   comments = "", setComments = () => {}, actionLoading = false, loadingDetails = false,
   handleApprove = () => {}, handleReject = () => {}, handleReturn = () => {},
-  handleDeleteClaim = () => {}, onClose, navigate = () => {}, setLightboxImage = () => {},
+  handleDeleteClaim = () => {}, onClose, navigate = () => {}, setLightboxImage: _setLightboxImage = () => {},
   getStatusBadgeClass = () => "", getStatusLabel = () => "", sourceMode,
   editedLegs, onLegAmountChange, onLegRemarkChange
 }) => {
   const [showResetModal, setShowResetModal] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLogError, setAuditLogError] = useState<string | null>(null);
+  const [auditLogLoading, setAuditLogLoading] = useState(false);
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [showReturnBox, setShowReturnBox] = useState(false);
+  const [modalTab, setModalTab] = useState<"all" | "summary" | "legs" | "bills" | "audit">("all");
+  const handleOpenPhoto = (url: string) => {
+    if (!url) return;
+    const formatted = formatImageUrl(url);
+    // Open only internal high-res zoom/rotate/download modal to prevent duplicate popups
+    setInternalPhotoUrl(formatted);
+    setLbZoom(1);
+    setLbRotation(0);
+  };
+
+  const [internalPhotoUrl, setInternalPhotoUrl] = useState<string | null>(null);
+  const [lbZoom, setLbZoom] = useState<number>(1);
+  const [lbRotation, setLbRotation] = useState<number>(0);
   const [barcodeMap, setBarcodeMap] = useState<Record<string, { equipment: string; hospital: string }>>({});
   const [userAllowance, setUserAllowance] = useState<any>(null);
   const [routeBenchmarks, setRouteBenchmarks] = useState<Record<number, any>>({});
 
-  useEffect(() => {
+  const fetchAuditLogs = () => {
     if (!claimDetails) {
       setAuditLogs([]);
+      setAuditLogError(null);
       return;
     }
     const expId = claimDetails.expense_code || claimDetails.id || claimDetails.expense_id || claimDetails.exp_id;
     if (expId) {
+      setAuditLogLoading(true);
+      setAuditLogError(null);
       api.get(`/expense/${encodeURIComponent(expId)}/audit-trail`)
         .then(res => {
           if (res.data && Array.isArray(res.data.audit_logs)) {
             setAuditLogs(res.data.audit_logs);
+          } else {
+            setAuditLogs([]);
           }
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.warn("Failed to fetch audit trail:", err);
+          setAuditLogError(err?.response?.data?.error || err?.message || "Audit history could not be loaded");
+        })
+        .finally(() => {
+          setAuditLogLoading(false);
+        });
     }
+  };
+
+  useEffect(() => {
+    fetchAuditLogs();
   }, [claimDetails]);
 
   useEffect(() => {
     if (!open || !claimDetails) return;
-    const itineraries = parseItineraryList(claimDetails.itineraries)
-      .concat(parseItineraryList(claimDetails.legs))
-      .concat(parseItineraryList(claimDetails.itinerary_list))
-      .concat(parseItineraryList(claimDetails.itinerary));
+    const itineraries = getResolvedItineraries(claimDetails);
 
     const homeKeywords = ["home", "residence", "house", "room", "flat", "base", "stay"];
 
@@ -1633,10 +1865,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       }
     });
 
-    const itineraries = parseItineraryList(claimDetails.itineraries)
-      .concat(parseItineraryList(claimDetails.legs))
-      .concat(parseItineraryList(claimDetails.itinerary_list))
-      .concat(parseItineraryList(claimDetails.itinerary));
+    const itineraries = getResolvedItineraries(claimDetails);
 
     itineraries.forEach((leg: any) => {
       const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
@@ -1698,10 +1927,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
   useEffect(() => {
     if (!claimDetails) return;
-    const itineraries = parseItineraryList(claimDetails.itineraries)
-      .concat(parseItineraryList(claimDetails.legs))
-      .concat(parseItineraryList(claimDetails.itinerary_list))
-      .concat(parseItineraryList(claimDetails.itinerary));
+    const itineraries = getResolvedItineraries(claimDetails);
 
     const barcodesToFetch: string[] = [];
 
@@ -1782,16 +2008,16 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
 
           {/* 1-Line Daily Summary Strip Skeleton */}
-          <div className="bg-slate-100/80 p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <div className="bg-slate-100/80 p-3 rounded-[4px] border border-slate-200 flex flex-wrap items-center justify-between gap-2">
             <div className="h-4 w-56 bg-slate-300 rounded"></div>
             <div className="h-4 w-32 bg-slate-200 rounded"></div>
             <div className="h-4 w-28 bg-slate-300 rounded"></div>
           </div>
 
           {/* Leg Breakdown Cards Skeleton */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[1, 2].map((idx) => (
-              <div key={idx} className="bg-white border border-slate-200/90 rounded-xl p-4 space-y-3 shadow-2xs">
+              <div key={idx} className="bg-white border border-slate-200/90 rounded-[4px] p-4 space-y-2 shadow-2xs">
                 <div className="flex justify-between items-center pb-2 border-b border-slate-100">
                   <div className="h-4 w-28 bg-slate-300 rounded"></div>
                   <div className="h-4 w-20 bg-slate-200 rounded"></div>
@@ -1807,12 +2033,12 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
 
           {/* Photos Row Skeleton */}
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+          <div className="bg-slate-50 p-3 rounded-[4px] border border-slate-200 space-y-2">
             <div className="h-3 w-32 bg-slate-300 rounded"></div>
             <div className="flex gap-3">
-              <div className="w-20 h-20 bg-slate-200 rounded-lg"></div>
-              <div className="w-20 h-20 bg-slate-200 rounded-lg"></div>
-              <div className="w-20 h-20 bg-slate-200 rounded-lg"></div>
+              <div className="w-20 h-20 bg-slate-200 rounded-[3px]"></div>
+              <div className="w-20 h-20 bg-slate-200 rounded-[3px]"></div>
+              <div className="w-20 h-20 bg-slate-200 rounded-[3px]"></div>
             </div>
           </div>
 
@@ -1888,20 +2114,54 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const formattedApprovedLimit = isClaimRejected
     ? (limitType === "KM" ? "0 KM" : "₹0")
     : (limitType === "KM" ? `${parseFloat(String(approvedLimitVal)).toFixed(0)} KM` : rupee(approvedLimitVal));
-  const parsedItinList = parseItineraryList(c.itineraries)
-    .concat(parseItineraryList(c.legs))
-    .concat(parseItineraryList(c.itinerary_list))
-    .concat(parseItineraryList(c.itinerary));
-
-  const itineraries = (parsedItinList.length > 0)
-    ? parsedItinList
+  const resolvedList = getResolvedItineraries(c);
+  const itineraries = (resolvedList.length > 0)
+    ? resolvedList
     : (Array.isArray(editedLegs) && editedLegs.length > 0 ? editedLegs : []);
+
+  // Collect all genuine bills & invoices (strictly financial vouchers only)
+  const displayBills: any[] = [];
+  const seenBillUrls = new Set<string>();
+
+  attachments.forEach((att: any, idx: number) => {
+    const u = typeof att === "string" ? att : (att.file_url || att.url || att.photo_url);
+    if (u && typeof u === "string" && !seenBillUrls.has(u)) {
+      seenBillUrls.add(u);
+      displayBills.push(typeof att === "string" ? { file_url: att, file_name: `Bill Attachment #${idx + 1}` } : att);
+    }
+  });
+
+  itineraries.forEach((leg: any, lIdx: number) => {
+    const candidateBills = [
+      { url: leg.travel_bill || leg.ta_bill || leg.ticket_url || leg.bus_bill || leg.train_ticket, title: `${leg.mode || "Travel"} Ticket/Bill (Leg ${lIdx + 1})` },
+      { url: leg.hotel_bill || leg.hotel_photo || leg.hotel_url || leg.stay_bill, title: `Hotel Stay Bill (Leg ${lIdx + 1})` },
+      { url: leg.local_purchase_bill || leg.local_purchase_photo || leg.local_purchase_url || leg.lp_bill, title: `Local Purchase Bill (Leg ${lIdx + 1})` },
+      { url: leg.other_bill || leg.other_photo || leg.parcel_photo || leg.oth_bill, title: `Other / Courier Bill (Leg ${lIdx + 1})` },
+    ];
+
+    candidateBills.forEach((cb) => {
+      if (cb.url && typeof cb.url === "string" && !seenBillUrls.has(cb.url)) {
+        seenBillUrls.add(cb.url);
+        displayBills.push({ file_url: cb.url, file_name: cb.title });
+      }
+    });
+  });
 
   const rejectorName = rejectedStep?.approver_name || rejectedStep?.approver || c.rejected_by_name || c.rejector_name || c.rejected_by || "Manager / Coordinator";
   const rejectorCode = rejectedStep?.approver_code || c.rejector_code || "";
   const rejectorRole = rejectedStep?.approver_role || rejectedStep?.approver_designation || c.rejector_role || "";
-
   const rejectionRemark = rejectedStep?.remark || c.rejection_reason || c.rejection_remark || c.deduction_remark || c.approver_remark || c.remark || "";
+
+  // Returned Claim Detection (Fix 2a)
+  const returnedStep = approvals.find((a: any) => {
+    const s = (a.status || "").toLowerCase();
+    return s === "returned" || s === "returned_to_draft";
+  });
+  const isReturned = (c.status || "").toLowerCase() === "returned_to_draft" || (c.status || "").toLowerCase() === "returned" || !!returnedStep;
+  const returnerName = returnedStep?.approver_name || returnedStep?.approver || c.returned_by_name || c.returner_name || "Manager / Coordinator";
+  const returnerCode = returnedStep?.approver_code || c.returner_code || "";
+  const returnerRole = returnedStep?.approver_role || returnedStep?.approver_designation || c.returner_role || "";
+  const returnRemark = returnedStep?.comments || returnedStep?.remark || c.return_reason || c.return_remark || c.comments || "";
 
   // Parse Travel Modes
   const modesList = typeof c.travel_mode === "string"
@@ -2148,31 +2408,32 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   });
 
   return (
+    <>
     <Modal
       open={open}
       onCancel={onClose}
       centered={true}
-      width={860}
+      width={720}
       destroyOnClose
       closeIcon={false}
       className="claim-details-compact-modal"
       wrapClassName="my-claims-modal-wrap"
-      maskStyle={{ backdropFilter: "blur(3px)", background: "rgba(15, 23, 42, 0.5)" }}
-      bodyStyle={{ padding: 0, background: "#f8fafc", maxHeight: "82vh", overflowY: "auto" }}
+      maskStyle={{ backdropFilter: "blur(6px)", background: "rgba(18, 21, 26, 0.6)" }}
+      bodyStyle={{ padding: 0, background: "#FAFAF9", maxHeight: "85vh", overflowY: "auto", borderRadius: "4px" }}
       styles={{
         header: { display: "none" },
-        footer: { borderTop: "1px solid #e2e8f0", padding: "8px 12px", background: "#ffffff", margin: 0 },
+        footer: { borderTop: "1px solid var(--line, #E7E5E1)", padding: "8px 12px", background: "#ffffff", margin: 0, borderRadius: "0 0 4px 4px" },
       }}
       footer={
         <div className="flex items-center justify-between flex-wrap gap-2">
           {/* Action buttons */}
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             {isEditable && (
               <button
                 onClick={() => { onClose(); navigate(`/submit-expense?edit=${c.id}`); }}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
+                className="cursor-pointer transition-all inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 border-b-[3px] border-b-amber-500 hover:brightness-105 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] shadow-2xs leading-none"
               >
-                <Pencil size={10} /> Edit
+                <Pencil size={13} /> Edit
               </button>
             )}
             {isDeletable && (
@@ -2181,9 +2442,9 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   onClose();
                   handleDeleteClaim(c.id);
                 }}
-                className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                className="cursor-pointer transition-all inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-900 border border-rose-300 border-b-[3px] border-b-rose-500 hover:brightness-105 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] shadow-2xs leading-none"
               >
-                <Trash2 size={10} /> Delete
+                <Trash2 size={13} /> Delete
               </button>
             )}
             {canApprove && !showRejectBox && !showReturnBox && (
@@ -2191,39 +2452,39 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                 <button
                   onClick={handleApprove}
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-1 px-3.5 py-1 rounded text-[10.5px] font-bold bg-emerald-600 text-white border border-emerald-700 hover:bg-emerald-700 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="cursor-pointer transition-all inline-flex items-center gap-1.5 px-4 py-1.5 rounded-[4px] text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 border-b-[3px] border-b-emerald-900 hover:brightness-110 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] shadow-sm disabled:opacity-50 leading-none"
                 >
-                  <CheckCircle2 size={10} /> {actionLoading ? "Processing…" : "Approve"}
+                  <CheckCircle2 size={13} /> {actionLoading ? "Processing…" : "Approve"}
                 </button>
                 <button
                   onClick={() => { setShowRejectBox(true); setShowReturnBox(false); }}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                  className="cursor-pointer transition-all inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 border-b-[3px] border-b-rose-500 hover:brightness-105 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] shadow-2xs leading-none"
                 >
-                  <XCircle size={10} /> Reject
+                  <XCircle size={13} /> Reject
                 </button>
                 {isCoordinator && (
                   <button
                     onClick={() => { setShowReturnBox(true); setShowRejectBox(false); }}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-amber-500 text-white border border-amber-600 hover:bg-amber-600 transition-colors cursor-pointer"
+                    className="cursor-pointer transition-all inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold bg-orange-50 hover:bg-orange-100 text-orange-900 border border-orange-300 border-b-[3px] border-b-orange-500 hover:brightness-105 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] shadow-2xs leading-none"
                   >
-                    <RotateCcw size={10} /> Return
+                    <RotateCcw size={13} /> Return
                   </button>
                 )}
                 {isAdmin && (
                   <>
                     <button
                       onClick={() => setShowResetModal(true)}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 transition-colors cursor-pointer shadow-2xs"
+                      className="cursor-pointer transition-all inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold bg-accent-600 hover:bg-accent-700 text-white border border-accent-700 border-b-[3px] border-b-accent-900 hover:brightness-110 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] shadow-sm leading-none"
                       title="Select specific approval hierarchy level to re-route this claim to"
                     >
-                      <RotateCcw size={10} /> Reset Level
+                      <RotateCcw size={13} /> Reset Level
                     </button>
                     <button
                       onClick={() => setShowResetModal(true)}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-bold bg-rose-600 text-white border border-rose-700 hover:bg-rose-700 transition-colors cursor-pointer shadow-2xs"
+                      className="cursor-pointer transition-all inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white border border-rose-700 border-b-[3px] border-b-rose-900 hover:brightness-110 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] shadow-sm leading-none"
                       title="Cancel this expense claim completely and record audit log"
                     >
-                      <XCircle size={10} /> Cancel Claim
+                      <XCircle size={13} /> Cancel Claim
                     </button>
                   </>
                 )}
@@ -2236,18 +2497,18 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   value={comments}
                   onChange={e => setComments(e.target.value)}
                   placeholder="Rejection reason…"
-                  className="text-[10.5px] border border-slate-200 rounded px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#4A6A8A] min-w-[180px]"
+                  className="text-xs border border-line rounded-[4px] px-3 py-1.5 bg-white text-ink-900 focus:outline-none focus:ring-2 focus:ring-rose-400/20 focus:border-rose-500 min-w-[200px]"
                 />
                 <button
                   onClick={handleReject}
                   disabled={actionLoading || !comments.trim()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="cursor-pointer transition-all inline-flex items-center gap-1 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white border border-rose-700 border-b-[3px] border-b-rose-900 hover:brightness-110 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] disabled:opacity-50 shadow-sm leading-none"
                 >
-                  <XCircle size={10} /> Confirm Reject
+                  <XCircle size={13} /> Confirm Reject
                 </button>
                 <button
                   onClick={() => { setShowRejectBox(false); setComments(""); }}
-                  className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors px-1 cursor-pointer"
+                  className="text-xs text-ink-400 hover:text-ink-600 transition-colors px-2 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2260,7 +2521,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   value={comments}
                   onChange={e => setComments(e.target.value)}
                   placeholder="Return reason / remark…"
-                  className="text-[10.5px] border border-slate-200 rounded px-2 py-1 bg-white text-slate-700 focus:outline-none focus:border-[#4A6A8A] min-w-[180px]"
+                  className="text-xs border border-line rounded-[4px] px-3 py-1.5 bg-white text-ink-900 focus:outline-none focus:ring-2 focus:ring-orange-400/20 focus:border-orange-500 min-w-[200px]"
                 />
                 <button
                   onClick={() => {
@@ -2271,13 +2532,13 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                     }
                   }}
                   disabled={actionLoading || !comments.trim()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-bold bg-amber-500 text-white hover:bg-amber-600 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="cursor-pointer transition-all inline-flex items-center gap-1 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold bg-orange-600 hover:bg-orange-700 text-white border border-orange-700 border-b-[3px] border-b-orange-900 hover:brightness-110 hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] disabled:opacity-50 shadow-sm leading-none"
                 >
-                  <RotateCcw size={10} /> Confirm Return
+                  <RotateCcw size={13} /> Confirm Return
                 </button>
                 <button
                   onClick={() => { setShowReturnBox(false); setComments(""); }}
-                  className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors px-1 cursor-pointer"
+                  className="text-xs text-ink-400 hover:text-ink-600 transition-colors px-2 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2287,30 +2548,35 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
           <button
             onClick={onClose}
-            className="inline-flex items-center gap-1 px-3 py-1 rounded text-[10.5px] font-semibold text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-colors"
+            className="cursor-pointer transition-all inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[4px] text-xs font-semibold text-ink-700 border border-line border-b-[3px] border-b-line-strong hover:border-b-accent-400 hover:bg-surface-sunken hover:-translate-y-[1px] active:border-b-[1px] active:translate-y-[2px] shadow-2xs leading-none"
           >
-            <X size={10} /> Close
+            <X size={13} /> Close
           </button>
         </div>
       }
     >
+      {/* ─── MOBILE DRAG HANDLE ─────────────────────────────────────────── */}
+      <div className="block sm:hidden pt-2 pb-1 text-center bg-white border-b border-line">
+        <div className="w-10 h-1 rounded-full bg-line-strong mx-auto" />
+      </div>
+
       {/* ─── MODAL HEADER ─────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-slate-200 sticky top-0 z-20 shadow-2xs">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className={`w-1 h-6 rounded-full shrink-0 ${isOutOfState ? "bg-purple-600" : (isOutDistrict ? "bg-orange-500" : "bg-[#4A6A8A]")}`} />
+      <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-line sticky top-0 z-20">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className={`w-1.5 h-6 rounded-full shrink-0 ${isOutOfState ? "bg-purple-600" : (isOutDistrict ? "bg-amber-500" : "bg-accent-600")}`} />
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[13px] font-extrabold font-mono tracking-tight ${isOutOfState ? "text-purple-700" : (isOutDistrict ? "text-orange-600" : "text-[#4A6A8A]")}`}>
+            <span className="text-sm font-bold font-mono text-accent-700 tracking-tight">
               {c.expense_code || c.claim_id || `#${c.id}`}
             </span>
-            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+            <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full border ${
               isOutOfState
                 ? "bg-purple-50 text-purple-700 border-purple-200"
-                : (isOutDistrict ? "bg-orange-50 text-orange-600 border-orange-200" : "bg-blue-50 text-blue-600 border-blue-200")
+                : (isOutDistrict ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-accent-50 text-accent-700 border-accent-200")
             }`}>
               {isOutOfState ? "Out of State" : (isOutDistrict ? "Out-District" : "In-District")}
             </span>
             {c.hasMismatch && (
-              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded border bg-amber-50 text-amber-700 border-amber-200">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
                 ⚠️ Mismatch
               </span>
             )}
@@ -2319,84 +2585,256 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         </div>
         <button
           onClick={onClose}
-          className="w-6 h-6 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0"
+          className="w-8 h-8 rounded-[4px] flex items-center justify-center text-ink-400 hover:text-ink-900 hover:bg-surface-sunken transition-all shrink-0 cursor-pointer border border-transparent hover:border-line"
         >
-          <X size={14} />
+          <X size={16} />
         </button>
       </div>
 
-      <div className="px-3 py-3 space-y-3">
+      <div className="p-2.5 space-y-2 font-sans text-ink-900">
 
-        {/* ─── HEADER DATA STRIP ────────────────────────────────────────────── */}
+        {/* ─── 1. HIERARCHY-ALIGNED LIFECYCLE APPROVAL STEPPER (3-STAGE: SUBMITTED ➔ LEVEL 1 MANAGER ➔ LEVEL 2 COORDINATOR) ─────────────────── */}
+        <div className="bg-white rounded-[4px] border border-line/80 p-2.5 shadow-2xs">
+          {(() => {
+            // Level 1: Manager Review
+            const l1 = approvals.find((a: any) => a.level === 1 || a.approver_role?.toLowerCase().includes("manag")) || approvals[0];
+            const isL1Approved = l1?.status === "approved" || isApproved || (approvals.length > 1 && approvals[1]?.status === "approved");
+            const isL1Rejected = l1?.status === "rejected" || (isClaimRejected && !approvals[1]);
+            const isL1Returned = l1?.status === "returned" || isReturned;
+
+            // Level 2: Coordinator Review
+            const l2 = approvals.find((a: any) => a.level === 2 || a.approver_role?.toLowerCase().includes("coord")) || approvals[1];
+            const isL2Approved = l2?.status === "approved" || isApproved;
+            const isL2Rejected = l2?.status === "rejected" || (isClaimRejected && !!approvals[1]);
+            const isL2Returned = l2?.status === "returned";
+
+            return (
+              <div className="flex items-center justify-between relative px-3 sm:px-12">
+                {/* Step 1: Submission */}
+                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[75px]">
+                  <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold shadow-2xs">
+                    <CheckCircle2 size={13} />
+                  </div>
+                  <span className="text-[10px] font-bold text-ink-900 font-sans">1. Submitted</span>
+                  <span className="text-[9px] text-ink-400 font-mono">{formatDateDDMMMYY(c.date || c.itinerary)}</span>
+                </div>
+
+                {/* Line 1 -> 2 */}
+                <div className={`flex-1 h-0.5 mx-3 sm:mx-6 ${
+                  isL1Approved ? "bg-emerald-500" : (isL1Rejected ? "bg-rose-400" : (isL1Returned ? "bg-orange-400" : "bg-amber-400"))
+                }`} />
+
+                {/* Step 2: Level 1 - Manager */}
+                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[95px]">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-2xs ${
+                    isL1Approved
+                      ? "bg-emerald-600 text-white"
+                      : isL1Rejected
+                      ? "bg-rose-600 text-white"
+                      : isL1Returned
+                      ? "bg-orange-500 text-white"
+                      : "bg-amber-500 text-white animate-pulse"
+                  }`}>
+                    {isL1Approved ? <CheckCircle2 size={13} /> : (isL1Rejected ? <XCircle size={13} /> : (isL1Returned ? <RotateCcw size={13} /> : <Clock size={13} />))}
+                  </div>
+                  <span className="text-[10px] font-bold text-ink-900 font-sans">2. Level 1: Manager</span>
+                  <span className="text-[9px] font-mono font-medium">
+                    {isL1Approved ? (
+                      <span className="text-emerald-700">{l1?.action_date ? formatDateDDMMMYY(l1.action_date) : "Approved"}</span>
+                    ) : isL1Rejected ? (
+                      <span className="text-rose-700">Rejected</span>
+                    ) : isL1Returned ? (
+                      <span className="text-orange-700">Returned</span>
+                    ) : (
+                      <span className="text-amber-700">Under Review</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Line 2 -> 3 */}
+                <div className={`flex-1 h-0.5 mx-3 sm:mx-6 ${
+                  isL2Approved ? "bg-emerald-500" : (isL2Rejected ? "bg-rose-400" : (isL2Returned ? "bg-orange-400" : (isL1Approved ? "bg-amber-400" : "bg-line")))
+                }`} />
+
+                {/* Step 3: Level 2 - Coordinator */}
+                <div className="flex flex-col items-center gap-0.5 z-10 text-center min-w-[95px]">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-2xs ${
+                    isL2Approved
+                      ? "bg-emerald-600 text-white"
+                      : isL2Rejected
+                      ? "bg-rose-600 text-white"
+                      : isL2Returned
+                      ? "bg-orange-500 text-white"
+                      : (isL1Approved ? "bg-amber-500 text-white animate-pulse" : "bg-surface-sunken text-ink-400 border border-line")
+                  }`}>
+                    {isL2Approved ? <CheckCircle2 size={13} /> : (isL2Rejected ? <XCircle size={13} /> : (isL2Returned ? <RotateCcw size={13} /> : <Clock size={13} />))}
+                  </div>
+                  <span className="text-[10px] font-bold text-ink-900 font-sans">3. Level 2: Coordinator</span>
+                  <span className="text-[9px] font-mono font-medium">
+                    {isL2Approved ? (
+                      <span className="text-emerald-700">{l2?.action_date ? formatDateDDMMMYY(l2.action_date) : "Approved"}</span>
+                    ) : isL2Rejected ? (
+                      <span className="text-rose-700">Rejected</span>
+                    ) : isL2Returned ? (
+                      <span className="text-orange-700">Returned</span>
+                    ) : isL1Approved ? (
+                      <span className="text-amber-700">In Review</span>
+                    ) : (
+                      <span className="text-ink-400">Awaiting L1</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* ─── 2. HEADER DATA STRIP ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           {/* Card 1: Identity */}
-          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
-            <div className="flex items-center gap-1 text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">
-              <FileText size={10} className="text-[#4A6A8A]" /> Claim Identity
+          <div className="bg-white rounded-[4px] border border-line/80 p-2 space-y-0.5 shadow-2xs">
+            <div className="flex items-center gap-1 text-ink-400 text-[10px] font-mono font-medium uppercase tracking-wider">
+              <FileText size={12} className="text-accent-600" /> Claim Identity
             </div>
-            <div className="text-[11.5px] font-extrabold text-[#4A6A8A] font-mono truncate">
+            <div className="text-xs font-bold text-accent-700 font-mono truncate">
               {c.expense_code || c.claim_id || `#${c.id}`}
             </div>
-            <div className="text-[9px] text-slate-500 font-semibold truncate flex items-center gap-1 flex-wrap">
-              <span>Category: <b className="text-slate-800">{c.category || c.travel_mode || "Auto"}</b></span>
-              {modesList.map((m: string, idx: number) => <ModeChip key={idx} mode={m} />)}
+            <div className="text-[11px] text-ink-600 font-medium flex items-center gap-1.5 flex-wrap">
+              <span className="text-ink-400">Mode:</span>
+              <span className="font-bold text-accent-800 bg-accent-50 border border-accent-200 px-1.5 py-0.2 rounded-[3px] uppercase text-[10px] tracking-wider">
+                {c.category || c.travel_mode || (modesList.length > 0 ? modesList.join(", ") : "Tour")}
+              </span>
             </div>
           </div>
 
           {/* Card 2: Submitter */}
-          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
-            <div className="flex items-center gap-1 text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">
-              <User size={10} className="text-indigo-600" /> Submitted By
+          <div className="bg-white rounded-[4px] border border-line/80 p-2 space-y-0.5 shadow-2xs">
+            <div className="flex items-center gap-1 text-ink-400 text-[10px] font-mono font-medium uppercase tracking-wider">
+              <User size={12} className="text-accent-600" /> Submitted By
             </div>
-            <div className="text-[11.5px] font-extrabold text-slate-800 truncate">
-              {c.submitter_name || c.employeeName || c.name || c.user_name || "Engineer"}
+            <div className="text-xs font-bold text-ink-900 truncate" title={c.submitter_name || c.employeeName || c.name || "Engineer"}>
+              {c.submitter_name || c.employeeName || c.name || "Engineer"}
             </div>
-            <div className="text-[9px] text-slate-500 font-medium truncate">
-              {(c.submitter_code || c.eCode || c.user_id) && <span className="font-mono text-slate-600 mr-1">[{c.submitter_code || c.eCode || c.user_id}]</span>}
-              {c.designation || c.submitter_designation || c.user_role || ""}
+            <div className="text-[10.5px] text-ink-600 font-medium leading-tight break-words" title={c.designation || c.submitter_designation || ""}>
+              {(c.submitter_code || c.eCode || c.user_id) && (
+                <span className="font-mono text-accent-700 font-bold mr-1">[{c.submitter_code || c.eCode || c.user_id}]</span>
+              )}
+              <span>{c.designation || c.submitter_designation || c.user_role || "Engineer"}</span>
             </div>
           </div>
 
           {/* Card 3: Mapped Zone & District */}
-          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
-            <div className="flex items-center gap-1 text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">
-              <Building2 size={10} className="text-emerald-600" /> Mapped Zone & District
+          <div className="bg-white rounded-[4px] border border-line/80 p-2 space-y-0.5 shadow-2xs">
+            <div className="flex items-center gap-1 text-ink-400 text-[10px] font-mono font-medium uppercase tracking-wider">
+              <Building2 size={12} className="text-[#0F7A4C]" /> Mapped Zone
             </div>
-            <div className="text-[11.5px] font-extrabold text-slate-800 truncate">
+            <div className="text-xs font-bold text-ink-900 truncate">
               {zoneVal ? `Zone ${zoneVal}` : (homeDistVal ? `${homeDistVal} Zone` : "Rajasthan Zone")}
             </div>
-            <div className="text-[9px] text-slate-500 font-medium truncate">
-              Home: <b>{homeDistVal || c.district || c.submitter_district || "Base District"}</b>
+            <div className="text-[11px] text-ink-500 font-medium truncate">
+              Home: <b className="text-ink-800">{homeDistVal || c.district || c.submitter_district || "Base District"}</b>
             </div>
           </div>
 
           {/* Card 4: Timing (24-HOUR FORMAT) */}
-          <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
-            <div className="flex items-center gap-1 text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">
-              <Calendar size={10} className="text-amber-600" /> Claim Date (24H)
+          <div className="bg-white rounded-[4px] border border-line/80 p-2 space-y-0.5 shadow-2xs">
+            <div className="flex items-center gap-1 text-ink-400 text-[10px] font-mono font-medium uppercase tracking-wider">
+              <Calendar size={12} className="text-[#B7791F]" /> Claim Date
             </div>
-            <div className="text-[11.5px] font-extrabold text-slate-800 truncate">
+            <div className="text-xs font-bold text-ink-900 truncate">
               {formatDateDDMMMYY(c.date || c.itinerary)}
             </div>
-            <div className="text-[8.5px] text-slate-400 truncate font-mono">
+            <div className="text-[10px] text-ink-400 truncate font-mono">
               {formatDateTime24(c.created_at || c.submitted_at)}
             </div>
           </div>
         </div>
 
-        {/* ─── FINANCIAL / QUOTA SUMMARY CARDS ─── */}
+        {/* ─── 3. MODAL SECTION TABS (3D TACTICAL PUSH BUTTON STYLE) ─────── */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          <button
+            type="button"
+            onClick={() => setModalTab("all")}
+            className={`cursor-pointer transition-all px-3.5 py-1.5 rounded-[4px] text-xs font-semibold leading-none flex items-center gap-1.5 shrink-0 ${
+              modalTab === "all"
+                ? "bg-accent-50 text-accent-700 border border-accent-300 border-b-[3px] border-b-accent-600 font-bold hover:brightness-105 hover:-translate-y-[0.5px] active:border-b-[1px] active:translate-y-[1.5px] shadow-xs"
+                : "bg-white text-ink-600 hover:text-ink-900 border border-line border-b-[3px] border-b-line-strong hover:border-b-accent-400 hover:bg-surface-sunken hover:-translate-y-[0.5px] active:border-b-[1px] active:translate-y-[1.5px] shadow-2xs"
+            }`}
+          >
+            <FileText size={13} className="text-accent-600" />
+            <span>All Overview</span>
+          </button>
+          {!isLimitRequest && itineraries.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setModalTab("legs")}
+              className={`cursor-pointer transition-all px-3.5 py-1.5 rounded-[4px] text-xs font-semibold leading-none flex items-center gap-1.5 shrink-0 ${
+                modalTab === "legs"
+                  ? "bg-accent-50 text-accent-700 border border-accent-300 border-b-[3px] border-b-accent-600 font-bold hover:brightness-105 hover:-translate-y-[0.5px] active:border-b-[1px] active:translate-y-[1.5px] shadow-xs"
+                  : "bg-white text-ink-600 hover:text-ink-900 border border-line border-b-[3px] border-b-line-strong hover:border-b-accent-400 hover:bg-surface-sunken hover:-translate-y-[0.5px] active:border-b-[1px] active:translate-y-[1.5px] shadow-2xs"
+              }`}
+            >
+              <Route size={13} className="text-accent-600" />
+              <span>Travel Legs ({itineraries.length})</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setModalTab("bills")}
+            className={`cursor-pointer transition-all px-3.5 py-1.5 rounded-[4px] text-xs font-semibold leading-none flex items-center gap-1.5 shrink-0 ${
+              modalTab === "bills"
+                ? "bg-accent-50 text-accent-700 border border-accent-300 border-b-[3px] border-b-accent-600 font-bold hover:brightness-105 hover:-translate-y-[0.5px] active:border-b-[1px] active:translate-y-[1.5px] shadow-xs"
+                : "bg-white text-ink-600 hover:text-ink-900 border border-line border-b-[3px] border-b-line-strong hover:border-b-accent-400 hover:bg-surface-sunken hover:-translate-y-[0.5px] active:border-b-[1px] active:translate-y-[1.5px] shadow-2xs"
+            }`}
+          >
+            <Package size={13} className="text-accent-600" />
+            <span>Bills & Invoices ({attachments.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalTab("audit")}
+            className={`cursor-pointer transition-all px-3.5 py-1.5 rounded-[4px] text-xs font-semibold leading-none flex items-center gap-1.5 shrink-0 ${
+              modalTab === "audit"
+                ? "bg-accent-50 text-accent-700 border border-accent-300 border-b-[3px] border-b-accent-600 font-bold hover:brightness-105 hover:-translate-y-[0.5px] active:border-b-[1px] active:translate-y-[1.5px] shadow-xs"
+                : "bg-white text-ink-600 hover:text-ink-900 border border-line border-b-[3px] border-b-line-strong hover:border-b-accent-400 hover:bg-surface-sunken hover:-translate-y-[0.5px] active:border-b-[1px] active:translate-y-[1.5px] shadow-2xs"
+            }`}
+          >
+            <ShieldCheck size={13} className="text-accent-600" />
+            <span>Approvals & Audit ({approvals.length + (auditLogs?.length || 0)})</span>
+          </button>
+        </div>
+
+        {/* ─── RETURN REMARK BANNER ─────────────────────────────────────────── */}
+        {isReturned && (
+          <div className="p-3.5 bg-orange-50 rounded-[4px] border border-orange-200 text-orange-900 space-y-1.5 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-orange-200/80 pb-1 flex-wrap gap-1">
+              <span className="text-xs font-bold text-orange-900 uppercase flex items-center gap-1.5 font-display">
+                <RotateCcw size={13} className="text-orange-700" /> Returned for Correction
+              </span>
+              <span className="text-[10px] font-semibold text-orange-900 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-300/80">
+                Returned By: <b>{returnerName}</b> {returnerCode ? `[${returnerCode}]` : ""} {returnerRole ? `(${returnerRole})` : ""}
+              </span>
+            </div>
+            <div className="bg-white p-2.5 rounded-[3px] border-l-4 border-l-orange-500 border border-orange-200/70 text-xs text-ink-900 font-semibold leading-relaxed">
+              <span className="text-[10px] font-mono text-orange-800 uppercase block mb-0.5">Return Remark:</span>
+              "{returnRemark || "Please review the notes, make the necessary corrections, and resubmit."}"
+            </div>
+          </div>
+        )}
+
+        {/* ─── 4. FINANCIAL / QUOTA SUMMARY CARDS ─── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
           {isLimitRequest ? (
             <>
-              <MiniAmountBox label="Requested Extension" value={formattedRequestedLimit} color="#4A6A8A" />
+              <MiniAmountBox label="Requested Extension" value={formattedRequestedLimit} color="#4338CA" />
               <MiniAmountBox
                 label="Approved Extension"
                 value={formattedApprovedLimit}
-                color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#f59e0b")}
+                color={isApproved ? "#0F7A4C" : (isClaimRejected ? "#DC2626" : "#D97706")}
               />
               <MiniAmountBox label="Reimbursable Cash" value="₹0" subtext="Quota Extension" color="#64748b" />
-              <div className="bg-white rounded-lg border border-slate-200 p-2 shadow-2xs space-y-0.5">
-                <div className="text-slate-400 text-[8.5px] font-bold uppercase tracking-wider">Request Status</div>
+              <div className="bg-white rounded-[4px] border border-line/80 p-2.5 shadow-2xs space-y-0.5 flex flex-col justify-center items-center">
+                <div className="text-ink-400 text-[9px] font-bold uppercase tracking-wider">Request Status</div>
                 <div className="pt-0.5">
                   <StatusBadge status={c.status} record={c} getStatusBadgeClass={getStatusBadgeClass} getStatusLabel={getStatusLabel} />
                 </div>
@@ -2404,11 +2842,11 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             </>
           ) : (
             <>
-              <MiniAmountBox label="Total Claimed" value={rupee(originalClaimedTotal)} color="#4A6A8A" />
+              <MiniAmountBox label="Total Claimed" value={rupee(originalClaimedTotal)} color="#4338CA" />
               <MiniAmountBox
                 label={isApproved ? "Approved Net" : (isClaimRejected ? "Approved Net" : (liveEditedTotalSum !== null ? "Live Net After Edit" : "Estimated Net"))}
                 value={isClaimRejected ? "₹0" : rupee(currentApprovedNet)}
-                color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#059669")}
+                color={isApproved ? "#0F7A4C" : (isClaimRejected ? "#DC2626" : "#0F7A4C")}
               />
               <MiniAmountBox label="Travel TA" value={rupee(totalTa)} subtext={c.total_km ? `${c.total_km} km` : undefined} color="#0284c7" />
               <MiniAmountBox label="Daily DA" value={rupee(totalDa)} color="#059669" />
@@ -2423,7 +2861,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
         {/* ─── DEDICATED LIMIT REQUEST PANEL ─── */}
         {isLimitRequest && (
-          <div className="bg-white border-2 border-[#4A6A8A]/30 rounded-lg p-3 space-y-2.5 shadow-2xs">
+          <div className="bg-white border-2 border-[#4A6A8A]/30 rounded-[3px] p-2 space-y-1.5 shadow-2xs">
             <div className="flex items-center justify-between border-b border-slate-200 pb-2 flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <Zap size={16} className="text-[#4A6A8A]" />
@@ -2450,14 +2888,14 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             </div>
 
             {/* Requester Purpose / Justification */}
-            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[10.5px]">
+            <div className="bg-slate-50 p-2.5 rounded-[3px] border border-slate-200 text-[10.5px]">
               <div className="font-bold text-slate-500 uppercase text-[9px] mb-0.5">Employee Purpose / Justification</div>
               <div className="text-slate-800 font-medium">{cleanPurpose || c.purpose || c.description || "Request additional limit extension."}</div>
             </div>
 
             {/* Manager Decision Remarks */}
             {(rejectionRemark || c.approver_remark || c.manager_remark || c.comments || (approvals.length > 0 && approvals[0]?.comments)) && (
-              <div className={`p-2.5 rounded-lg border text-[10.5px] ${isClaimRejected ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
+              <div className={`p-2.5 rounded-[3px] border text-[10.5px] ${isClaimRejected ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
                 <div className="font-extrabold uppercase text-[9px] mb-0.5 flex items-center gap-1">
                   {isClaimRejected ? <XCircle size={12} className="text-rose-600" /> : <CheckCircle2 size={12} className="text-emerald-600" />}
                   Manager Remarks ({rejectorName})
@@ -2471,7 +2909,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         )}
 
         {/* ─── DEEP LEG-BY-LEG CARDS (FOR REGULAR TRAVEL CLAIMS ONLY) ─── */}
-        {!isLimitRequest && itineraries.length > 0 && (
+        {!isLimitRequest && itineraries.length > 0 && (modalTab === "all" || modalTab === "legs") && (
           <div className="space-y-2">
             <SectionHeader
               icon={Route}
@@ -2486,7 +2924,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   leg={leg}
                   index={idx}
                   totalLegsCount={itineraries.length}
-                  setLightboxImage={setLightboxImage}
+                  setLightboxImage={handleOpenPhoto}
                   barcodeMap={barcodeMap}
                   claimDistrictType={c.districtType || (isOutDistrict ? "Out-District" : "In-District")}
                   userAllowance={userAllowance}
@@ -2497,51 +2935,74 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                   onLegAmountChange={onLegAmountChange}
                   onLegRemarkChange={onLegRemarkChange}
                   routeBenchmark={routeBenchmarks[idx]}
+                  auditLogs={auditLogs}
                 />
               ))}
             </div>
           </div>
         )}
 
-
-
-        {/* ─── ATTACHMENTS & BILL INVOICES GALLERY ──────────────────────────── */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-2.5">
-          <SectionHeader icon={Package} label="Attachments & Invoices" count={attachments.length} />
-          {attachments.length === 0 ? (
-            <div className="text-center py-3 text-[10px] text-slate-400">
-              No bills uploaded for this claim
+        {/* ─── ATTACHMENTS & BILL INVOICES GALLERY (STRICTLY BILLS & INVOICES ONLY) ─── */}
+        {(modalTab === "all" || modalTab === "bills") && (
+          <div className="bg-white rounded-[4px] border border-line/80 shadow-2xs p-2.5 space-y-2">
+            <div className="flex items-center justify-between border-b border-line/60 pb-1 flex-wrap gap-1">
+              <SectionHeader
+                icon={Package}
+                label="Bills & Invoices"
+                count={`${displayBills.length} Bills`}
+              />
+              {displayBills.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    displayBills.forEach((b: any, bIdx: number) => {
+                      const u = typeof b === "string" ? b : (b.file_url || b.url);
+                      if (u) setTimeout(() => handleDownloadFile(u, b.file_name || `bill-${bIdx + 1}.jpg`), bIdx * 300);
+                    });
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[3px] bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 text-[10px] font-bold transition-colors cursor-pointer"
+                >
+                  <Download size={12} />
+                  <span>Download All Bills ({displayBills.length})</span>
+                </button>
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
-              {attachments.map((att: any, i: number) => (
-                <AttachmentCard
-                  key={i}
-                  att={att}
-                  index={i}
-                  setLightboxImage={setLightboxImage}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+
+            {displayBills.length === 0 ? (
+              <div className="text-center py-4 text-xs text-ink-400 font-sans">
+                No bills uploaded for this claim (Standard Allowance / Rate per KM)
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {displayBills.map((att: any, i: number) => (
+                  <AttachmentCard
+                    key={i}
+                    att={att}
+                    index={i}
+                    setLightboxImage={handleOpenPhoto}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ─── DEDUCTIONS & POLICY REMARKS (FULL CONSOLIDATED AUDIT CARD) ─── */}
-        {!isLimitRequest && hasOverallDeduction && !isClaimRejected && (
-          <div className="bg-white rounded-lg border-2 border-rose-200 shadow-2xs p-2.5 space-y-2 text-[10.5px]">
+        {!isLimitRequest && hasOverallDeduction && !isClaimRejected && (modalTab === "all" || modalTab === "audit") && (
+          <div className="bg-white rounded-[4px] border border-rose-200/80 shadow-2xs p-2.5 space-y-1.5 text-xs">
             <SectionHeader icon={AlertTriangle} label="Deductions & Policy Audit Details" accent="#ef4444" />
             
             {/* Summary Line */}
-            <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 flex-wrap gap-2">
-              <div className="flex items-center gap-1.5 font-extrabold text-slate-800 flex-wrap">
-                <span>Deduction Audit Details:</span>
-                <span className="font-semibold text-slate-600">Claimed: <b>{rupee(originalClaimedTotal)}</b></span>
-                <span className="text-slate-400">➔</span>
-                <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            <div className="flex items-center justify-between border-b border-rose-100 pb-2 flex-wrap gap-2">
+              <div className="flex items-center gap-1.5 font-bold text-ink-900 flex-wrap">
+                <span>Deduction Summary:</span>
+                <span className="font-medium text-ink-600">Claimed: <b className="font-mono">{rupee(originalClaimedTotal)}</b></span>
+                <span className="text-ink-300">➔</span>
+                <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-mono">
                   Approved Net: {rupee(currentApprovedNet)}
                 </span>
               </div>
-              <div className="font-mono text-[10.5px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+              <div className="font-mono text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
                 Total Deduction: -{rupee(totalCombinedDeduction)}
               </div>
             </div>
@@ -2550,17 +3011,17 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {/* Base Location Deduction Card */}
               {systemDeductionAmt > 0 && (
-                <div className="bg-amber-50/90 border border-amber-300 rounded-lg p-2.5 space-y-1">
-                  <div className="flex items-center justify-between font-extrabold text-amber-950 text-[10.5px]">
+                <div className="bg-amber-50/60 border border-amber-200 rounded-[4px] p-3 space-y-1.5">
+                  <div className="flex items-center justify-between font-bold text-amber-950 text-xs">
                     <span className="flex items-center gap-1.5">📍 Base Location Deduction</span>
-                    <span className="font-mono text-amber-900 font-black">-{rupee(systemDeductionAmt)}</span>
+                    <span className="font-mono text-amber-900 font-bold">-{rupee(systemDeductionAmt)}</span>
                   </div>
-                  <div className="text-[9.5px] text-amber-900 leading-tight">
+                  <div className="text-[11px] text-amber-900 leading-tight">
                     <b className="text-amber-950">Deducted By:</b> System Rule Engine
                   </div>
-                  <div className="text-[9.5px] text-amber-900 leading-normal bg-white p-1.5 rounded border border-amber-200 mt-1">
+                  <div className="text-[11px] text-amber-900 leading-normal bg-white p-2 rounded-[3px] border border-amber-200/60 mt-1">
                     <b className="text-amber-950 block mb-0.5">Exact Reason / Rule:</b>
-                    <span className="text-slate-900 font-semibold">
+                    <span className="text-ink-900 font-medium">
                       Base Location Deduction
                     </span>
                   </div>
@@ -2569,23 +3030,20 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
               {/* Coordinator / Manager Manual Deduction Card */}
               {managerDeductionAmt > 0 && (
-                <div className="bg-rose-50/90 border border-rose-300 rounded-lg p-2.5 space-y-1">
-                  <div className="flex items-center justify-between font-extrabold text-rose-950 text-[10.5px]">
+                <div className="bg-rose-50/60 border border-rose-200 rounded-[4px] p-3 space-y-1.5">
+                  <div className="flex items-center justify-between font-bold text-rose-950 text-xs">
                     <span className="flex items-center gap-1.5">
                       {isClaimRejected ? "🚫 Claim Rejection" : `✏️ ${managerDeductorRole || "Coordinator / Manager"} Manual Deduction`}
                     </span>
-                    <span className="font-mono text-rose-900 font-black">-{rupee(managerDeductionAmt)}</span>
+                    <span className="font-mono text-rose-900 font-bold">-{rupee(managerDeductionAmt)}</span>
                   </div>
-                  <div className="text-[9.5px] text-rose-900 leading-tight">
-                    <b className="text-rose-950">{isClaimRejected ? "Rejected By:" : "Deducted By:"}</b>{" "}
-                    <span className="font-extrabold text-slate-900">{managerDeductorName}</span>{" "}
-                    {managerDeductorRole ? <span className="font-bold text-indigo-900 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 text-[9px]">({managerDeductorRole})</span> : ""}
-                    {managerDeductorCode ? <span className="font-mono text-slate-500 font-bold text-[9px]"> [{managerDeductorCode}]</span> : ""}
+                  <div className="text-[11px] text-rose-900 leading-tight">
+                    <b className="text-rose-950">Deducted By:</b> {managerDeductorName || "Approver"} {managerDeductorCode ? `[${managerDeductorCode}]` : ""}
                   </div>
-                  <div className="text-[9.5px] text-rose-900 leading-normal bg-white p-1.5 rounded border border-rose-200 mt-1">
-                    <b className="text-rose-950 block mb-0.5">Exact Remarks:</b>
-                    <span className="text-slate-900 font-semibold">
-                      "{rejectionRemark || finalManagerReason || "Manual deduction applied during approval review."}"
+                  <div className="text-[11px] text-rose-900 leading-normal bg-white p-2 rounded-[3px] border border-rose-200/60 mt-1">
+                    <b className="text-rose-950 block mb-0.5">Remark:</b>
+                    <span className="text-ink-900 font-medium">
+                      "{finalManagerReason || "Amount adjusted during review"}"
                     </span>
                   </div>
                 </div>
@@ -2594,49 +3052,27 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
           </div>
         )}
 
-        {/* ─── ULTRA-COMPACT REJECTION BANNER & POLICY NOTICE ─── */}
+        {/* ─── REJECTION NOTICE BANNER ──────────────────────────────────────── */}
         {isClaimRejected && (
-          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-2 space-y-1.5">
-            {/* Header & Rejector Info */}
-            <div className="flex items-center justify-between border-b border-rose-200/60 pb-1 flex-wrap gap-1">
-              <div className="flex items-center gap-1">
-                <div className="w-3.5 h-3.5 rounded-full bg-rose-600 text-white flex items-center justify-center font-extrabold text-[8.5px]">
-                  ✕
-                </div>
-                <span className="text-[10px] font-extrabold text-rose-900 uppercase tracking-tight">
-                  Expense Claim Rejected
-                </span>
-              </div>
-              <div className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-900 text-[9px] font-bold border border-rose-200/80">
-                Rejected By: <b>{rejectorName}</b> {rejectorCode ? `[${rejectorCode}]` : ""} {rejectorRole ? `(${rejectorRole})` : ""}
-              </div>
-            </div>
-
-            {/* Rejection Remark - EXACT TITLE REQUESTED: Rejection Remark: */}
-            {rejectionRemark && (
-              <div className="bg-white px-2 py-1 rounded border-l-3 border-rose-500 border-y border-r border-rose-200/60 text-[10px] text-slate-800">
-                <span className="text-rose-800 font-extrabold text-[8.5px] uppercase tracking-wider block">
-                  👤 Rejection Remark:
-                </span>
-                <div className="text-slate-900 font-semibold leading-snug">
-                  "{rejectionRemark}"
-                </div>
-              </div>
-            )}
-
-            {/* Ultra-Compact English Policy Notice */}
-            <div className="text-[9px] text-slate-700 font-medium flex items-center gap-1 bg-rose-100/50 px-2 py-0.5 rounded border border-rose-200/50">
-              <AlertTriangle size={11} className="text-rose-600 shrink-0" />
-              <span>
-                <b>Policy Notice:</b> Expense claim for <b>{formatDateDDMMMYY(c.date || c.itinerary)}</b> was rejected. No re-submission or reimbursement is allowed for this date.
+          <div className="p-3.5 bg-rose-50 rounded-[4px] border border-rose-200 text-rose-900 space-y-2">
+            <div className="flex items-center justify-between border-b border-rose-200/60 pb-1.5 flex-wrap gap-1">
+              <span className="text-xs font-bold text-rose-900 uppercase flex items-center gap-1.5 font-display">
+                <XCircle size={14} className="text-rose-600" /> Claim Rejected
               </span>
+              <span className="text-[10px] font-semibold text-rose-900 bg-rose-100 px-2 py-0.5 rounded-full border border-rose-200">
+                Rejected By: <b>{rejectorName}</b> {rejectorCode ? `[${rejectorCode}]` : ""} {rejectorRole ? `(${rejectorRole})` : ""}
+              </span>
+            </div>
+            <div className="bg-white p-2.5 rounded-[3px] border-l-4 border-l-rose-600 border border-rose-100 text-xs text-ink-900 font-semibold leading-relaxed">
+              <span className="text-[10px] font-mono text-rose-700 uppercase block mb-1">Rejection Remark:</span>
+              "{rejectionRemark || "Claim was rejected after review."}"
             </div>
           </div>
         )}
 
         {/* ─── APPROVAL WORKFLOW (24-HOUR TIME FORMAT) ──────────────────────── */}
-        {approvals.length > 0 && (
-          <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-2.5">
+        {approvals.length > 0 && (modalTab === "all" || modalTab === "audit") && (
+          <div className="bg-white rounded-[4px] border border-line/80 shadow-2xs p-3.5 space-y-2">
             <SectionHeader icon={ShieldCheck} label="Approval Workflow" count={`${approvals.length} Levels`} />
             <div className="space-y-1.5">
               {approvals.map((step: any, i: number) => <ApprovalStep key={i} step={step} index={i} />)}
@@ -2645,49 +3081,80 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         )}
 
         {/* ─── FINANCIAL AUDIT LEDGER & CHANGE HISTORY ───────────────────── */}
-        {auditLogs && auditLogs.length > 0 && (
-          <div className="bg-white rounded-lg border border-slate-200 shadow-2xs p-2.5 space-y-2">
-            <SectionHeader icon={RotateCcw} label="Financial Audit Ledger & Change History" count={`${auditLogs.length} Records`} />
-            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-              {auditLogs.map((log: any, idx: number) => {
-                const isDeduction = log.action_type === "POLICY_DEDUCTION";
-                const isEdit = log.action_type === "MANAGER_EDIT";
-                const isApproval = log.action_type === "APPROVED";
-                const badgeColor = isDeduction ? "bg-amber-100 text-amber-900 border-amber-300" : (isEdit ? "bg-indigo-100 text-indigo-900 border-indigo-300" : (isApproval ? "bg-emerald-100 text-emerald-900 border-emerald-300" : "bg-slate-100 text-slate-800 border-slate-300"));
-                return (
-                  <div key={idx} className="p-2 rounded border border-slate-200 bg-slate-50/50 flex flex-col gap-1 text-[10px]">
-                    <div className="flex items-center justify-between font-bold text-slate-800 flex-wrap gap-1">
-                      <span className={`px-1.5 py-0.2 rounded border text-[9px] font-extrabold uppercase ${badgeColor}`}>
-                        {log.action_type}
-                      </span>
-                      <span className="text-slate-500 font-mono text-[9.5px]">{log.created_at ? new Date(log.created_at).toLocaleString("en-IN") : ""}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-700 flex-wrap gap-1">
-                      <span><b>Actor:</b> {log.actor_name} ({log.actor_role})</span>
-                      {log.field_name && <span><b>Field:</b> {log.field_name}</span>}
-                    </div>
-                    {(log.old_value !== null || log.new_value !== null) && (
-                      <div className="flex items-center gap-2 font-mono text-[9.5px] text-slate-900 bg-white p-1 rounded border border-slate-200">
-                        <span className="line-through text-rose-600 font-bold">Old: ₹{log.old_value || "0"}</span>
-                        <span>➔</span>
-                        <span className="text-emerald-700 font-bold">New: ₹{log.new_value || "0"}</span>
+        {(modalTab === "all" || modalTab === "audit") && (
+          <div className="bg-white rounded-[4px] border border-line/80 shadow-2xs p-2.5 space-y-1.5">
+            <SectionHeader icon={RotateCcw} label="Financial Audit Ledger & Change History" count={auditLogs ? `${auditLogs.length} Records` : "0 Records"} />
+            
+            {auditLogError ? (
+              <div className="p-3 rounded-[4px] border border-amber-200 bg-amber-50 text-xs text-amber-900 flex items-center justify-between gap-2 flex-wrap">
+                <span>⚠️ Audit history could not be loaded ({auditLogError})</span>
+                <button
+                  type="button"
+                  onClick={fetchAuditLogs}
+                  className="px-3 py-1 rounded-[3px] bg-white border border-amber-300 font-semibold text-amber-800 hover:bg-amber-100 transition cursor-pointer text-xs"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : auditLogLoading ? (
+              <div className="text-center py-4 text-ink-400 text-xs font-mono">
+                Loading audit history...
+              </div>
+            ) : !auditLogs || auditLogs.length === 0 ? (
+              <div className="text-center py-4 text-ink-400 text-xs">
+                No manual edits or policy overrides recorded for this claim.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {auditLogs.map((log: any, idx: number) => {
+                  const isDeduction = log.action_type === "POLICY_DEDUCTION";
+                  const isEdit = log.action_type === "MANAGER_EDIT";
+                  const isApproval = log.action_type === "APPROVED";
+                  const isReturn = log.action_type === "RETURNED";
+                  const badgeColor = isDeduction 
+                    ? "bg-amber-100 text-amber-900 border-amber-200" 
+                    : (isEdit 
+                      ? "bg-indigo-100 text-indigo-900 border-indigo-200" 
+                      : (isApproval 
+                        ? "bg-emerald-100 text-emerald-900 border-emerald-200" 
+                        : (isReturn 
+                          ? "bg-orange-100 text-orange-900 border-orange-200" 
+                          : "bg-surface-sunken text-ink-800 border-line")));
+                  return (
+                    <div key={idx} className="p-2.5 rounded-[4px] border border-line/70 bg-surface-sunken/40 flex flex-col gap-1.5 text-[11px]">
+                      <div className="flex items-center justify-between font-bold text-ink-900 flex-wrap gap-1">
+                        <span className={`px-2 py-0.5 rounded-full border text-[9.5px] font-bold uppercase tracking-wider ${badgeColor}`}>
+                          {log.action_type}
+                        </span>
+                        <span className="text-ink-500 font-mono text-[10px]">{log.created_at ? new Date(log.created_at).toLocaleString("en-IN") : ""}</span>
                       </div>
-                    )}
-                    {log.change_reason && (
-                      <div className="text-[9.5px] text-slate-600 italic">
-                        "{log.change_reason}"
+                      <div className="flex items-center justify-between text-ink-700 flex-wrap gap-1 text-xs">
+                        <span><b>Actor:</b> {log.actor_name} ({log.actor_role})</span>
+                        {log.field_name && <span><b>Field:</b> {log.field_name}</span>}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                      {(log.old_value !== null || log.new_value !== null) && (
+                        <div className="flex items-center gap-2 font-mono text-xs text-ink-900 bg-white p-1.5 rounded-[3px] border border-line">
+                          <span className="line-through text-rose-600 font-bold">Old: ₹{log.old_value || "0"}</span>
+                          <span className="text-ink-300">➔</span>
+                          <span className="text-emerald-700 font-bold">New: ₹{log.new_value || "0"}</span>
+                        </div>
+                      )}
+                      {log.change_reason && (
+                        <div className="text-[11px] text-ink-600 italic">
+                          "{log.change_reason}"
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
       </div>
 
-      <ResetApprovalLevelModal
+            <ResetApprovalLevelModal
         isOpen={showResetModal}
         onClose={() => setShowResetModal(false)}
         expenseId={c.id}
@@ -2698,6 +3165,124 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
         }}
       />
     </Modal>
+
+    {/* ─── ENHANCED HIGH-RESOLUTION PHOTO VIEWER & DOWNLOAD MODAL ─── */}
+    {internalPhotoUrl && (
+      <Modal
+        open={!!internalPhotoUrl}
+        footer={null}
+        closable={false}
+        centered
+        width={820}
+        wrapClassName="claim-photo-lightbox-modal"
+        styles={{ body: { padding: 0, background: "rgba(10, 15, 25, 0.96)", borderRadius: "6px", overflow: "hidden" } }}
+        onCancel={() => { setInternalPhotoUrl(null); setLbZoom(1); setLbRotation(0); }}
+      >
+        <div className="flex flex-col h-full max-h-[90vh]">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between px-4 py-2.5 bg-black/60 border-b border-white/10 text-white flex-wrap gap-2">
+            <div className="flex items-center gap-2 truncate">
+              <span className="font-bold text-xs truncate max-w-[280px] sm:max-w-md">Attachment High-Res Preview</span>
+              <span className="text-[10px] font-mono text-white/60 bg-white/10 px-1.5 py-0.5 rounded">
+                {Math.round(lbZoom * 100)}%
+              </span>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setLbZoom((z) => Math.max(0.5, z - 0.25))}
+                className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer text-xs"
+                title="Zoom Out (-)"
+              >
+                <ZoomOut size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLbZoom(1); setLbRotation(0); }}
+                className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer text-[10px] font-mono"
+                title="Reset Zoom"
+              >
+                100%
+              </button>
+              <button
+                type="button"
+                onClick={() => setLbZoom((z) => Math.min(3, z + 0.25))}
+                className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer text-xs"
+                title="Zoom In (+)"
+              >
+                <ZoomIn size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setLbRotation((r) => (r + 90) % 360)}
+                className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer text-xs"
+                title="Rotate 90°"
+              >
+                <RotateCw size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDownloadFile(internalPhotoUrl, "claim-attachment.jpg")}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors cursor-pointer"
+                title="Download Photo"
+              >
+                <Download size={13} />
+                <span>Download</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setInternalPhotoUrl(null); setLbZoom(1); setLbRotation(0); }}
+                className="p-1.5 rounded bg-white/10 hover:bg-rose-600 text-white transition-colors cursor-pointer ml-1"
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Image Preview Canvas */}
+          <div className="flex-1 overflow-auto p-4 flex items-center justify-center min-h-[350px] max-h-[70vh] bg-black/80 select-none">
+            <img
+              src={internalPhotoUrl}
+              alt="Preview"
+              style={{
+                transform: `scale(${lbZoom}) rotate(${lbRotation}deg)`,
+                transition: "transform 0.2s ease-out",
+                maxHeight: "65vh",
+                maxWidth: "100%",
+                objectFit: "contain"
+              }}
+              className="rounded shadow-2xl"
+            />
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="flex items-center justify-between px-4 py-2 bg-black/60 border-t border-white/10 text-white text-xs flex-wrap gap-2">
+            <div className="text-[11px] text-white/50 font-mono">
+              Use toolbar controls above to zoom, rotate or download
+            </div>
+            {displayBills.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  displayBills.forEach((b: any, bIdx: number) => {
+                    const u = typeof b === "string" ? b : (b.file_url || b.url);
+                    if (u) setTimeout(() => handleDownloadFile(u, b.file_name || `claim-file-${bIdx + 1}.jpg`), bIdx * 300);
+                  });
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-accent-600 hover:bg-accent-500 text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Download size={13} />
+                <span>Download All Claim Photos ({displayBills.length})</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </Modal>
+    )}
+  </>
   );
 };
 

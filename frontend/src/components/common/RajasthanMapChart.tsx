@@ -11,7 +11,7 @@ import {
   ZoomOut, 
   RotateCcw, 
   Layers, 
-  DollarSign, 
+  IndianRupee, 
   Sparkles, 
   X, 
   Globe,
@@ -1334,7 +1334,7 @@ export const RajasthanMapChart: React.FC<RajasthanMapChartProps> = ({
                     { label: "PMS / Cal", val: `${activeDistrictDetails.pmsCount}/${activeDistrictDetails.calibrationCount}`, icon: <Wrench className="w-3 h-3" />, color: "indigo" },
                     { label: "Engineers", val: activeDistrictDetails.engineersCount, icon: <Users className="w-3 h-3" />, color: "cyan" },
                     { label: "Managers", val: activeDistrictDetails.managersCount, icon: <UserCheck className="w-3 h-3" />, color: "violet" },
-                    { label: "Total Expense", val: `₹${activeDistrictDetails.totalAmount.toLocaleString()}`, icon: <DollarSign className="w-3 h-3" />, color: "amber" },
+                    { label: "Total Expense", val: `₹${activeDistrictDetails.totalAmount.toLocaleString()}`, icon: <IndianRupee className="w-3 h-3" />, color: "amber" },
                     { label: "Avg / Staff", val: `₹${activeDistrictDetails.avgExpensePerStaff.toLocaleString()}`, icon: <Calculator className="w-3 h-3" />, color: "orange" },
                   ].map((stat, si) => (
                     <div

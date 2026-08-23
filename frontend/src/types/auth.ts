@@ -3,7 +3,9 @@ export interface LoginCredentials {
   password: string;
   force?: boolean;
   login_at?: string;
+  turnstile_token?: string;
 }
+
 
 export interface User {
   id: number;

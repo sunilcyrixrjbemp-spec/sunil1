@@ -25,6 +25,8 @@ import {
 } from "./utils/http.js";
 import { globalIPRateLimit, loginRateLimit, getClientIP } from "./utils/rateLimit.js";
 import { Logger, generateRequestId } from "./utils/logger.js";
+import { withTurnstileVerification } from "./utils/turnstile.js";
+
 
 // ─── Route Handler Imports ────────────────────────────────────────────────────
 
@@ -66,9 +68,9 @@ import {
 
 // Ticket handlers
 import {
-  handleGetTickets, handleCreateTicket, handleAddComment,
+  handleGetTickets, handleGetTicketById, handleCreateTicket, handleAddComment,
   handleCloseTicket, handleReopenTicket, handleToggleFollowup,
-  handleGetTicketStats, handleAssignTicket, handleUpdateTicketStatus
+  handleGetTicketStats, handleAssignTicket, handleUpdateTicketStatus, handleTicketWebSocket
 } from "./routes/ticket.js";
 
 // Upload handlers
@@ -187,6 +189,10 @@ import {
 // TRC DB Migration
 import { runMigrationsTrc, checkTrcTableStatus } from "./utils/db-migrate-trc.js";
 
+// Cron Handlers
+import { handleDailyCheck } from "./routes/cron.js";
+
+
 // ─── Router — O(1) Method-Grouped Hash Map Router ────────────────────────────
 class Router {
   constructor() {
@@ -268,7 +274,7 @@ router.get("/api/health", async (req, env) => {
 });
 
 // ─── Auth Endpoints ───────────────────────────────────────────────────────────
-router.post("/api/auth/login", handleLogin);
+router.post("/api/auth/login", withTurnstileVerification(handleLogin));
 router.post("/api/auth/refresh", handleRefresh);
 router.get("/api/auth/bootstrap", handleBootstrap, true);
 router.post("/api/auth/logout", handleLogout, true);
@@ -429,12 +435,17 @@ router.post("/api/whatsapp/config", async (req, env) => handleSaveWhatsappConfig
 router.post("/api/whatsapp/pairing-code", async (req, env) => handleGenerateWhatsappPairingCode(req, env), true);
 router.post("/api/whatsapp/test-alert", async (req, env) => handleTestWhatsappDispatch(req, env), true);
 
+// ─── Cron & Scheduled Job Diagnostic Endpoints ──────────────────────────────
+router.get("/api/cron/daily-check", handleDailyCheck, false);
+router.post("/api/cron/daily-check", handleDailyCheck, false);
+
 // ─── Test/Dev Endpoints ───────────────────────────────────────────────────────
 router.get("/api/test/time", handleTestTime, false);
 router.get("/api/admin/test/time", handleTestTime, true);
 
 // ─── Ticket Endpoints — Two path aliases ─────────────────────────────────────
 router.get("/api/ticket/stats", handleGetTicketStats, true);
+router.get("/api/ticket/:ticket_id", handleGetTicketById, true);
 router.get("/api/ticket", handleGetTickets, true);
 router.post("/api/ticket", handleCreateTicket, true);
 router.post("/api/ticket/:ticket_id/assign", handleAssignTicket, true);
@@ -444,6 +455,10 @@ router.post("/api/ticket/:ticket_id/close", handleCloseTicket, true);
 router.post("/api/ticket/:ticket_id/reopen", handleReopenTicket, true);
 router.post("/api/ticket/:ticket_id/followup", handleToggleFollowup, true);
 router.get("/api/tickets/stats", handleGetTicketStats, true);
+router.post("/api/ai/ask-help", handleAiAskHelp, true);
+router.get("/api/ticket/ws/:ticket_id", handleTicketWebSocket, false);
+router.get("/api/tickets/ws/:ticket_id", handleTicketWebSocket, false);
+router.get("/api/tickets/:ticket_id", handleGetTicketById, true);
 router.get("/api/tickets", handleGetTickets, true);
 router.post("/api/tickets", handleCreateTicket, true);
 router.post("/api/tickets/:ticket_id/assign", handleAssignTicket, true);
@@ -890,6 +905,13 @@ export default {
     ctx.waitUntil(handleAutoApprovalExpiry(env).catch(e =>
       staticLog.error("Auto-approval expiry failed", { error: e.message })
     ));
+
+    // Daily diagnostic health check & SLA alerts (02:00 AM IST = 20:30 UTC)
+    if (event.cron === "30 20 * * *") {
+      ctx.waitUntil(handleDailyCheck(null, env).catch(e =>
+        staticLog.error("Daily cron check failed", { error: e.message })
+      ));
+    }
 
     // Manager daily digest (10:00 AM IST = 04:30 UTC)
     if (event.cron === "30 4 * * *") {
