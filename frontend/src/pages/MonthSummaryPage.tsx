@@ -1654,7 +1654,7 @@ export default function MonthSummaryPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-bold text-white bg-[#4A6A8A] px-2.5 py-1 rounded-none border border-[#4A6A8A] font-mono">
+          <span className="text-[10px] font-bold text-white bg-[#4A6A8A] px-2.5 py-1 rounded-none border border-line font-mono">
             Total Staff: <strong>{totalEngineers}</strong>
           </span>
           <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-none border border-emerald-200 font-mono">
@@ -1739,7 +1739,7 @@ export default function MonthSummaryPage() {
             <select 
               value={filterMonth} 
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-line cursor-pointer bg-white"
             >
               <option value="">All Months</option>
               {MONTHS.slice(1).map((m) => <option key={m} value={m}>{m}</option>)}
@@ -1751,7 +1751,7 @@ export default function MonthSummaryPage() {
             <select 
               value={filterYear || ""} 
               onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : 0)}
-              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-line cursor-pointer bg-white"
             >
               <option value="">All Years</option>
               {[2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
@@ -1763,7 +1763,7 @@ export default function MonthSummaryPage() {
             <select 
               value={filterDistrict} 
               onChange={(e) => setFilterDistrict(e.target.value)}
-              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] cursor-pointer bg-white"
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-line cursor-pointer bg-white"
             >
               <option value="">All Districts</option>
               {districts.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -1778,7 +1778,7 @@ export default function MonthSummaryPage() {
               onChange={(e) => setFilterEngineer(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleApplyFilters()}
               placeholder="Type name or code..."
-              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#4A6A8A] bg-white" 
+              className="w-full border border-slate-300 rounded-none px-2.5 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-line bg-white" 
             />
           </div>
         </div>
@@ -1803,7 +1803,7 @@ export default function MonthSummaryPage() {
       {/* Summary Data Table Section */}
       <div className="border border-[#4f4f4f]/30 rounded-[4px] shadow-2xs bg-white overflow-hidden">
         {/* Table Header Banner */}
-        <div className="bg-[#4A6A8A] text-white px-3 py-2 text-xs font-extrabold uppercase tracking-wider flex items-center justify-between rounded-none flex-wrap gap-2">
+        <div className="bg-[#1E1B4B] text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-between rounded-[4px] flex-wrap gap-2 font-mono">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-slate-200 shrink-0" />
             <span>
@@ -2086,7 +2086,7 @@ export default function MonthSummaryPage() {
                   value={String(advanceAmountInput) === "0" || advanceAmountInput === "" ? "" : advanceAmountInput}
                   onFocus={(e) => e.target.select()}
                   onChange={(e) => setAdvanceAmountInput(e.target.value)}
-                  className="w-full border border-slate-300 rounded-none px-3 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#4A6A8A] bg-white"
+                  className="w-full border border-slate-300 rounded-none px-3 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-line bg-white"
                   placeholder="0"
                   min="0"
                 />
