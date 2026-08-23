@@ -1137,7 +1137,7 @@ export default function AnalysisPage() {
         </div>
 
         {/* Controls & Mode Switcher */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
+        <div className="flex items-center flex-wrap sm:flex-nowrap gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
           {isReviewer && (
             <div className="flex items-center bg-white/15 p-0.5 rounded-md text-[11px] font-bold shrink-0">
               <button
@@ -1161,25 +1161,27 @@ export default function AnalysisPage() {
             </div>
           )}
 
-          <button
-            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-            className="px-2 py-1 bg-white/15 hover:bg-white/25 text-white rounded-md text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap shrink-0"
-          >
-            <FilterOutlined style={{ fontSize: 11 }} />
-            {isFilterExpanded ? "Hide Filters" : "Filters"}
-          </button>
+          <div className="flex items-center gap-1.5 ml-auto sm:ml-0 shrink-0">
+            <button
+              onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+              className="px-2 py-1 bg-white/15 hover:bg-white/25 text-white rounded-md text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap shrink-0"
+            >
+              <FilterOutlined style={{ fontSize: 11 }} />
+              {isFilterExpanded ? "Hide Filters" : "Filters"}
+            </button>
 
-          <Button
-            type="primary"
-            size="small"
-            icon={<FileExcelOutlined style={{ fontSize: 11 }} />}
-            style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-            onClick={downloadCSV}
-            disabled={activeExpenses.length === 0}
-            className="font-bold text-[11px] uppercase flex items-center justify-center shrink-0 h-7 px-2.5 cursor-pointer shadow-2xs whitespace-nowrap rounded-md"
-          >
-            Export CSV
-          </Button>
+            <Button
+              type="primary"
+              size="small"
+              icon={<FileExcelOutlined style={{ fontSize: 11 }} />}
+              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+              onClick={downloadCSV}
+              disabled={activeExpenses.length === 0}
+              className="font-bold text-[11px] uppercase flex items-center justify-center shrink-0 h-7 px-2.5 cursor-pointer shadow-2xs whitespace-nowrap rounded-md"
+            >
+              Export CSV
+            </Button>
+          </div>
 
           <span className="hidden sm:inline-block text-xs font-mono font-bold text-white/90 bg-white/20 px-2.5 py-1 rounded shrink-0 whitespace-nowrap">
             {activeExpenses.length} Records

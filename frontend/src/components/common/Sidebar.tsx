@@ -202,11 +202,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="flex items-center overflow-hidden group focus:outline-none"
           title="Cyrix Field Connect"
         >
-          {/* Official Logo (Clean, No artificial background box) */}
+          {/* Official Logo Mark (Clean 32px emblem, No embedded text) */}
           <img
-            src="/logo-fieldconnect.png"
+            src="/apple-touch-icon.png"
             alt="Cyrix Field Connect"
-            className="h-8 w-auto object-contain shrink-0"
+            className="h-8 w-8 rounded-lg object-contain shrink-0"
             onError={(e) => {
               (e.target as HTMLElement).style.display = "none";
             }}

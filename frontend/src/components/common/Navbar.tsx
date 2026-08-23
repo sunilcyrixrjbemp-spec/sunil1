@@ -162,12 +162,12 @@ export const Navbar: React.FC<NavbarProps> = ({
       <header className="sticky top-0 z-30 h-14 md:h-16 bg-white border-b border-line px-3.5 md:px-6 flex items-center justify-between gap-3 shadow-none pt-[env(safe-area-inset-top)]">
         {/* Left Section: Mobile Brand Mark / Desktop Sidebar Toggle + Page Title */}
         <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
-          {/* Mobile Logo Mark (Clean, 24px) */}
+          {/* Mobile Logo Mark (Clean 28px emblem, no embedded text) */}
           <Link to="/home" className="lg:hidden flex items-center shrink-0">
             <img
-              src="/logo-fieldconnect.png"
+              src="/apple-touch-icon.png"
               alt="Cyrix"
-              className="h-6 w-auto object-contain"
+              className="h-7 w-7 rounded-lg object-contain shrink-0"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = "none";
               }}

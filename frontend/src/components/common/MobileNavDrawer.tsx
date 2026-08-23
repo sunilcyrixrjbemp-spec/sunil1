@@ -98,9 +98,9 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
         <div className="px-5 py-2.5 flex items-center justify-between border-b border-line shrink-0">
           <div className="flex items-center gap-2.5">
             <img
-              src="/logo-fieldconnect.png"
+              src="/apple-touch-icon.png"
               alt="Cyrix"
-              className="h-6 w-auto object-contain"
+              className="h-8 w-8 rounded-lg object-contain shrink-0"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = "none";
               }}
