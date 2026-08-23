@@ -1514,6 +1514,48 @@ export default function AdminPage() {
     return Array.from(statuses).sort();
   }, [safeUsers]);
 
+  // Dedicated dynamic districts and zones for Facilities Master
+  const availableFacilityZones = useMemo(() => {
+    const zones = new Set<string>();
+    standardFacilities.forEach(f => {
+      if (f.zone_name && f.zone_name.trim() && f.zone_name.trim().toLowerCase() !== "all") {
+        zones.add(f.zone_name.trim());
+      }
+    });
+    return Array.from(zones).sort();
+  }, [standardFacilities]);
+
+  const availableFacilityDistricts = useMemo(() => {
+    const districts = new Set<string>();
+    const list = facilitySubTab === "expense" ? standardFacilities : noTaDaHospitals;
+    list.forEach(f => {
+      if (f.district_name && f.district_name.trim() && f.district_name.trim().toLowerCase() !== "all") {
+        districts.add(f.district_name.trim());
+      }
+    });
+    return Array.from(districts).sort();
+  }, [standardFacilities, noTaDaHospitals, facilitySubTab]);
+
+  // State for Hierarchy Search
+  const [hierarchySearch, setHierarchySearch] = useState("");
+  const [hierarchyUnmappedOnly, setHierarchyUnmappedOnly] = useState(false);
+
+  const filteredHierarchies = useMemo(() => {
+    return safeHierarchies.filter(hq => {
+      if (hierarchyUnmappedOnly && hq.requesters.length > 0) return false;
+      if (!hierarchySearch.trim()) return true;
+      const q = hierarchySearch.toLowerCase().trim();
+      const hqMatch = (hq.name || "").toLowerCase().includes(q);
+      const reqMatch = hq.requesters.some((r: any) => 
+        (r.user_name || "").toLowerCase().includes(q) || (r.user_code || "").toLowerCase().includes(q)
+      );
+      const appMatch = hq.approvers.some((a: any) => 
+        (a.approver_name || "").toLowerCase().includes(q) || (a.approver_code || "").toLowerCase().includes(q)
+      );
+      return hqMatch || reqMatch || appMatch;
+    });
+  }, [safeHierarchies, hierarchySearch, hierarchyUnmappedOnly]);
+
   const filteredUsers = useMemo(() => {
     return safeUsers.filter(u => {
       if (userZoneFilter !== "all" && (u.zone || "").trim().toLowerCase() !== userZoneFilter.trim().toLowerCase()) return false;
@@ -1526,7 +1568,9 @@ export default function AdminPage() {
         const nameMatch = (u.name || "").toLowerCase().includes(q);
         const codeMatch = (u.user_id || u.e_code || "").toLowerCase().includes(q);
         const mobileMatch = (u.mobile_number || "").toLowerCase().includes(q);
-        if (!nameMatch && !codeMatch && !mobileMatch) return false;
+        const emailMatch = (u.mail_id || u.email || "").toLowerCase().includes(q);
+        const desgMatch = (u.designation || "").toLowerCase().includes(q);
+        if (!nameMatch && !codeMatch && !mobileMatch && !emailMatch && !desgMatch) return false;
       }
       return true;
     });
@@ -1925,130 +1969,129 @@ export default function AdminPage() {
             {activeTab === "users" && (
               <div className="space-y-3 animate-fadeIn">
                 {/* Search & 5-Dropdown Filter Bar */}
-                <div className="bg-surface border border-line rounded-lg p-3 sm:p-3.5 space-y-3 shadow-none">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
+                <div className="bg-surface border border-line rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-xs">
+                  {/* Clean Horizontal Filter Row */}
+                  <div className="flex flex-wrap items-center gap-2">
                     {/* Search Input */}
-                    <div className="space-y-1">
-                      <label className="label-lte text-2xs block">Search</label>
-                      <div className="relative">
-                        <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
-                          type="text"
-                          placeholder="Name, Code, Mobile..."
-                          value={userSearchTerm}
-                          onChange={(e) => setUserSearchTerm(e.target.value)}
-                          className="input-lte pl-8 h-8 text-xs w-full"
-                        />
-                      </div>
+                    <div className="relative min-w-[200px] flex-1">
+                      <Search className="w-3.5 h-3.5 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search name, emp code, mobile, email..."
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        className="input-lte pl-8.5 h-8.5 text-xs w-full rounded-xl bg-white"
+                      />
+                      {userSearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setUserSearchTerm("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 p-0.5 border-0 bg-transparent cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Zone Filter */}
-                    <div className="space-y-1">
-                      <label className="label-lte text-2xs block">Zone</label>
-                      <select
-                        value={userZoneFilter}
-                        onChange={(e) => {
-                          setUserZoneFilter(e.target.value);
-                          setUserDistrictFilter("all");
-                        }}
-                        className="input-lte h-8 text-xs w-full cursor-pointer py-0.5 px-2"
-                      >
-                        <option value="all">All Zones ({availableUserZones.length})</option>
-                        {availableUserZones.map((z: string) => (
-                          <option key={z} value={z}>{z}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <select
+                      value={userZoneFilter}
+                      onChange={(e) => {
+                        setUserZoneFilter(e.target.value);
+                        setUserDistrictFilter("all");
+                      }}
+                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[125px] bg-white"
+                    >
+                      <option value="all">All Zones ({availableUserZones.length})</option>
+                      {availableUserZones.map((z: string) => (
+                        <option key={z} value={z}>{z}</option>
+                      ))}
+                    </select>
 
                     {/* District Filter */}
-                    <div className="space-y-1">
-                      <label className="label-lte text-2xs block">District</label>
-                      <select
-                        value={userDistrictFilter}
-                        onChange={(e) => setUserDistrictFilter(e.target.value)}
-                        className="input-lte h-8 text-xs w-full cursor-pointer py-0.5 px-2"
-                      >
-                        <option value="all">All Districts ({availableUserDistricts.length})</option>
-                        {availableUserDistricts.map((d: string) => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <select
+                      value={userDistrictFilter}
+                      onChange={(e) => setUserDistrictFilter(e.target.value)}
+                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[125px] bg-white"
+                    >
+                      <option value="all">All Districts ({availableUserDistricts.length})</option>
+                      {availableUserDistricts.map((d: string) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
 
                     {/* Manager Filter */}
-                    <div className="space-y-1">
-                      <label className="label-lte text-2xs block">Manager</label>
-                      <select
-                        value={userManagerFilter}
-                        onChange={(e) => setUserManagerFilter(e.target.value)}
-                        className="input-lte h-8 text-xs w-full cursor-pointer py-0.5 px-2"
-                      >
-                        <option value="all">All Managers ({availableUserManagers.length})</option>
-                        {availableUserManagers.map((m: string) => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <select
+                      value={userManagerFilter}
+                      onChange={(e) => setUserManagerFilter(e.target.value)}
+                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[130px] bg-white"
+                    >
+                      <option value="all">All Managers ({availableUserManagers.length})</option>
+                      {availableUserManagers.map((m: string) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
 
                     {/* Role Filter */}
-                    <div className="space-y-1">
-                      <label className="label-lte text-2xs block">Role</label>
-                      <select
-                        value={userRoleFilter}
-                        onChange={(e) => setUserRoleFilter(e.target.value)}
-                        className="input-lte h-8 text-xs w-full cursor-pointer py-0.5 px-2"
-                      >
-                        <option value="all">All Roles ({availableUserRoles.length})</option>
-                        {availableUserRoles.map((r: string) => (
-                          <option key={r} value={r}>{r}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <select
+                      value={userRoleFilter}
+                      onChange={(e) => setUserRoleFilter(e.target.value)}
+                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[115px] bg-white"
+                    >
+                      <option value="all">All Roles ({availableUserRoles.length})</option>
+                      {availableUserRoles.map((r: string) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
 
-                    {/* Status Filter & Reset */}
-                    <div className="space-y-1">
-                      <label className="label-lte text-2xs block">Status</label>
-                      <div className="flex items-center gap-1.5">
-                        <select
-                          value={userStatusFilter}
-                          onChange={(e) => setUserStatusFilter(e.target.value)}
-                          className="input-lte h-8 text-xs flex-1 cursor-pointer py-0.5 px-2"
-                        >
-                          <option value="all">All Status</option>
-                          {availableUserStatuses.map((st: string) => (
-                            <option key={st} value={st}>{st.toUpperCase()}</option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUserSearchTerm("");
-                            setUserZoneFilter("all");
-                            setUserDistrictFilter("all");
-                            setUserManagerFilter("all");
-                            setUserRoleFilter("all");
-                            setUserStatusFilter("all");
-                          }}
-                          className="btn-lte-secondary h-8 px-2.5 text-2xs font-bold uppercase cursor-pointer shrink-0"
-                          title="Reset Filters"
-                        >
-                          Reset
-                        </button>
-                      </div>
-                    </div>
+                    {/* Status Filter */}
+                    <select
+                      value={userStatusFilter}
+                      onChange={(e) => setUserStatusFilter(e.target.value)}
+                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[110px] bg-white"
+                    >
+                      <option value="all">All Status</option>
+                      {availableUserStatuses.map((st: string) => (
+                        <option key={st} value={st}>{st.toUpperCase()}</option>
+                      ))}
+                    </select>
+
+                    {/* Reset Filters Pill Button */}
+                    {(userSearchTerm || userZoneFilter !== "all" || userDistrictFilter !== "all" || userManagerFilter !== "all" || userRoleFilter !== "all" || userStatusFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserSearchTerm("");
+                          setUserZoneFilter("all");
+                          setUserDistrictFilter("all");
+                          setUserManagerFilter("all");
+                          setUserRoleFilter("all");
+                          setUserStatusFilter("all");
+                        }}
+                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8.5 px-3 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                        title="Clear all filters"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Reset</span>
+                      </button>
+                    )}
                   </div>
 
-                  {/* Summary Count & Table Export Toolbar */}
+                  {/* Summary Count & Action Buttons */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-line">
-                    <span className="text-xs font-mono text-ink-500 font-semibold">
-                      Showing <strong className="text-accent-600">{filteredUsers.length}</strong> of {safeUsers.length} Employees
+                    <span className="text-xs font-mono text-ink-500 font-semibold flex items-center gap-1.5">
+                      <span>Showing</span>
+                      <span className="bg-accent-50 text-accent-700 px-2 py-0.5 rounded-full font-bold border border-accent-200">
+                        {filteredUsers.length}
+                      </span>
+                      <span>of {safeUsers.length} Employees</span>
                     </span>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={handleExportUsersExcel}
-                        className="btn-lte-outline text-xs h-7.5 px-2.5 flex items-center gap-1 font-semibold cursor-pointer"
+                        className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-3 h-8 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                       >
                         <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Export Excel</span>
@@ -2063,7 +2106,7 @@ export default function AdminPage() {
                       >
                         <button
                           type="button"
-                          className="btn-lte-danger text-xs h-7.5 px-2.5 flex items-center gap-1 font-semibold cursor-pointer"
+                          className="bg-white hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-rose-200 text-xs font-semibold px-3 h-8 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           <LogOut className="w-3.5 h-3.5" />
                           <span>Force Logout All</span>
@@ -2271,14 +2314,74 @@ export default function AdminPage() {
             {/* ================= SECTION 2: ROLE MAPPINGS (APPROVAL HIERARCHY) ================= */}
             {activeTab === "approvals" && (
               <div className="space-y-3 animate-fadeIn">
-                {safeHierarchies.length === 0 ? (
-                  <div className="bg-surface border border-line rounded-lg p-8 text-center text-xs uppercase tracking-wider text-ink-400 font-bold">
-                    No team hierarchy configurations created. Click "+ Create Team" to define one.
+                {/* Search & Filter Toolbar */}
+                <div className="bg-surface border border-line rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[240px]">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="w-3.5 h-3.5 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search HQ team, employee name, or approver..."
+                        value={hierarchySearch}
+                        onChange={(e) => setHierarchySearch(e.target.value)}
+                        className="input-lte pl-8.5 h-8.5 text-xs w-full rounded-xl bg-white"
+                      />
+                      {hierarchySearch && (
+                        <button
+                          type="button"
+                          onClick={() => setHierarchySearch("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 p-0.5 border-0 bg-transparent cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setHierarchyUnmappedOnly(!hierarchyUnmappedOnly)}
+                      className={`h-8.5 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                        hierarchyUnmappedOnly
+                          ? "bg-amber-50 text-amber-800 border-amber-300 font-bold"
+                          : "bg-white text-ink-600 border-line hover:bg-surface-sunken"
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${hierarchyUnmappedOnly ? "bg-amber-500" : "bg-ink-300"}`} />
+                      <span>Unmapped Only</span>
+                    </button>
+
+                    {(hierarchySearch || hierarchyUnmappedOnly) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHierarchySearch("");
+                          setHierarchyUnmappedOnly(false);
+                        }}
+                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8.5 px-3 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <span className="text-xs font-mono text-ink-500 font-semibold flex items-center gap-1">
+                    <span>Showing</span>
+                    <strong className="text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
+                      {filteredHierarchies.length}
+                    </strong>
+                    <span>of {safeHierarchies.length} HQ Teams</span>
+                  </span>
+                </div>
+
+                {filteredHierarchies.length === 0 ? (
+                  <div className="bg-surface border border-line rounded-2xl p-8 text-center text-xs text-ink-400 font-bold">
+                    No team hierarchy configurations match your search filter.
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
-                    {safeHierarchies.map((hq) => (
-                      <div key={hq.id} className="bg-surface border border-line hover:border-line-strong rounded-lg p-4 space-y-3 transition-colors shadow-none">
+                    {filteredHierarchies.map((hq) => (
+                      <div key={hq.id} className="bg-surface border border-line hover:border-accent-300/60 rounded-2xl p-4 space-y-3 transition-all shadow-xs">
                         {/* Card Header */}
                         <div className="flex items-center justify-between pb-2.5 border-b border-line">
                           <div className="flex items-center gap-2.5">
@@ -3227,10 +3330,10 @@ export default function AdminPage() {
                     <select
                       value={facilityZoneFilter}
                       onChange={(e) => setFacilityZoneFilter(e.target.value)}
-                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer min-w-[120px]"
+                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[125px] bg-white"
                     >
-                      <option value="all">All Zones</option>
-                      {dropdowns?.zones && Object.keys(dropdowns.zones).map((z: string) => (
+                      <option value="all">All Zones ({availableFacilityZones.length})</option>
+                      {availableFacilityZones.map((z: string) => (
                         <option key={z} value={z}>{z}</option>
                       ))}
                     </select>
@@ -3238,13 +3341,29 @@ export default function AdminPage() {
                     <select
                       value={facilityDistrictFilter}
                       onChange={(e) => setFacilityDistrictFilter(e.target.value)}
-                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer min-w-[120px]"
+                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[125px] bg-white"
                     >
-                      <option value="all">All Districts</option>
-                      {availableUserDistricts.map((d: string) => (
+                      <option value="all">All Districts ({availableFacilityDistricts.length})</option>
+                      {availableFacilityDistricts.map((d: string) => (
                         <option key={d} value={d}>{d}</option>
                       ))}
                     </select>
+
+                    {(facilitySearch || facilityZoneFilter !== "all" || facilityDistrictFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFacilitySearch("");
+                          setFacilityZoneFilter("all");
+                          setFacilityDistrictFilter("all");
+                        }}
+                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8.5 px-3 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                        title="Clear all filters"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Reset</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -3275,7 +3394,7 @@ export default function AdminPage() {
                           <tbody className="divide-y divide-line text-ink-900 font-medium">
                             {standardFacilities
                               .filter((f) => {
-                                if (facilityZoneFilter !== "all" && (f.zone_name || "").toLowerCase() !== facilityZoneFilter.toLowerCase()) return false;
+                                if (facilityZoneFilter !== "all" && (f.zone_name || "").toLowerCase().replace(/^zone\s+/i, "").trim() !== facilityZoneFilter.toLowerCase().replace(/^zone\s+/i, "").trim()) return false;
                                 if (facilityDistrictFilter !== "all" && (f.district_name || "").toLowerCase() !== facilityDistrictFilter.toLowerCase()) return false;
                                 if (!facilitySearch.trim()) return true;
                                 const q = facilitySearch.toLowerCase();
