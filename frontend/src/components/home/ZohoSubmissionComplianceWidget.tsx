@@ -129,8 +129,9 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
   }, [selectMonth]);
 
 
-  // Load list of engineers who have already been sent a reminder today
+  // Load list of engineers who have already been sent a reminder today (Admin only, non-blocking)
   useEffect(() => {
+    if (!isAdmin) return;
     let isMounted = true;
     const fetchSentStatus = async () => {
       try {
@@ -146,9 +147,10 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
         }
       } catch (_) {}
     };
-    fetchSentStatus();
-    return () => { isMounted = false; };
-  }, []);
+    // Fetch in idle callback or next tick so initial UI renders instantaneously
+    const timer = setTimeout(fetchSentStatus, 50);
+    return () => { isMounted = false; clearTimeout(timer); };
+  }, [isAdmin, selectMonth]);
 
   // Load logged leaves for this month
   useEffect(() => {
