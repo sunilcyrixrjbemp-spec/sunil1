@@ -306,20 +306,18 @@ function fmtDate(d: string): string {
 
 // ─── PDF — EXACT CYRIX EXCEL FORMAT ──────────────────────────────────────────
 
-function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], advance: number = 0, autoPrint: boolean = false): string {
+function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], advance: number = 0, _autoPrint: boolean = false): string {
   // Flatten: one row per leg, ensuring ONLY APPROVED amounts are included
   const allLegs: { date: string; expCode: string; leg: any }[] = [];
   for (const claim of claims) {
     const claimStat = String(claim.status || "").toLowerCase();
     if (claimStat && claimStat !== "approved" && claimStat !== "auto_approved" && claimStat !== "auto-approved") {
-      // Skip non-approved claims
       continue;
     }
     for (const rawLeg of (claim.legs || [])) {
       const legStat = String(rawLeg.status || "").toLowerCase();
       if (legStat === "rejected") continue;
 
-      // Extract strictly approved amounts (including Bus / Train travel fare amounts)
       const mode = String(rawLeg.travel_mode || "").toLowerCase();
       const isBusOrTrain = mode.includes("bus") || mode.includes("train") || mode === "b" || mode === "t";
 
@@ -349,8 +347,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     }
   }
 
-  // Grand totals — TA only Train/Bus; bike/car goes into Total but not TA column
-  const gTA     = allLegs.reduce((s, r) => s + (r.leg.ta_amount || 0), 0);          // Train/Bus only
+  // Grand totals
+  const gTA     = allLegs.reduce((s, r) => s + (r.leg.ta_amount || 0), 0);
   const gBikeCar= allLegs.reduce((s, r) => s + (r.leg.bike_amount || 0) + (r.leg.car_amount || 0), 0);
   const gAuto   = allLegs.reduce((s, r) => s + (r.leg.auto_amount || 0), 0);
   const gDA     = allLegs.reduce((s, r) => s + (r.leg.da_amount || 0), 0);
@@ -369,7 +367,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   const gAssetQty = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_qty || 0), 0);
   const gAssetVal = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_val || 0), 0);
 
-  // ── visit purpose formatter ──
   const getFormattedPurpose = (l: any) => {
     const parts: string[] = [];
     let acts: string[] = [];
@@ -408,8 +405,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         parts.push("Asset Verification");
       } else if (actClean === "Calibration") {
         parts.push("Calibration");
-      } else if (actClean === "Other") {
-        // Skip
       } else if (actClean && actClean !== "Field visit") {
         parts.push(actClean);
       }
@@ -427,7 +422,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
   const getActivityOtherDesc = (l: any) => l.other_desc || "";
 
-  // ── mode abbreviation ──
   const modeAbbr = (m: string) => {
     if (!m) return "";
     const map: Record<string, string> = {
@@ -437,7 +431,14 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     return map[m] || m;
   };
 
-  // Helper to identify Call Service Reports and PMS Reports
+  // Helper to extract clean ticket number / ID instead of long barcode string
+  const getCleanTicketNumber = (l: any): string => {
+    const raw = String(l.barcode_ticket || l.ticket_no || l.complaint_id || l.ticket_id || l.mpt_id || "").trim();
+    if (!raw || raw === "—" || raw === "-") return "";
+    // If it's a numeric string or comma-separated numbers, display cleanly
+    return raw.replace(/barcode[:s]*/gi, "").trim();
+  };
+
   const isCallOrPmsReport = (label: string = "", billType: string = ""): boolean => {
     const l = (label || "").toLowerCase();
     const b = (billType || "").toLowerCase();
@@ -448,7 +449,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
            b.includes("pms_report") || b.includes("service_report_sheet") || b === "service_report";
   };
 
-  // Helper to get normalized deduplication key from attachment URL
   const getAttachmentNormKey = (urlStr: string): string => {
     if (!urlStr) return "";
     if (urlStr.startsWith("data:")) return urlStr.slice(0, 120);
@@ -457,11 +457,9 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     return base.toLowerCase().replace(/\.[^/.]+$/, "");
   };
 
-  // Collect ALL financial bill attachments (excluding Call Service Reports & PMS Reports)
   const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
   const seenNormKeys = new Set<string>();
 
-  // 1. Top-level attachments array from backend / prepareConvertedAttachments
   (attachments || []).forEach((att: any, idx: number) => {
     const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
     const origUrl = att.original_url || rawUrl;
@@ -478,10 +476,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     }
   });
 
-  // 2. Scan claims and legs for any financial bill attachment URLs
   (claims || []).forEach((claim: any) => {
     const claimDate = claim.date ? fmtDate(claim.date) : "";
-
     const claimAtts = [
       ...(Array.isArray(claim.attachments) ? claim.attachments : []),
       ...(Array.isArray(claim.attachments_detailed) ? claim.attachments_detailed : []),
@@ -495,11 +491,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       const label = (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`;
       if (cUrl && normKey && !isCallOrPmsReport(label, (cItem.bill_type || "")) && !seenNormKeys.has(normKey)) {
         seenNormKeys.add(normKey);
-        allAttachmentsMap.set(normKey, {
-          url: cUrl,
-          date: claimDate,
-          label: label
-        });
+        allAttachmentsMap.set(normKey, { url: cUrl, date: claimDate, label: label });
       }
     });
 
@@ -546,7 +538,6 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     });
   });
 
-  // Build a lookup map of originalUrl -> base64Url from attachments parameter
   const base64Lookup = new Map<string, string>();
   if (Array.isArray(attachments)) {
     attachments.forEach((item: any) => {
@@ -561,31 +552,48 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
   const finalAttachments = Array.from(allAttachmentsMap.values());
 
-  // Attached receipts HTML block — 1 dedicated full page per bill attachment!
+  // ── ORGANIZED 4-PER-PAGE BILL ATTACHMENTS GRID (Drastically reduces page bloat and speeds up PDF) ──
   let attachmentsSection = "";
   if (finalAttachments.length > 0) {
-    attachmentsSection = finalAttachments.map((att: any, index) => {
-      const rawUrl = att.url;
-      const base64OrUrl = base64Lookup.get(rawUrl) || base64Lookup.get(getAbsoluteUrl(rawUrl)) || rawUrl;
-      const absoluteUrl = base64OrUrl.startsWith("data:") ? base64OrUrl : getAbsoluteUrl(base64OrUrl);
-      const dateStr = att.date || `Receipt #${index + 1}`;
-      const attLabel = att.label || "Expense Bill Attachment";
+    const ATTS_PER_PAGE = 4;
+    const totalAttPages = Math.ceil(finalAttachments.length / ATTS_PER_PAGE);
 
-      return `
-        <div class="attachment-page" style="width:1122px;height:793px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 20px;box-sizing:border-box;background:#fff;overflow:hidden;page-break-before:always;">
-          <div style="width:100%;max-width:1080px;max-height:750px;border:2px solid #1565C0;border-radius:6px;padding:12px 16px;background:#fff;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <div style="width:100%;font-size:11pt;font-weight:900;color:#1565C0;text-align:left;border-bottom:2px solid #1565C0;padding-bottom:6px;margin-bottom:12px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;letter-spacing:0.5px;">
-              ${attLabel.toUpperCase()} &mdash; DATE: ${dateStr}
+    for (let p = 0; p < totalAttPages; p++) {
+      const pageAtts = finalAttachments.slice(p * ATTS_PER_PAGE, (p + 1) * ATTS_PER_PAGE);
+      const gridItems = pageAtts.map((att: any, aIndex) => {
+        const rawUrl = att.url;
+        const base64OrUrl = base64Lookup.get(rawUrl) || base64Lookup.get(getAbsoluteUrl(rawUrl)) || rawUrl;
+        const absoluteUrl = base64OrUrl.startsWith("data:") ? base64OrUrl : getAbsoluteUrl(base64OrUrl);
+        const dateStr = att.date || `Receipt #${p * ATTS_PER_PAGE + aIndex + 1}`;
+        const attLabel = att.label || "Expense Bill";
+
+        return `
+          <div style="border:1.5px solid #1E1B4B;border-radius:4px;padding:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:330px;box-sizing:border-box;">
+            <div style="width:100%;font-size:8pt;font-weight:bold;color:#1E1B4B;text-align:center;border-bottom:1px solid #1E1B4B;padding-bottom:3px;margin-bottom:4px;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${attLabel} &mdash; ${dateStr}
             </div>
-            <img src="${absoluteUrl}" style="max-width:100%;max-height:660px;object-fit:contain;border:1px solid #ccc;display:block;margin:0 auto;" alt="Attachment ${dateStr}" />
+            <div style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+              <img src="${absoluteUrl}" style="max-width:100%;max-height:290px;object-fit:contain;display:block;" alt="Bill ${dateStr}" />
+            </div>
+          </div>
+        `;
+      }).join("\n");
+
+      attachmentsSection += `
+        <div class="attachment-page" style="width:1122px;height:793px;padding:8mm;background:#fff;box-sizing:border-box;page-break-before:always;display:flex;flex-direction:column;">
+          <div style="background:#1E1B4B;color:#fff;padding:6px 12px;font-size:9.5pt;font-weight:bold;font-family:'Aptos','Segoe UI',Calibri,sans-serif;text-align:center;text-transform:uppercase;margin-bottom:8px;border-radius:3px;">
+            VERIFIED BILL ATTACHMENTS &amp; RECEIPTS &mdash; PAGE ${p + 1} OF ${totalAttPages}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;flex:1;">
+            ${gridItems}
           </div>
         </div>
       `;
-    }).join("\n");
+    }
   }
 
-  // ── Split expense table into multi-page chunks (14 rows per page) ──
-  const ROWS_PER_PAGE = 14;
+  // ── Multi-page Table Split (15 rows per page with Aptos font and centered layout) ──
+  const ROWS_PER_PAGE = 15;
   const numPages = Math.max(1, Math.ceil(allLegs.length / ROWS_PER_PAGE));
 
   let summaryPagesHtml = "";
@@ -599,78 +607,101 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
       const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
                      + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
-      const bg = i % 2 === 0 ? "#ffffff" : "#f0f7ff";
-      const c = `border:1px solid #000!important;padding:4px 5px;font-size:8.5pt;font-weight:600;color:#000;vertical-align:middle;word-wrap:break-word;`;
+      const bg = i % 2 === 0 ? "#ffffff" : "#f8f9fa";
+      const c = `border:1px solid #1E1B4B!important;padding:3.5px 3px;font-size:8pt;font-weight:600;color:#000;vertical-align:middle;text-align:center;font-family:'Aptos','Segoe UI',Calibri,sans-serif;`;
       const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
+      const ticketNo = getCleanTicketNumber(l);
 
       return `<tr style="background:${bg}!important;">
-        <td style="${c}text-align:center;">${fmtDate(r.date)}</td>
-        <td style="${c}">${l.from_location || ""}</td>
-        <td style="${c}">${l.to_location || ""}</td>
-        <td style="${c}text-align:center;">${l.worked_district || ""}</td>
-        <td style="${c}text-align:center;font-weight:700;">${modeAbbr(l.travel_mode)}</td>
-        <td style="${c}text-align:center;">${l.distance_km > 0 ? l.distance_km.toFixed(1) : ""}</td>
-        <td style="${c}text-align:right;">${taCol > 0 ? taCol.toFixed(2) : ""}</td>
-        <td style="${c}text-align:right;">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : ""}</td>
-        <td style="${c}text-align:right;">${l.da_amount > 0 ? l.da_amount.toFixed(2) : ""}</td>
-        <td style="${c}text-align:right;">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : ""}</td>
-        <td style="${c}text-align:right;">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : ""}</td>
-        <td style="${c}font-size:8.5pt;">${getActivityOtherDesc(l)}</td>
-        <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : ""}</td>
-        <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : ""}</td>
-        <td style="${c}font-size:8.5pt;">${getFormattedPurpose(l)}</td>
-        <td style="${c}font-size:8pt;font-family:monospace;">${l.barcode_ticket || ""}</td>
-        <td style="${c}text-align:center;">${pmsCalibCount}</td>
-        <td style="${c}text-align:center;">${l.calls_completed || 0}/${l.calls_assigned || 0}</td>
+        <td style="${c}">${fmtDate(r.date)}</td>
+        <td style="${c}">${l.from_location || "—"}</td>
+        <td style="${c}">${l.to_location || "—"}</td>
+        <td style="${c}">${l.worked_district || "—"}</td>
+        <td style="${c}font-weight:700;">${modeAbbr(l.travel_mode)}</td>
+        <td style="${c}">${l.distance_km > 0 ? l.distance_km.toFixed(1) : "—"}</td>
+        <td style="${c}text-align:right;">${taCol > 0 ? taCol.toFixed(2) : "—"}</td>
+        <td style="${c}text-align:right;">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : "—"}</td>
+        <td style="${c}text-align:right;">${l.da_amount > 0 ? l.da_amount.toFixed(2) : "—"}</td>
+        <td style="${c}text-align:right;">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : "—"}</td>
+        <td style="${c}text-align:right;">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : "—"}</td>
+        <td style="${c}">${getActivityOtherDesc(l) || "—"}</td>
+        <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : "—"}</td>
+        <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : "—"}</td>
+        <td style="${c}">${getFormattedPurpose(l)}</td>
+        <td style="${c}font-weight:bold;color:#1E1B4B;">${ticketNo || "—"}</td>
+        <td style="${c}">${pmsCalibCount || "0"}</td>
+        <td style="${c}">${l.calls_completed || 0}/${l.calls_assigned || 0}</td>
       </tr>`;
     }).join("\n");
 
     summaryPagesHtml += `
-    <div class="wrap summary-page" style="width:1122px;min-height:793px;padding:4mm;background:#fff;box-sizing:border-box;margin-bottom:0;page-break-after:always;">
+    <div class="wrap summary-page" style="width:1122px;min-height:793px;padding:4mm;background:#fff;box-sizing:border-box;page-break-after:always;">
+      {/* Top Banner Header */}
       <table style="margin-bottom:0;">
-        <colgroup><col style="width:10%;"><col style="width:65%;"><col style="width:25%;"></colgroup>
+        <colgroup><col style="width:12%;"><col style="width:68%;"><col style="width:20%;"></colgroup>
         <tr>
-          <td style="background:#fff!important;border:2px solid #0d1557;padding:0;text-align:center;vertical-align:middle;height:32px;overflow:hidden;">
-            <img src="${window.location.origin}/brand.png" style="height:100%; max-height:32px; width:100%; object-fit:contain; display:block; margin:0 auto;" alt="Logo" />
+          <td style="background:#fff!important;border:2px solid #1E1B4B;padding:2px;text-align:center;vertical-align:middle;height:36px;">
+            <img src="${window.location.origin}/brand.png" style="height:100%;max-height:32px;width:auto;object-fit:contain;display:block;margin:0 auto;" alt="Logo" />
           </td>
-          <td class="main-hdr">CYRIX &mdash; EXPENSES REIMBURSEMENT FORM ${numPages > 1 ? `(PAGE ${pageIdx + 1} OF ${numPages})` : ""}</td>
-          <td style="background:#1a237e!important;color:#fff!important;border:2px solid #0d1557;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;vertical-align:middle;">
-            <div>Month-Year: ${user.month.toUpperCase().substring(0,3)} ${user.year}</div>
+          <td class="main-hdr">
+            CYRIX HEALTHCARE &mdash; EXPENSES REIMBURSEMENT FORM ${numPages > 1 ? `(PAGE ${pageIdx + 1} OF ${numPages})` : ""}
+          </td>
+          <td style="background:#1E1B4B!important;color:#fff!important;border:2px solid #1E1B4B;padding:4px 8px;font-size:8pt;font-weight:bold;text-align:center;vertical-align:middle;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">
+            <div>PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0,3)} ${user.year || "2026"}</div>
           </td>
         </tr>
       </table>
 
+      {/* Staff Metadata Grid */}
       <table class="info-tbl">
-        <colgroup><col style="width:6%;"><col style="width:23%;"><col style="width:7%;"><col style="width:10%;"><col style="width:8%;"><col style="width:10%;"><col style="width:12%;"><col style="width:12%;"><col style="width:6%;"><col style="width:6%;"><col style="width:7%;"><col style="width:11%;"></colgroup>
+        <colgroup><col style="width:7%;"><col style="width:23%;"><col style="width:7%;"><col style="width:13%;"><col style="width:8%;"><col style="width:12%;"><col style="width:10%;"><col style="width:20%;"></colgroup>
         <tr>
-          <td class="info-lbl">NAME :</td><td class="info-val">${user.name}</td>
-          <td class="info-lbl">EECode:</td><td class="info-val">${user.e_code}</td>
+          <td class="info-lbl">NAME :</td><td class="info-val">${user.name || "—"}</td>
+          <td class="info-lbl">EE CODE:</td><td class="info-val">${user.e_code || "—"}</td>
           <td class="info-lbl">PROJECT:</td><td class="info-val">RJBEMP</td>
-          <td class="info-lbl">BASE LOCATION:</td><td class="info-val">${(user.district || "").toUpperCase()}</td>
-          <td class="info-lbl">GRADE:</td><td class="info-val">${user.grade || "—"}</td>
-          <td class="info-lbl">MOBILE:</td><td class="info-val" style="border-right:none;">${user.mobile || "—"}</td>
+          <td class="info-lbl">LOCATION:</td><td class="info-val" style="border-right:none;">${(user.district || "").toUpperCase()}</td>
         </tr>
       </table>
 
-      <table style="margin-bottom:0; border-top: none; border-bottom: none;">
-        <colgroup><col style="width:4.5%;"><col style="width:6.5%;"><col style="width:6.5%;"><col style="width:5%;"><col style="width:3.5%;"><col style="width:3.5%;"><col style="width:4.5%;"><col style="width:3.5%;"><col style="width:3.5%;"><col style="width:5%;"><col style="width:3.5%;"><col style="width:7.5%;"><col style="width:4%;"><col style="width:4.5%;"><col style="width:8%;"><col style="width:7%;"><col style="width:3.5%;"><col style="width:4%;"></colgroup>
+      {/* Main Expense Ledger Table */}
+      <table style="margin-bottom:0;border-top:none;border-bottom:none;">
+        <colgroup>
+          <col style="width:5%;">
+          <col style="width:7%;">
+          <col style="width:7%;">
+          <col style="width:5.5%;">
+          <col style="width:3.5%;">
+          <col style="width:4%;">
+          <col style="width:4.5%;">
+          <col style="width:4%;">
+          <col style="width:4%;">
+          <col style="width:5%;">
+          <col style="width:4.5%;">
+          <col style="width:7%;">
+          <col style="width:4.5%;">
+          <col style="width:5.5%;">
+          <col style="width:9%;">
+          <col style="width:7%;">
+          <col style="width:4%;">
+          <col style="width:4.5%;">
+        </colgroup>
         <thead>
           <tr>
             <th class="col-h1" rowspan="2">Date<br>(DD-MM-YY)</th>
             <th class="col-h1" colspan="2">Locations</th>
             <th class="col-h1" rowspan="2">Worked<br>District</th>
-            <th class="col-h1" rowspan="2">Mode of<br>Trans.<br>(T/B/Bi/C)</th>
-            <th class="col-h1" rowspan="2">Distance<br>in (KM)</th>
-            <th class="col-h1" rowspan="2">TA (if mode<br>is Train(T)/<br>Bus(B))</th>
-            <th class="col-h1" rowspan="2">Auto<br>fare</th>
+            <th class="col-h1" rowspan="2">Mode<br>(T/B/Bi/C)</th>
+            <th class="col-h1" rowspan="2">Dist.<br>(KM)</th>
+            <th class="col-h1" rowspan="2">Train/Bus<br>Fare (TA)</th>
+            <th class="col-h1" rowspan="2">Auto<br>Fare</th>
             <th class="col-h1" rowspan="2">D.A.</th>
             <th class="col-h1" rowspan="2">Local Spare<br>Purch. Rate</th>
-            <th class="col-h1" rowspan="2">Hotel</th>
+            <th class="col-h1" rowspan="2">Hotel<br>Bill</th>
             <th class="col-h1" colspan="2">Other Expenses</th>
-            <th class="col-h1" rowspan="2">Total</th>
+            <th class="col-h1" rowspan="2">Total<br>(₹)</th>
             <th class="col-h1" rowspan="2">Remarks /<br>Purpose</th>
-            <th class="col-h1" rowspan="2">Barcode/<br>Asset No. and<br>Ticket No./MPT ID</th>
-            <th class="col-h1" rowspan="2">PMS/<br>Calibration</th>
+            <th class="col-h1" rowspan="2">Ticket No. /<br>MPT ID</th>
+            <th class="col-h1" rowspan="2">PMS /<br>Calib.</th>
             <th class="col-h1" rowspan="2">Calls<br>(Done/Assign)</th>
           </tr>
           <tr>
@@ -681,54 +712,54 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
           </tr>
         </thead>
         <tbody>
-          ${pageRowsHtml || `<tr><td colspan="18" style="text-align:center;padding:14px;color:#888;font-style:italic;font-size:8pt;">No expense leg data found for this period.</td></tr>`}
+          ${pageRowsHtml || `<tr><td colspan="18" style="text-align:center;padding:14px;color:#888;font-style:italic;font-size:8pt;">No expense records found.</td></tr>`}
         </tbody>
         ${isLastPage ? `
         <tfoot>
-          <tr style="background:#fff3cd!important;">
-            <td class="tot-lbl" colspan="5" style="text-align:center; border: 1.5px solid #000!important; text-transform:uppercase; background:#fff3cd!important;">
+          <tr style="background:#FFF9C4!important;">
+            <td class="tot-lbl" colspan="5" style="text-align:center;border:1.5px solid #1E1B4B!important;text-transform:uppercase;background:#FFF9C4!important;">
               TOTAL EXPENSE CLAIMED
             </td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important; text-align:center;">${gKM > 0 ? gKM.toFixed(1) : ""}</td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gTA > 0 ? gTA.toFixed(2) : ""}</td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gAuto > 0 ? gAuto.toFixed(2) : ""}</td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gDA > 0 ? gDA.toFixed(2) : ""}</td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gLocal > 0 ? gLocal.toFixed(2) : ""}</td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gHotel > 0 ? gHotel.toFixed(2) : ""}</td>
-            <td class="tot-lbl" style="text-align:center; font-size:6.5pt; border: 1.5px solid #000!important; background:#fff3cd!important;">Other Total</td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; background:#fff3cd!important;">${gOther > 0 ? gOther.toFixed(2) : ""}</td>
-            <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1.5px solid #000!important;">${gTotal.toFixed(2)}</td>
-            <td class="tot-lbl" style="border: 1.5px solid #000!important; background:#fff3cd!important;"></td>
-            <td class="tot-lbl" style="border: 1.5px solid #000!important; font-size:6.5pt!important; text-align:center; font-weight:bold; background:#fff3cd!important;">
-              ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : ""}
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;text-align:center;">${gKM > 0 ? gKM.toFixed(1) : "0"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gTA > 0 ? gTA.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gAuto > 0 ? gAuto.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gDA > 0 ? gDA.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gLocal > 0 ? gLocal.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gHotel > 0 ? gHotel.toFixed(2) : "0.00"}</td>
+            <td class="tot-lbl" style="text-align:center;font-size:7pt;border:1.5px solid #1E1B4B!important;">Total</td>
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gOther > 0 ? gOther.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="background:#FFF9C4!important;font-weight:900;text-align:right;border:1.5px solid #1E1B4B!important;color:#1E1B4B;">₹${gTotal.toFixed(2)}</td>
+            <td class="tot-lbl" style="border:1.5px solid #1E1B4B!important;"></td>
+            <td class="tot-lbl" style="border:1.5px solid #1E1B4B!important;font-size:7pt!important;text-align:center;font-weight:bold;">
+              ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN')}` : "—"}
             </td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMSCalib}</td>
-            <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gCallsC}/${gCallsA}</td>
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;text-align:center;font-weight:bold;">${gPMSCalib}</td>
+            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;text-align:center;font-weight:bold;">${gCallsC}/${gCallsA}</td>
           </tr>
           <tr>
-            <td colspan="13" style="border: 1.5px solid #000!important; background:#fff!important; font-weight:900; text-align:center; padding:5px 6px; font-size:8pt; text-transform:uppercase;">ADVANCES</td>
-            <td style="border: 1.5px solid #000!important; background:#fff!important; font-weight:950; text-align:center; font-size:8.5pt!important;">${advance > 0 ? Math.round(advance) : ""}</td>
-            <td colspan="4" style="border: 1.5px solid #000!important; background:#fff!important;"></td>
+            <td colspan="13" style="border:1.5px solid #1E1B4B!important;background:#fff!important;font-weight:bold;text-align:center;padding:4px 6px;font-size:8pt;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">LESS: MONTHLY ADVANCE DEDUCTION</td>
+            <td style="border:1.5px solid #1E1B4B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:8.5pt!important;color:#b91c1c;">₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
+            <td colspan="4" style="border:1.5px solid #1E1B4B!important;background:#fff!important;"></td>
           </tr>
-          <tr style="background:#dcdcdc!important;">
-            <td class="net-lbl" colspan="13" style="border: 1.5px solid #000!important; background:#dcdcdc!important;">NET PAYABLE</td>
-            <td class="net-val" style="font-weight:950; font-size:8.5pt!important; border: 1.5px solid #000!important; background:#dcdcdc!important;">${Math.round(gTotal - advance)}</td>
-            <td colspan="4" style="border: 1.5px solid #000!important; background:#dcdcdc!important;"></td>
+          <tr style="background:#EEF0FF!important;">
+            <td class="net-lbl" colspan="13" style="border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;color:#1E1B4B;font-size:8.5pt;font-weight:bold;">NET PAYABLE AMOUNT</td>
+            <td class="net-val" style="font-weight:900;font-size:9pt!important;border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;color:#1E1B4B;text-align:center;">₹${Math.round(gTotal - advance).toFixed(2)}</td>
+            <td colspan="4" style="border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;"></td>
           </tr>
         </tfoot>
         ` : ""}
       </table>
 
       ${isLastPage ? `
-        <div class="awords-box">Amount in words (including all pages): <strong>${amountWords(gTotal - advance).toUpperCase()}</strong></div>
-        <div class="remarks-box">REMARKS: APPROVED</div>
+        <div class="awords-box">Amount in words: <strong style="color:#1E1B4B;">${amountWords(gTotal - advance).toUpperCase()}</strong></div>
+        <div class="remarks-box">REMARKS: AUDITED &amp; APPROVED BY CYRIX MANAGEMENT</div>
         <table class="sig-tbl">
           <colgroup><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"></colgroup>
           <tr>
-            <td class="sig-lbl">Claimed By: <strong>${user.name}</strong></td>
-            <td class="sig-lbl">Approved By:<br><strong>${user.manager || ""}</strong></td>
-            <td class="sig-lbl">Checked By: (Verifier)<br><strong>${user.coordinator || ""}</strong></td>
-            <td class="sig-lbl" style="border-right:none;">Accounted By: (Accounts)<br><strong>Amit Rawat</strong></td>
+            <td class="sig-lbl">Claimed By:<br><strong>${user.name}</strong></td>
+            <td class="sig-lbl">Approved By (Manager):<br><strong>${user.manager || "—"}</strong></td>
+            <td class="sig-lbl">Checked By (Coordinator):<br><strong>${user.coordinator || "—"}</strong></td>
+            <td class="sig-lbl" style="border-right:none;">Accounted By:<br><strong>Amit Rawat</strong></td>
           </tr>
           <tr>
             <td class="sig-val">Date: ${new Date().toLocaleDateString("en-IN", {timeZone: "Asia/Kolkata"})}</td>
@@ -738,7 +769,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
           </tr>
         </table>
       ` : `
-        <div style="font-size:8pt;font-weight:bold;text-align:right;padding:8px 4px;color:#444;font-style:italic;">
+        <div style="font-size:8pt;font-weight:bold;text-align:center;padding:6px;color:#444;font-style:italic;">
           Summary continued on Page ${pageIdx + 2} of ${numPages} ...
         </div>
       `}
@@ -753,106 +784,43 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Expense Form — ${user.name} — ${user.month} ${user.year}</title>
   <style>
-    /* Use system fonts — Google Fonts @import fails in cross-origin iframes causing html2canvas to collapse spaces */
-    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0;word-spacing:normal!important;letter-spacing:normal!important;}
-    body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;font-size:7.5pt;}
-    .wrap{width:100%;padding:4mm;background:#fff;}
-    table{width:100%;border-collapse:collapse;table-layout:fixed;}
-    th,td{border:1px solid #222!important;padding:3.5px 4px;vertical-align:middle;word-wrap:break-word;overflow-wrap:break-word;}
-    tbody tr{page-break-inside:avoid!important;break-inside:avoid!important;}
-    .main-hdr{background:#1565C0!important;color:#fff!important;text-align:center;font-size:13pt!important;
-      font-weight:900!important;word-spacing:normal!important;letter-spacing:normal!important;padding:6px!important;border:1px solid #0d3f7a!important;}
-    .month-hdr{background:#1565C0!important;color:#fff!important;font-size:7.5pt!important;
-      font-weight:800!important;text-align:right;padding:4px 8px!important;border:1px solid #0d3f7a!important;white-space:nowrap;}
-    .form-no{background:#1565C0!important;color:#FFE082!important;font-size:7.5pt!important;
-      font-weight:800!important;text-align:right;padding:4px 8px!important;border:1px solid #0d3f7a!important;white-space:nowrap;}
-    .info-tbl{margin-bottom:0; border:1px solid #222!important; border-top: none!important;}
-    .info-lbl{font-weight:800; background:#F5F5F5!important; color:#000; border-right:1px solid #222!important; font-size:7pt; text-align:left; padding:4px 6px; text-transform:uppercase; white-space:nowrap; word-spacing:normal!important;}
-    .info-val{background:#fff!important; color:#1565C0!important; border-right:1px solid #222!important; font-size:7pt; text-align:left; padding:4px 6px; font-weight:900; white-space:pre-wrap; word-spacing:normal!important; letter-spacing:normal!important;}
-    .col-h1{background:#1565C0!important;color:#fff!important;font-size:7pt!important;
-      font-weight:800!important;text-align:center!important;padding:4.5px 2px!important;
-      border:1px solid #0d3f7a!important;line-height:1.2;vertical-align:middle;}
-    .col-h2{background:#1976D2!important;color:#fff!important;font-size:6.5pt!important;
-      font-weight:800!important;text-align:center!important;padding:3.5px 2px!important;
-      border:1px solid #0d3f7a!important;line-height:1.15;vertical-align:middle;}
-    .tot-lbl{border:1px solid #222!important;padding:4px 5px;font-size:7pt;font-weight:900;color:#000;background:#FFF9C4!important;vertical-align:middle;}
-    .tot-num{border:1px solid #222!important;padding:4px 5px;font-size:7pt;font-weight:900;color:#000;background:#FFF9C4!important;vertical-align:middle;text-align:right;}
-    .net-lbl{border:1px solid #222!important;padding:5px 6px;font-size:7.5pt;font-weight:900;color:#000;background:#CFD8DC!important;text-align:center;text-transform:uppercase;}
-    .net-val{border:1px solid #222!important;padding:5px 6px;font-size:8pt;font-weight:900;color:#000;background:#fff!important;text-align:center;}
-    .awords-box{border:1px solid #222!important;border-top:none!important;padding:5px 8px;font-size:7pt;font-weight:600;color:#000;background:#fff!important;white-space:pre-wrap;word-spacing:normal!important;}
-    .remarks-box{border:1px solid #222!important;border-top:none!important;padding:4px 8px;font-size:7pt;font-weight:800;color:#000;background:#fff!important;word-spacing:normal!important;}
-    .sig-tbl{border:1px solid #222!important;border-top:none!important;}
-    .sig-lbl{border-right:1px solid #222!important;padding:4px 6px;font-size:7pt;font-weight:700;color:#000;background:#fff!important;height:32px;vertical-align:top;white-space:pre-wrap;word-spacing:normal!important;}
-    .sig-val{border-right:1px solid #222!important;padding:4px 6px;font-size:7pt;font-weight:600;color:#000;background:#fff!important;height:32px;vertical-align:bottom;word-spacing:normal!important;}
-    .attachment-page{width:1122px!important;height:793px!important;overflow:hidden!important;}
-    @page{size:A4 landscape;margin:6mm 7mm;}
-    @media print{
-      body{margin:0;padding:0;}
-      .wrap{page-break-after:always;page-break-inside:avoid;}
-      tbody tr{page-break-inside:avoid!important;break-inside:avoid!important;}
-      .attachment-page{page-break-before:always!important;break-before:page!important;height:793px!important;page-break-inside:avoid!important;break-inside:avoid!important;overflow:hidden!important;}
+    * { -webkit-print-color-adjust: exact!important; print-color-adjust: exact!important; box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; color: #000; background: #fff; font-size: 8pt; }
+    .wrap { width: 100%; padding: 4mm; background: #fff; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th, td { border: 1px solid #1E1B4B!important; padding: 3.5px 3px; vertical-align: middle; text-align: center; word-wrap: break-word; font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; }
+    tbody tr { page-break-inside: avoid!important; break-inside: avoid!important; }
+    .main-hdr { background: #1E1B4B!important; color: #fff!important; text-align: center; font-size: 11pt!important; font-weight: 800!important; padding: 5px!important; border: 1px solid #1E1B4B!important; }
+    .info-tbl { margin-bottom: 0; border: 1px solid #1E1B4B!important; border-top: none!important; }
+    .info-lbl { font-weight: bold; background: #F4F3F1!important; color: #1E1B4B; border-right: 1px solid #1E1B4B!important; font-size: 7.5pt; text-align: center; padding: 3px 5px; text-transform: uppercase; white-space: nowrap; }
+    .info-val { background: #fff!important; color: #000!important; border-right: 1px solid #1E1B4B!important; font-size: 7.5pt; text-align: center; padding: 3px 5px; font-weight: bold; }
+    .col-h1 { background: #1E1B4B!important; color: #fff!important; font-size: 7pt!important; font-weight: bold!important; text-align: center!important; padding: 4px 2px!important; border: 1px solid #1E1B4B!important; line-height: 1.2; vertical-align: middle; }
+    .col-h2 { background: #312E81!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; padding: 3px 2px!important; border: 1px solid #1E1B4B!important; line-height: 1.15; vertical-align: middle; }
+    .tot-lbl { border: 1px solid #1E1B4B!important; padding: 4px; font-size: 7.5pt; font-weight: bold; color: #000; background: #FFF9C4!important; vertical-align: middle; text-align: center; }
+    .tot-num { border: 1px solid #1E1B4B!important; padding: 4px; font-size: 7.5pt; font-weight: bold; color: #000; background: #FFF9C4!important; vertical-align: middle; text-align: right; }
+    .net-lbl { border: 1px solid #1E1B4B!important; padding: 4px 6px; font-size: 8pt; font-weight: bold; color: #1E1B4B; background: #EEF0FF!important; text-align: center; text-transform: uppercase; }
+    .net-val { border: 1px solid #1E1B4B!important; padding: 4px 6px; font-size: 8.5pt; font-weight: 900; color: #1E1B4B; background: #EEF0FF!important; text-align: center; }
+    .awords-box { border: 1px solid #1E1B4B!important; border-top: none!important; padding: 4px 8px; font-size: 7.5pt; font-weight: 600; color: #000; background: #fff!important; text-align: center; }
+    .remarks-box { border: 1px solid #1E1B4B!important; border-top: none!important; padding: 4px 8px; font-size: 7.5pt; font-weight: bold; color: #000; background: #F4F3F1!important; text-align: center; }
+    .sig-tbl { border: 1px solid #1E1B4B!important; border-top: none!important; }
+    .sig-lbl { border-right: 1px solid #1E1B4B!important; padding: 3px 6px; font-size: 7.5pt; font-weight: 600; color: #000; background: #fff!important; height: 28px; vertical-align: top; text-align: center; }
+    .sig-val { border-right: 1px solid #1E1B4B!important; padding: 3px 6px; font-size: 7pt; font-weight: 600; color: #555; background: #fff!important; height: 20px; vertical-align: bottom; text-align: center; }
+    .attachment-page { width: 1122px!important; height: 793px!important; overflow: hidden!important; }
+    @page { size: A4 landscape; margin: 4mm; }
+    @media print {
+      body { margin: 0; padding: 0; }
+      .wrap { page-break-after: always; page-break-inside: avoid; }
+      tbody tr { page-break-inside: avoid!important; break-inside: avoid!important; }
+      .attachment-page { page-break-before: always!important; break-before: page!important; height: 793px!important; page-break-inside: avoid!important; break-inside: avoid!important; overflow: hidden!important; }
     }
   </style>
 </head>
 <body>
 ${summaryPagesHtml}
 ${attachmentsSection}
-
-  ${autoPrint ? `
-  <script>
-    (function() {
-      function doPrint() {
-        const images = Array.from(document.getElementsByTagName('img'));
-        let loadedCount = 0;
-        
-        function trigger() {
-          setTimeout(function() {
-            try {
-              window.print();
-            } catch (e) {
-              console.warn("Print failed:", e);
-            }
-          }, 350);
-        }
-        
-        if (images.length === 0) {
-          trigger();
-        } else {
-          images.forEach(function(img) {
-            if (img.complete) {
-              loadedCount++;
-              if (loadedCount === images.length) trigger();
-            } else {
-              img.onload = function() {
-                loadedCount++;
-                if (loadedCount === images.length) trigger();
-              };
-              img.onerror = function() {
-                loadedCount++;
-                if (loadedCount === images.length) trigger();
-              };
-            }
-          });
-        }
-      }
-
-      if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        doPrint();
-      } else {
-        document.addEventListener('DOMContentLoaded', doPrint);
-        window.addEventListener('load', doPrint);
-        // Fallback safety timeout
-        setTimeout(doPrint, 1500);
-      }
-    })();
-  </script>
-  ` : ""}
-</div>
 </body>
 </html>`;
 }
-
-// ─── Main Page Component ──────────────────────────────────────────────────────
 
 export default function MonthSummaryPage() {
 
