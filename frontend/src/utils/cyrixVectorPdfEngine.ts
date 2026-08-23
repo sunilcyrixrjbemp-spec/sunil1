@@ -53,7 +53,35 @@ const getCleanTicketNumber = (l: any): string => {
   return raw.replace(/barcode[:\s]*/gi, "").trim();
 };
 
-const getFormattedPurpose = (l: any): string => {
+/**
+ * Filter Return to home/hotel/room in Home District
+ */
+function cleanReturnText(text: string, isHomeDistrict: boolean): string {
+  if (!text) return "";
+  if (!isHomeDistrict) return text;
+
+  const lower = text.toLowerCase();
+  const returnPhrases = [
+    "return to hotel", "return to hotal", "return to home", "return to room", "return to house",
+    "back to home", "back to hotel", "back to hotal", "back to house", "back to room",
+    "return room tonk", "return to room tonk"
+  ];
+
+  for (const p of returnPhrases) {
+    if (lower.includes(p)) {
+      // In home district, remove return phrase or replace with Field visit
+      const cleaned = text.replace(new RegExp(p, "gi"), "").replace(/^[\s,;\-]+|[\s,;\-]+$/g, "").trim();
+      return cleaned || "Field visit";
+    }
+  }
+  return text;
+}
+
+const getFormattedPurpose = (l: any, userDistrict: string = ""): string => {
+  const homeDist = (userDistrict || "").trim().toLowerCase();
+  const workedDist = (l.worked_district || l.district || "").trim().toLowerCase();
+  const isHomeDistrict = homeDist && workedDist ? homeDist === workedDist : true;
+
   const parts: string[] = [];
   let acts: string[] = [];
   let actOtherDesc = "";
@@ -98,18 +126,17 @@ const getFormattedPurpose = (l: any): string => {
 
   if (actOtherDesc && actOtherDesc.trim()) parts.push(actOtherDesc.trim());
 
+  let result = "";
   if (parts.length === 0) {
     const cleanPurpose = l.visit_purpose && !visitPurposeStr.startsWith("Activities:") ? visitPurposeStr : "Field visit";
-    if (l.other_desc && cleanPurpose.trim() === l.other_desc.trim()) return "Field visit";
-    return cleanPurpose;
+    result = (l.other_desc && cleanPurpose.trim() === l.other_desc.trim()) ? "Field visit" : cleanPurpose;
+  } else {
+    result = parts.join(", ");
   }
-  return parts.join(", ");
+
+  return cleanReturnText(result, isHomeDistrict);
 };
 
-/**
- * Generate 100% Vector PDF for Cyrix Reimbursement Summary
- * Renders in 15-20ms with 0 DOM rendering overhead!
- */
 export async function generateCyrixVectorPdf(
   user: any,
   claims: any[] = [],
@@ -126,6 +153,9 @@ export async function generateCyrixVectorPdf(
   const pageWidth = 297;
   const pageHeight = 210;
   const margin = 5;
+  const tableWidth = pageWidth - margin * 2; // Exact 287mm
+
+  const userDistrict = user.district || "";
 
   const allLegs: { date: string; expCode: string; leg: any }[] = [];
   for (const claim of claims) {
@@ -189,17 +219,17 @@ export async function generateCyrixVectorPdf(
   const gAssetQty = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_qty || 0), 0);
   const gAssetVal = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_val || 0), 0);
 
-  // Dynamic Balanced Rows per Page
+  // Dynamic Balanced Page Splitting
   const totalLegCount = allLegs.length;
-  let ROWS_PER_PAGE = 15;
-  if (totalLegCount <= 16) {
-    ROWS_PER_PAGE = 16;
-  } else if (totalLegCount <= 32) {
-    ROWS_PER_PAGE = Math.ceil(totalLegCount / 2);
-  } else if (totalLegCount <= 48) {
+  let ROWS_PER_PAGE = 14;
+  if (totalLegCount <= 14) {
+    ROWS_PER_PAGE = 14;
+  } else if (totalLegCount <= 28) {
+    ROWS_PER_PAGE = Math.ceil(totalLegCount / 2); // e.g. 24 rows = 12 + 12
+  } else if (totalLegCount <= 42) {
     ROWS_PER_PAGE = Math.ceil(totalLegCount / 3);
   } else {
-    ROWS_PER_PAGE = 15;
+    ROWS_PER_PAGE = 14;
   }
 
   const numPages = Math.max(1, Math.ceil(totalLegCount / ROWS_PER_PAGE));
@@ -212,9 +242,9 @@ export async function generateCyrixVectorPdf(
     const isLastPage = pageIdx === numPages - 1;
     const pageLegs = allLegs.slice(pageIdx * ROWS_PER_PAGE, (pageIdx + 1) * ROWS_PER_PAGE);
 
-    // 1. Header Banner
+    // 1. Header Banner (Width exact 287mm)
     doc.setFillColor(30, 41, 59); // #1E293B
-    doc.rect(margin, 5, pageWidth - margin * 2, 9, "F");
+    doc.rect(margin, 5, tableWidth, 9, "F");
 
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
@@ -223,23 +253,23 @@ export async function generateCyrixVectorPdf(
     doc.text(titleText, pageWidth / 2, 11, { align: "center" });
 
     doc.setFontSize(7.5);
-    doc.text(`PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0, 3)} ${user.year || "2026"}`, pageWidth - margin - 5, 11, { align: "right" });
+    doc.text(`PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0, 3)} ${user.year || "2026"}`, margin + tableWidth - 4, 11, { align: "right" });
 
-    // 2. Info Bar
+    // 2. Info Bar (Width exact 287mm matching table)
     doc.setFillColor(241, 245, 249); // #F1F5F9
-    doc.rect(margin, 14, pageWidth - margin * 2, 6, "F");
+    doc.rect(margin, 14, tableWidth, 6.5, "F");
     doc.setDrawColor(71, 85, 105);
-    doc.rect(margin, 14, pageWidth - margin * 2, 6, "S");
+    doc.rect(margin, 14, tableWidth, 6.5, "S");
 
     doc.setTextColor(15, 23, 42);
-    doc.setFontSize(7);
-    const infoY = 18;
+    doc.setFontSize(7.2);
+    const infoY = 18.5;
     doc.text(`NAME: ${user.name || ""}`, margin + 4, infoY);
     doc.text(`EE CODE: ${user.e_code || ""}`, margin + 55, infoY);
     doc.text(`GRADE: ${user.grade || "L1"}`, margin + 95, infoY);
     doc.text(`MOBILE: ${user.phone || user.mobile || user.contact_no || ""}`, margin + 130, infoY);
     doc.text("PROJECT: RJBEMP", margin + 185, infoY);
-    doc.text(`LOCATION: ${(user.district || "").toUpperCase()}`, margin + 235, infoY);
+    doc.text(`LOCATION: ${(user.district || "").toUpperCase()}`, margin + tableWidth - 4, infoY, { align: "right" });
 
     // 3. Table Rows Data
     const tableBody = pageLegs.map((r) => {
@@ -250,6 +280,7 @@ export async function generateCyrixVectorPdf(
                      + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
       const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
       const ticketNo = getCleanTicketNumber(l);
+      const otherDescClean = cleanReturnText(l.other_desc || "", (userDistrict.trim().toLowerCase() === (l.worked_district || "").trim().toLowerCase()));
 
       return [
         fmtDate(r.date),
@@ -263,10 +294,10 @@ export async function generateCyrixVectorPdf(
         l.da_amount > 0 ? l.da_amount.toFixed(2) : "",
         l.local_purchase > 0 ? l.local_purchase.toFixed(2) : "",
         l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : "",
-        l.other_desc || "",
+        otherDescClean || "",
         l.other_amount > 0 ? l.other_amount.toFixed(2) : "",
         rowTotal > 0 ? rowTotal.toFixed(2) : "",
-        getFormattedPurpose(l) || "",
+        getFormattedPurpose(l, userDistrict) || "",
         ticketNo || "",
         pmsCalibCount > 0 ? String(pmsCalibCount) : "",
         (l.calls_completed > 0 || l.calls_assigned > 0) ? `${l.calls_completed}/${l.calls_assigned}` : ""
@@ -285,27 +316,29 @@ export async function generateCyrixVectorPdf(
         { content: gHotel > 0 ? gHotel.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
         { content: "Total", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
         { content: gOther > 0 ? gOther.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: `₹${gTotal.toFixed(2)}`, styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+        { content: gTotal.toFixed(2), styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
         { content: "", styles: { fillColor: [254, 243, 199] } },
-        { content: gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString("en-IN")}` : "", styles: { halign: "center", fontSize: 5.5, fontStyle: "bold", fillColor: [254, 243, 199] } },
+        { content: gAssetQty > 0 ? `Qty: ${gAssetQty} | ${gAssetVal.toLocaleString("en-IN")}` : "", styles: { halign: "center", fontSize: 5.5, fontStyle: "bold", fillColor: [254, 243, 199] } },
         { content: gPMSCalib > 0 ? String(gPMSCalib) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
         { content: (gCallsC > 0 || gCallsA > 0) ? `${gCallsC}/${gCallsA}` : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } }
       ]);
       footRows.push([
         { content: "LESS: MONTHLY ADVANCE DEDUCTION", colSpan: 13, styles: { halign: "center", fontStyle: "bold" } },
-        { content: `₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}`, styles: { halign: "center", fontStyle: "bold", textColor: [185, 28, 28] } },
+        { content: advance > 0 ? Math.round(advance).toFixed(2) : "0.00", styles: { halign: "center", fontStyle: "bold", textColor: [185, 28, 28] } },
         { content: "", colSpan: 4 }
       ]);
       footRows.push([
         { content: "NET PAYABLE AMOUNT", colSpan: 13, styles: { halign: "center", fontStyle: "bold", fillColor: [241, 245, 249] } },
-        { content: `₹${Math.round(gTotal - advance).toFixed(2)}`, styles: { halign: "center", fontStyle: "bold", fillColor: [241, 245, 249] } },
+        { content: Math.round(gTotal - advance).toFixed(2), styles: { halign: "center", fontStyle: "bold", fillColor: [241, 245, 249] } },
         { content: "", colSpan: 4, styles: { fillColor: [241, 245, 249] } }
       ]);
     }
 
+    // AutoTable fitting exactly 287mm tableWidth
     autoTable(doc, {
-      startY: 20,
+      startY: 20.5,
       margin: { left: margin, right: margin },
+      tableWidth: tableWidth,
       head: [
         [
           { content: "Date\n(DD-MM-YY)", rowSpan: 2 },
@@ -319,7 +352,7 @@ export async function generateCyrixVectorPdf(
           { content: "Local Spare\nPurch. Rate", rowSpan: 2 },
           { content: "Hotel\nBill", rowSpan: 2 },
           { content: "Other Expenses", colSpan: 2 },
-          { content: "Total\n(₹)", rowSpan: 2 },
+          { content: "Total\n(Rs.)", rowSpan: 2 },
           { content: "Remarks /\nPurpose", rowSpan: 2 },
           { content: "Ticket No. /\nMPT ID", rowSpan: 2 },
           { content: "PMS /\nCalib.", rowSpan: 2 },
@@ -331,8 +364,9 @@ export async function generateCyrixVectorPdf(
       foot: footRows,
       theme: "grid",
       styles: {
-        fontSize: 6.8,
-        cellPadding: 1.5,
+        fontSize: 7.2,
+        cellPadding: 2.2,
+        minCellHeight: 6.2,
         halign: "center",
         valign: "middle",
         lineColor: [71, 85, 105],
@@ -343,24 +377,25 @@ export async function generateCyrixVectorPdf(
         fillColor: [30, 41, 59],
         textColor: [255, 255, 255],
         fontStyle: "bold",
-        fontSize: 6.5
+        fontSize: 6.8,
+        cellPadding: 2
       },
       columnStyles: {
         0: { cellWidth: 15 },
         1: { cellWidth: 20 },
         2: { cellWidth: 20 },
         3: { cellWidth: 16 },
-        4: { cellWidth: 10, fontStyle: "bold" },
+        4: { cellWidth: 11, fontStyle: "bold" },
         5: { cellWidth: 12 },
-        6: { cellWidth: 13 },
+        6: { cellWidth: 14 },
         7: { cellWidth: 12 },
         8: { cellWidth: 12 },
-        9: { cellWidth: 13 },
-        10: { cellWidth: 13 },
+        9: { cellWidth: 14 },
+        10: { cellWidth: 14 },
         11: { cellWidth: 18 },
-        12: { cellWidth: 13 },
-        13: { cellWidth: 18, fontStyle: "bold" },
-        14: { cellWidth: 30 },
+        12: { cellWidth: 14 },
+        13: { cellWidth: 21, fontStyle: "bold" }, // Total column: 21mm ensures 19155.00 never clips
+        14: { cellWidth: 32 },
         15: { cellWidth: 14, fontStyle: "bold" },
         16: { cellWidth: 12 },
         17: { cellWidth: 16 }
@@ -372,24 +407,24 @@ export async function generateCyrixVectorPdf(
     if (isLastPage) {
       // Amount in words box
       doc.setFillColor(255, 255, 255);
-      doc.rect(margin, finalY + 1, pageWidth - margin * 2, 5, "FD");
-      doc.setFontSize(6.8);
+      doc.rect(margin, finalY + 1, tableWidth, 5.5, "FD");
+      doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
-      doc.text(`Amount in words: ${amountWords(gTotal - advance).toUpperCase()}`, pageWidth / 2, finalY + 4.5, { align: "center" });
+      doc.text(`Amount in words: ${amountWords(gTotal - advance).toUpperCase()}`, pageWidth / 2, finalY + 4.8, { align: "center" });
 
       // Remarks Box
       doc.setFillColor(241, 245, 249);
-      doc.rect(margin, finalY + 6, pageWidth - margin * 2, 5, "FD");
+      doc.rect(margin, finalY + 6.5, tableWidth, 5.5, "FD");
       doc.setFont("helvetica", "bold");
-      doc.text("REMARKS: AUDITED & APPROVED BY CYRIX MANAGEMENT", pageWidth / 2, finalY + 9.5, { align: "center" });
+      doc.text("REMARKS: AUDITED & APPROVED BY CYRIX MANAGEMENT", pageWidth / 2, finalY + 10.3, { align: "center" });
 
       // Signature Table Box
-      const sigY = finalY + 11;
-      const sigH = 14;
-      const colW = (pageWidth - margin * 2) / 4;
+      const sigY = finalY + 12;
+      const sigH = 15;
+      const colW = tableWidth / 4;
 
       doc.setFillColor(255, 255, 255);
-      doc.rect(margin, sigY, pageWidth - margin * 2, sigH, "FD");
+      doc.rect(margin, sigY, tableWidth, sigH, "FD");
 
       const sigs = [
         { label: "Claimed By:", name: user.name || "" },
@@ -406,14 +441,14 @@ export async function generateCyrixVectorPdf(
           doc.line(x, sigY, x, sigY + sigH);
         }
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(6.5);
-        doc.text(sig.label, x + colW / 2, sigY + 3.5, { align: "center" });
+        doc.setFontSize(6.8);
+        doc.text(sig.label, x + colW / 2, sigY + 4, { align: "center" });
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(7.5);
-        doc.text(sig.name, x + colW / 2, sigY + 7.5, { align: "center" });
+        doc.setFontSize(8);
+        doc.text(sig.name, x + colW / 2, sigY + 8.5, { align: "center" });
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(6.5);
-        doc.text(`Date: ${todayStr}`, x + colW / 2, sigY + 11.5, { align: "center" });
+        doc.setFontSize(6.8);
+        doc.text(`Date: ${todayStr}`, x + colW / 2, sigY + 12.5, { align: "center" });
       });
     }
   }
@@ -429,7 +464,7 @@ export async function generateCyrixVectorPdf(
 
       // Banner
       doc.setFillColor(30, 41, 59);
-      doc.rect(margin, 5, pageWidth - margin * 2, 8, "F");
+      doc.rect(margin, 5, tableWidth, 8, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
