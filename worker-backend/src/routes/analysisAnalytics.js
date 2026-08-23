@@ -116,7 +116,10 @@ export async function handleGetAnalysisSummary(request, env, params, query, user
     const statusFilter = (query?.status || "all").trim();
 
     const isFiltered = districtFilter !== "all" || engineerFilter !== "all" || zoneFilter !== "all" || statusFilter !== "all";
-    const cacheKey = `analysis_summary:${user.id}:${viewMode}:${year}_${monthIndex + 1}`;
+    const roleClean = (user.role || "").trim().toLowerCase();
+    const isAdminUser = hasFullAccess(roleClean);
+    const scopeKey = (isAdminUser && viewMode === "team") ? "admin" : `user_${user.id}`;
+    const cacheKey = `analysis_summary:${scopeKey}:${viewMode}:${year}_${monthIndex + 1}`;
 
     // 1. Check KV Cache if no custom filter is applied
     if (!isFiltered && env.OTPS_KV) {

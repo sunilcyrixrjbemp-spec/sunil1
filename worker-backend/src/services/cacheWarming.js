@@ -24,11 +24,13 @@ export async function warmUserCache(env, user) {
     const monthNum = currentMonthIdx + 1;
 
     const roleLower = (user.role || "").toLowerCase();
-    const isManager = roleLower.includes("admin") || roleLower.includes("manager") || roleLower.includes("reviewer") || roleLower.includes("head");
+    const isAdmin = ["admin", "administrator", "general manager", "gm", "director", "vp", "state head", "project manager", "operation head"].some(r => roleLower.includes(r));
+    const isManager = isAdmin || roleLower.includes("manager") || roleLower.includes("reviewer") || roleLower.includes("head");
 
     // 1. Warm Analysis Summary Cache (Team mode for managers, My mode for engineers)
     const viewMode = isManager ? "team" : "my";
-    const cacheKey = `analysis_summary:${user.id}:${viewMode}:${currentYear}_${monthNum}`;
+    const scopeKey = (isAdmin && viewMode === "team") ? "admin" : `user_${user.id}`;
+    const cacheKey = `analysis_summary:${scopeKey}:${viewMode}:${currentYear}_${monthNum}`;
 
     // Check if already warm
     const existing = await env.OTPS_KV.get(cacheKey);

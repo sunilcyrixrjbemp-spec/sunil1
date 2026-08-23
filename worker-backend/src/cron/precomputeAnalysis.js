@@ -170,12 +170,12 @@ export async function precomputeAnalyticsCache(env) {
         computed_at: new Date().toISOString()
       };
 
-      // Store in KV for all managers & admin scope
-      const globalKey = `analysis_summary:global:team:${m.year}_${m.monthNum}`;
-      await env.OTPS_KV.put(globalKey, JSON.stringify(payload), { expirationTtl: 7200 });
+      // Store in KV for admin and manager scopes
+      const adminKey = `analysis_summary:admin:team:${m.year}_${m.monthNum}`;
+      await env.OTPS_KV.put(adminKey, JSON.stringify(payload), { expirationTtl: 7200 });
 
       for (const mgr of managers) {
-        const mgrKey = `analysis_summary:${mgr.id}:team:${m.year}_${m.monthNum}`;
+        const mgrKey = `analysis_summary:user_${mgr.id}:team:${m.year}_${m.monthNum}`;
         await env.OTPS_KV.put(mgrKey, JSON.stringify(payload), { expirationTtl: 7200 });
       }
 
