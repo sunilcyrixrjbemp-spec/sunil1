@@ -173,9 +173,34 @@ const convertImageUrlToBase64 = async (url: string, fileName = ""): Promise<stri
   return convertImageUrlToBase64WithFallback(url, fileName);
 };
 
+const getQuickContentHash = (str: string): string => {
+  if (!str) return "";
+  if (str.length < 500) return str;
+  // Sample length + start + mid + end for fast and 100% collision-free image matching
+  const len = str.length;
+  const mid = Math.floor(len / 2);
+  return `len_${len}_${str.slice(100, 150)}_${str.slice(mid, mid + 50)}_${str.slice(-50)}`;
+};
+
 const prepareConvertedAttachments = async (claims: any[]) => {
   const rawAttachmentsMap = new Map<string, any>();
-  
+  const seenUrls = new Set<string>();
+
+  const isCallOrPms = (label: string = "", billType: string = ""): boolean => {
+    const l = (label || "").toLowerCase();
+    const b = (billType || "").toLowerCase();
+    if (l.includes("hotel") || l.includes("purchase") || l.includes("ticket") || l.includes("receipt") || l.includes("bill") || l.includes("fare") || l.includes("travel")) {
+      return false;
+    }
+    return l.includes("pms report") || l.includes("service report sheet") || l.includes("breakdown call report") ||
+           b.includes("pms_report") || b.includes("service_report_sheet") || b === "service_report";
+  };
+
+  const normalizeUrlKey = (u: string): string => {
+    if (!u) return "";
+    return u.split("?")[0].replace(/^https?:\/\/[^\/]+/, "").replace(/^\//, "").toLowerCase().trim();
+  };
+
   (claims || []).forEach((claim: any) => {
     const claimDate = claim.date || "N/A";
     const claimAtts = [
@@ -188,8 +213,10 @@ const prepareConvertedAttachments = async (claims: any[]) => {
     claimAtts.forEach((cItem: any, cIdx: number) => {
       const cUrl = typeof cItem === "string" ? cItem : (cItem.file_url || cItem.url);
       const label = (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`;
-      if (cUrl && typeof cUrl === "string" && cUrl.trim() && !rawAttachmentsMap.has(cUrl)) {
-        rawAttachmentsMap.set(cUrl, {
+      const normKey = normalizeUrlKey(cUrl);
+      if (cUrl && typeof cUrl === "string" && cUrl.trim() && normKey && !seenUrls.has(normKey) && !isCallOrPms(label)) {
+        seenUrls.add(normKey);
+        rawAttachmentsMap.set(normKey, {
           file_url: cUrl,
           url: cUrl,
           date: claimDate,
@@ -200,28 +227,30 @@ const prepareConvertedAttachments = async (claims: any[]) => {
 
     (claim.legs || []).forEach((leg: any) => {
       const legCandidateFields = [
-        { key: "hotel_receipt", label: "Hotel Bill Receipt" },
+        { key: "hotel_receipt", label: "Hotel Bill" },
         { key: "local_purchase_bill", label: "Local Purchase Bill" },
         { key: "other_bill", label: "Other Expense Bill" },
         { key: "receipt_url", label: "Travel / Bill Receipt" },
         { key: "bill_url", label: "Travel Ticket" },
-        { key: "attachment_url", label: "Expense Bill Attachment" },
-        { key: "file_url", label: "Expense Bill Attachment" },
-        { key: "bill_copy", label: "Expense Bill Copy" },
+        { key: "attachment_url", label: "Expense Bill" },
+        { key: "file_url", label: "Expense Bill" },
+        { key: "bill_copy", label: "Expense Bill" },
         { key: "receipt", label: "Bill Receipt" },
-        { key: "ticket_attachment", label: "Train / Bus Ticket" },
-        { key: "main_bill_file", label: "Travel Ticket Receipt" },
+        { key: "ticket_attachment", label: "Travel Ticket" },
+        { key: "main_bill_file", label: "Travel Ticket" },
         { key: "sub_bill_file", label: "Sub-connection Ticket" },
         { key: "hotel_bill_file", label: "Hotel Bill" },
         { key: "lp_bill_file", label: "Local Purchase Bill" },
         { key: "oth_bill_file", label: "Other Expense Bill" },
-        { key: "other_attachment", label: "Other Bill Attachment" }
+        { key: "other_attachment", label: "Other Expense Bill" }
       ];
 
       legCandidateFields.forEach(field => {
         const u = leg[field.key];
-        if (u && typeof u === "string" && u.trim() && !rawAttachmentsMap.has(u)) {
-          rawAttachmentsMap.set(u, {
+        const normKey = normalizeUrlKey(u);
+        if (u && typeof u === "string" && u.trim() && normKey && !seenUrls.has(normKey) && !isCallOrPms(field.label)) {
+          seenUrls.add(normKey);
+          rawAttachmentsMap.set(normKey, {
             file_url: u,
             url: u,
             date: claimDate,
@@ -233,12 +262,15 @@ const prepareConvertedAttachments = async (claims: any[]) => {
       if (Array.isArray(leg.attachments)) {
         leg.attachments.forEach((aItem: any) => {
           const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
-          if (aUrl && !rawAttachmentsMap.has(aUrl)) {
-            rawAttachmentsMap.set(aUrl, {
+          const aLabel = (typeof aItem === "object" && aItem.bill_type) ? aItem.bill_type : "Bill Attachment";
+          const normKey = normalizeUrlKey(aUrl);
+          if (aUrl && normKey && !seenUrls.has(normKey) && !isCallOrPms(aLabel, aLabel)) {
+            seenUrls.add(normKey);
+            rawAttachmentsMap.set(normKey, {
               file_url: aUrl,
               url: aUrl,
               date: claimDate,
-              bill_type: (typeof aItem === "object" && aItem.bill_type) ? aItem.bill_type : "Bill Attachment"
+              bill_type: aLabel
             });
           }
         });
@@ -246,10 +278,10 @@ const prepareConvertedAttachments = async (claims: any[]) => {
     });
   });
 
-  const rawAttachments = Array.from(rawAttachmentsMap.values());
-  return await Promise.all(
-    rawAttachments.map(async (att: any) => {
-      const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
+  const rawList = Array.from(rawAttachmentsMap.values());
+  const convertedList = await Promise.all(
+    rawList.map(async (att: any) => {
+      const rawUrl = att.file_url || att.url || "";
       const base64Url = rawUrl ? await convertImageUrlToBase64(rawUrl) : "";
       return {
         ...att,
@@ -259,6 +291,21 @@ const prepareConvertedAttachments = async (claims: any[]) => {
       };
     })
   );
+
+  // Content-Hash Deduplication: if two different URLs point to the same base64 image, keep only 1!
+  const seenHashes = new Set<string>();
+  const finalDeduped: any[] = [];
+
+  for (const item of convertedList) {
+    const hash = getQuickContentHash(item.url || item.file_url || item.original_url);
+    if (hash && seenHashes.has(hash)) {
+      continue; // Skip exact duplicate photo
+    }
+    if (hash) seenHashes.add(hash);
+    finalDeduped.push(item);
+  }
+
+  return finalDeduped;
 };
 
 const MONTHS = [
@@ -445,129 +492,15 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     return raw.replace(/barcode[:\s]*/gi, "").trim();
   };
 
-  const isCallOrPmsReport = (label: string = "", billType: string = ""): boolean => {
-    const l = (label || "").toLowerCase();
-    const b = (billType || "").toLowerCase();
-    if (l.includes("hotel") || l.includes("purchase") || l.includes("ticket") || l.includes("receipt") || l.includes("bill") || l.includes("fare") || l.includes("travel")) {
-      return false;
-    }
-    return l.includes("pms report") || l.includes("service report sheet") || l.includes("breakdown call report") ||
-           b.includes("pms_report") || b.includes("service_report_sheet") || b === "service_report";
-  };
-
-  const getBillFingerprint = (urlStr: string): string => {
-    if (!urlStr) return "";
-    if (urlStr.startsWith("data:")) return urlStr.slice(0, 150);
-    const clean = urlStr.split("?")[0].replace(/^https?:\/\/[^\/]+/, "").replace(/^\//, "").toLowerCase();
-    const filename = clean.split("/").pop() || clean;
-    return filename.replace(/\.[^/.]+$/, "").trim();
-  };
-
-  const allAttachmentsMap = new Map<string, { url: string; date: string; label: string }>();
-  const seenFingerprints = new Set<string>();
-
-  (attachments || []).forEach((att: any, idx: number) => {
-    const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
-    const origUrl = att.original_url || rawUrl;
-    const fp = getBillFingerprint(origUrl) || getBillFingerprint(rawUrl);
-    const label = att.bill_type || att.billType || "Expense Bill";
-
-    if (rawUrl && fp && !isCallOrPmsReport(label, att.bill_type) && !seenFingerprints.has(fp)) {
-      seenFingerprints.add(fp);
-      allAttachmentsMap.set(fp, {
-        url: rawUrl,
-        date: att.date ? fmtDate(att.date) : `Bill #${idx + 1}`,
-        label: label
-      });
-    }
-  });
-
-  (claims || []).forEach((claim: any) => {
-    const claimDate = claim.date ? fmtDate(claim.date) : "";
-    const claimAtts = [
-      ...(Array.isArray(claim.attachments) ? claim.attachments : []),
-      ...(Array.isArray(claim.attachments_detailed) ? claim.attachments_detailed : []),
-      ...(Array.isArray(claim.attachment_urls) ? claim.attachment_urls : []),
-      ...(typeof claim.attachments === "string" ? (() => { try { return JSON.parse(claim.attachments); } catch { return [claim.attachments]; } })() : [])
-    ];
-
-    claimAtts.forEach((cItem: any, cIdx: number) => {
-      const cUrl = typeof cItem === "string" ? cItem : (cItem.file_url || cItem.url);
-      const fp = getBillFingerprint(cUrl);
-      const label = (typeof cItem === "object" && (cItem.bill_type || cItem.billType)) ? (cItem.bill_type || cItem.billType) : `Claim Attachment #${cIdx + 1}`;
-      if (cUrl && fp && !isCallOrPmsReport(label, (cItem.bill_type || "")) && !seenFingerprints.has(fp)) {
-        seenFingerprints.add(fp);
-        allAttachmentsMap.set(fp, { url: cUrl, date: claimDate, label: label });
-      }
-    });
-
-    (claim.legs || []).forEach((leg: any) => {
-      const candidateFields = [
-        { key: "hotel_receipt", label: "Hotel Bill Receipt" },
-        { key: "local_purchase_bill", label: "Local Purchase Bill" },
-        { key: "other_bill", label: "Other Expense Bill" },
-        { key: "receipt_url", label: "Travel / Bill Receipt" },
-        { key: "bill_url", label: "Travel Ticket" },
-        { key: "attachment_url", label: "Expense Bill Attachment" },
-        { key: "file_url", label: "Expense Bill Attachment" },
-        { key: "bill_copy", label: "Expense Bill Copy" },
-        { key: "receipt", label: "Bill Receipt" },
-        { key: "ticket_attachment", label: "Train / Bus Ticket" },
-        { key: "main_bill_file", label: "Travel Ticket Receipt" },
-        { key: "sub_bill_file", label: "Sub-connection Ticket" },
-        { key: "hotel_bill_file", label: "Hotel Bill" },
-        { key: "lp_bill_file", label: "Local Purchase Bill" },
-        { key: "oth_bill_file", label: "Other Expense Bill" },
-        { key: "other_attachment", label: "Other Bill Attachment" }
-      ];
-
-      candidateFields.forEach(field => {
-        const u = leg[field.key];
-        const fp = getBillFingerprint(u);
-        if (u && fp && !isCallOrPmsReport(field.label, "") && !seenFingerprints.has(fp)) {
-          seenFingerprints.add(fp);
-          allAttachmentsMap.set(fp, { url: u, date: claimDate, label: field.label });
-        }
-      });
-
-      if (Array.isArray(leg.attachments)) {
-        leg.attachments.forEach((aItem: any, aIdx: number) => {
-          const aUrl = typeof aItem === "string" ? aItem : (aItem.file_url || aItem.url);
-          const fp = getBillFingerprint(aUrl);
-          const label = aItem.bill_type || `Bill Attachment #${aIdx + 1}`;
-          if (aUrl && fp && !isCallOrPmsReport(label, aItem.bill_type || "") && !seenFingerprints.has(fp)) {
-            seenFingerprints.add(fp);
-            allAttachmentsMap.set(fp, { url: aUrl, date: claimDate, label: label });
-          }
-        });
-      }
-    });
-  });
-
-  const base64Lookup = new Map<string, string>();
-  if (Array.isArray(attachments)) {
-    attachments.forEach((item: any) => {
-      const orig = item.original_url || item.raw_url || item.url || item.file_url;
-      const b64 = item.file_url || item.url;
-      if (orig && b64) {
-        base64Lookup.set(orig, b64);
-        base64Lookup.set(getAbsoluteUrl(orig), b64);
-      }
-    });
-  }
-
-  const finalAttachments = Array.from(allAttachmentsMap.values());
-
-  // ── 1 DEDICATED FULL A4 PAGE PER UNIQUE BILL ATTACHMENT ──
+  // Dedicated 1 full page per bill — using pre-deduplicated attachments directly
   let attachmentsSection = "";
-  if (finalAttachments.length > 0) {
-    const totalAtts = finalAttachments.length;
-    attachmentsSection = finalAttachments.map((att: any, idx: number) => {
-      const rawUrl = att.url;
-      const base64OrUrl = base64Lookup.get(rawUrl) || base64Lookup.get(getAbsoluteUrl(rawUrl)) || rawUrl;
-      const absoluteUrl = base64OrUrl.startsWith("data:") ? base64OrUrl : getAbsoluteUrl(base64OrUrl);
-      const dateStr = att.date || `Receipt #${idx + 1}`;
-      const attLabel = att.label || "Expense Bill";
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    const totalAtts = attachments.length;
+    attachmentsSection = attachments.map((att: any, idx: number) => {
+      const rawUrl = att.file_url || att.url || "";
+      const absoluteUrl = rawUrl.startsWith("data:") ? rawUrl : getAbsoluteUrl(rawUrl);
+      const dateStr = att.date ? fmtDate(att.date) : `Receipt #${idx + 1}`;
+      const attLabel = att.bill_type || att.billType || "Expense Bill";
 
       return `
         <div class="attachment-page" style="width:1122px;min-height:740px;padding:5mm;background:#fff;box-sizing:border-box;page-break-before:always;display:flex;flex-direction:column;">
@@ -582,9 +515,21 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     }).join("\n");
   }
 
-  // ── Multi-page Table Split (10 rows per page: Excel Middle + Center Aligned) ──
-  const ROWS_PER_PAGE = 10;
-  const numPages = Math.max(1, Math.ceil(allLegs.length / ROWS_PER_PAGE));
+  // ── DYNAMIC BALANCED PAGE SPLITTING (Eliminates empty wasted pages) ──
+  const totalLegCount = allLegs.length;
+  let ROWS_PER_PAGE = 15;
+
+  if (totalLegCount <= 16) {
+    ROWS_PER_PAGE = 16; // Perfectly fits on 1 page!
+  } else if (totalLegCount <= 32) {
+    ROWS_PER_PAGE = Math.ceil(totalLegCount / 2); // e.g. 24 rows = 12 + 12 on 2 balanced pages
+  } else if (totalLegCount <= 48) {
+    ROWS_PER_PAGE = Math.ceil(totalLegCount / 3); // e.g. 36 rows = 12 + 12 + 12 on 3 balanced pages
+  } else {
+    ROWS_PER_PAGE = 15;
+  }
+
+  const numPages = Math.max(1, Math.ceil(totalLegCount / ROWS_PER_PAGE));
 
   let summaryPagesHtml = "";
   for (let pageIdx = 0; pageIdx < numPages; pageIdx++) {
@@ -598,7 +543,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
                      + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
       const bg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
-      const c = `border:1px solid #475569!important;padding:5px 3px;font-size:7.5pt;font-weight:600;color:#0f172a;vertical-align:middle!important;text-align:center!important;font-family:'Aptos','Segoe UI',Calibri,sans-serif;`;
+      const c = `border:1px solid #475569!important;padding:4px 3px;font-size:7.5pt;font-weight:600;color:#0f172a;vertical-align:middle!important;text-align:center!important;font-family:'Aptos','Segoe UI',Calibri,sans-serif;`;
       const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
       const ticketNo = getCleanTicketNumber(l);
 
@@ -794,14 +739,14 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     body { font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; color: #0f172a; background: #fff; font-size: 7.5pt; }
     .summary-page { width: 1122px; background: #fff; padding: 5mm; box-sizing: border-box; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    th, td { border: 1px solid #475569!important; padding: 5px 3px; vertical-align: middle!important; text-align: center!important; word-wrap: break-word; font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; }
+    th, td { border: 1px solid #475569!important; padding: 4px 3px; vertical-align: middle!important; text-align: center!important; word-wrap: break-word; font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; }
     tbody tr { page-break-inside: avoid!important; break-inside: avoid!important; }
     .main-hdr { background: #1E293B!important; color: #fff!important; text-align: center!important; vertical-align: middle!important; font-size: 10.5pt!important; font-weight: 800!important; padding: 6px!important; border: 1.5px solid #1E293B!important; letter-spacing: 0.5px; }
     .info-tbl { margin-bottom: 0; border: 1.5px solid #1E293B!important; border-top: none!important; }
-    .info-lbl { font-weight: bold; background: #F1F5F9!important; color: #1E293B; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center!important; vertical-align: middle!important; padding: 5px 4px; text-transform: uppercase; white-space: nowrap; }
-    .info-val { background: #fff!important; color: #0f172a!important; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center!important; vertical-align: middle!important; padding: 5px 4px; font-weight: bold; }
-    .col-h1 { background: #1E293B!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; vertical-align: middle!important; padding: 5px 2px!important; border: 1px solid #475569!important; }
-    .col-h2 { background: #334155!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; vertical-align: middle!important; padding: 4px 2px!important; border: 1px solid #475569!important; }
+    .info-lbl { font-weight: bold; background: #F1F5F9!important; color: #1E293B; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center!important; vertical-align: middle!important; padding: 4px 4px; text-transform: uppercase; white-space: nowrap; }
+    .info-val { background: #fff!important; color: #0f172a!important; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center!important; vertical-align: middle!important; padding: 4px 4px; font-weight: bold; }
+    .col-h1 { background: #1E293B!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; vertical-align: middle!important; padding: 4px 2px!important; border: 1px solid #475569!important; }
+    .col-h2 { background: #334155!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; vertical-align: middle!important; padding: 3.5px 2px!important; border: 1px solid #475569!important; }
     .tot-lbl { border: 1.5px solid #1E293B!important; padding: 5px 3px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #FEF3C7!important; vertical-align: middle!important; text-align: center!important; }
     .tot-num { border: 1.5px solid #1E293B!important; padding: 5px 3px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #FEF3C7!important; vertical-align: middle!important; text-align: center!important; white-space: nowrap!important; }
     .net-lbl { border: 1.5px solid #1E293B!important; padding: 6px 6px; font-size: 8pt; font-weight: bold; color: #0f172a; background: #F1F5F9!important; text-align: center!important; vertical-align: middle!important; text-transform: uppercase; }
