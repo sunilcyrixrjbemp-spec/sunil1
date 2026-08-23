@@ -18,7 +18,6 @@ import {
   BarChart3, 
   Settings, 
   Building2, 
-  ChevronRight, 
   Search, 
   RefreshCw, 
   FileSpreadsheet, 
@@ -27,29 +26,23 @@ import {
   Unlock, 
   AlertTriangle, 
   X, 
-  Check,
-  Info,
   Calendar,
   DollarSign,
-  Sliders,
-  ArrowLeft,
   Sparkles,
   Key,
   History,
   Activity,
   ShieldAlert,
   Clock,
+  Save,
   LucideIcon
 } from "lucide-react";
 import ResetApprovalLevelModal from "../components/admin/ResetApprovalLevelModal";
 import { 
   Table, 
   Popconfirm, 
-  Alert, 
   Spin, 
-  InputNumber,
-  Switch,
-  Tooltip
+  Switch
 } from "antd";
 import { SaaSDonutChart } from "../components/common/SaaSCharts";
 
@@ -538,7 +531,7 @@ export default function AdminPage() {
     rejection_fallback_level: "creator"
   });
   const [savingSettings, setSavingSettings] = useState(false);
-  const [settingsSubTab, setSettingsSubTab] = useState<"home" | "submission" | "automation" | "allowances">("home");
+  const [settingsSubTab, setSettingsSubTab] = useState<"home" | "submission" | "automation" | "allowances" | "security">("submission");
 
   const [resetModalState, setResetModalState] = useState<{ isOpen: boolean; expenseId: number; expenseCode: string }>({
     isOpen: false,
@@ -1810,7 +1803,7 @@ export default function AdminPage() {
   const zmList = getEligibleZonalManagers();
   const cList = getEligibleCoordinators();
 
-  const currentTabConfig = NAV_ITEMS.find(n => n.id === activeTab) || NAV_ITEMS[0];
+  // current tab config
 
   const getNavCount = (tabId: AdminTab) => {
     if (tabId === "users") return users.length;
@@ -1843,8 +1836,8 @@ export default function AdminPage() {
 
         <div className="relative z-10 max-w-[1680px] mx-auto px-3 sm:px-5 pt-3 space-y-3 text-ink-900 font-sans antialiased">
           
-          {/* ── 1. Slim Unified Top Header (Compact & Clean) ──────────────── */}
-          <header className="bg-surface border border-line rounded-2xl px-4 py-2.5 shadow-xs flex items-center justify-between gap-3">
+          {/* ── 1. Slim Unified Top Header (HomePage Parity) ──────────────── */}
+          <header className="bg-surface border border-line rounded-2xl px-4 py-2.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white flex items-center justify-center font-black text-xs shadow-2xs shrink-0">
                 AD
@@ -1856,7 +1849,7 @@ export default function AdminPage() {
                 <span className="text-ink-400">/</span>
                 <span className="text-xs font-bold text-accent-700 bg-accent-50 px-2.5 py-0.5 rounded-full border border-accent-200 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-accent-600" />
-                  {currentTabConfig.label}
+                  {NAV_ITEMS.find(n => n.id === activeTab)?.label || "Dashboard"}
                 </span>
                 <span className="hidden sm:inline-flex items-center gap-1.5 text-2xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Online
@@ -1869,7 +1862,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={handleSyncData}
                 disabled={isSyncing}
-                className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-3 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 title="Refresh All Data"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${isSyncing ? "animate-spin" : ""}`} />
@@ -1881,7 +1874,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowBulkUploadModal(true)}
-                    className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-3 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
                     <span className="hidden sm:inline">Bulk CSV</span>
@@ -1889,7 +1882,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowSingleUserModal(true)}
-                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-8 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
+                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-3.5 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Add User</span>
@@ -1902,7 +1895,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={handleExportHierarchies}
-                    className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-3 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                     title="Export Hierarchy CSV"
                   >
                     <Download className="w-3.5 h-3.5 text-ink-600" />
@@ -1911,7 +1904,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowBulkHierarchyModal(true)}
-                    className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-3 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
                     <span className="hidden sm:inline">Bulk Import</span>
@@ -1919,7 +1912,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => handleOpenHierarchyModal()}
-                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-8 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
+                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-3.5 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Create Team</span>
@@ -1928,14 +1921,35 @@ export default function AdminPage() {
               )}
 
               {activeTab === "facilities" && (
-                <>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadFacilityTemplate}
+                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-2.5 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Download pre-formatted Excel template"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden md:inline">Download Format</span>
+                    <span className="inline md:hidden">Format</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkFacilityModalOpen(true)}
+                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-2.5 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Bulk import facilities via Excel / CSV (Upsert)"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
+                    <span className="hidden md:inline">Import Facilities</span>
+                    <span className="inline md:hidden">Import</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handleExportFacilitiesExcel}
-                    className="btn-lte-outline text-xs h-8 px-3 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-2xs"
+                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-2.5 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Export facilities list to Excel"
                   >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="hidden sm:inline">Export Excel</span>
+                    <Download className="w-3.5 h-3.5 text-ink-600" />
+                    <span className="hidden sm:inline">Export</span>
                   </button>
                   <button
                     type="button"
@@ -1948,125 +1962,55 @@ export default function AdminPage() {
                       setNewFacilityCoordinatorName("");
                       setIsAddFacilityModalOpen(true);
                     }}
-                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-8 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
+                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-3.5 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Add Location</span>
                   </button>
-                </>
+                </div>
               )}
             </div>
           </header>
 
-          {/* ================= MOBILE NAVIGATION PILLS (<768px) ================= */}
-          <nav className="block md:hidden bg-surface border border-line rounded-2xl p-1.5 overflow-x-auto no-scrollbar shadow-xs">
-            <div className="flex items-center gap-1">
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                const count = getNavCount(item.id);
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleTabChange(item.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 border transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
-                        : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                    <span>{item.label}</span>
-                    {count !== undefined && count > 0 && (
-                      <span className={`px-1.5 py-0.2 rounded-full text-2xs font-mono font-bold ${
-                        isActive ? "bg-white/20 text-white" : "bg-surface-sunken text-ink-600"
-                      }`}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+          {error && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl text-xs font-semibold flex items-center justify-between">
+              <span>{error}</span>
+              <button type="button" onClick={() => setError(null)} className="text-rose-500 hover:text-rose-800 text-xs font-bold border-0 bg-transparent cursor-pointer">Dismiss</button>
             </div>
+          )}
+          {/* ── 2. Top Horizontal Navigation Tabs (HomePage Parity) ─── */}
+          <nav className="bg-surface-sunken p-1 rounded-2xl border border-line flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-xs">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              const count = getNavCount(item.id);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleTabChange(item.id)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-2 border transition-all cursor-pointer ${
+                    isActive
+                      ? "bg-white text-accent-700 font-bold shadow-xs border-line/60"
+                      : "bg-transparent text-ink-600 hover:text-ink-900 border-transparent hover:bg-surface/50"
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-accent-600" : "text-ink-400"}`} />
+                  <span>{item.label}</span>
+                  {count !== undefined && count > 0 && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-2xs font-mono font-bold ${
+                      isActive ? "bg-accent-100 text-accent-700" : "bg-surface text-ink-500 border border-line"
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
 
-          {/* ================= MAIN TWO-COLUMN WORKSPACE ================= */}
-          <div className="flex flex-col md:flex-row gap-3.5 items-start">
-            {/* Tablet 52px Collapsed Icon Rail (768px–1024px) */}
-            <aside className="hidden md:block lg:hidden w-13 shrink-0 bg-surface border border-line rounded-2xl py-2.5 shadow-xs sticky top-3">
-              <div className="flex flex-col items-center gap-1">
-                {NAV_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <div key={item.id} className="relative group">
-                      <button
-                        type="button"
-                        onClick={() => handleTabChange(item.id)}
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer border-0 ${
-                          isActive
-                            ? "bg-accent-50 text-accent-700 font-bold"
-                            : "bg-transparent text-ink-500 hover:bg-surface-sunken hover:text-ink-900"
-                        }`}
-                        title={item.label}
-                      >
-                        <Icon className="w-4 h-4" />
-                      </button>
-                      <div className="absolute left-12 top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-ink-900 text-white text-xs font-semibold rounded-lg shadow-md whitespace-nowrap hidden group-hover:block z-50 pointer-events-none">
-                        {item.label}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </aside>
-
-            {/* Desktop 230px Zoho Left Sidebar (≥1024px) */}
-            <aside className="hidden lg:block w-56 shrink-0 bg-surface border border-line rounded-2xl p-2 shadow-xs sticky top-3">
-              <nav className="space-y-1">
-                {NAV_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  const count = getNavCount(item.id);
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleTabChange(item.id)}
-                      className={`w-full h-9 px-3 flex items-center justify-between text-xs rounded-xl transition-all cursor-pointer border-0 ${
-                        isActive
-                          ? "bg-[#EEF0FF] text-[#4338CA] font-bold shadow-2xs"
-                          : "bg-transparent text-ink-700 hover:bg-surface-sunken hover:text-ink-900 font-medium"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 truncate">
-                        <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-[#4338CA]" : "text-ink-500"}`} />
-                        <span className="truncate">{item.label}</span>
-                      </div>
-                      {count !== undefined && (
-                        <span className={`px-2 py-0.5 text-2xs font-mono font-bold rounded-full ${
-                          isActive
-                            ? "bg-accent-100 text-accent-700 border border-accent-300/40"
-                            : "bg-surface-sunken text-ink-500"
-                        }`}>
-                          {count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </nav>
-            </aside>
-
-            {/* Main Content Workspace */}
-            <main className="flex-1 min-w-0">
-              {error && (
-                <div className="mb-3">
-                  <Alert message={error} type="error" showIcon className="rounded-xl font-semibold border-rose-200" />
-                </div>
-              )}
-
+          {/* ── 3. Full-Width Workspace ─── */}
+          <main className="space-y-3.5 w-full">
             {/* ================= SECTION 1: USERS DIRECTORY ================= */}
             {activeTab === "users" && (
               <div className="space-y-3 animate-fadeIn">
@@ -2789,588 +2733,372 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* ================= SECTION 4: SYSTEM SETTINGS & ALLOWANCE MASTER ================= */}
+            {/* ================= SECTION 4: SYSTEM SETTINGS & GOVERNANCE MODULES ================= */}
             {activeTab === "settings" && (
-              <div className="space-y-4 animate-fadeIn max-w-5xl">
-                {/* Settings Sub-Navigation Header (Zoho pattern) */}
-                <div className="bg-surface border border-line rounded-xl p-1.5 flex flex-wrap items-center justify-between gap-2 shadow-xs">
-                  <div className="flex items-center gap-1.5 overflow-x-auto">
-                    <button
-                      type="button"
-                      onClick={() => setSettingsSubTab("home")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                        settingsSubTab === "home"
-                          ? "bg-accent-600 text-white shadow-xs"
-                          : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
-                      }`}
-                    >
-                      <Sliders className="w-3.5 h-3.5" />
-                      <span>Settings Overview</span>
-                    </button>
+              <div className="space-y-4 animate-fadeIn">
+                {/* Clean Segmented Function Switcher */}
+                <div className="bg-surface border border-line rounded-2xl p-1.5 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                  <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab("submission")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                        settingsSubTab === "submission"
-                          ? "bg-accent-600 text-white shadow-xs"
-                          : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
+                        settingsSubTab === "submission" || settingsSubTab === "home"
+                          ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
+                          : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
                       }`}
                     >
                       <Calendar className="w-3.5 h-3.5" />
-                      <span>1. Submission Policy</span>
+                      <span>1. Submission &amp; Cutoffs</span>
                     </button>
+
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab("automation")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
                         settingsSubTab === "automation"
-                          ? "bg-accent-600 text-white shadow-xs"
-                          : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+                          ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
+                          : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
                       }`}
                     >
                       <Zap className="w-3.5 h-3.5" />
                       <span>2. Approval Automation</span>
                     </button>
+
                     <button
                       type="button"
                       onClick={() => setSettingsSubTab("allowances")}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
                         settingsSubTab === "allowances"
-                          ? "bg-accent-600 text-white shadow-xs"
-                          : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+                          ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
+                          : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
                       }`}
                     >
                       <DollarSign className="w-3.5 h-3.5" />
-                      <span>3. Allowance Rates</span>
+                      <span>3. Allowance Rates (TA/DA)</span>
                     </button>
-                  </div>
-                  {settingsSubTab !== "home" && (
+
                     <button
                       type="button"
-                      onClick={() => setSettingsSubTab("home")}
-                      className="text-xs text-accent-600 hover:text-accent-800 font-bold flex items-center gap-1 cursor-pointer px-2 py-1"
+                      onClick={() => setSettingsSubTab("security")}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
+                        settingsSubTab === "security"
+                          ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
+                          : "bg-surface text-ink-700 border-line hover:bg-surface-sunken"
+                      }`}
                     >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back to Overview</span>
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>4. Security &amp; Sessions</span>
                     </button>
-                  )}
+                  </div>
+
+                  <div className="text-2xs font-mono text-ink-500 font-semibold px-2">
+                    <span>Active Policy Engine</span>
+                  </div>
                 </div>
 
-                {/* --- SUB-VIEW 0: SETTINGS HOME GRID (Landing Page) --- */}
-                {settingsSubTab === "home" && (
-                  <div className="space-y-4">
-                    {/* Settings Overview Banner */}
-                    <div className="bg-gradient-to-r from-accent-900 via-accent-800 to-accent-700 text-white rounded-xl p-5 shadow-xs border border-accent-900/20">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/10 text-white/90 text-2xs font-bold uppercase tracking-wider mb-2">
-                            <Sliders className="w-3 h-3 text-indigo-300" />
-                            Enterprise Policy Engine
-                          </div>
-                          <h3 className="text-base font-bold text-white mb-1">
-                            System Settings &amp; Financial Allowance Hub
-                          </h3>
-                          <p className="text-xs text-white/80 max-w-2xl leading-relaxed">
-                            Configure expense cutoff dates, past-day logging limits, automated approval escalations, and official TA/DA travel allowance rates across all employee grades.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xs px-3.5 py-2.5 rounded-xl border border-white/15 shrink-0">
-                          <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                          <div className="text-xs">
-                            <div className="font-bold text-white">Policies Active</div>
-                            <div className="text-2xs text-white/70 font-mono">Live Across All Workflows</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 3 Interactive Grid Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Card 1 */}
-                      <div 
-                        onClick={() => setSettingsSubTab("submission")}
-                        className="bg-surface border border-line rounded-xl p-5 hover:border-accent-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between"
-                      >
-                        <div className="space-y-3">
-                          <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent-600 flex items-center justify-center group-hover:bg-accent-600 group-hover:text-white transition-colors shadow-xs">
-                            <Calendar className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-ink-900 group-hover:text-accent-600 transition-colors flex items-center justify-between">
-                              <span>1. Submission Policy</span>
-                              <ChevronRight className="w-4 h-4 text-ink-400 group-hover:text-accent-600 group-hover:translate-x-0.5 transition-all" />
-                            </h4>
-                            <p className="text-xs text-ink-500 mt-1 leading-relaxed">
-                              Cutoffs &amp; date windows for claim submission. Controls how far back engineers can log past expenses.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-2xs font-mono">
-                          <span className="text-ink-500">Window: <strong className="text-ink-900 font-bold">{settings.max_past_days_limit || "15"} Days</strong></span>
-                          <span className="text-ink-500">Cutoff: <strong className="text-ink-900 font-bold">Day {settings.monthly_cutoff_day || "3"}</strong></span>
-                        </div>
-                      </div>
-
-                      {/* Card 2 */}
-                      <div 
-                        onClick={() => setSettingsSubTab("automation")}
-                        className="bg-surface border border-line rounded-xl p-5 hover:border-accent-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between"
-                      >
-                        <div className="space-y-3">
-                          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors shadow-xs">
-                            <Zap className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-ink-900 group-hover:text-accent-600 transition-colors flex items-center justify-between">
-                              <span>2. Approval Automation</span>
-                              <ChevronRight className="w-4 h-4 text-ink-400 group-hover:text-accent-600 group-hover:translate-x-0.5 transition-all" />
-                            </h4>
-                            <p className="text-xs text-ink-500 mt-1 leading-relaxed">
-                              Auto-approve &amp; expiry rules when manager approval is pending beyond the threshold limit.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-2xs font-mono">
-                          <span className="text-ink-500">Threshold: <strong className="text-ink-900 font-bold">{settings.pending_auto_expiry_days || "5"} Days</strong></span>
-                          <span className="text-ink-500">Action: <strong className="text-ink-900 font-bold uppercase">{settings.pending_auto_action || "reject"}</strong></span>
-                        </div>
-                      </div>
-
-                      {/* Card 3 */}
-                      <div 
-                        onClick={() => setSettingsSubTab("allowances")}
-                        className="bg-surface border border-line rounded-xl p-5 hover:border-accent-400 hover:shadow-md transition-all duration-200 cursor-pointer group flex flex-col justify-between"
-                      >
-                        <div className="space-y-3">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors shadow-xs">
-                            <DollarSign className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-ink-900 group-hover:text-accent-600 transition-colors flex items-center justify-between">
-                              <span>3. Allowance Rates</span>
-                              <ChevronRight className="w-4 h-4 text-ink-400 group-hover:text-accent-600 group-hover:translate-x-0.5 transition-all" />
-                            </h4>
-                            <p className="text-xs text-ink-500 mt-1 leading-relaxed">
-                              TA/DA rates, vehicle mileage per km, in/out district daily allowance, and hotel caps per employee grade.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between text-2xs font-mono">
-                          <span className="text-ink-500">Master Tiers:</span>
-                          <span className="text-accent-700 font-bold">{allowanceRates?.length || 0} Grades Configured</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* --- SUB-VIEW 1: SUBMISSION POLICIES FORM --- */}
+                {/* --- MODULE 1: CLAIM SUBMISSION & CUTOFFS --- */}
                 {(settingsSubTab === "submission" || settingsSubTab === "home") && (
-                  <form onSubmit={handleSaveSettings} className="space-y-4">
-                    <div className="bg-surface border border-line rounded-xl p-5 space-y-4 shadow-xs">
-                      <div className="border-b border-line pb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">1</span>
-                          <h4 className="text-sm font-bold text-ink-900 m-0">
-                            Expense Submission Window &amp; Cutoff Policies
-                          </h4>
+                  <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-5 animate-fadeIn">
+                    <div className="flex items-center justify-between pb-3 border-b border-line">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200">
+                          <Calendar className="w-4.5 h-4.5" />
                         </div>
-                        <p className="text-xs text-ink-500 mt-1 ml-8">
-                          Controls how far back employees can log expenses, and when a month closes for editing.
-                        </p>
+                        <div>
+                          <h3 className="font-bold text-ink-900 text-sm m-0">Claim Submission &amp; Cutoff Policy</h3>
+                          <p className="text-2xs text-ink-500 m-0">Control maximum retrospective expense logging windows and monthly financial cutoffs</p>
+                        </div>
                       </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
-                            <span>How many past days can employees log a claim for? *</span>
-                            <Tooltip title="Example: if set to 15, an employee submitting a claim today can date it back up to 15 days ago.">
-                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
-                            </Tooltip>
-                          </label>
+                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        Live Policy
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Max Past Days */}
+                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                        <label className="text-xs font-bold text-ink-900 block">
+                          Past-Day Expense Logging Limit (Days)
+                        </label>
+                        <p className="text-2xs text-ink-500 leading-relaxed">
+                          Maximum number of days in the past an engineer is allowed to log a travel or daily allowance claim.
+                        </p>
+                        <div className="flex items-center gap-3 pt-1">
                           <input
                             type="number"
                             min={1}
-                            required
-                            value={settings.max_past_days_limit || "15"}
-                            onChange={(e) => setSettings({ ...settings, max_past_days_limit: e.target.value })}
-                            className="input-lte h-9 text-xs font-mono font-bold w-full rounded-lg"
-                            placeholder="e.g. 15"
+                            max={60}
+                            value={settings.max_past_days_limit || 15}
+                            onChange={(e) => setSettings({ ...settings, max_past_days_limit: Number(e.target.value) })}
+                            className="input-lte h-9 w-32 font-mono font-bold text-xs rounded-xl bg-white border border-line px-3"
                           />
-                          <span className="text-xs text-ink-500 font-medium block">
-                            Past calendar days allowed for engineers to log expenses.
-                          </span>
+                          <span className="text-xs text-ink-600 font-semibold">Days from today</span>
                         </div>
+                      </div>
 
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
-                            <span>Lock previous month's claims after this day *</span>
-                            <Tooltip title="Example: if set to 3, all submissions for the previous month are locked after the 3rd of the current month.">
-                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
-                            </Tooltip>
-                          </label>
+                      {/* Monthly Cutoff Day */}
+                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                        <label className="text-xs font-bold text-ink-900 block">
+                          Monthly Submission Cutoff Day
+                        </label>
+                        <p className="text-2xs text-ink-500 leading-relaxed">
+                          Day of the next month when previous month claims are locked from further editing.
+                        </p>
+                        <div className="flex items-center gap-3 pt-1">
                           <input
                             type="number"
                             min={1}
-                            max={28}
-                            required
-                            value={settings.monthly_cutoff_day || "3"}
-                            onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: e.target.value })}
-                            className="input-lte h-9 text-xs font-mono font-bold w-full rounded-lg"
-                            placeholder="e.g. 3"
+                            max={31}
+                            value={settings.monthly_cutoff_day || 3}
+                            onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: Number(e.target.value) })}
+                            className="input-lte h-9 w-32 font-mono font-bold text-xs rounded-xl bg-white border border-line px-3"
                           />
-                          <span className="text-xs text-ink-500 font-medium block">
-                            Day of month after which previous month claims are blocked.
-                          </span>
+                          <span className="text-xs text-ink-600 font-semibold">th of every month</span>
                         </div>
                       </div>
-
-                      {settingsSubTab === "submission" && (
-                        <div className="flex items-center justify-between pt-3 border-t border-line">
-                          <span className="text-2xs text-ink-500 font-mono">
-                            Auto-applied globally to all employees
-                          </span>
-                          <button
-                            type="submit"
-                            disabled={savingSettings}
-                            className="btn-lte-primary text-xs h-9 px-5 flex items-center gap-2 cursor-pointer font-bold disabled:opacity-60 rounded-lg"
-                          >
-                            <Zap className="w-4 h-4" />
-                            <span>{savingSettings ? "Saving Settings..." : "Save Submission Policies"}</span>
-                          </button>
-                        </div>
-                      )}
                     </div>
-                  </form>
-                )}
 
-                {/* --- SUB-VIEW 2: APPROVAL AUTOMATION FORM --- */}
-                {(settingsSubTab === "automation" || settingsSubTab === "home") && (
-                  <form onSubmit={handleSaveSettings} className="space-y-4">
-                    <div className="bg-surface border border-line rounded-xl p-5 space-y-4 shadow-xs">
-                      <div className="border-b border-line pb-3">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">2</span>
-                          <h4 className="text-sm font-bold text-ink-900 m-0">
-                            Auto-Approval / Expiry Rules &amp; Routing Levels
-                          </h4>
-                        </div>
-                        <p className="text-xs text-ink-500 mt-1 ml-8">
-                          Configures automatic escalation, forwarding, or rejection when approvers do not take action in time.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
-                            <span>Auto-action after claim is pending this many days *</span>
-                            <Tooltip title="Example: if set to 5, any claim waiting for approval for more than 5 days will trigger the automatic action below (0 = disabled).">
-                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
-                            </Tooltip>
-                          </label>
-                          <input
-                            type="number"
-                            min={0}
-                            required
-                            value={settings.pending_auto_expiry_days || "5"}
-                            onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: e.target.value })}
-                            className="input-lte h-9 text-xs font-mono font-bold w-full rounded-lg"
-                            placeholder="e.g. 5"
-                          />
-                          <span className="text-xs text-ink-500 font-medium block">
-                            Days pending before system auto-action triggers (0 = disabled).
-                          </span>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
-                            <span>What happens automatically when threshold is reached? *</span>
-                            <Tooltip title="Choose whether overdue claims should be automatically approved, rejected, or left for manual review.">
-                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
-                            </Tooltip>
-                          </label>
-                          <select
-                            value={settings.pending_auto_action || "approve"}
-                            onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
-                            className="input-lte h-9 text-xs font-semibold w-full cursor-pointer py-1 px-2.5 rounded-lg"
-                          >
-                            <option value="approve">⚡ Auto Approve Current Level</option>
-                            <option value="reject">❌ Auto Reject Claim</option>
-                            <option value="disabled">🚫 Disabled (Manual Action Only)</option>
-                          </select>
-                          <span className="text-xs text-ink-500 font-medium block">
-                            System behavior when threshold days are reached without manager action.
-                          </span>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
-                            <span>Which approval level gets auto-approved?</span>
-                            <Tooltip title="Determines whether auto-approval advances the claim to the next manager level or completes all levels.">
-                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
-                            </Tooltip>
-                          </label>
-                          <select
-                            value={settings.auto_approve_target_level || "next_level"}
-                            onChange={(e) => setSettings({ ...settings, auto_approve_target_level: e.target.value })}
-                            className="input-lte h-9 text-xs font-semibold w-full cursor-pointer py-1 px-2.5 rounded-lg"
-                          >
-                            <option value="next_level">⏩ Forward to Next Manager Level (L1 → L2)</option>
-                            <option value="l1_only">1️⃣ Auto-Approve L1 Only</option>
-                            <option value="full_final">✅ Complete Final Auto-Approval (All Levels)</option>
-                          </select>
-                          <span className="text-xs text-ink-500 font-medium block">
-                            Target destination level when auto-approved.
-                          </span>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-ink-900 flex items-center gap-1.5">
-                            <span>Where does a rejected claim go?</span>
-                            <Tooltip title="Defines whether a rejected claim returns to the submitter as a draft for correction or is closed permanently.">
-                              <Info className="w-3.5 h-3.5 text-ink-400 hover:text-accent-600 cursor-help" />
-                            </Tooltip>
-                          </label>
-                          <select
-                            value={settings.rejection_fallback_level || "creator"}
-                            onChange={(e) => setSettings({ ...settings, rejection_fallback_level: e.target.value })}
-                            className="input-lte h-9 text-xs font-semibold w-full cursor-pointer py-1 px-2.5 rounded-lg"
-                          >
-                            <option value="creator">↩️ Return to Submitter / Drafts (For Edit &amp; Re-submit)</option>
-                            <option value="previous_level">◀️ Return to Previous Manager Level</option>
-                            <option value="final_reject">🛑 Permanent Rejection (Closed)</option>
-                          </select>
-                          <span className="text-xs text-ink-500 font-medium block">
-                            Target destination when a claim is rejected.
-                          </span>
-                        </div>
-                      </div>
-
-                      {settingsSubTab === "automation" && (
-                        <div className="flex items-center justify-between pt-3 border-t border-line">
-                          <span className="text-2xs text-ink-500 font-mono">
-                            Auto-applied globally across all workflows
-                          </span>
-                          <button
-                            type="submit"
-                            disabled={savingSettings}
-                            className="btn-lte-primary text-xs h-9 px-5 flex items-center gap-2 cursor-pointer font-bold disabled:opacity-60 rounded-lg"
-                          >
-                            <Zap className="w-4 h-4" />
-                            <span>{savingSettings ? "Saving Settings..." : "Save Approval Rules"}</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </form>
-                )}
-
-                {/* --- SUB-VIEW 3: ALLOWANCE MASTER TABLE --- */}
-                {(settingsSubTab === "allowances" || settingsSubTab === "home") && (
-                  <div className="bg-surface border border-line rounded-xl p-5 space-y-4 shadow-xs">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-lg bg-accent-50 text-accent-600 flex items-center justify-center text-xs font-bold">3</span>
-                          <h4 className="text-sm font-bold text-ink-900 m-0">
-                            Allowance Master — TA / DA Rates &amp; Hotel Caps
-                          </h4>
-                        </div>
-                        <p className="text-xs text-ink-500 mt-1 ml-8">
-                          Master rate table for mileage, daily allowance (DA), and lodging caps configured by employee grade.
-                        </p>
-                      </div>
+                    {/* Footer Save Button */}
+                    <div className="flex items-center justify-between pt-3 border-t border-line">
+                      <span className="text-2xs text-ink-500">Changes apply immediately across all field engineer claim forms.</span>
                       <button
                         type="button"
-                        disabled={savingRates}
-                        onClick={handleSaveAllowanceRates}
-                        className="btn-lte-primary text-xs h-8 px-3.5 flex items-center gap-1.5 cursor-pointer disabled:opacity-60 rounded-lg shrink-0"
+                        onClick={handleSaveSettings}
+                        disabled={savingSettings}
+                        className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-4 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0"
                       >
-                        {savingRates ? <LteSpinner /> : <Check className="w-3.5 h-3.5" />}
-                        <span>Save Allowance Rates</span>
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{savingSettings ? "Saving..." : "Save Submission Policy"}</span>
                       </button>
-                    </div>
-
-                    <div className="overflow-x-auto border border-line rounded-xl">
-                      <Table
-                        dataSource={allowanceRates}
-                        rowKey="id"
-                        loading={loadingRates}
-                        pagination={false}
-                        size="small"
-                        className="ant-table-striped"
-                        columns={[
-                          {
-                            title: "GRADE / LEVEL",
-                            key: "grade_level",
-                            render: (_: any, r: any) => (
-                              <div className="space-y-0.5">
-                                <span className="px-2 py-0.5 bg-accent-50 text-accent-700 border border-accent-100 font-bold text-2xs uppercase rounded font-mono inline-block">
-                                  {r.grade ? `Grade ${r.grade}` : (r.level || "—")}
-                                </span>
-                                <div className="text-2xs text-ink-500 font-semibold">{r.category || ""}</div>
-                              </div>
-                            )
-                          },
-                          {
-                            title: "VEHICLE",
-                            key: "vehicle_type",
-                            render: (_: any, r: any, idx: number) => (
-                              <select
-                                value={r.vehicle_type || "Bike"}
-                                onChange={(e) => {
-                                  const updated = [...allowanceRates];
-                                  updated[idx].vehicle_type = e.target.value;
-                                  setAllowanceRates(updated);
-                                }}
-                                className="input-lte h-7.5 text-xs py-0.5 px-2 cursor-pointer rounded-md"
-                              >
-                                <option value="Bike">Bike</option>
-                                <option value="Car">Car</option>
-                                <option value="Public">Public</option>
-                              </select>
-                            )
-                          },
-                          {
-                            title: "RATE / KM (₹)",
-                            key: "rate_per_km",
-                            render: (_: any, r: any, idx: number) => (
-                              <InputNumber
-                                min={0}
-                                step={0.1}
-                                size="small"
-                                value={r.rate_per_km}
-                                onChange={(val) => {
-                                  const updated = [...allowanceRates];
-                                  updated[idx].rate_per_km = val || 0;
-                                  setAllowanceRates(updated);
-                                }}
-                                className="w-20 font-mono font-bold text-xs rounded-md"
-                              />
-                            )
-                          },
-                          {
-                            title: "IN-DIST DA (₹)",
-                            key: "daily_in_district",
-                            render: (_: any, r: any, idx: number) => (
-                              <InputNumber
-                                min={0}
-                                size="small"
-                                value={r.daily_in_district}
-                                onChange={(val) => {
-                                  const updated = [...allowanceRates];
-                                  updated[idx].daily_in_district = val || 0;
-                                  setAllowanceRates(updated);
-                                }}
-                                className="w-20 font-mono font-bold text-xs rounded-md"
-                              />
-                            )
-                          },
-                          {
-                            title: "OUT-DIST DA (₹)",
-                            key: "daily_out_district",
-                            render: (_: any, r: any, idx: number) => (
-                              <InputNumber
-                                min={0}
-                                size="small"
-                                value={r.daily_out_district}
-                                onChange={(val) => {
-                                  const updated = [...allowanceRates];
-                                  updated[idx].daily_out_district = val || 0;
-                                  setAllowanceRates(updated);
-                                }}
-                                className="w-20 font-mono font-bold text-xs rounded-md"
-                              />
-                            )
-                          },
-                          {
-                            title: "HOTEL DA (₹)",
-                            key: "daily_hotel",
-                            render: (_: any, r: any, idx: number) => (
-                              <InputNumber
-                                min={0}
-                                size="small"
-                                value={r.daily_hotel}
-                                onChange={(val) => {
-                                  const updated = [...allowanceRates];
-                                  updated[idx].daily_hotel = val || 0;
-                                  setAllowanceRates(updated);
-                                }}
-                                className="w-20 font-mono font-bold text-xs rounded-md"
-                              />
-                            )
-                          },
-                          {
-                            title: "HOTEL CAP IN-STATE S/D (₹)",
-                            key: "hotel_in_state",
-                            render: (_: any, r: any, idx: number) => (
-                              <div className="flex gap-1.5">
-                                <InputNumber
-                                  min={0}
-                                  size="small"
-                                  placeholder="Single"
-                                  value={r.hotel_in_state_s}
-                                  onChange={(val) => {
-                                    const updated = [...allowanceRates];
-                                    updated[idx].hotel_in_state_s = val || 0;
-                                    setAllowanceRates(updated);
-                                  }}
-                                  className="w-18 font-mono font-bold text-xs rounded-md"
-                                />
-                                <InputNumber
-                                  min={0}
-                                  size="small"
-                                  placeholder="Double"
-                                  value={r.hotel_in_state_d}
-                                  onChange={(val) => {
-                                    const updated = [...allowanceRates];
-                                    updated[idx].hotel_in_state_d = val || 0;
-                                    setAllowanceRates(updated);
-                                  }}
-                                  className="w-18 font-mono font-bold text-xs rounded-md"
-                                />
-                              </div>
-                            )
-                          },
-                          {
-                            title: "MAX KM / MO",
-                            key: "max_km_per_month",
-                            render: (_: any, r: any, idx: number) => (
-                              <InputNumber
-                                min={0}
-                                size="small"
-                                value={r.max_km_per_month}
-                                onChange={(val) => {
-                                  const updated = [...allowanceRates];
-                                  updated[idx].max_km_per_month = val || 0;
-                                  setAllowanceRates(updated);
-                                }}
-                                className="w-20 font-mono font-bold text-xs rounded-md"
-                              />
-                            )
-                          }
-                        ]}
-                      />
                     </div>
                   </div>
                 )}
 
-                {/* Global Save Action Bar on Home view */}
-                {settingsSubTab === "home" && (
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-line">
-                    <span className="text-2xs font-bold text-ink-500 flex items-center gap-1.5 font-mono">
-                      <span className="h-2 w-2 rounded-full bg-approved animate-pulse" />
-                      Settings Auto-Applied Globally Across All Workflows
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleSaveSettings}
-                      disabled={savingSettings}
-                      className="btn-lte-primary text-xs h-9 px-5 flex items-center gap-2 cursor-pointer font-bold disabled:opacity-60 rounded-lg shadow-xs"
-                    >
-                      <Zap className="w-4 h-4" />
-                      <span>{savingSettings ? "Saving Settings..." : "Save All System Settings"}</span>
-                    </button>
+                {/* --- MODULE 2: APPROVAL AUTOMATION & EXPIRY --- */}
+                {settingsSubTab === "automation" && (
+                  <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-5 animate-fadeIn">
+                    <div className="flex items-center justify-between pb-3 border-b border-line">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+                          <Zap className="w-4.5 h-4.5" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-ink-900 text-sm m-0">Approval Automation &amp; Expiry Escalations</h3>
+                          <p className="text-2xs text-ink-500 m-0">Configure auto-escalation actions when manager review exceeds timeout</p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        Workflow Rule
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Auto Expiry Days */}
+                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                        <label className="text-xs font-bold text-ink-900 block">
+                          Manager Approval Timeout (Days)
+                        </label>
+                        <p className="text-2xs text-ink-500 leading-relaxed">
+                          Number of days an approval request can remain pending before automated rule triggers.
+                        </p>
+                        <div className="flex items-center gap-3 pt-1">
+                          <input
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={settings.pending_auto_expiry_days || 5}
+                            onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: Number(e.target.value) })}
+                            className="input-lte h-9 w-32 font-mono font-bold text-xs rounded-xl bg-white border border-line px-3"
+                          />
+                          <span className="text-xs text-ink-600 font-semibold">Days pending</span>
+                        </div>
+                      </div>
+
+                      {/* Action on Timeout */}
+                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                        <label className="text-xs font-bold text-ink-900 block">
+                          Timeout Action Trigger
+                        </label>
+                        <p className="text-2xs text-ink-500 leading-relaxed">
+                          Automated system behavior when approval timeout threshold is reached.
+                        </p>
+                        <div className="pt-1">
+                          <select
+                            value={settings.pending_auto_action || "reject"}
+                            onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
+                            className="input-lte h-9 text-xs font-bold rounded-xl bg-white border border-line px-3 w-full cursor-pointer"
+                          >
+                            <option value="reject">Auto-Reject (Return to Draft with Timeout Reason)</option>
+                            <option value="approve">Auto-Approve (Move to Next Approval Level)</option>
+                            <option value="escalate">Escalate to Admin Queue</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Save Button */}
+                    <div className="flex items-center justify-between pt-3 border-t border-line">
+                      <span className="text-2xs text-ink-500">Cron runner evaluates pending claims daily at 00:00 IST.</span>
+                      <button
+                        type="button"
+                        onClick={handleSaveSettings}
+                        disabled={savingSettings}
+                        className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-4 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{savingSettings ? "Saving..." : "Save Automation Policy"}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* --- MODULE 3: ALLOWANCE RATES (TA / DA) MASTER --- */}
+                {settingsSubTab === "allowances" && (
+                  <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-5 animate-fadeIn">
+                    <div className="flex items-center justify-between pb-3 border-b border-line">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+                          <DollarSign className="w-4.5 h-4.5" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-ink-900 text-sm m-0">Daily Allowance (DA) &amp; Travel Rates Master</h3>
+                          <p className="text-2xs text-ink-500 m-0">Configure standard Daily Allowance (DA) and Travel Allowance (TA) rates per designation</p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        Financial Master
+                      </span>
+                    </div>
+
+                    {loadingRates ? (
+                      <div className="p-12 text-center text-ink-500 font-bold text-xs flex flex-col items-center justify-center gap-3">
+                        <LteSpinner />
+                        <span>Loading Allowance Rates...</span>
+                      </div>
+                    ) : (
+                      <div className="border border-line rounded-xl overflow-x-auto text-xs">
+                        <table className="w-full text-left border-collapse">
+                          <thead className="bg-surface-sunken text-2xs uppercase text-ink-600 font-bold">
+                            <tr>
+                              <th className="p-2.5 border-b border-line">Designation / Role</th>
+                              <th className="p-2.5 border-b border-line">Daily Allowance (DA) Base</th>
+                              <th className="p-2.5 border-b border-line">TA Rate (Per KM)</th>
+                              <th className="p-2.5 border-b border-line">Metro DA Multiplier</th>
+                              <th className="p-2.5 border-b border-line">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-line text-ink-900 font-medium">
+                            {(allowanceRates.length > 0 ? allowanceRates : [
+                              { designation: "Field Engineer", base_da: 350, ta_per_km: 4.5, metro_multiplier: 1.2, is_active: 1 },
+                              { designation: "Biomedical Engineer", base_da: 350, ta_per_km: 4.5, metro_multiplier: 1.2, is_active: 1 },
+                              { designation: "District In-charge", base_da: 450, ta_per_km: 5.0, metro_multiplier: 1.25, is_active: 1 },
+                              { designation: "Divisional Manager", base_da: 500, ta_per_km: 6.0, metro_multiplier: 1.3, is_active: 1 },
+                              { designation: "Coordinator", base_da: 400, ta_per_km: 4.5, metro_multiplier: 1.2, is_active: 1 }
+                            ]).map((r: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-surface-sunken">
+                                <td className="p-2.5 font-bold text-ink-900">{r.designation}</td>
+                                <td className="p-2.5 font-mono font-bold text-emerald-700">₹{r.base_da || 350} / day</td>
+                                <td className="p-2.5 font-mono text-ink-700">₹{r.ta_per_km || 4.5} / km</td>
+                                <td className="p-2.5 font-mono text-ink-700">{r.metro_multiplier || 1.2}x</td>
+                                <td className="p-2.5">
+                                  <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Active
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Footer Save Button */}
+                    <div className="flex items-center justify-between pt-3 border-t border-line">
+                      <span className="text-2xs text-ink-500">Auto-calculates daily allowances on expense submission forms.</span>
+                      <button
+                        type="button"
+                        onClick={handleSaveAllowanceRates}
+                        disabled={savingRates}
+                        className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-4 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{savingRates ? "Saving..." : "Save Allowance Rates"}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* --- MODULE 4: SECURITY & SESSION GOVERNANCE --- */}
+                {settingsSubTab === "security" && (
+                  <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-5 animate-fadeIn">
+                    <div className="flex items-center justify-between pb-3 border-b border-line">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200">
+                          <ShieldCheck className="w-4.5 h-4.5" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-ink-900 text-sm m-0">Security, Session &amp; Field Locks</h3>
+                          <p className="text-2xs text-ink-500 m-0">Configure authentication session duration and sensitive field lock policies</p>
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                        Security Layer
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Session Idle Timeout */}
+                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                        <label className="text-xs font-bold text-ink-900 block">
+                          User Session Idle Timeout
+                        </label>
+                        <p className="text-2xs text-ink-500 leading-relaxed">
+                          Inactivity duration after which a web or mobile session requires re-authentication.
+                        </p>
+                        <div className="flex items-center gap-3 pt-1">
+                          <input
+                            type="number"
+                            min={15}
+                            max={1440}
+                            value={settings.session_timeout_mins || 120}
+                            onChange={(e) => setSettings({ ...settings, session_timeout_mins: Number(e.target.value) })}
+                            className="input-lte h-9 w-32 font-mono font-bold text-xs rounded-xl bg-white border border-line px-3"
+                          />
+                          <span className="text-xs text-ink-600 font-semibold">Minutes (Default: 120m)</span>
+                        </div>
+                      </div>
+
+                      {/* Sensitive Fields Protection */}
+                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                        <label className="text-xs font-bold text-ink-900 block">
+                          Sensitive Profile Fields Lock
+                        </label>
+                        <p className="text-2xs text-ink-500 leading-relaxed">
+                          Requires admin password confirmation before modifying bank account numbers or PAN records.
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5">
+                            <Lock className="w-3 h-3 text-emerald-600" />
+                            <span>Strictly Enforced (Active)</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Save Button */}
+                    <div className="flex items-center justify-between pt-3 border-t border-line">
+                      <span className="text-2xs text-ink-500">Protects sensitive operational &amp; banking records from unauthorized tampering.</span>
+                      <button
+                        type="button"
+                        onClick={handleSaveSettings}
+                        disabled={savingSettings}
+                        className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-4 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{savingSettings ? "Saving..." : "Save Security Policy"}</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -4095,7 +3823,6 @@ export default function AdminPage() {
             )}
 
           </main>
-        </div>
 
 
           {/* Footer attribution matching HomePage */}
