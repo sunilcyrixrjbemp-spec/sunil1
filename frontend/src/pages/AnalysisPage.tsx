@@ -48,28 +48,116 @@ const ALL_RAJASTHAN_DISTRICTS = [
 export default function AnalysisPage() {
   const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
 
-  const parseCallsDetails = (e: any): any[] => {
-    if (Array.isArray(e.calls_details)) return e.calls_details;
-    if (typeof e.calls_details === "string" && e.calls_details.trim().startsWith("[")) {
-      try {
-        const parsed = JSON.parse(e.calls_details);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (_) {}
-    }
-    if (Array.isArray(e.activity_details)) return e.activity_details;
-    if (typeof e.activity_details === "string" && e.activity_details.trim().startsWith("[")) {
-      try {
-        const parsed = JSON.parse(e.activity_details);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (_) {}
-    }
-    return [];
-  };
+  interface ExtractedExpenseCall {
+    complaintId: string;
+    callType: "Online Call" | "Support Call";
+    district: string;
+    isResolved24h: boolean;
+    status: string;
+  }
 
-  const extractComplaintId = (c: any): string => {
-    if (!c) return "";
-    const raw = c.complaint_id || c.calls_complaint_id || c.complaint_no || c.complaintId || c.call_number || c.call_no || c.ticket_no || c.ticket_id || c.c_id || "";
-    return String(raw).trim().toLowerCase();
+  const extractCallsFromExpense = (e: any, fallbackDistrict: string): ExtractedExpenseCall[] => {
+    const calls: ExtractedExpenseCall[] = [];
+    const expDist = (e.district || e.facility_district || fallbackDistrict || "").trim();
+
+    // 1. Check e.itinerary (legs)
+    let legs: any[] = [];
+    if (Array.isArray(e.itinerary)) {
+      legs = e.itinerary;
+    } else if (typeof e.itinerary === "string" && e.itinerary.trim().startsWith("[")) {
+      try { legs = JSON.parse(e.itinerary); } catch (_) {}
+    }
+
+    if (legs.length > 0) {
+      legs.forEach((leg: any) => {
+        const legDist = (leg.district || leg.to_district || leg.district_from || leg.from_district || expDist || "").trim();
+        
+        // Check activity_details inside leg
+        let actDetails = leg.activity_details;
+        if (typeof actDetails === "string" && actDetails.trim().startsWith("{")) {
+          try { actDetails = JSON.parse(actDetails); } catch (_) {}
+        }
+        
+        const callsList = actDetails?.calls_list;
+        if (Array.isArray(callsList) && callsList.length > 0) {
+          callsList.forEach((c: any) => {
+            const cid = String(c.calls_complaint_id || c.complaint_id || c.call_number || c.ticket_no || c.id || "").trim();
+            const rawType = String(c.calls_type || c.call_type || c.type || leg.calls_type || leg.call_type || "").toLowerCase();
+            const isSupport = rawType.includes("support") || /^SCRJ/i.test(cid);
+            
+            calls.push({
+              complaintId: cid,
+              callType: isSupport ? "Support Call" : "Online Call",
+              district: legDist || expDist,
+              isResolved24h: c.tat_hours <= 24 || c.is_ftfr || c.status === "Close" || c.status === "Attend & Close" || c.status === "Closed",
+              status: c.status || c.calls_status || "Completed"
+            });
+          });
+        } else {
+          // Check leg-level complaint fields
+          const legCid = String(leg.calls_complaint_id || leg.complaint_id || "").trim();
+          const legRawType = String(leg.calls_type || leg.call_type || leg.type || "").toLowerCase();
+          const isSupport = legRawType.includes("support") || /^SCRJ/i.test(legCid);
+          const count = Math.max(parseSanitizedCount(leg.calls_completed), parseSanitizedCount(leg.calls_assigned), legCid ? 1 : 0);
+
+          if (count > 0) {
+            for (let i = 0; i < count; i++) {
+              calls.push({
+                complaintId: i === 0 ? legCid : "",
+                callType: isSupport ? "Support Call" : "Online Call",
+                district: legDist || expDist,
+                isResolved24h: true,
+                status: "Completed"
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Check e.calls_details / e.activity_details if no legs had calls
+    if (calls.length === 0) {
+      let rawCalls = e.calls_details || e.activity_details;
+      if (typeof rawCalls === "string" && rawCalls.trim().startsWith("[")) {
+        try { rawCalls = JSON.parse(rawCalls); } catch (_) {}
+      }
+
+      if (Array.isArray(rawCalls) && rawCalls.length > 0) {
+        rawCalls.forEach((c: any) => {
+          const cid = String(c.calls_complaint_id || c.complaint_id || c.call_number || c.ticket_no || c.id || "").trim();
+          const rawType = String(c.calls_type || c.call_type || c.type || e.calls_type || e.call_type || "").toLowerCase();
+          const isSupport = rawType.includes("support") || /^SCRJ/i.test(cid);
+
+          calls.push({
+            complaintId: cid,
+            callType: isSupport ? "Support Call" : "Online Call",
+            district: (c.district || expDist || "").trim(),
+            isResolved24h: c.tat_hours <= 24 || c.is_ftfr || c.status === "Close" || c.status === "Attend & Close" || c.status === "Closed",
+            status: c.status || c.calls_status || "Completed"
+          });
+        });
+      } else {
+        // 3. Row-level fallback on e
+        const eCid = String(e.calls_complaint_id || e.complaint_id || "").trim();
+        const eRawType = String(e.calls_type || e.call_type || "").toLowerCase();
+        const isSupport = eRawType.includes("support") || /^SCRJ/i.test(eCid);
+        const count = Math.max(parseSanitizedCount(e.calls_completed), parseSanitizedCount(e.calls_assigned), eCid ? 1 : 0);
+
+        if (count > 0) {
+          for (let i = 0; i < count; i++) {
+            calls.push({
+              complaintId: i === 0 ? eCid : "",
+              callType: isSupport ? "Support Call" : "Online Call",
+              district: expDist,
+              isResolved24h: true,
+              status: "Completed"
+            });
+          }
+        }
+      }
+    }
+
+    return calls;
   };
 
   const parseFlexibleComplaintDate = (raw: any): Date | null => {
@@ -846,9 +934,24 @@ export default function AnalysisPage() {
 
   // H. Unified 6-Pillar Analysis: Portal Complaints, Expenses (Online vs Support), Match Audit & FTFR
   const comprehensiveCallAnalysis = useMemo(() => {
-    // A. Build verified Complaint IDs Set & District Portal Stats for selected month
+    // A. Build verified Complaint IDs Set & District Portal Stats
     const verifiedComplaintSet = new Set<string>();
     const portalByDistrict: Record<string, { total: number; closed24h: number }> = {};
+
+    // Check if complaints match selectedMonth and selectedYear, or fallback to selectedMonth across years if dataset year differs
+    const strictMonthlyComplaints = (complaintRecords || []).filter(r => {
+      const raiseDate = parseFlexibleComplaintDate(r.complaint_raise_date || r.attend_date || r.complaint_close_date);
+      if (!raiseDate) return false;
+      return raiseDate.getMonth() === selectedMonth && raiseDate.getFullYear() === selectedYear;
+    });
+
+    const activeComplaintList = strictMonthlyComplaints.length > 0
+      ? strictMonthlyComplaints
+      : (complaintRecords || []).filter(r => {
+          const raiseDate = parseFlexibleComplaintDate(r.complaint_raise_date || r.attend_date || r.complaint_close_date);
+          if (!raiseDate) return true; // include if no explicit date
+          return raiseDate.getMonth() === selectedMonth;
+        });
 
     (complaintRecords || []).forEach(r => {
       const cid = String(r.complaint_id || "").trim().toLowerCase();
@@ -857,33 +960,32 @@ export default function AnalysisPage() {
         const cleanAlpha = cid.replace(/[^a-z0-9]/gi, "");
         if (cleanAlpha) verifiedComplaintSet.add(cleanAlpha);
       }
+    });
 
-      // Filter by selected month/year for district portal stats & FTFR
-      const raiseDate = parseFlexibleComplaintDate(r.complaint_raise_date || r.attend_date);
-      if (raiseDate && raiseDate.getMonth() === selectedMonth && raiseDate.getFullYear() === selectedYear) {
-        const rawDist = (r.district_name || "").trim();
-        if (rawDist && rawDist.toLowerCase() !== "all" && rawDist.toLowerCase() !== "undefined") {
-          const distName = rawDist.charAt(0).toUpperCase() + rawDist.slice(1);
-          if (!portalByDistrict[distName]) portalByDistrict[distName] = { total: 0, closed24h: 0 };
-          portalByDistrict[distName].total += 1;
+    activeComplaintList.forEach(r => {
+      const rawDist = (r.district_name || "").trim();
+      if (rawDist && rawDist.toLowerCase() !== "all" && rawDist.toLowerCase() !== "undefined") {
+        const distName = rawDist.charAt(0).toUpperCase() + rawDist.slice(1);
+        if (!portalByDistrict[distName]) portalByDistrict[distName] = { total: 0, closed24h: 0 };
+        portalByDistrict[distName].total += 1;
 
-          const hoursDiff = Number(r.attend_hour_diff || r.total_downtime_hours || 0);
-          let is24h = false;
-          if (hoursDiff > 0 && hoursDiff <= 24) {
-            is24h = true;
-          } else if (r.complaint_raise_date && r.complaint_close_date) {
-            const closeDate = parseFlexibleComplaintDate(r.complaint_close_date);
-            if (closeDate) {
-              const diffMs = closeDate.getTime() - raiseDate.getTime();
-              if (diffMs >= 0 && diffMs <= 24 * 3600 * 1000) is24h = true;
-            }
-          } else if (r.status === "Closed" || (r.complaint_status || "").toLowerCase().includes("close") || (r.complaint_status || "").toLowerCase().includes("resolve")) {
-            if (!r.attend_hour_diff || Number(r.attend_hour_diff) <= 24) is24h = true;
+        const hoursDiff = Number(r.attend_hour_diff || r.total_downtime_hours || 0);
+        let is24h = false;
+        if (hoursDiff > 0 && hoursDiff <= 24) {
+          is24h = true;
+        } else if (r.complaint_raise_date && r.complaint_close_date) {
+          const raiseDate = parseFlexibleComplaintDate(r.complaint_raise_date);
+          const closeDate = parseFlexibleComplaintDate(r.complaint_close_date);
+          if (raiseDate && closeDate) {
+            const diffMs = closeDate.getTime() - raiseDate.getTime();
+            if (diffMs >= 0 && diffMs <= 24 * 3600 * 1000) is24h = true;
           }
+        } else if (r.status === "Closed" || (r.complaint_status || "").toLowerCase().includes("close") || (r.complaint_status || "").toLowerCase().includes("resolve")) {
+          if (!r.attend_hour_diff || Number(r.attend_hour_diff) <= 24) is24h = true;
+        }
 
-          if (is24h) {
-            portalByDistrict[distName].closed24h += 1;
-          }
+        if (is24h) {
+          portalByDistrict[distName].closed24h += 1;
         }
       }
     });
@@ -929,55 +1031,29 @@ export default function AnalysisPage() {
       d.ftfrRate = stat.total > 0 ? Math.round((stat.closed24h / stat.total) * 100) : 0;
     });
 
-    // Populate from Expense Submissions
+    // Populate from Expense Submissions using universal extractor
     activeExpenses.forEach(e => {
-      const rawDist = (e.district || e.facility_district || user?.district || "").trim();
-      if (!rawDist || rawDist.toLowerCase() === "all" || rawDist.toLowerCase() === "undefined") return;
-      const d = getOrCreateDist(rawDist);
+      const extractedCalls = extractCallsFromExpense(e, user?.district || "");
+      extractedCalls.forEach(call => {
+        const rawDist = (call.district || user?.district || "").trim();
+        if (!rawDist || rawDist.toLowerCase() === "all" || rawDist.toLowerCase() === "undefined") return;
+        const d = getOrCreateDist(rawDist);
 
-      const calls = parseCallsDetails(e);
-      if (calls.length > 0) {
-        calls.forEach((c: any) => {
-          const typeStr = String(c.type || c.call_type || c.calls_type || "").toLowerCase();
-          const cid = extractComplaintId(c);
-          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cid);
-
-          d.expenseTotal += 1;
-          if (isSupport) {
-            d.expenseSupport += 1;
+        d.expenseTotal += 1;
+        if (call.callType === "Support Call") {
+          d.expenseSupport += 1;
+        } else {
+          d.expenseOnline += 1;
+          const cid = call.complaintId.trim().toLowerCase();
+          const cleanCid = cid.replace(/[^a-z0-9]/gi, "");
+          const isMatched = (cid && verifiedComplaintSet.has(cid)) || (cleanCid && verifiedComplaintSet.has(cleanCid));
+          if (isMatched) {
+            d.onlineMatched += 1;
           } else {
-            d.expenseOnline += 1;
-            const cleanCid = cid.replace(/[^a-z0-9]/gi, "");
-            const isMatched = (cid && verifiedComplaintSet.has(cid)) || (cleanCid && verifiedComplaintSet.has(cleanCid));
-            if (isMatched) {
-              d.onlineMatched += 1;
-            } else {
-              d.onlineUnmatched += 1;
-            }
-          }
-        });
-      } else {
-        const completed = parseSanitizedCount(e.calls_completed) || parseSanitizedCount(e.calls_assigned);
-        if (completed > 0) {
-          const typeStr = String(e.calls_type || e.call_type || "").toLowerCase();
-          const cid = extractComplaintId(e);
-          const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cid);
-
-          d.expenseTotal += completed;
-          if (isSupport) {
-            d.expenseSupport += completed;
-          } else {
-            d.expenseOnline += completed;
-            const cleanCid = cid.replace(/[^a-z0-9]/gi, "");
-            const isMatched = (cid && verifiedComplaintSet.has(cid)) || (cleanCid && verifiedComplaintSet.has(cleanCid));
-            if (isMatched) {
-              d.onlineMatched += completed;
-            } else {
-              d.onlineUnmatched += completed;
-            }
+            d.onlineUnmatched += 1;
           }
         }
-      }
+      });
     });
 
     // Calculate rates and overall aggregates
