@@ -203,11 +203,11 @@ export async function handleSendSubmissionReminder(request, env, params, query, 
       return jsonResponse({ success: false, error: "empCode is required" }, 400);
     }
 
-    // 1. Fetch engineer info and reporting hierarchy
+    // 1. Fetch engineer info and reporting hierarchy using actual columns (manager, zonal_manager, coordinator)
     const empRows = await env.DB.prepare(`
       SELECT 
         u.id, u.user_id, u.name, u.mail_id, u.district, u.zone, u.designation,
-        u.manager_id, u.division_manager_id, u.coordinator_id
+        u.manager, u.zonal_manager, u.coordinator
       FROM users u
       WHERE REPLACE(REPLACE(u.user_id, '-', ''), ' ', '') = REPLACE(REPLACE(?, '-', ''), ' ', '')
          OR REPLACE(REPLACE(u.e_code, '-', ''), ' ', '') = REPLACE(REPLACE(?, '-', ''), ' ', '')
@@ -225,23 +225,41 @@ export async function handleSendSubmissionReminder(request, env, params, query, 
       return jsonResponse({ success: false, error: `Engineer ${emp.name} does not have a registered email address` }, 400);
     }
 
-    // 2. Fetch hierarchy emails (Manager, DM, Coordinator) for CC
-    const managerIds = [emp.manager_id, emp.division_manager_id, emp.coordinator_id].filter(Boolean);
+    // 2. Fetch hierarchy emails (Manager, Zonal Manager, Coordinator) for CC
+    const managerRefs = [emp.manager, emp.zonal_manager, emp.coordinator].filter(Boolean);
     let ccList = [];
 
-    if (managerIds.length > 0) {
-      const placeholders = managerIds.map(() => "?").join(",");
-      const managerRows = await env.DB.prepare(`
-        SELECT mail_id FROM users WHERE id IN (${placeholders}) OR user_id IN (${placeholders})
-      `).bind(...managerIds, ...managerIds.map(String)).all();
+    if (managerRefs.length > 0) {
+      for (const ref of managerRefs) {
+        const refStr = String(ref).trim();
+        if (!refStr) continue;
 
-      ccList = (managerRows.results || [])
-        .map(m => m.mail_id)
-        .filter(m => m && m.includes("@") && m !== engineerEmail);
+        // If reference is already an email
+        if (refStr.includes("@")) {
+          if (refStr !== engineerEmail && !ccList.includes(refStr)) {
+            ccList.push(refStr);
+          }
+          continue;
+        }
+
+        // Look up by user_id, e_code, name, or id in users table
+        try {
+          const mgrRows = await env.DB.prepare(`
+            SELECT mail_id FROM users 
+            WHERE user_id = ? OR e_code = ? OR name = ? OR id = ?
+            LIMIT 1
+          `).bind(refStr, refStr, refStr, parseInt(refStr) || 0).all();
+
+          const mgrMail = mgrRows.results?.[0]?.mail_id;
+          if (mgrMail && mgrMail.includes("@") && mgrMail !== engineerEmail && !ccList.includes(mgrMail)) {
+            ccList.push(mgrMail);
+          }
+        } catch (_) {}
+      }
     }
 
     // Also include logged-in sender (coordinator/admin) in CC if different
-    if (user.email && user.email.includes("@") && user.email !== engineerEmail && !ccList.includes(user.email)) {
+    if (user?.email && user.email.includes("@") && user.email !== engineerEmail && !ccList.includes(user.email)) {
       ccList.push(user.email);
     }
 

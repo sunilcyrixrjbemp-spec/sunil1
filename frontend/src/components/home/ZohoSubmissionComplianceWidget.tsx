@@ -378,7 +378,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     return { total, compliant, pending, defaulter };
   }, [complianceData]);
 
-  // Executive Email Reminder Sender
+  // Executive Email Reminder Sender (100% Automated Background API Dispatch)
   const handleSendEmailReminder = async (r: any) => {
     setSendingEmailCode(r.code);
     try {
@@ -392,28 +392,15 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
 
       if (res.data?.success) {
         toast.success(
-          `Official reminder email sent to ${r.name}! (CC: Manager & DM)`,
-          { id: `remind-${r.code}`, duration: 4000 }
+          `Official reminder email sent automatically to ${r.name}! (CC: Manager, DM & Coordinator)`,
+          { id: `remind-${r.code}`, duration: 4500 }
         );
-        return;
+      } else {
+        toast.error(res.data?.error || "Failed to dispatch reminder email.");
       }
     } catch (err: any) {
-      console.warn("Backend email dispatch fallback to mailto:", err);
-      
-      const subject = encodeURIComponent(`[Action Required] ${r.pendingDays} Working Days Expense Submission Pending - ${r.name} (${monthLabel})`);
-      const body = encodeURIComponent(
-        `Dear ${r.name} (${r.code}),\n\n` +
-        `Our system records indicate that you have ${r.pendingDays} working day(s) with missing expense claims for ${monthLabel}.\n\n` +
-        `Missing Dates:\n${r.missingDates.join("\n")}\n\n` +
-        `🌴 On Leave / Absent Notice: If you were on leave/absent on any of these dates, please login to Cyrix FieldOps (https://indrae.in) and mark 'On Leave' so it is excluded from your overdue list.\n\n` +
-        `⏰ Policy Notice: All retrospective claims must be submitted before the monthly cutoff (3rd of the following month).\n\n` +
-        `Please login to Cyrix FieldOps (https://indrae.in) and submit your claims today.\n\n` +
-        `Thanks,\nCyrix Field Operations Team`
-      );
-
-      const mailtoUrl = `mailto:?subject=${subject}&body=${body}`;
-      window.open(mailtoUrl, "_blank");
-      toast.success(`Email draft prepared for ${r.name}!`, { id: `remind-${r.code}`, duration: 4000 });
+      console.error("Backend email dispatch error:", err);
+      toast.error(err.response?.data?.error || "Failed to dispatch reminder email via API.");
     } finally {
       setSendingEmailCode(null);
     }
