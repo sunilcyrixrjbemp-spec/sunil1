@@ -235,14 +235,23 @@ export async function handleCfInfraAnalytics(request, env, params, query, user) 
       .then(r => r.json())
       .catch(() => ({ errors: [{ message: "fetch failed" }] }));
 
-  // ── Get email count from our D1 DB (CF Email API doesn't expose via GraphQL) ──
+  // ── Get email count & logs from our D1 DB ──
   let emailSentCount = 0;
+  let recentEmailLogs = [];
   try {
     const db = env.DB;
     const emailResult = await db.prepare(
       `SELECT COUNT(*) as cnt FROM email_logs WHERE sent_at >= ? AND sent_at <= ?`
     ).bind(monthStart, monthEnd).first().catch(() => null);
     emailSentCount = emailResult?.cnt || 0;
+
+    const emailList = await db.prepare(
+      `SELECT id, recipient_email, recipient_name, recipient_user_id, subject, template_name, status, attempts, sent_at, created_at, error_message, provider, related_entity_type, related_entity_id FROM email_logs ORDER BY id DESC LIMIT 50`
+    ).all().catch(() => ({ results: [] }));
+    recentEmailLogs = emailList?.results || [];
+    if (!emailSentCount && recentEmailLogs.length) {
+      emailSentCount = recentEmailLogs.length;
+    }
   } catch (_) { emailSentCount = 0; }
 
   // ── Run parallel CF API calls ──────────────────────────────────────────────
@@ -621,8 +630,8 @@ export async function handleCfInfraAnalytics(request, env, params, query, user) 
       ...cacheTotals,
       hitRatio: cacheTotals.requests > 0 ? Math.round((cacheTotals.cachedRequests/cacheTotals.requests)*100) : 0,
     },
-    zoneHttpTrend,
     products,   // ← full billing table for frontend, matches CF billing dashboard
+    recentEmailLogs,
     billing: {
       month:             now.toISOString().slice(0, 7),
       subscriptionUsd:   subCost.toFixed(2),
