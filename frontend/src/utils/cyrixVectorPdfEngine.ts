@@ -226,7 +226,7 @@ export async function generateCyrixVectorPdf(
   if (totalLegCount <= 15) {
     ROWS_PER_PAGE = 15;
   } else if (totalLegCount <= 30) {
-    ROWS_PER_PAGE = Math.ceil(totalLegCount / 2); // e.g. 24 rows = 12 + 12
+    ROWS_PER_PAGE = Math.ceil(totalLegCount / 2);
   } else if (totalLegCount <= 45) {
     ROWS_PER_PAGE = Math.ceil(totalLegCount / 3);
   } else {
@@ -243,7 +243,7 @@ export async function generateCyrixVectorPdf(
     const isLastPage = (pageIdx === numPages - 1);
     const pageLegs = allLegs.slice(pageIdx * ROWS_PER_PAGE, (pageIdx + 1) * ROWS_PER_PAGE);
 
-    // 1. Header Banner (Width exact 287mm)
+    // 1. Header Banner (Exact tableWidth 287mm)
     doc.setFillColor(30, 41, 59); // #1E293B
     doc.rect(margin, 5, tableWidth, 9, "F");
 
@@ -256,7 +256,7 @@ export async function generateCyrixVectorPdf(
     doc.setFontSize(7.5);
     doc.text(`PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0, 3)} ${user.year || "2026"}`, margin + tableWidth - 4, 11, { align: "right" });
 
-    // 2. Info Bar (Width exact 287mm matching table)
+    // 2. Info Bar (Exact tableWidth 287mm)
     doc.setFillColor(241, 245, 249); // #F1F5F9
     doc.rect(margin, 14, tableWidth, 6.5, "F");
     doc.setDrawColor(71, 85, 105);
@@ -336,7 +336,7 @@ export async function generateCyrixVectorPdf(
       ]);
     }
 
-    // AutoTable fitting exact 287mm tableWidth and NO unintended page breaking
+    // AutoTable width EXACTLY 287mm (Sum of columns = 287mm)
     autoTable(doc, {
       startY: 20.5,
       margin: { left: margin, right: margin },
@@ -385,52 +385,57 @@ export async function generateCyrixVectorPdf(
         cellPadding: 1.8
       },
       columnStyles: {
-        0: { cellWidth: 14 },
-        1: { cellWidth: 18 },
-        2: { cellWidth: 18 },
-        3: { cellWidth: 15 },
+        0: { cellWidth: 15 },
+        1: { cellWidth: 19 },
+        2: { cellWidth: 19 },
+        3: { cellWidth: 16 },
         4: { cellWidth: 8, fontStyle: "bold" },
-        5: { cellWidth: 11 },
-        6: { cellWidth: 14 },
-        7: { cellWidth: 12 },
-        8: { cellWidth: 15 }, // D.A. column: 15mm ensures 2750.00 never wraps
-        9: { cellWidth: 12 },
-        10: { cellWidth: 15 }, // Hotel column: 15mm ensures 9200.00 never wraps
-        11: { cellWidth: 18 },
-        12: { cellWidth: 12 },
-        13: { cellWidth: 20, fontStyle: "bold" }, // Total column: 20mm ensures 19155.00 never wraps
+        5: { cellWidth: 12 },
+        6: { cellWidth: 15 },
+        7: { cellWidth: 13 },
+        8: { cellWidth: 16 }, // D.A. column: 16mm (Fits 2750.00 cleanly)
+        9: { cellWidth: 13 },
+        10: { cellWidth: 16 }, // Hotel column: 16mm (Fits 9200.00 cleanly)
+        11: { cellWidth: 19 },
+        12: { cellWidth: 13 },
+        13: { cellWidth: 21, fontStyle: "bold" }, // Total column: 21mm (Fits 19155.00 cleanly)
         14: { cellWidth: 35 },
-        15: { cellWidth: 13, fontStyle: "bold" },
+        15: { cellWidth: 14, fontStyle: "bold" },
         16: { cellWidth: 11 },
-        17: { cellWidth: 16 }
+        17: { cellWidth: 12 }
+        // Total sum = 15+19+19+16+8+12+15+13+16+13+16+19+13+21+35+14+11+12 = 287mm!
       }
     });
 
     const finalY = (doc as any).lastAutoTable.finalY || 140;
 
     if (isLastPage) {
-      // Amount in words box
+      doc.setDrawColor(71, 85, 105);
+      doc.setLineWidth(0.15);
+
+      // 1. Amount in words box (Direct continuous attachment at finalY)
       doc.setFillColor(255, 255, 255);
-      doc.rect(margin, finalY + 1, tableWidth, 5.5, "FD");
+      doc.rect(margin, finalY, tableWidth, 5.5, "FD");
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
-      doc.text(`Amount in words: ${amountWords(gTotal - advance).toUpperCase()}`, pageWidth / 2, finalY + 4.8, { align: "center" });
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Amount in words: ${amountWords(gTotal - advance).toUpperCase()}`, pageWidth / 2, finalY + 3.8, { align: "center" });
 
-      // Remarks Box with Coordinator and Manager names!
+      // 2. Remarks Box (Direct continuous attachment at finalY + 5.5)
       doc.setFillColor(241, 245, 249);
-      doc.rect(margin, finalY + 6.5, tableWidth, 5.5, "FD");
+      doc.rect(margin, finalY + 5.5, tableWidth, 5.5, "FD");
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7.2);
       doc.text(
         `REMARKS: AUDITED BY: ${coordinatorName.toUpperCase()} | APPROVED BY: ${managerName.toUpperCase()}`,
         pageWidth / 2,
-        finalY + 10.3,
+        finalY + 9.3,
         { align: "center" }
       );
 
-      // Signature Table Box
-      const sigY = finalY + 12;
-      const sigH = 15;
+      // 3. Signature Table Box (Direct continuous attachment at finalY + 11)
+      const sigY = finalY + 11;
+      const sigH = 14;
       const colW = tableWidth / 4;
 
       doc.setFillColor(255, 255, 255);
@@ -452,13 +457,13 @@ export async function generateCyrixVectorPdf(
         }
         doc.setFont("helvetica", "normal");
         doc.setFontSize(6.8);
-        doc.text(sig.label, x + colW / 2, sigY + 4, { align: "center" });
+        doc.text(sig.label, x + colW / 2, sigY + 3.8, { align: "center" });
         doc.setFont("helvetica", "bold");
         doc.setFontSize(7.8);
-        doc.text(sig.name, x + colW / 2, sigY + 8.5, { align: "center" });
+        doc.text(sig.name, x + colW / 2, sigY + 7.8, { align: "center" });
         doc.setFont("helvetica", "normal");
         doc.setFontSize(6.8);
-        doc.text(`Date: ${todayStr}`, x + colW / 2, sigY + 12.5, { align: "center" });
+        doc.text(`Date: ${todayStr}`, x + colW / 2, sigY + 11.8, { align: "center" });
       });
     }
   }
