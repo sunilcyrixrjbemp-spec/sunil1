@@ -135,7 +135,7 @@ import {
   handleMigrateGdrive, handleMigrationStatus,
   handleAnalyticsDashboard, handleAnalyticsBilling,
   handleFileHealth, handleStorageReport, handleRunMigrationsV2,
-  handleCfInfraAnalytics,
+  handleCfInfraAnalytics, handleGetEmailLogs,
 } from "./routes/adminEnterprise.js";
 
 
@@ -380,6 +380,10 @@ router.get("/api/admin/analytics/billing", async (req, env, params, query, user)
 
 router.get("/api/admin/analytics/cf-infra", async (req, env, params, query, user) => {
   return handleCfInfraAnalytics(req, env, params, query, user);
+}, true, ["Admin"]);
+
+router.get("/api/admin/analytics/email-logs", async (req, env, params, query, user) => {
+  return handleGetEmailLogs(req, env, params, query, user);
 }, true, ["Admin"]);
 
 

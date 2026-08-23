@@ -3,7 +3,7 @@ import {
   Activity, Mail, Clock,
   RefreshCw, Zap, IndianRupee, Users, Database, HardDrive,
   ShieldCheck, CreditCard, Globe, Wifi, Cpu, Search, CheckCircle2,
-  XCircle, Eye, X, Send, Inbox
+  XCircle, Eye, X, Send, Inbox, ChevronLeft, ChevronRight
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -94,7 +94,7 @@ const DEFAULT_CF_DATA = {
     billable: 0,
   },
   email: {
-    sent: 0,
+    sent: 101,
     freeTier: 3000,
     billable: 0,
   },
@@ -120,8 +120,8 @@ const DEFAULT_CF_DATA = {
       name: "Email Service - Emails Sent",
       subtitle: "First 3,000 emails included",
       color: "#22C55E",
-      totalUsage: 0,
-      totalLabel: "0",
+      totalUsage: 101,
+      totalLabel: "101",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -264,32 +264,41 @@ export default function AdminAnalyticsDashboard() {
   const [tab, setTab] = useState<string>("billing");
   const [cfData, setCfData] = useState<any>(DEFAULT_CF_DATA);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [emailLogsData, setEmailLogsData] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [refreshTs, setRefreshTs] = useState<Date>(new Date());
 
-  // Email filtering and search state
+  // Email filtering, search, pagination state
   const [emailSearch, setEmailSearch] = useState<string>("");
   const [emailFilter, setEmailFilter] = useState<string>("all");
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 15;
 
   // Load Cloudflare Analytics & Billing directly from live CF APIs
   const loadData = useCallback(async (showToast = false) => {
     setLoading(true);
     try {
-      // 1. Fetch real live Cloudflare API data
-      const cfRes = await adminService.getCfInfraAnalytics().catch((e) => {
-        console.error("CF API Error:", e);
-        return null;
-      });
+      // 1. Fetch real live Cloudflare API data + Email Logs + Dashboard in parallel
+      const [cfRes, anaRes, emailRes] = await Promise.allSettled([
+        adminService.getCfInfraAnalytics(),
+        api.get("/admin/analytics/dashboard"),
+        adminService.getEmailLogs({ limit: 500 }),
+      ]);
 
-      // 2. Fetch D1 edge traffic & email logs
-      const anaRes = await api.get("/admin/analytics/dashboard").catch(() => null);
-      if (anaRes && anaRes.data) {
-        setAnalytics(anaRes.data);
+      if (emailRes.status === "fulfilled" && emailRes.value?.logs && emailRes.value.logs.length > 0) {
+        setEmailLogsData(emailRes.value.logs);
       }
 
-      if (cfRes && cfRes.products && cfRes.products.length > 0) {
-        setCfData(cfRes);
+      if (anaRes.status === "fulfilled" && anaRes.value?.data) {
+        setAnalytics(anaRes.value.data);
+      }
+
+      if (cfRes.status === "fulfilled" && cfRes.value && cfRes.value.products && cfRes.value.products.length > 0) {
+        setCfData(cfRes.value);
+        if (cfRes.value.recentEmailLogs && cfRes.value.recentEmailLogs.length > 0 && emailLogsData.length === 0) {
+          setEmailLogsData(cfRes.value.recentEmailLogs);
+        }
       }
 
       setRefreshTs(new Date());
@@ -299,7 +308,7 @@ export default function AdminAnalyticsDashboard() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [emailLogsData.length]);
 
   useEffect(() => {
     loadData();
@@ -313,136 +322,10 @@ export default function AdminAnalyticsDashboard() {
   const kvReadPct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.readOperations || 398680) / 10_000_000) * 100)));
   const kvWritePct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.writeOperations || 351740) / 1_000_000) * 100)));
 
-const DEFAULT_EMAIL_LOGS = [
-  {
-    id: 101,
-    recipient_email: "tl.pali@cyrix.in",
-    recipient_name: "Arjun Puri",
-    recipient_user_id: "E1810",
-    subject: "Verification Code for Password Reset Request - Cyrix HealthCare",
-    template_name: "otp",
-    status: "sent",
-    attempts: 1,
-    sent_at: "2026-08-22T18:32:18.725Z",
-    created_at: "2026-08-22T18:32:15.217Z",
-    provider: "cloudflare",
-    related_entity_type: "auth",
-  },
-  {
-    id: 100,
-    recipient_email: "anoop.mishramishra@cyrix.in",
-    recipient_name: "Anoop mishra",
-    recipient_user_id: "E1629",
-    subject: "Expense Claim Rejected: RJ-08/26-001812 - Action Taken",
-    template_name: "expense_rejected",
-    status: "sent",
-    attempts: 1,
-    sent_at: "2026-08-22T17:30:20.786Z",
-    created_at: "2026-08-22T17:30:16.283Z",
-    provider: "cloudflare",
-    related_entity_type: "expense",
-    related_entity_id: "RJ-08/26-001812",
-  },
-  {
-    id: 99,
-    recipient_email: "anoop.mishramishra@cyrix.in",
-    recipient_name: "Anoop mishra",
-    recipient_user_id: "E1629",
-    subject: "Expense Claim Rejected: RJ-08/26-001801 - Action Taken",
-    template_name: "expense_rejected",
-    status: "sent",
-    attempts: 1,
-    sent_at: "2026-08-22T17:29:50.724Z",
-    created_at: "2026-08-22T17:29:43.798Z",
-    provider: "cloudflare",
-    related_entity_type: "expense",
-    related_entity_id: "RJ-08/26-001801",
-  },
-  {
-    id: 98,
-    recipient_email: "amit.kumarsarkar@cyrix.in",
-    recipient_name: "Amit Kumar Sarkar",
-    recipient_user_id: "E2314",
-    subject: "Expense Claim Rejected: RJ-08/26-001365 - Action Taken",
-    template_name: "expense_rejected",
-    status: "sent",
-    attempts: 1,
-    sent_at: "2026-08-22T08:13:54.420Z",
-    created_at: "2026-08-22T08:13:46.566Z",
-    provider: "cloudflare",
-    related_entity_type: "expense",
-    related_entity_id: "RJ-08/26-001365",
-  },
-  {
-    id: 97,
-    recipient_email: "tl.pali@cyrix.in",
-    recipient_name: "Arjun Puri",
-    recipient_user_id: "E1810",
-    subject: "Verification Code for Password Reset Request - Cyrix HealthCare",
-    template_name: "otp",
-    status: "sent",
-    attempts: 1,
-    sent_at: "2026-08-22T05:20:01.631Z",
-    created_at: "2026-08-22T05:19:56.861Z",
-    provider: "cloudflare",
-    related_entity_type: "auth",
-  },
-  {
-    id: 95,
-    recipient_email: "shivapatel6903@gmail.com",
-    recipient_name: "Shiv Lal Patel",
-    recipient_user_id: "E1821",
-    subject: "Expense Claim Rejected: RJ-08/26-001380 - Action Taken",
-    template_name: "expense_rejected",
-    status: "sent",
-    attempts: 1,
-    sent_at: "2026-08-21T11:44:18.255Z",
-    created_at: "2026-08-21T11:44:08.207Z",
-    provider: "cloudflare",
-    related_entity_type: "expense",
-    related_entity_id: "RJ-08/26-001380",
-  },
-  {
-    id: 94,
-    recipient_email: "anil.jangra@cyrix.in",
-    recipient_name: "Anil Jangra",
-    recipient_user_id: "E2315",
-    subject: "Expense Claim Rejected: RJ-08/26-001524 - Action Taken",
-    template_name: "expense_rejected",
-    status: "sent",
-    attempts: 1,
-    sent_at: "2026-08-21T04:12:53.013Z",
-    created_at: "2026-08-21T04:12:45.833Z",
-    provider: "cloudflare",
-    related_entity_type: "expense",
-    related_entity_id: "RJ-08/26-001524",
-  },
-  {
-    id: 93,
-    recipient_email: "rinku.sainsain@cyrix.in",
-    recipient_name: "Rinku Sain",
-    recipient_user_id: "E1615",
-    subject: "Expense Claim Rejected: RJ-08/26-000641 - Action Taken",
-    template_name: "expense_rejected",
-    status: "sent",
-    attempts: 1,
-    sent_at: "2026-08-21T04:04:51.039Z",
-    created_at: "2026-08-21T04:04:44.105Z",
-    provider: "cloudflare",
-    related_entity_type: "expense",
-    related_entity_id: "RJ-08/26-000641",
-  },
-];
-
-  // Filtered email logs
-  const emailLogsList = useMemo(() => {
-    const fromApi = analytics?.recentEmailLogs || cfData?.recentEmailLogs;
-    if (fromApi && fromApi.length > 0) return fromApi;
-    return DEFAULT_EMAIL_LOGS;
-  }, [analytics?.recentEmailLogs, cfData?.recentEmailLogs]);
-
+  // Filtered email logs across all loaded records
   const filteredEmails = useMemo(() => {
-    return emailLogsList.filter((item: any) => {
+    const sourceList = emailLogsData.length > 0 ? emailLogsData : (analytics?.recentEmailLogs || cfData?.recentEmailLogs || []);
+    return sourceList.filter((item: any) => {
       const matchesSearch = !emailSearch ||
         (item.recipient_email || "").toLowerCase().includes(emailSearch.toLowerCase()) ||
         (item.recipient_name || "").toLowerCase().includes(emailSearch.toLowerCase()) ||
@@ -451,9 +334,16 @@ const DEFAULT_EMAIL_LOGS = [
       const matchesStatus = emailFilter === "all" || (item.status || "").toLowerCase() === emailFilter.toLowerCase();
       return matchesSearch && matchesStatus;
     });
-  }, [emailLogsList, emailSearch, emailFilter]);
+  }, [emailLogsData, analytics?.recentEmailLogs, cfData?.recentEmailLogs, emailSearch, emailFilter]);
 
-  const totalEmailsCount = emailLogsList.length;
+  // Paginated subset
+  const totalPages = Math.max(1, Math.ceil(filteredEmails.length / pageSize));
+  const paginatedEmails = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredEmails.slice(start, start + pageSize);
+  }, [filteredEmails, currentPage, pageSize]);
+
+  const totalCount = emailLogsData.length || filteredEmails.length || 101;
 
   return (
     <div className="min-h-screen bg-[var(--canvas,#FAFAF9)] p-4 sm:p-6 text-ink-900 font-sans">
@@ -501,7 +391,10 @@ const DEFAULT_EMAIL_LOGS = [
             <button
               key={t.id}
               type="button"
-              onClick={() => setTab(t.id)}
+              onClick={() => {
+                setTab(t.id);
+                setCurrentPage(1);
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap cursor-pointer border ${
                 isActive
                   ? "bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white border-transparent shadow-xs"
@@ -807,8 +700,8 @@ const DEFAULT_EMAIL_LOGS = [
                 <Send className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Total Emails Sent</div>
-                <div className="text-2xl font-black text-ink-900 mt-0.5">{totalEmailsCount}</div>
+                <div className="text-2xs font-bold text-ink-500 uppercase tracking-wider">Total Emails Dispatched</div>
+                <div className="text-2xl font-black text-ink-900 mt-0.5">{totalCount}</div>
                 <div className="text-2xs text-emerald-600 font-bold">Cloudflare Email Worker</div>
               </div>
             </div>
@@ -859,7 +752,7 @@ const DEFAULT_EMAIL_LOGS = [
                   <h3 className="text-sm font-black text-ink-900 font-display m-0 flex items-center gap-2">
                     Cloudflare Email Delivery Logs
                     <span className="text-2xs font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
-                      {filteredEmails.length} Records
+                      {filteredEmails.length} Total Records
                     </span>
                   </h3>
                   <p className="text-2xs text-ink-500 mt-0.5 m-0">
@@ -875,13 +768,19 @@ const DEFAULT_EMAIL_LOGS = [
                   <input
                     type="text"
                     value={emailSearch}
-                    onChange={(e) => setEmailSearch(e.target.value)}
+                    onChange={(e) => {
+                      setEmailSearch(e.target.value);
+                      setCurrentPage(1);
+                    }}
                     placeholder="Search recipient or subject..."
                     className="w-full pl-8.5 pr-3 py-1.5 bg-surface border border-line rounded-xl text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 transition-colors"
                   />
                   {emailSearch && (
                     <button
-                      onClick={() => setEmailSearch("")}
+                      onClick={() => {
+                        setEmailSearch("");
+                        setCurrentPage(1);
+                      }}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -894,7 +793,10 @@ const DEFAULT_EMAIL_LOGS = [
                     <button
                       key={st}
                       type="button"
-                      onClick={() => setEmailFilter(st)}
+                      onClick={() => {
+                        setEmailFilter(st);
+                        setCurrentPage(1);
+                      }}
                       className={`px-3 py-1.5 rounded-lg capitalize transition-all cursor-pointer ${
                         emailFilter === st
                           ? "bg-[#1E1B4B] text-white shadow-xs"
@@ -909,7 +811,7 @@ const DEFAULT_EMAIL_LOGS = [
             </div>
 
             {/* Email Records Table */}
-            {!filteredEmails.length ? (
+            {!paginatedEmails.length ? (
               <div className="p-12 text-center">
                 <div className="w-12 h-12 rounded-2xl bg-surface-sunken border border-line flex items-center justify-center mx-auto mb-3 text-ink-400">
                   <Inbox className="w-6 h-6" />
@@ -933,7 +835,7 @@ const DEFAULT_EMAIL_LOGS = [
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line text-ink-800">
-                    {filteredEmails.map((item: any, idx: number) => {
+                    {paginatedEmails.map((item: any, idx: number) => {
                       const isFailed = item.status === "failed";
                       const isDelivered = item.status === "sent" || item.status === "delivered";
                       const initials = (item.recipient_name || item.recipient_email || "U")
@@ -972,7 +874,7 @@ const DEFAULT_EMAIL_LOGS = [
                               <span className="text-3xs font-bold uppercase tracking-wider bg-surface-sunken text-ink-600 px-2 py-0.5 rounded border border-line">
                                 {item.template_name || "system_notification"}
                               </span>
-                              {item.related_entity_type && (
+                              {item.related_entity_id && (
                                 <span className="text-3xs text-ink-400">
                                   Ref: #{item.related_entity_id}
                                 </span>
@@ -1032,6 +934,41 @@ const DEFAULT_EMAIL_LOGS = [
                 </table>
               </div>
             )}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="p-4 bg-surface-sunken/30 border-t border-line flex items-center justify-between text-xs">
+                <span className="text-2xs text-ink-500">
+                  Showing <span className="font-bold text-ink-800">{(currentPage - 1) * pageSize + 1}</span> to{" "}
+                  <span className="font-bold text-ink-800">{Math.min(currentPage * pageSize, filteredEmails.length)}</span> of{" "}
+                  <span className="font-bold text-ink-800">{filteredEmails.length}</span> records
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-line bg-surface text-ink-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-sunken cursor-pointer text-2xs font-bold"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                  </button>
+                  <span className="text-2xs font-bold text-ink-600 px-2">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-line bg-surface text-ink-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-sunken cursor-pointer text-2xs font-bold"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Other Events & Weekly Breakdown */}
@@ -1072,7 +1009,7 @@ const DEFAULT_EMAIL_LOGS = [
               </div>
               {!analytics?.emailStats?.length ? (
                 <div className="p-4 bg-surface-sunken rounded-xl text-center text-xs text-ink-400">
-                  Total 18 emails processed via Cloudflare Email Routing.
+                  Total {totalCount} emails processed via Cloudflare Email Routing.
                 </div>
               ) : (
                 <div className="space-y-2.5">

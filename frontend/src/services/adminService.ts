@@ -271,6 +271,11 @@ export const adminService = {
     const response = await api.get("/admin/analytics/cf-infra");
     return response.data;
   },
+
+  getEmailLogs: async (params?: { limit?: number; offset?: number; search?: string; status?: string }): Promise<any> => {
+    const response = await api.get("/admin/analytics/email-logs", { params });
+    return response.data;
+  },
 };
 
 

@@ -95,6 +95,53 @@ export async function handleAnalyticsDashboard(request, env, params, query, user
 }
 
 /**
+ * GET /api/admin/analytics/email-logs
+ * Fetches all Cloudflare Email dispatch logs with pagination & filtering.
+ */
+export async function handleGetEmailLogs(request, env, params, query, user) {
+  if (!user || user.role !== "Admin") return errorResponse("Admin access required", 403);
+
+  const limit = Math.min(500, parseInt(query?.limit) || 200);
+  const offset = parseInt(query?.offset) || 0;
+  const search = (query?.search || "").trim();
+  const status = (query?.status || "").trim();
+
+  let sql = `SELECT id, recipient_email, recipient_name, recipient_user_id, subject, template_name, status, attempts, sent_at, created_at, error_message, provider, related_entity_type, related_entity_id FROM email_logs`;
+  const conditions = [];
+  const binds = [];
+
+  if (search) {
+    conditions.push(`(recipient_email LIKE ? OR recipient_name LIKE ? OR subject LIKE ?)`);
+    binds.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
+  if (status && status !== "all") {
+    conditions.push(`status = ?`);
+    binds.push(status);
+  }
+
+  if (conditions.length > 0) {
+    sql += ` WHERE ` + conditions.join(" AND ");
+  }
+
+  sql += ` ORDER BY id DESC LIMIT ? OFFSET ?`;
+  binds.push(limit, offset);
+
+  const [logsRes, countRes, statsRes] = await Promise.all([
+    env.DB.prepare(sql).bind(...binds).all().catch(() => ({ results: [] })),
+    env.DB.prepare(`SELECT COUNT(*) as total FROM email_logs`).first().catch(() => ({ total: 0 })),
+    env.DB.prepare(`SELECT status, COUNT(*) as cnt FROM email_logs GROUP BY status`).all().catch(() => ({ results: [] })),
+  ]);
+
+  return jsonResponse({
+    success: true,
+    logs: logsRes?.results || [],
+    total: countRes?.total || (logsRes?.results?.length || 0),
+    stats: statsRes?.results || [],
+    generatedAt: nowISO(),
+  });
+}
+
+/**
  * GET /api/admin/analytics/billing
  * Estimate monthly Cloudflare usage and costs.
  */
