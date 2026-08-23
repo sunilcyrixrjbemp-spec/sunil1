@@ -26,7 +26,7 @@ export function useHomeExpenses() {
     return cached ? JSON.parse(cached) : [];
   });
 
-  const [historicalExpenses, setHistoricalExpenses] = useState<any[]>(() => {
+  const [historicalExpenses, _setHistoricalExpenses] = useState<any[]>(() => {
     const u = JSON.parse(localStorage.getItem("user") || "null");
     if (!u) return [];
     const cached = localStorage.getItem(`cache_historical_expenses_${u.user_id}`);
@@ -41,7 +41,7 @@ export function useHomeExpenses() {
     return cached ? JSON.parse(cached) : [];
   });
 
-  const [historicalTeamExpenses, setHistoricalTeamExpenses] = useState<any[]>(() => {
+  const [historicalTeamExpenses, _setHistoricalTeamExpenses] = useState<any[]>(() => {
     const u = JSON.parse(localStorage.getItem("user") || "null");
     if (!u) return [];
     const cached = localStorage.getItem(`cache_historical_team_expenses_${u.user_id}`);
@@ -418,7 +418,7 @@ export function useHomeExpenses() {
   }, [user]);
 
   // ── Data fetching ─────────────────────────────────────────────────────────
-  const refreshDashboardData = useCallback(async (forceTeam = false) => {
+  const refreshDashboardData = useCallback(async (_forceTeam = false) => {
     const currentUser = authService.getCurrentUser() || user;
     if (!currentUser) return;
     const uId = currentUser.user_id;
@@ -485,26 +485,6 @@ export function useHomeExpenses() {
       }
     }
 
-    // Fetch full historical expenses across all months for the 6-month spend chart
-    prefetchManager.getOrFetch(`all_historical_expenses_${uId}`, () => expenseService.getExpenses(""), 60000)
-      .then(allData => {
-        if (Array.isArray(allData)) {
-          setHistoricalExpenses(allData);
-          safeStorageSetItem(`cache_historical_expenses_${uId}`, JSON.stringify(allData));
-        }
-      })
-      .catch(() => {});
-
-    if (isReviewer) {
-      prefetchManager.getOrFetch(`all_team_historical_${uId}`, () => expenseService.getTeamExpenses(""), 60000)
-        .then(allTeamData => {
-          if (Array.isArray(allTeamData)) {
-            setHistoricalTeamExpenses(allTeamData);
-            safeStorageSetItem(`cache_historical_team_expenses_${uId}`, JSON.stringify(allTeamData));
-          }
-        })
-        .catch(() => {});
-    }
     prefetchManager.getOrFetch(`allowance_stats_${uId}_${selectMonth}`, () => expenseService.getExpenseInit(uId, selectMonth), 30000)
       .then(initData => {
         if (initData?.allowance) {
@@ -540,32 +520,7 @@ export function useHomeExpenses() {
         })
         .catch(() => {});
 
-      // LAZY team fetch — only if team tab is active OR forced (e.g. pull-to-refresh)
-      if (forceTeam || activeTab === "team-claims" || teamFetchedRef.current) {
-        prefetchManager.getOrFetch(`team_expenses_${uId}_${selectMonth}`, () => expenseService.getTeamExpenses(selectMonth), 30000)
-          .then(teamData => {
-            if (Array.isArray(teamData)) {
-              setTeamExpenses(teamData);
-              teamFetchedRef.current = true;
-              safeStorageSetItem(`cache_team_expenses_${uId}_${selectMonth}`, JSON.stringify(teamData));
-              safeStorageSetItem(`cache_team_expenses_${uId}`, JSON.stringify(teamData));
-            }
-            setLoadingTeamExpenses(false);
-          })
-          .catch(() => setLoadingTeamExpenses(false));
-      } else {
-        setLoadingTeamExpenses(false);
-      }
-    }
-  }, [user, selectMonth, activeTab]);
-
-  // Trigger lazy team fetch when tab switches to team-claims for the first time
-  useEffect(() => {
-    if (activeTab === "team-claims" && !teamFetchedRef.current && isReviewerRole) {
-      const currentUser = authService.getCurrentUser() || user;
-      if (!currentUser) return;
-      const uId = currentUser.user_id;
-      setLoadingTeamExpenses(true);
+      // Team fetch — fetch for selected month
       prefetchManager.getOrFetch(`team_expenses_${uId}_${selectMonth}`, () => expenseService.getTeamExpenses(selectMonth), 30000)
         .then(teamData => {
           if (Array.isArray(teamData)) {
@@ -578,20 +533,40 @@ export function useHomeExpenses() {
         })
         .catch(() => setLoadingTeamExpenses(false));
     }
-  }, [activeTab, isReviewerRole, selectMonth, user]);
+  }, [user, selectMonth, activeTab]);
 
-  // ── Bootstrap on mount ────────────────────────────────────────────────────
+  // ── Bootstrap on mount & month switch ──────────────────────────────────────
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) { navigate("/login"); return; }
     setUser(currentUser);
     const uId = currentUser.user_id;
 
+    // Instant Cache Hydration for selectMonth from localStorage (0ms!)
     const cachedMy = localStorage.getItem(`cache_my_expenses_${uId}_${selectMonth}`);
-    if (cachedMy) { try { setMyExpenses(JSON.parse(cachedMy)); setLoadingMyExpenses(false); } catch (e) {} }
+    if (cachedMy) {
+      try {
+        const parsed = JSON.parse(cachedMy);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMyExpenses(parsed);
+          setLoadingMyExpenses(false);
+        }
+      } catch (e) {}
+    } else {
+      setLoadingMyExpenses(true);
+    }
 
     const cachedTeam = localStorage.getItem(`cache_team_expenses_${uId}_${selectMonth}`);
-    if (cachedTeam) { try { setTeamExpenses(JSON.parse(cachedTeam)); setLoadingTeamExpenses(false); teamFetchedRef.current = true; } catch (e) {} }
+    if (cachedTeam) {
+      try {
+        const parsed = JSON.parse(cachedTeam);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTeamExpenses(parsed);
+          setLoadingTeamExpenses(false);
+          teamFetchedRef.current = true;
+        }
+      } catch (e) {}
+    }
 
     const cachedStats = localStorage.getItem(`cache_allowance_stats_${uId}_${selectMonth}`);
     if (cachedStats) { try { setAllowanceStats(JSON.parse(cachedStats)); } catch (e) {} }

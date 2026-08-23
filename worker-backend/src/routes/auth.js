@@ -345,14 +345,24 @@ export async function handleLogin(request, env) {
   profile.profile_photo   = user.profile_pic_url;
   profile.profile_pic_url = user.profile_pic_url;
 
-  await resolveUserHierarchyNames(env, profile);
+  // Precompute Fast Bootstrap data in parallel with profile resolution
+  const bootstrapData = await getBootstrapDataHelper(env, profile, { isFastLogin: true, teamLimit: 150 }).catch(e => {
+    console.warn("Fast login bootstrap fetch error:", e);
+    return null;
+  });
 
   // Background cache warming (fire-and-forget)
   import("../services/cacheWarming.js").then(({ warmUserCache }) => {
     if (warmUserCache) warmUserCache(env, profile).catch(() => {});
   }).catch(() => {});
 
-  return jsonResponse({ access_token: accessToken, refresh_token: refreshToken, token_type: "bearer", user: profile });
+  return jsonResponse({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    token_type: "bearer",
+    user: profile,
+    bootstrap_data: bootstrapData
+  });
 }
 
 // ─── POST /api/auth/refresh ───────────────────────────────────────────────────

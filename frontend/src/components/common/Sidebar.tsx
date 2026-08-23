@@ -199,29 +199,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         <Link
           to="/home"
-          className="flex items-center gap-2 overflow-hidden group focus:outline-none"
+          className="flex items-center overflow-hidden group focus:outline-none"
           title="Cyrix Field Connect"
         >
           {/* Official Logo (Clean, No artificial background box) */}
           <img
             src="/logo-fieldconnect.png"
             alt="Cyrix Field Connect"
-            className="h-7 w-auto object-contain shrink-0"
+            className="h-8 w-auto object-contain shrink-0"
             onError={(e) => {
               (e.target as HTMLElement).style.display = "none";
             }}
           />
-
-          {!isCollapsed && (
-            <div className="flex flex-col min-w-0 leading-tight">
-              <span className="font-display font-bold text-[14px] tracking-tight text-ink-900 truncate">
-                Cyrix
-              </span>
-              <span className="text-[10px] font-semibold text-accent-700 truncate">
-                Field Connect
-              </span>
-            </div>
-          )}
         </Link>
 
         {!isCollapsed && (

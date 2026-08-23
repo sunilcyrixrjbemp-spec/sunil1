@@ -24,48 +24,66 @@ export async function precomputeAnalyticsCache(env) {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonthIdx = now.getMonth();
-    const currentMonthName = MONTH_NAMES[currentMonthIdx];
 
-    // Compute for current month & previous month
-    const targetMonths = [
-      { year: currentYear, monthName: currentMonthName, monthNum: currentMonthIdx + 1 }
-    ];
-
-    if (currentMonthIdx > 0) {
+    // Precompute for all 12 months of current year + last year's previous 3 months
+    const targetMonths = [];
+    for (let m = 0; m < 12; m++) {
       targetMonths.push({
         year: currentYear,
-        monthName: MONTH_NAMES[currentMonthIdx - 1],
-        monthNum: currentMonthIdx
+        monthName: MONTH_NAMES[m],
+        monthNum: m + 1
+      });
+    }
+    // Also include previous year's Q4
+    for (let m = 9; m < 12; m++) {
+      targetMonths.push({
+        year: currentYear - 1,
+        monthName: MONTH_NAMES[m],
+        monthNum: m + 1
       });
     }
 
-    // Fetch active reviewers/managers and admins
-    const usersRes = await env.DB.prepare(`
-      SELECT id, user_id, name, role, district, zone FROM users
-      WHERE status != 'inactive' AND (
-        LOWER(role) LIKE '%admin%' OR LOWER(role) LIKE '%manager%' OR LOWER(role) LIKE '%reviewer%'
-        OR LOWER(role) LIKE '%director%' OR LOWER(role) LIKE '%vp%' OR LOWER(role) LIKE '%head%'
-      )
-    `).all();
-
-    const managers = usersRes.results || [];
-    console.log(`[Cron Precompute] Warming analysis cache for ${managers.length} managers across ${targetMonths.length} months`);
+    console.log(`[Cron Precompute] Warming Universal Master Analysis dataset across ${targetMonths.length} months`);
 
     for (const m of targetMonths) {
-      // 1. Precompute global team summary (Admin / all users)
+      const monthParam = `${m.year}-${String(m.monthNum).padStart(2, "0")}`;
+      const masterKey = `analysis_master:${m.year}_${m.monthNum}`;
+
+      // Universal SQL query matching all month storage formats
       const globalSql = `
         SELECT 
-          e.id, e.user_id, e.amount, e.pms_count, e.calibration_count, e.asset_tagging,
-          e.mobilise_count, e.calls_completed, e.itinerary,
-          u.name as engineer_name, u.district as user_district, u.zone as user_zone
+          e.id, e.user_id, e.month, e.year, e.amount, e.status, e.itinerary, e.expense_code,
+          e.pms_count, e.calibration_count, e.asset_tagging, e.mobilise_count, e.calls_completed, e.calls_assigned,
+          e.district_type,
+          u.name as engineer_name, u.district as user_district, u.zone as user_zone, u.manager as user_manager, u.coordinator as user_coordinator, u.role as user_role
         FROM expenses e
         LEFT JOIN users u ON e.user_id = u.id
-        WHERE e.year = ? AND (e.month = ? OR LOWER(e.month) = ?)
+        WHERE (
+          (e.year = ? AND (
+            e.month = ? OR LOWER(e.month) = ? OR e.month = ? OR e.month = ? OR LOWER(e.month) LIKE ?
+          ))
+          OR e.itinerary LIKE ?
+          OR e.date LIKE ?
+        )
       `;
-      const { results: allRows } = await env.DB.prepare(globalSql).bind(m.year, m.monthName, m.monthName.toLowerCase()).all();
+      const binds = [
+        m.year,
+        m.monthName,
+        m.monthName.toLowerCase(),
+        String(m.monthNum),
+        String(m.monthNum).padStart(2, "0"),
+        `%${m.monthName.toLowerCase()}%`,
+        `${monthParam}%`,
+        `${monthParam}%`
+      ];
+
+      const { results: allRows } = await env.DB.prepare(globalSql).bind(...binds).all();
       const rows = allRows || [];
 
-      // Compute global aggregates
+      // 1. Store the Master Dataset in KV (shared by all users)
+      await env.OTPS_KV.put(masterKey, JSON.stringify({ rows, computed_at: new Date().toISOString() }), { expirationTtl: 86400 });
+
+      // 2. Compute Admin Statewide Summary
       let totalAmount = 0;
       let totalPms = 0;
       let totalCalibration = 0;
@@ -114,7 +132,7 @@ export async function precomputeAnalyticsCache(env) {
         engineerMap[engKey].calibration += cal;
         engineerMap[engKey].calls += calls;
 
-        const dist = (r.user_district || "Other").trim();
+        const dist = (r.user_district || r.district_type || "Other").trim();
         const cleanDist = dist.charAt(0).toUpperCase() + dist.slice(1);
         if (!districtCalMap[cleanDist]) {
           districtCalMap[cleanDist] = { name: cleanDist, count: 0, amount: 0, pms: 0 };
@@ -151,7 +169,7 @@ export async function precomputeAnalyticsCache(env) {
       const payload = {
         year: m.year,
         month: m.monthName,
-        monthParam: `${m.year}-${String(m.monthNum).padStart(2, "0")}`,
+        monthParam,
         totals: {
           totalAmount,
           totalClaims: rows.length,
@@ -170,14 +188,9 @@ export async function precomputeAnalyticsCache(env) {
         computed_at: new Date().toISOString()
       };
 
-      // Store in KV for admin and manager scopes
+      // Store in KV for admin statewide dashboard (TTL = 24 hours)
       const adminKey = `analysis_summary:admin:team:${m.year}_${m.monthNum}`;
-      await env.OTPS_KV.put(adminKey, JSON.stringify(payload), { expirationTtl: 7200 });
-
-      for (const mgr of managers) {
-        const mgrKey = `analysis_summary:user_${mgr.id}:team:${m.year}_${m.monthNum}`;
-        await env.OTPS_KV.put(mgrKey, JSON.stringify(payload), { expirationTtl: 7200 });
-      }
+      await env.OTPS_KV.put(adminKey, JSON.stringify(payload), { expirationTtl: 86400 });
 
       // Also precompute filter options
       const [distRows, zoneRows, engRows] = await Promise.all([
@@ -201,7 +214,7 @@ export async function precomputeAnalyticsCache(env) {
       };
 
       const filtersKey = `analysis_filters:${m.year}_${m.monthName}`;
-      await env.OTPS_KV.put(filtersKey, JSON.stringify(filtersPayload), { expirationTtl: 7200 });
+      await env.OTPS_KV.put(filtersKey, JSON.stringify(filtersPayload), { expirationTtl: 86400 });
     }
 
     console.log("[Cron Precompute] Analytics cache warming completed successfully");

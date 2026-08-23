@@ -29,8 +29,11 @@ export const authService = {
         const monthStr = getISTMonth();
         localStorage.setItem("cache_dropdowns", JSON.stringify(bootstrap_data.dropdowns || {}));
         localStorage.setItem(`cache_month_limits_${user_id}_${monthStr}`, JSON.stringify(bootstrap_data.expense_init || {}));
+        localStorage.setItem(`cache_my_expenses_${user_id}_${monthStr}`, JSON.stringify(bootstrap_data.my_expenses || []));
         localStorage.setItem(`cache_my_expenses_${user_id}`, JSON.stringify(bootstrap_data.my_expenses || []));
+        localStorage.setItem(`cache_allowance_stats_${user_id}_${monthStr}`, JSON.stringify(bootstrap_data.allowance_stats || {}));
         localStorage.setItem(`cache_allowance_stats_${user_id}`, JSON.stringify(bootstrap_data.allowance_stats || {}));
+        localStorage.setItem(`cache_team_expenses_${user_id}_${monthStr}`, JSON.stringify(bootstrap_data.team_expenses || []));
         localStorage.setItem(`cache_team_expenses_${user_id}`, JSON.stringify(bootstrap_data.team_expenses || []));
         localStorage.setItem(`cache_approvals_count_${user_id}`, (bootstrap_data.pending_approvals_count || 0).toString());
         localStorage.setItem("cache_pending_approvals", JSON.stringify(bootstrap_data.pending_approvals || []));
@@ -46,9 +49,18 @@ export const authService = {
             const monthStr = getISTMonth();
             if (data.dropdowns) localStorage.setItem("cache_dropdowns", JSON.stringify(data.dropdowns));
             if (data.expense_init) localStorage.setItem(`cache_month_limits_${user_id}_${monthStr}`, JSON.stringify(data.expense_init));
-            if (data.my_expenses) localStorage.setItem(`cache_my_expenses_${user_id}`, JSON.stringify(data.my_expenses));
-            if (data.allowance_stats) localStorage.setItem(`cache_allowance_stats_${user_id}`, JSON.stringify(data.allowance_stats));
-            if (data.team_expenses) localStorage.setItem(`cache_team_expenses_${user_id}`, JSON.stringify(data.team_expenses));
+            if (data.my_expenses) {
+              localStorage.setItem(`cache_my_expenses_${user_id}_${monthStr}`, JSON.stringify(data.my_expenses));
+              localStorage.setItem(`cache_my_expenses_${user_id}`, JSON.stringify(data.my_expenses));
+            }
+            if (data.allowance_stats) {
+              localStorage.setItem(`cache_allowance_stats_${user_id}_${monthStr}`, JSON.stringify(data.allowance_stats));
+              localStorage.setItem(`cache_allowance_stats_${user_id}`, JSON.stringify(data.allowance_stats));
+            }
+            if (data.team_expenses) {
+              localStorage.setItem(`cache_team_expenses_${user_id}_${monthStr}`, JSON.stringify(data.team_expenses));
+              localStorage.setItem(`cache_team_expenses_${user_id}`, JSON.stringify(data.team_expenses));
+            }
             if (data.pending_approvals_count !== undefined) localStorage.setItem(`cache_approvals_count_${user_id}`, data.pending_approvals_count.toString());
             if (data.pending_approvals) localStorage.setItem("cache_pending_approvals", JSON.stringify(data.pending_approvals));
           } catch (_) {}

@@ -27,33 +27,48 @@ export async function warmUserCache(env, user) {
     const isAdmin = ["admin", "administrator", "general manager", "gm", "director", "vp", "state head", "project manager", "operation head"].some(r => roleLower.includes(r));
     const isManager = isAdmin || roleLower.includes("manager") || roleLower.includes("reviewer") || roleLower.includes("head");
 
-    // 1. Warm Analysis Summary Cache (Team mode for managers, My mode for engineers)
-    const viewMode = isManager ? "team" : "my";
-    const scopeKey = (isAdmin && viewMode === "team") ? "admin" : `user_${user.id}`;
-    const cacheKey = `analysis_summary:${scopeKey}:${viewMode}:${currentYear}_${monthNum}`;
+    // 1. Warm Master Month Dataset in KV (shared by all users)
+    const masterKey = `analysis_master:${currentYear}_${monthNum}`;
+    const existingMaster = await env.OTPS_KV.get(masterKey);
 
-    // Check if already warm
-    const existing = await env.OTPS_KV.get(cacheKey);
-    if (existing) return; // Cache is already fresh
-
-    let sql = `
-      SELECT 
-        e.id, e.user_id, e.amount, e.pms_count, e.calibration_count, e.asset_tagging,
-        e.mobilise_count, e.calls_completed, e.itinerary,
-        u.name as engineer_name, u.district as user_district, u.zone as user_zone
-      FROM expenses e
-      LEFT JOIN users u ON e.user_id = u.id
-      WHERE e.year = ? AND (e.month = ? OR LOWER(e.month) = ?)
-    `;
-    const binds = [currentYear, currentMonthName, currentMonthName.toLowerCase()];
-
-    if (!isManager) {
-      sql += " AND e.user_id = ?";
-      binds.push(user.id);
+    let rows = [];
+    if (!existingMaster) {
+      const monthParam = `${currentYear}-${String(monthNum).padStart(2, "0")}`;
+      const globalSql = `
+        SELECT 
+          e.id, e.user_id, e.month, e.year, e.amount, e.status, e.itinerary, e.expense_code,
+          e.pms_count, e.calibration_count, e.asset_tagging, e.mobilise_count, e.calls_completed, e.calls_assigned,
+          e.district_type,
+          u.name as engineer_name, u.district as user_district, u.zone as user_zone, u.manager as user_manager, u.coordinator as user_coordinator, u.role as user_role
+        FROM expenses e
+        LEFT JOIN users u ON e.user_id = u.id
+        WHERE (
+          (e.year = ? AND (
+            e.month = ? OR LOWER(e.month) = ? OR e.month = ? OR e.month = ? OR LOWER(e.month) LIKE ?
+          ))
+          OR e.itinerary LIKE ?
+          OR e.date LIKE ?
+        )
+      `;
+      const binds = [
+        currentYear,
+        currentMonthName,
+        currentMonthName.toLowerCase(),
+        String(monthNum),
+        String(monthNum).padStart(2, "0"),
+        `%${currentMonthName.toLowerCase()}%`,
+        `${monthParam}%`,
+        `${monthParam}%`
+      ];
+      const { results: allRows } = await env.DB.prepare(globalSql).bind(...binds).all();
+      rows = allRows || [];
+      await env.OTPS_KV.put(masterKey, JSON.stringify({ rows, computed_at: new Date().toISOString() }), { expirationTtl: 86400 });
+    } else {
+      try {
+        const parsed = JSON.parse(existingMaster);
+        rows = parsed.rows || [];
+      } catch (e) {}
     }
-
-    const { results } = await env.DB.prepare(sql).bind(...binds).all();
-    const rows = results || [];
 
     let totalAmount = 0;
     let totalPms = 0;

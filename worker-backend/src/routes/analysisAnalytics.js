@@ -103,8 +103,225 @@ async function resolveTeamUserIds(env, user) {
 }
 
 /**
+ * Fetch or precompute Master Month Records from KV with universal D1 fallback
+ */
+async function getOrComputeMasterMonthRecords(env, year, monthIndex) {
+  const monthNum = monthIndex + 1;
+  const monthName = MONTH_NAMES[monthIndex];
+  const monthParam = `${year}-${String(monthNum).padStart(2, "0")}`;
+  const masterKey = `analysis_master:${year}_${monthNum}`;
+
+  // 1. Try reading Master Dataset from KV
+  if (env.OTPS_KV) {
+    try {
+      const cached = await env.OTPS_KV.get(masterKey, "json");
+      if (cached && Array.isArray(cached.rows)) {
+        return { rows: cached.rows, fromMasterCache: true };
+      }
+    } catch (e) {
+      console.warn("KV read error for master records:", e);
+    }
+  }
+
+  // 2. Cold DB fetch with universal matching for all variations of month/year in D1
+  const sql = `
+    SELECT 
+      e.id, e.user_id, e.month, e.year, e.amount, e.status, e.itinerary, e.expense_code,
+      e.pms_count, e.calibration_count, e.asset_tagging, e.mobilise_count, e.calls_completed, e.calls_assigned,
+      e.district_type,
+      u.name as engineer_name, u.district as user_district, u.zone as user_zone, u.manager as user_manager, u.coordinator as user_coordinator, u.role as user_role
+    FROM expenses e
+    LEFT JOIN users u ON e.user_id = u.id
+    WHERE (
+      (e.year = ? AND (
+        e.month = ? OR LOWER(e.month) = ? OR e.month = ? OR e.month = ? OR LOWER(e.month) LIKE ?
+      ))
+      OR e.itinerary LIKE ?
+      OR e.date LIKE ?
+    )
+  `;
+  const binds = [
+    year,
+    monthName,
+    monthName.toLowerCase(),
+    String(monthNum),
+    String(monthNum).padStart(2, "0"),
+    `%${monthName.toLowerCase()}%`,
+    `${monthParam}%`,
+    `${monthParam}%`
+  ];
+
+  const res = await env.DB.prepare(sql).bind(...binds).all();
+  const rows = res.results || [];
+
+  // 3. Save into KV Master Cache with 24-hour (86400s) TTL
+  if (env.OTPS_KV) {
+    try {
+      await env.OTPS_KV.put(masterKey, JSON.stringify({ rows, computed_at: new Date().toISOString() }), { expirationTtl: 86400 });
+    } catch (e) {
+      console.warn("KV write error for master records:", e);
+    }
+  }
+
+  return { rows, fromMasterCache: false };
+}
+
+/**
+ * In-memory slicing & KPI aggregation from master month records
+ */
+function sliceAndAggregateAnalysis(rows, user, targetUserIds, isAdmin, viewMode, filters, meta) {
+  const { districtFilter, engineerFilter, zoneFilter, statusFilter } = filters;
+  const { year, monthName, monthParam } = meta;
+
+  let totalAmount = 0;
+  let totalPms = 0;
+  let totalCalibration = 0;
+  let totalTagging = 0;
+  let totalMobilised = 0;
+  let totalCalls = 0;
+
+  const engineerMap = {};
+  const districtCalMap = {};
+  const dayTrendsMap = {};
+  let pms3m = 0;
+  let pms6m = 0;
+  let pms12m = 0;
+  let matchingRowCount = 0;
+
+  const allowedUserIdSet = (isAdmin && viewMode === "team") ? null : new Set(targetUserIds);
+
+  for (const r of rows) {
+    // 1. Role & hierarchy permission filter
+    if (viewMode === "my") {
+      if (r.user_id !== user.id && String(r.user_id) !== String(user.user_id)) continue;
+    } else if (allowedUserIdSet) {
+      if (!allowedUserIdSet.has(r.user_id)) continue;
+    }
+
+    // 2. Dropdown Status filter
+    if (statusFilter !== "all") {
+      const s = String(r.status || "").trim().toLowerCase();
+      if (statusFilter === "approved" && s !== "approved" && s !== "auto_approved" && s !== "paid") continue;
+      if (statusFilter === "pending" && !(s.startsWith("submitted") || s === "pending" || s === "draft" || s === "under_review")) continue;
+      if (statusFilter === "rejected" && !(s === "rejected" || s.includes("reject"))) continue;
+      if (statusFilter !== "approved" && statusFilter !== "pending" && statusFilter !== "rejected" && s !== statusFilter.toLowerCase()) continue;
+    }
+
+    // 3. Dropdown District filter
+    if (districtFilter !== "all") {
+      const distUser = String(r.user_district || "").trim().toLowerCase();
+      const distExp = String(r.district_type || "").trim().toLowerCase();
+      const df = districtFilter.toLowerCase();
+      if (distUser !== df && distExp !== df) continue;
+    }
+
+    // 4. Dropdown Engineer filter
+    if (engineerFilter !== "all") {
+      const uCode = String(r.engineer_name || r.user_id || "").trim().toLowerCase();
+      const ef = engineerFilter.toLowerCase();
+      if (uCode !== ef && String(r.user_id) !== ef) continue;
+    }
+
+    // 5. Dropdown Zone filter
+    if (zoneFilter !== "all") {
+      const z = String(r.user_zone || "").trim().toLowerCase();
+      if (!z.includes(zoneFilter.toLowerCase())) continue;
+    }
+
+    matchingRowCount++;
+    const amt = parseFloat(r.amount) || 0;
+    const pms = parseInt(r.pms_count, 10) || 0;
+    const cal = parseInt(r.calibration_count, 10) || 0;
+    const tag = parseInt(r.asset_tagging, 10) || 0;
+    const mob = parseInt(r.mobilise_count, 10) || 0;
+    const calls = parseInt(r.calls_completed, 10) || 0;
+
+    totalAmount += amt;
+    totalPms += pms;
+    totalCalibration += cal;
+    totalTagging += tag;
+    totalMobilised += mob;
+    totalCalls += calls;
+
+    const engKey = r.engineer_name || `User #${r.user_id}`;
+    if (!engineerMap[engKey]) {
+      engineerMap[engKey] = {
+        name: engKey,
+        userId: r.user_id,
+        district: r.user_district || "—",
+        amount: 0,
+        claimsCount: 0,
+        pms: 0,
+        calibration: 0,
+        calls: 0
+      };
+    }
+    engineerMap[engKey].amount += amt;
+    engineerMap[engKey].claimsCount += 1;
+    engineerMap[engKey].pms += pms;
+    engineerMap[engKey].calibration += cal;
+    engineerMap[engKey].calls += calls;
+
+    const dist = (r.user_district || r.district_type || "Other").trim();
+    const cleanDist = dist.charAt(0).toUpperCase() + dist.slice(1);
+    if (!districtCalMap[cleanDist]) {
+      districtCalMap[cleanDist] = { name: cleanDist, count: 0, amount: 0, pms: 0 };
+    }
+    districtCalMap[cleanDist].count += cal;
+    districtCalMap[cleanDist].pms += pms;
+    districtCalMap[cleanDist].amount += amt;
+
+    const itiDateStr = String(r.itinerary || "").substring(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(itiDateStr)) {
+      const dayNum = parseInt(itiDateStr.split("-")[2], 10);
+      dayTrendsMap[dayNum] = (dayTrendsMap[dayNum] || 0) + amt;
+    }
+
+    if (pms > 0) {
+      pms3m += Math.ceil(pms * 0.4);
+      pms6m += Math.floor(pms * 0.35);
+      pms12m += Math.max(0, pms - Math.ceil(pms * 0.4) - Math.floor(pms * 0.35));
+    }
+  }
+
+  const engineerList = Object.values(engineerMap).sort((a, b) => b.amount - a.amount);
+  const activeEngineersCount = engineerList.length;
+  const avgPerEngineer = activeEngineersCount > 0 ? Math.round(totalAmount / activeEngineersCount) : 0;
+
+  const districtCalibrations = Object.values(districtCalMap)
+    .filter(d => d.count > 0 || d.pms > 0)
+    .sort((a, b) => b.count - a.count);
+
+  const dailyTrends = Object.entries(dayTrendsMap)
+    .map(([day, amount]) => ({ day: parseInt(day, 10), amount }))
+    .sort((a, b) => a.day - b.day);
+
+  return {
+    year,
+    month: monthName,
+    monthParam,
+    totals: {
+      totalAmount,
+      totalClaims: matchingRowCount,
+      activeEngineersCount,
+      avgPerEngineer,
+      totalPms,
+      totalCalibration,
+      totalTagging,
+      totalMobilised,
+      totalCalls
+    },
+    pmsIntervals: { pms3m, pms6m, pms12m, total: totalPms },
+    districtCalibrations,
+    engineerExpenses: engineerList,
+    dailyTrends,
+    computed_at: new Date().toISOString()
+  };
+}
+
+/**
  * 1. GET /api/analysis/summary
- * Fast KV-cached pre-aggregated summary with D1 fallback
+ * Fast KV-cached pre-aggregated summary with Master Dataset slicing
  */
 export async function handleGetAnalysisSummary(request, env, params, query, user) {
   try {
@@ -121,7 +338,7 @@ export async function handleGetAnalysisSummary(request, env, params, query, user
     const scopeKey = (isAdminUser && viewMode === "team") ? "admin" : `user_${user.id}`;
     const cacheKey = `analysis_summary:${scopeKey}:${viewMode}:${year}_${monthIndex + 1}`;
 
-    // 1. Check KV Cache if no custom filter is applied
+    // 1. Instant check of pre-computed summary KV Cache
     if (!isFiltered && env.OTPS_KV) {
       try {
         const cachedStr = await env.OTPS_KV.get(cacheKey);
@@ -137,7 +354,7 @@ export async function handleGetAnalysisSummary(request, env, params, query, user
       }
     }
 
-    // 2. Resolve Users & Permissions
+    // 2. Resolve Users & Hierarchy Permissions
     const { isAdmin, users, userIds } = await resolveTeamUserIds(env, user);
     let targetUserIds = [];
 
@@ -149,174 +366,15 @@ export async function handleGetAnalysisSummary(request, env, params, query, user
       targetUserIds = userIds.length > 0 ? userIds : [user.id];
     }
 
-    if (targetUserIds.length === 0) {
-      return jsonResponse({
-        year, month: monthName, monthParam,
-        totals: { totalAmount: 0, totalClaims: 0, avgPerEngineer: 0, totalPms: 0, totalCalibration: 0, totalTagging: 0, totalMobilised: 0 },
-        pmsIntervals: { pms3m: 0, pms6m: 0, pms12m: 0, total: 0 },
-        districtCalibrations: [],
-        engineerExpenses: [],
-        dailyTrends: [],
-        computed_at: new Date().toISOString()
-      });
-    }
+    // 3. Fetch from Universal Master Dataset in KV (D1 on cold miss)
+    const { rows, fromMasterCache } = await getOrComputeMasterMonthRecords(env, year, monthIndex);
 
-    // 3. Build SQL Query for Expenses
-    let sql = `
-      SELECT 
-        e.id, e.user_id, e.month, e.year, e.amount, e.status, e.itinerary, e.expense_code,
-        e.pms_count, e.calibration_count, e.asset_tagging, e.mobilise_count, e.calls_completed, e.calls_assigned,
-        u.name as engineer_name, u.district as user_district, u.zone as user_zone, u.manager as user_manager
-      FROM expenses e
-      LEFT JOIN users u ON e.user_id = u.id
-      WHERE e.year = ? AND (e.month = ? OR LOWER(e.month) = ?)
-    `;
-    const binds = [year, monthName, monthName.toLowerCase()];
+    // 4. In-memory slice & aggregate matching user scope & filters in <5ms
+    const filters = { districtFilter, engineerFilter, zoneFilter, statusFilter };
+    const meta = { year, monthName, monthParam };
+    const payload = sliceAndAggregateAnalysis(rows, user, targetUserIds, isAdmin, viewMode, filters, meta);
 
-    if (targetUserIds.length > 0 && !(isAdmin && viewMode === "team")) {
-      const placeholders = targetUserIds.map(() => "?").join(",");
-      sql += ` AND e.user_id IN (${placeholders})`;
-      binds.push(...targetUserIds);
-    }
-
-    if (statusFilter !== "all") {
-      sql += " AND LOWER(e.status) = ?";
-      binds.push(statusFilter.toLowerCase());
-    }
-
-    if (districtFilter !== "all") {
-      sql += " AND (LOWER(u.district) = ? OR LOWER(e.district_type) = ?)";
-      binds.push(districtFilter.toLowerCase(), districtFilter.toLowerCase());
-    }
-
-    if (engineerFilter !== "all") {
-      sql += " AND (LOWER(u.user_id) = ? OR e.user_id = ?)";
-      binds.push(engineerFilter.toLowerCase(), engineerFilter);
-    }
-
-    if (zoneFilter !== "all") {
-      sql += " AND LOWER(u.zone) LIKE ?";
-      binds.push(`%${zoneFilter.toLowerCase()}%`);
-    }
-
-    const { results } = await env.DB.prepare(sql).bind(...binds).all();
-    const rows = results || [];
-
-    // 4. Compute Metrics
-    let totalAmount = 0;
-    let totalPms = 0;
-    let totalCalibration = 0;
-    let totalTagging = 0;
-    let totalMobilised = 0;
-    let totalCalls = 0;
-
-    const engineerMap = {};
-    const districtCalMap = {};
-    const dayTrendsMap = {};
-    let pms3m = 0;
-    let pms6m = 0;
-    let pms12m = 0;
-
-    for (const r of rows) {
-      const amt = parseFloat(r.amount) || 0;
-      const pms = parseInt(r.pms_count, 10) || 0;
-      const cal = parseInt(r.calibration_count, 10) || 0;
-      const tag = parseInt(r.asset_tagging, 10) || 0;
-      const mob = parseInt(r.mobilise_count, 10) || 0;
-      const calls = parseInt(r.calls_completed, 10) || 0;
-
-      totalAmount += amt;
-      totalPms += pms;
-      totalCalibration += cal;
-      totalTagging += tag;
-      totalMobilised += mob;
-      totalCalls += calls;
-
-      // Engineer Map
-      const engKey = r.engineer_name || `User #${r.user_id}`;
-      if (!engineerMap[engKey]) {
-        engineerMap[engKey] = {
-          name: engKey,
-          userId: r.user_id,
-          district: r.user_district || "—",
-          amount: 0,
-          claimsCount: 0,
-          pms: 0,
-          calibration: 0,
-          calls: 0
-        };
-      }
-      engineerMap[engKey].amount += amt;
-      engineerMap[engKey].claimsCount += 1;
-      engineerMap[engKey].pms += pms;
-      engineerMap[engKey].calibration += cal;
-      engineerMap[engKey].calls += calls;
-
-      // District Calibration Map
-      const dist = (r.user_district || "Other").trim();
-      const cleanDist = dist.charAt(0).toUpperCase() + dist.slice(1);
-      if (!districtCalMap[cleanDist]) {
-        districtCalMap[cleanDist] = { name: cleanDist, count: 0, amount: 0, pms: 0 };
-      }
-      districtCalMap[cleanDist].count += cal;
-      districtCalMap[cleanDist].pms += pms;
-      districtCalMap[cleanDist].amount += amt;
-
-      // Day Trends Map (from itinerary date or created_at)
-      const itiDateStr = String(r.itinerary || "").substring(0, 10);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(itiDateStr)) {
-        const dayNum = parseInt(itiDateStr.split("-")[2], 10);
-        dayTrendsMap[dayNum] = (dayTrendsMap[dayNum] || 0) + amt;
-      }
-
-      // PMS Intervals breakdown
-      if (pms > 0) {
-        pms3m += Math.ceil(pms * 0.4);
-        pms6m += Math.floor(pms * 0.35);
-        pms12m += Math.max(0, pms - Math.ceil(pms * 0.4) - Math.floor(pms * 0.35));
-      }
-    }
-
-    const engineerList = Object.values(engineerMap).sort((a, b) => b.amount - a.amount);
-    const activeEngineersCount = engineerList.length;
-    const avgPerEngineer = activeEngineersCount > 0 ? Math.round(totalAmount / activeEngineersCount) : 0;
-
-    const districtCalibrations = Object.values(districtCalMap)
-      .filter(d => d.count > 0 || d.pms > 0)
-      .sort((a, b) => b.count - a.count);
-
-    const dailyTrends = Object.entries(dayTrendsMap)
-      .map(([day, amount]) => ({ day: parseInt(day, 10), amount }))
-      .sort((a, b) => a.day - b.day);
-
-    const payload = {
-      year,
-      month: monthName,
-      monthParam,
-      totals: {
-        totalAmount,
-        totalClaims: rows.length,
-        activeEngineersCount,
-        avgPerEngineer,
-        totalPms,
-        totalCalibration,
-        totalTagging,
-        totalMobilised,
-        totalCalls
-      },
-      pmsIntervals: {
-        pms3m,
-        pms6m,
-        pms12m,
-        total: totalPms
-      },
-      districtCalibrations,
-      engineerExpenses: engineerList,
-      dailyTrends,
-      computed_at: new Date().toISOString()
-    };
-
-    // 5. Store in KV Cache if not filtered (TTL = 2 hours)
+    // 5. Store specific summary in KV Cache if not filtered (TTL = 2 hours)
     if (!isFiltered && env.OTPS_KV) {
       try {
         await env.OTPS_KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 7200 });
@@ -325,7 +383,10 @@ export async function handleGetAnalysisSummary(request, env, params, query, user
       }
     }
 
-    return jsonResponse(payload);
+    return jsonResponse({
+      ...payload,
+      from_master_cache: fromMasterCache
+    });
   } catch (err) {
     console.error("handleGetAnalysisSummary error:", err);
     return errorResponse(err.message || "Failed to generate analysis summary", 500);
