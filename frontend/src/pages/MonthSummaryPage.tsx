@@ -1,3 +1,5 @@
+// High-Speed In-Memory PDF Cache
+const pdfBlobCache = new Map<string, Blob>();
 import { useEffect, useState, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 import { expenseService } from "../services/expenseService";
@@ -307,7 +309,6 @@ function fmtDate(d: string): string {
 // ─── PDF — EXACT CYRIX EXCEL FORMAT ──────────────────────────────────────────
 
 function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], advance: number = 0, _autoPrint: boolean = false): string {
-  // Flatten: one row per leg, ensuring ONLY APPROVED amounts are included
   const allLegs: { date: string; expCode: string; leg: any }[] = [];
   for (const claim of claims) {
     const claimStat = String(claim.status || "").toLowerCase();
@@ -342,6 +343,13 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         hotel_amount: rawLeg.approved_hotel_amount !== undefined ? parseFloat(rawLeg.approved_hotel_amount || 0) : parseFloat(rawLeg.hotel_amount || 0),
         other_amount: rawLeg.approved_other_amount !== undefined ? parseFloat(rawLeg.approved_other_amount || 0) : parseFloat(rawLeg.other_amount || 0),
       };
+
+      const legTotal = leg.ta_amount + leg.bike_amount + leg.car_amount + leg.auto_amount + leg.da_amount + leg.local_purchase + leg.hotel_amount + leg.other_amount;
+      
+      // If total approved reimbursement amount is 0 (deducted by system policy or not payable), do not show in PDF table
+      if (legTotal <= 0) {
+        continue;
+      }
 
       allLegs.push({ date: claim.date, expCode: claim.expense_code, leg });
     }
@@ -431,12 +439,21 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     return map[m] || m;
   };
 
-  // Helper to extract clean ticket number / ID instead of long barcode string
   const getCleanTicketNumber = (l: any): string => {
-    const raw = String(l.barcode_ticket || l.ticket_no || l.complaint_id || l.ticket_id || l.mpt_id || "").trim();
-    if (!raw || raw === "—" || raw === "-") return "";
-    // If it's a numeric string or comma-separated numbers, display cleanly
-    return raw.replace(/barcode[:s]*/gi, "").trim();
+    // Prefer single complaint/ticket id if present
+    const singleTicket = String(l.complaint_id || l.ticket_no || l.ticket_id || l.mpt_id || "").trim();
+    if (singleTicket && singleTicket !== "—" && singleTicket !== "-") {
+      return singleTicket.replace(/barcode[:\s]*/gi, "").trim();
+    }
+
+    const raw = String(l.barcode_ticket || "").trim();
+    if (!raw || raw === "—" || raw === "-") return "—";
+
+    const items = raw.split(/[,;\s]+/).map(s => s.replace(/barcode[:\s]*/gi, "").trim()).filter(Boolean);
+    if (items.length === 0) return "—";
+    if (items.length === 1) return items[0];
+    if (items.length === 2) return `${items[0]}, ${items[1]}`;
+    return `${items[0]} (+${items.length - 1})`;
   };
 
   const isCallOrPmsReport = (label: string = "", billType: string = ""): boolean => {
@@ -464,7 +481,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
     const rawUrl = att.file_url || att.url || (typeof att === "string" ? att : "");
     const origUrl = att.original_url || rawUrl;
     const normKey = getAttachmentNormKey(origUrl) || getAttachmentNormKey(rawUrl);
-    const label = att.bill_type || att.billType || "Expense Bill Attachment";
+    const label = att.bill_type || att.billType || "Expense Bill";
 
     if (rawUrl && normKey && !isCallOrPmsReport(label, att.bill_type) && !seenNormKeys.has(normKey)) {
       seenNormKeys.add(normKey);
@@ -552,7 +569,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
 
   const finalAttachments = Array.from(allAttachmentsMap.values());
 
-  // ── ORGANIZED 4-PER-PAGE BILL ATTACHMENTS GRID (Drastically reduces page bloat and speeds up PDF) ──
+  // ── ORGANIZED 4-PER-PAGE BILL ATTACHMENTS GRID WITH SUBTLE SLATE HEADER ──
   let attachmentsSection = "";
   if (finalAttachments.length > 0) {
     const ATTS_PER_PAGE = 4;
@@ -568,8 +585,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         const attLabel = att.label || "Expense Bill";
 
         return `
-          <div style="border:1.5px solid #1E1B4B;border-radius:4px;padding:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:330px;box-sizing:border-box;">
-            <div style="width:100%;font-size:8pt;font-weight:bold;color:#1E1B4B;text-align:center;border-bottom:1px solid #1E1B4B;padding-bottom:3px;margin-bottom:4px;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          <div style="border:1px solid #475569;border-radius:4px;padding:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;height:330px;box-sizing:border-box;">
+            <div style="width:100%;font-size:7.5pt;font-weight:bold;color:#1E293B;text-align:center;border-bottom:1px solid #94a3b8;padding-bottom:3px;margin-bottom:4px;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               ${attLabel} &mdash; ${dateStr}
             </div>
             <div style="flex:1;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;">
@@ -580,11 +597,11 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       }).join("\n");
 
       attachmentsSection += `
-        <div class="attachment-page" style="width:1122px;height:793px;padding:8mm;background:#fff;box-sizing:border-box;page-break-before:always;display:flex;flex-direction:column;">
-          <div style="background:#1E1B4B;color:#fff;padding:6px 12px;font-size:9.5pt;font-weight:bold;font-family:'Aptos','Segoe UI',Calibri,sans-serif;text-align:center;text-transform:uppercase;margin-bottom:8px;border-radius:3px;">
+        <div class="attachment-page" style="width:1122px;height:793px;padding:6mm;background:#fff;box-sizing:border-box;page-break-before:always;display:flex;flex-direction:column;">
+          <div style="background:#1E293B;color:#fff;padding:5px 12px;font-size:9pt;font-weight:bold;font-family:'Aptos','Segoe UI',Calibri,sans-serif;text-align:center;text-transform:uppercase;margin-bottom:8px;border-radius:3px;letter-spacing:0.5px;">
             VERIFIED BILL ATTACHMENTS &amp; RECEIPTS &mdash; PAGE ${p + 1} OF ${totalAttPages}
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;flex:1;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;flex:1;">
             ${gridItems}
           </div>
         </div>
@@ -607,8 +624,8 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
       const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
                      + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
-      const bg = i % 2 === 0 ? "#ffffff" : "#f8f9fa";
-      const c = `border:1px solid #1E1B4B!important;padding:3.5px 3px;font-size:8pt;font-weight:600;color:#000;vertical-align:middle;text-align:center;font-family:'Aptos','Segoe UI',Calibri,sans-serif;`;
+      const bg = i % 2 === 0 ? "#ffffff" : "#f8fafc";
+      const c = `border:1px solid #475569!important;padding:3.5px 2px;font-size:7.5pt;font-weight:600;color:#0f172a;vertical-align:middle;text-align:center;font-family:'Aptos','Segoe UI',Calibri,sans-serif;`;
       const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
       const ticketNo = getCleanTicketNumber(l);
 
@@ -619,16 +636,16 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         <td style="${c}">${l.worked_district || "—"}</td>
         <td style="${c}font-weight:700;">${modeAbbr(l.travel_mode)}</td>
         <td style="${c}">${l.distance_km > 0 ? l.distance_km.toFixed(1) : "—"}</td>
-        <td style="${c}text-align:right;">${taCol > 0 ? taCol.toFixed(2) : "—"}</td>
-        <td style="${c}text-align:right;">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : "—"}</td>
-        <td style="${c}text-align:right;">${l.da_amount > 0 ? l.da_amount.toFixed(2) : "—"}</td>
-        <td style="${c}text-align:right;">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : "—"}</td>
-        <td style="${c}text-align:right;">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : "—"}</td>
+        <td style="${c}">${taCol > 0 ? taCol.toFixed(2) : "—"}</td>
+        <td style="${c}">${l.auto_amount > 0 ? l.auto_amount.toFixed(2) : "—"}</td>
+        <td style="${c}">${l.da_amount > 0 ? l.da_amount.toFixed(2) : "—"}</td>
+        <td style="${c}">${l.local_purchase > 0 ? l.local_purchase.toFixed(2) : "—"}</td>
+        <td style="${c}">${l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : "—"}</td>
         <td style="${c}">${getActivityOtherDesc(l) || "—"}</td>
-        <td style="${c}text-align:right;">${l.other_amount > 0 ? l.other_amount.toFixed(2) : "—"}</td>
-        <td style="${c}text-align:right;font-weight:800;background:#e8f5e9!important;">${rowTotal > 0 ? rowTotal.toFixed(2) : "—"}</td>
+        <td style="${c}">${l.other_amount > 0 ? l.other_amount.toFixed(2) : "—"}</td>
+        <td style="${c}font-weight:800;background:#ecfdf5!important;color:#065f46;">${rowTotal > 0 ? rowTotal.toFixed(2) : "—"}</td>
         <td style="${c}">${getFormattedPurpose(l)}</td>
-        <td style="${c}font-weight:bold;color:#1E1B4B;">${ticketNo || "—"}</td>
+        <td style="${c}font-weight:bold;color:#1e293b;">${ticketNo || "—"}</td>
         <td style="${c}">${pmsCalibCount || "0"}</td>
         <td style="${c}">${l.calls_completed || 0}/${l.calls_assigned || 0}</td>
       </tr>`;
@@ -639,13 +656,13 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
       <table style="margin-bottom:0;width:100%;">
         <colgroup><col style="width:12%;"><col style="width:68%;"><col style="width:20%;"></colgroup>
         <tr>
-          <td style="background:#fff!important;border:1.5px solid #1E1B4B;padding:2px;text-align:center;vertical-align:middle;height:34px;">
+          <td style="background:#fff!important;border:1.5px solid #1E293B;padding:2px;text-align:center;vertical-align:middle;height:34px;">
             <img src="${window.location.origin}/brand.png" style="height:100%;max-height:30px;width:auto;object-fit:contain;display:block;margin:0 auto;" alt="Logo" />
           </td>
           <td class="main-hdr">
             CYRIX HEALTHCARE &mdash; EXPENSES REIMBURSEMENT FORM ${numPages > 1 ? `(PAGE ${pageIdx + 1} OF ${numPages})` : ""}
           </td>
-          <td style="background:#1E1B4B!important;color:#fff!important;border:1.5px solid #1E1B4B;padding:3px 6px;font-size:7.5pt;font-weight:bold;text-align:center;vertical-align:middle;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">
+          <td style="background:#1E293B!important;color:#fff!important;border:1.5px solid #1E293B;padding:3px 6px;font-size:7.5pt;font-weight:bold;text-align:center;vertical-align:middle;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">
             <div>PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0,3)} ${user.year || "2026"}</div>
           </td>
         </tr>
@@ -713,42 +730,42 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         </tbody>
         ${isLastPage ? `
         <tfoot>
-          <tr style="background:#FFF9C4!important;">
-            <td class="tot-lbl" colspan="5" style="text-align:center;border:1.5px solid #1E1B4B!important;text-transform:uppercase;background:#FFF9C4!important;">
+          <tr style="background:#FEF3C7!important;">
+            <td class="tot-lbl" colspan="5" style="text-align:center;border:1.5px solid #1E293B!important;text-transform:uppercase;background:#FEF3C7!important;font-weight:bold;">
               TOTAL EXPENSE CLAIMED
             </td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;text-align:center;">${gKM > 0 ? gKM.toFixed(1) : "0"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gTA > 0 ? gTA.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gAuto > 0 ? gAuto.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gDA > 0 ? gDA.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gLocal > 0 ? gLocal.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gHotel > 0 ? gHotel.toFixed(2) : "0.00"}</td>
-            <td class="tot-lbl" style="text-align:center;font-size:6.5pt;border:1.5px solid #1E1B4B!important;">Total</td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;">${gOther > 0 ? gOther.toFixed(2) : "0.00"}</td>
-            <td class="tot-num" style="background:#FFF9C4!important;font-weight:900;text-align:right;border:1.5px solid #1E1B4B!important;color:#1E1B4B;">₹${gTotal.toFixed(2)}</td>
-            <td class="tot-lbl" style="border:1.5px solid #1E1B4B!important;"></td>
-            <td class="tot-lbl" style="border:1.5px solid #1E1B4B!important;font-size:6.5pt!important;text-align:center;font-weight:bold;">
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gKM > 0 ? gKM.toFixed(1) : "0"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gTA > 0 ? gTA.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gAuto > 0 ? gAuto.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gDA > 0 ? gDA.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gLocal > 0 ? gLocal.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gHotel > 0 ? gHotel.toFixed(2) : "0.00"}</td>
+            <td class="tot-lbl" style="text-align:center;font-size:6.5pt;border:1.5px solid #1E293B!important;">Total</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;">${gOther > 0 ? gOther.toFixed(2) : "0.00"}</td>
+            <td class="tot-num" style="background:#FEF3C7!important;font-weight:bold;text-align:center;border:1.5px solid #1E293B!important;color:#0f172a;">₹${gTotal.toFixed(2)}</td>
+            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;"></td>
+            <td class="tot-lbl" style="border:1.5px solid #1E293B!important;font-size:6.5pt!important;text-align:center;font-weight:bold;">
               ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN')}` : "—"}
             </td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;text-align:center;font-weight:bold;">${gPMSCalib}</td>
-            <td class="tot-num" style="border:1.5px solid #1E1B4B!important;text-align:center;font-weight:bold;">${gCallsC}/${gCallsA}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;">${gPMSCalib}</td>
+            <td class="tot-num" style="border:1.5px solid #1E293B!important;text-align:center;font-weight:bold;">${gCallsC}/${gCallsA}</td>
           </tr>
           <tr>
-            <td colspan="13" style="border:1.5px solid #1E1B4B!important;background:#fff!important;font-weight:bold;text-align:center;padding:3px 5px;font-size:7.5pt;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">LESS: MONTHLY ADVANCE DEDUCTION</td>
-            <td style="border:1.5px solid #1E1B4B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:8pt!important;color:#b91c1c;">₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
-            <td colspan="4" style="border:1.5px solid #1E1B4B!important;background:#fff!important;"></td>
+            <td colspan="13" style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;padding:3px 5px;font-size:7.5pt;text-transform:uppercase;font-family:'Aptos','Segoe UI',Calibri,sans-serif;">LESS: MONTHLY ADVANCE DEDUCTION</td>
+            <td style="border:1.5px solid #1E293B!important;background:#fff!important;font-weight:bold;text-align:center;font-size:8pt!important;color:#b91c1c;">₹${advance > 0 ? Math.round(advance).toFixed(2) : "0.00"}</td>
+            <td colspan="4" style="border:1.5px solid #1E293B!important;background:#fff!important;"></td>
           </tr>
-          <tr style="background:#EEF0FF!important;">
-            <td class="net-lbl" colspan="13" style="border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;color:#1E1B4B;font-size:8pt;font-weight:bold;">NET PAYABLE AMOUNT</td>
-            <td class="net-val" style="font-weight:900;font-size:8.5pt!important;border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;color:#1E1B4B;text-align:center;">₹${Math.round(gTotal - advance).toFixed(2)}</td>
-            <td colspan="4" style="border:1.5px solid #1E1B4B!important;background:#EEF0FF!important;"></td>
+          <tr style="background:#F1F5F9!important;">
+            <td class="net-lbl" colspan="13" style="border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;font-size:8pt;font-weight:bold;">NET PAYABLE AMOUNT</td>
+            <td class="net-val" style="font-weight:900;font-size:8.5pt!important;border:1.5px solid #1E293B!important;background:#F1F5F9!important;color:#0f172a;text-align:center;">₹${Math.round(gTotal - advance).toFixed(2)}</td>
+            <td colspan="4" style="border:1.5px solid #1E293B!important;background:#F1F5F9!important;"></td>
           </tr>
         </tfoot>
         ` : ""}
       </table>
 
       ${isLastPage ? `
-        <div class="awords-box">Amount in words: <strong style="color:#1E1B4B;">${amountWords(gTotal - advance).toUpperCase()}</strong></div>
+        <div class="awords-box">Amount in words: <strong style="color:#0f172a;">${amountWords(gTotal - advance).toUpperCase()}</strong></div>
         <div class="remarks-box">REMARKS: AUDITED &amp; APPROVED BY CYRIX MANAGEMENT</div>
         <table class="sig-tbl" style="width:100%;">
           <colgroup><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"><col style="width:25%;"></colgroup>
@@ -782,28 +799,28 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
   <title>Expense Form — ${user.name} — ${user.month} ${user.year}</title>
   <style>
     * { -webkit-print-color-adjust: exact!important; print-color-adjust: exact!important; box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; color: #000; background: #fff; font-size: 8pt; }
-    .wrap { width: 100%; padding: 4mm; background: #fff; }
+    body { font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; color: #0f172a; background: #fff; font-size: 7.5pt; }
+    .wrap { width: 100%; padding: 3mm 4mm; background: #fff; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    th, td { border: 1px solid #1E1B4B!important; padding: 3.5px 3px; vertical-align: middle; text-align: center; word-wrap: break-word; font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; }
+    th, td { border: 1px solid #475569!important; padding: 3px 2px; vertical-align: middle; text-align: center; word-wrap: break-word; font-family: 'Aptos', 'Segoe UI', Calibri, Arial, sans-serif; }
     tbody tr { page-break-inside: avoid!important; break-inside: avoid!important; }
-    .main-hdr { background: #1E1B4B!important; color: #fff!important; text-align: center; font-size: 11pt!important; font-weight: 800!important; padding: 5px!important; border: 1px solid #1E1B4B!important; }
-    .info-tbl { margin-bottom: 0; border: 1px solid #1E1B4B!important; border-top: none!important; }
-    .info-lbl { font-weight: bold; background: #F4F3F1!important; color: #1E1B4B; border-right: 1px solid #1E1B4B!important; font-size: 7.5pt; text-align: center; padding: 3px 5px; text-transform: uppercase; white-space: nowrap; }
-    .info-val { background: #fff!important; color: #000!important; border-right: 1px solid #1E1B4B!important; font-size: 7.5pt; text-align: center; padding: 3px 5px; font-weight: bold; }
-    .col-h1 { background: #1E1B4B!important; color: #fff!important; font-size: 7pt!important; font-weight: bold!important; text-align: center!important; padding: 4px 2px!important; border: 1px solid #1E1B4B!important; line-height: 1.2; vertical-align: middle; }
-    .col-h2 { background: #312E81!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; padding: 3px 2px!important; border: 1px solid #1E1B4B!important; line-height: 1.15; vertical-align: middle; }
-    .tot-lbl { border: 1px solid #1E1B4B!important; padding: 4px; font-size: 7.5pt; font-weight: bold; color: #000; background: #FFF9C4!important; vertical-align: middle; text-align: center; }
-    .tot-num { border: 1px solid #1E1B4B!important; padding: 4px; font-size: 7.5pt; font-weight: bold; color: #000; background: #FFF9C4!important; vertical-align: middle; text-align: right; }
-    .net-lbl { border: 1px solid #1E1B4B!important; padding: 4px 6px; font-size: 8pt; font-weight: bold; color: #1E1B4B; background: #EEF0FF!important; text-align: center; text-transform: uppercase; }
-    .net-val { border: 1px solid #1E1B4B!important; padding: 4px 6px; font-size: 8.5pt; font-weight: 900; color: #1E1B4B; background: #EEF0FF!important; text-align: center; }
-    .awords-box { border: 1px solid #1E1B4B!important; border-top: none!important; padding: 4px 8px; font-size: 7.5pt; font-weight: 600; color: #000; background: #fff!important; text-align: center; }
-    .remarks-box { border: 1px solid #1E1B4B!important; border-top: none!important; padding: 4px 8px; font-size: 7.5pt; font-weight: bold; color: #000; background: #F4F3F1!important; text-align: center; }
-    .sig-tbl { border: 1px solid #1E1B4B!important; border-top: none!important; }
-    .sig-lbl { border-right: 1px solid #1E1B4B!important; padding: 3px 6px; font-size: 7.5pt; font-weight: 600; color: #000; background: #fff!important; height: 28px; vertical-align: top; text-align: center; }
-    .sig-val { border-right: 1px solid #1E1B4B!important; padding: 3px 6px; font-size: 7pt; font-weight: 600; color: #555; background: #fff!important; height: 20px; vertical-align: bottom; text-align: center; }
+    .main-hdr { background: #1E293B!important; color: #fff!important; text-align: center; font-size: 10.5pt!important; font-weight: 800!important; padding: 5px!important; border: 1.5px solid #1E293B!important; letter-spacing: 0.5px; }
+    .info-tbl { margin-bottom: 0; border: 1.5px solid #1E293B!important; border-top: none!important; }
+    .info-lbl { font-weight: bold; background: #F1F5F9!important; color: #1E293B; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center; padding: 3px 4px; text-transform: uppercase; white-space: nowrap; }
+    .info-val { background: #fff!important; color: #0f172a!important; border-right: 1px solid #475569!important; font-size: 7pt; text-align: center; padding: 3px 4px; font-weight: bold; }
+    .col-h1 { background: #1E293B!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; padding: 3.5px 2px!important; border: 1px solid #475569!important; line-height: 1.15; vertical-align: middle; }
+    .col-h2 { background: #334155!important; color: #fff!important; font-size: 6.5pt!important; font-weight: bold!important; text-align: center!important; padding: 3px 2px!important; border: 1px solid #475569!important; line-height: 1.1; vertical-align: middle; }
+    .tot-lbl { border: 1.5px solid #1E293B!important; padding: 3.5px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #FEF3C7!important; vertical-align: middle; text-align: center; }
+    .tot-num { border: 1.5px solid #1E293B!important; padding: 3.5px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #FEF3C7!important; vertical-align: middle; text-align: center; }
+    .net-lbl { border: 1.5px solid #1E293B!important; padding: 3.5px 5px; font-size: 7.5pt; font-weight: bold; color: #0f172a; background: #F1F5F9!important; text-align: center; text-transform: uppercase; }
+    .net-val { border: 1.5px solid #1E293B!important; padding: 3.5px 5px; font-size: 8pt; font-weight: 900; color: #0f172a; background: #F1F5F9!important; text-align: center; }
+    .awords-box { border: 1.5px solid #1E293B!important; border-top: none!important; padding: 3.5px 6px; font-size: 7pt; font-weight: 600; color: #0f172a; background: #fff!important; text-align: center; }
+    .remarks-box { border: 1.5px solid #1E293B!important; border-top: none!important; padding: 3.5px 6px; font-size: 7pt; font-weight: bold; color: #0f172a; background: #F1F5F9!important; text-align: center; }
+    .sig-tbl { border: 1.5px solid #1E293B!important; border-top: none!important; }
+    .sig-lbl { border-right: 1px solid #475569!important; padding: 3px 5px; font-size: 7pt; font-weight: 600; color: #0f172a; background: #fff!important; height: 26px; vertical-align: top; text-align: center; }
+    .sig-val { border-right: 1px solid #475569!important; padding: 2px 5px; font-size: 6.5pt; font-weight: 600; color: #64748b; background: #fff!important; height: 18px; vertical-align: bottom; text-align: center; }
     .attachment-page { width: 1122px!important; height: 793px!important; overflow: hidden!important; }
-    @page { size: A4 landscape; margin: 4mm; }
+    @page { size: A4 landscape; margin: 3mm; }
     @media print {
       body { margin: 0; padding: 0; }
       .wrap { page-break-after: always; page-break-inside: avoid; }
@@ -1222,9 +1239,13 @@ export default function MonthSummaryPage() {
         })
       );
 
-      const attachments = await prepareConvertedAttachments(claims);
-      const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
-      const pdfBlob = await renderHTMLToPDFBlob(html);
+      let pdfBlob = pdfBlobCache.get(key);
+      if (!pdfBlob) {
+        const attachments = await prepareConvertedAttachments(claims);
+        const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
+        pdfBlob = await renderHTMLToPDFBlob(html);
+        pdfBlobCache.set(key, pdfBlob);
+      }
 
       const safeName = (userObj.name || "Staff").replace(/[^a-zA-Z0-9]/g, "_");
       const filename = `${safeName}_${userObj.e_code || row.e_code || "E"}_${row.month}_${row.year}.pdf`;
@@ -1481,9 +1502,14 @@ export default function MonthSummaryPage() {
                 })
               );
 
-              const attachments = await prepareConvertedAttachments(claims);
-              const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
-              const pdfBlob = await renderHTMLToPDFBlob(html);
+              const cacheKey = `${row.user_id}-${row.month}-${row.year}`;
+              let pdfBlob = pdfBlobCache.get(cacheKey);
+              if (!pdfBlob) {
+                const attachments = await prepareConvertedAttachments(claims);
+                const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
+                pdfBlob = await renderHTMLToPDFBlob(html);
+                pdfBlobCache.set(cacheKey, pdfBlob);
+              }
 
               const safeName = (userObj.name || "Staff").replace(/[^a-zA-Z0-9]/g, "_");
               const filename = `${safeName}_${userObj.e_code || row.e_code || "E"}_${row.month}_${row.year}.pdf`;
