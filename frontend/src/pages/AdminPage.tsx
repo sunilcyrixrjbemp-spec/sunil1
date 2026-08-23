@@ -1956,7 +1956,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setShowSingleUserModal(true)}
-                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-3.5 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border-0"
+                    className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-bold px-4 h-10 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 cursor-pointer border-0 active:scale-[0.98]"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Add User</span>
@@ -1999,7 +1999,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={handleDownloadFacilityTemplate}
-                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-2.5 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3.5 h-10 rounded-xl shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
                     title="Download pre-formatted Excel template"
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
@@ -2009,7 +2009,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => setIsBulkFacilityModalOpen(true)}
-                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-2.5 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3.5 h-10 rounded-xl shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
                     title="Bulk import facilities via Excel / CSV (Upsert)"
                   >
                     <UploadCloud className="w-3.5 h-3.5 text-accent-600" />
@@ -2019,7 +2019,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={handleExportFacilitiesExcel}
-                    className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-2.5 h-8.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="bg-white hover:bg-surface-sunken text-ink-800 hover:text-ink-950 border border-line text-xs font-bold px-3.5 h-10 rounded-xl shadow-2xs hover:shadow-xs transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
                     title="Export facilities list to Excel"
                   >
                     <Download className="w-3.5 h-3.5 text-ink-600" />
@@ -2053,7 +2053,7 @@ export default function AdminPage() {
             </div>
           )}
           {/* ── 2. Top Horizontal Navigation Tabs (HomePage Parity) ─── */}
-          <nav className="bg-surface-sunken p-1 rounded-2xl border border-line flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-xs">
+          <nav className="bg-surface-sunken/80 p-1.5 rounded-2xl border border-line flex items-center gap-1.5 overflow-x-auto scrollbar-none shadow-xs">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -2063,10 +2063,10 @@ export default function AdminPage() {
                   key={item.id}
                   type="button"
                   onClick={() => handleTabChange(item.id)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-2 border transition-all cursor-pointer ${
+                  className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 flex items-center gap-2 border transition-all cursor-pointer active:scale-[0.98] ${
                     isActive
-                      ? "bg-white text-accent-700 font-bold shadow-xs border-line/60"
-                      : "bg-transparent text-ink-600 hover:text-ink-900 border-transparent hover:bg-surface/50"
+                      ? "bg-white text-[#1E1B4B] shadow-xs border-line ring-1 ring-black/5"
+                      : "bg-transparent text-ink-600 hover:text-ink-900 border-transparent hover:bg-surface/60"
                   }`}
                 >
                   <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? "text-accent-600" : "text-ink-400"}`} />
@@ -3820,20 +3820,65 @@ export default function AdminPage() {
 
                 {/* Audit Toolbar */}
                 <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="relative w-full sm:w-80">
-                    <Search className="w-4 h-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <div className="relative flex-1 w-full sm:w-96">
+                    <Search className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       placeholder="Search by actor, action, or entity..."
                       value={auditSearch}
                       onChange={(e) => setAuditSearch(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && fetchAuditLogs(auditSearch)}
-                      className="input-lte pl-9 h-9 text-xs w-full rounded-xl"
+                      className="w-full !pl-10 !pr-8 h-10 bg-white border border-line rounded-xl text-xs font-semibold text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 focus:ring-2 focus:ring-accent-600/15 transition-all shadow-2xs"
                     />
+                    {auditSearch && (
+                      <button
+                        type="button"
+                        onClick={() => { setAuditSearch(""); fetchAuditLogs(""); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 cursor-pointer p-0.5"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-2 text-2xs font-mono font-bold text-ink-500">
-                    <span>Showing recent {auditLogs.length} audit trail records</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fetchAuditLogs(auditSearch)}
+                      className="h-10 px-4 bg-white hover:bg-surface-sunken text-ink-800 font-bold text-xs rounded-xl border border-line shadow-2xs flex items-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${auditLoading ? "animate-spin" : ""}`} />
+                      <span>Refresh</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (auditLogs.length === 0) {
+                          toast.error("No audit records to export!");
+                          return;
+                        }
+                        const ws = XLSX.utils.json_to_sheet(auditLogs.map(l => ({
+                          ID: l.id,
+                          Action: l.action,
+                          Entity: l.entity_type,
+                          "Performed By": l.performed_by_name || l.actor_name || "Admin",
+                          Role: l.performed_by_role || l.actor_role || "Admin",
+                          "New Value": typeof l.new_value === "object" ? JSON.stringify(l.new_value) : l.new_value,
+                          "Created At": l.created_at
+                        })));
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Audit_Trail");
+                        XLSX.writeFile(wb, `audit_trail_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                        toast.success("Audit trail log exported to Excel!");
+                      }}
+                      className="h-10 px-4 bg-white hover:bg-surface-sunken text-ink-800 font-bold text-xs rounded-xl border border-line shadow-2xs flex items-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
+                    >
+                      <Download className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Export Log</span>
+                    </button>
+                    <div className="bg-surface-sunken border border-line px-3 py-2 rounded-xl text-2xs font-mono font-bold text-ink-600 shrink-0">
+                      {auditLogs.length} Records
+                    </div>
                   </div>
                 </div>
 
