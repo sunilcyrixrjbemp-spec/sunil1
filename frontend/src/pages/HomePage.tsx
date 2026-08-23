@@ -298,7 +298,9 @@ export default function HomePage() {
         {/* ── 6.5 Engineer Daily Submission Compliance & Defaulter Tracker ── */}
         {isComparativeExpenseAllowed && (
           <ZohoSubmissionComplianceWidget
-            expenses={activeTab === "team-claims" ? safeTeamExpenses : safeTeamExpenses.length > 0 ? safeTeamExpenses : activeClaims}
+            user={user}
+            activeTab={activeTab}
+            expenses={activeTab === "team-claims" ? safeTeamExpenses : safeMyExpenses}
             selectMonth={selectMonth}
             filterZone={filterZone}
             filterDistrict={filterDistrict}

@@ -503,44 +503,66 @@ export async function handleDeleteEngineerLeave(request, env, params, query, use
 /**
  * GET /api/attendance/reminder-status?date=YYYY-MM-DD&month=YYYY-MM
  */
+/**
+ * GET /api/attendance/reminder-status?date=YYYY-MM-DD&month=YYYY-MM
+ */
 export async function handleGetSentReminders(request, env, params, query, user) {
   try {
     const todayStr = query.get("date") || new Date().toISOString().slice(0, 10);
     const monthQuery = query.get("month") || "";
 
-    // 1. Check attendance_reminder_logs
-    await env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS attendance_reminder_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        employee_code TEXT NOT NULL,
-        month TEXT NOT NULL,
-        sent_date TEXT NOT NULL,
-        sent_by TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(employee_code, month, sent_date)
-      )
-    `).run();
-
-    const attLogs = await env.DB.prepare(`
-      SELECT DISTINCT employee_code FROM attendance_reminder_logs
-      WHERE sent_date = ? OR (month = ? AND month != '')
-    `).bind(todayStr, monthQuery).all().catch(() => ({ results: [] }));
-
-    // 2. Check email_logs table for dispatched reminders
-    const emailLogs = await env.DB.prepare(`
-      SELECT DISTINCT related_entity_id, user_id FROM email_logs
-      WHERE (template_name = 'expense_submission_reminder' OR subject LIKE '%Expense%Reminder%')
-        AND (DATE(created_at) = ? OR created_at LIKE ?)
-    `).bind(todayStr, `${todayStr}%`).all().catch(() => ({ results: [] }));
-
     const sentSet = new Set();
-    (attLogs.results || []).forEach(r => {
-      if (r.employee_code) sentSet.add(String(r.employee_code).trim().toUpperCase());
-    });
-    (emailLogs.results || []).forEach(r => {
-      if (r.related_entity_id) sentSet.add(String(r.related_entity_id).trim().toUpperCase());
-      if (r.user_id) sentSet.add(String(r.user_id).trim().toUpperCase());
-    });
+
+    // 1. Check attendance_reminder_logs
+    try {
+      await env.DB.prepare(`
+        CREATE TABLE IF NOT EXISTS attendance_reminder_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          employee_code TEXT NOT NULL,
+          month TEXT NOT NULL,
+          sent_date TEXT NOT NULL,
+          sent_by TEXT,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(employee_code, month, sent_date)
+        )
+      `).run();
+
+      const attLogs = await env.DB.prepare(`
+        SELECT DISTINCT employee_code FROM attendance_reminder_logs
+      `).all();
+
+      (attLogs.results || []).forEach(r => {
+        if (r.employee_code) {
+          sentSet.add(String(r.employee_code).trim().toUpperCase());
+          sentSet.add(String(r.employee_code).replace(/[^a-zA-Z0-9]/g, "").toUpperCase());
+        }
+      });
+    } catch (e) {
+      console.warn("attendance_reminder_logs query error:", e.message);
+    }
+
+    // 2. Check email_logs table for all reminder logs
+    try {
+      const emailLogs = await env.DB.prepare(`
+        SELECT DISTINCT related_entity_id, user_id, recipient FROM email_logs
+        WHERE template_name = 'expense_submission_reminder'
+           OR subject LIKE '%Expense%Reminder%'
+           OR subject LIKE '%Pending Expense%'
+      `).all();
+
+      (emailLogs.results || []).forEach(r => {
+        if (r.related_entity_id) {
+          sentSet.add(String(r.related_entity_id).trim().toUpperCase());
+          sentSet.add(String(r.related_entity_id).replace(/[^a-zA-Z0-9]/g, "").toUpperCase());
+        }
+        if (r.user_id) {
+          sentSet.add(String(r.user_id).trim().toUpperCase());
+          sentSet.add(String(r.user_id).replace(/[^a-zA-Z0-9]/g, "").toUpperCase());
+        }
+      });
+    } catch (e) {
+      console.warn("email_logs query error:", e.message);
+    }
 
     return jsonResponse({
       success: true,

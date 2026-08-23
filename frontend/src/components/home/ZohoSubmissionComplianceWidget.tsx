@@ -57,14 +57,29 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
   const [leaveReason, setLeaveReason] = useState<string>("");
   const [savingLeave, setSavingLeave] = useState(false);
 
-  // Strict Admin Role Check — ONLY Admins & Superadmins see the Remind / Sent action button!
+  // Strict Admin Role Check — ONLY Genuine Admins see the Remind / Sent action button!
   const isAdmin = useMemo(() => {
-    const role = String(user?.role || user?.designation || "").toLowerCase().trim();
+    const rawRole = String(user?.role || "").trim().toLowerCase();
+    const rawDesig = String(user?.designation || "").trim().toLowerCase();
+
+    // 1. Explicitly reject Coordinator, Manager, Field Engineer
     if (
-      role === "admin" || 
-      role === "superadmin" || 
-      role === "super_admin" || 
-      role.includes("super admin") ||
+      rawRole.includes("coordinator") || 
+      rawDesig.includes("coordinator") ||
+      rawRole.includes("manager") || 
+      rawDesig.includes("manager") ||
+      rawRole.includes("engineer") || 
+      rawDesig.includes("engineer")
+    ) {
+      return false;
+    }
+
+    // 2. Check Admin role
+    if (
+      rawRole === "admin" || 
+      rawRole === "superadmin" || 
+      rawRole === "super_admin" || 
+      rawRole.includes("super admin") ||
       user?.is_admin === true || 
       user?.isAdmin === true
     ) {
@@ -75,12 +90,23 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       const stored = localStorage.getItem("cyrix_user") || localStorage.getItem("user");
       if (stored) {
         const u = JSON.parse(stored);
-        const r = String(u.role || u.designation || "").toLowerCase().trim();
+        const uRole = String(u.role || "").trim().toLowerCase();
+        const uDesig = String(u.designation || "").trim().toLowerCase();
         if (
-          r === "admin" || 
-          r === "superadmin" || 
-          r === "super_admin" || 
-          r.includes("super admin") ||
+          uRole.includes("coordinator") || 
+          uDesig.includes("coordinator") ||
+          uRole.includes("manager") || 
+          uDesig.includes("manager") ||
+          uRole.includes("engineer") || 
+          uDesig.includes("engineer")
+        ) {
+          return false;
+        }
+        if (
+          uRole === "admin" || 
+          uRole === "superadmin" || 
+          uRole === "super_admin" || 
+          uRole.includes("super admin") ||
           u.is_admin === true || 
           u.isAdmin === true
         ) {
@@ -89,7 +115,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       }
     } catch (_) {}
 
-    return false; // Non-admin (Engineer, Coordinator, Manager) strictly gets false!
+    return false; // Non-admin gets strictly false!
   }, [user]);
 
   // Parse Year and Month
@@ -110,7 +136,13 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       try {
         const res = await api.get(`/attendance/reminder-status?month=${selectMonth}`);
         if (isMounted && res.data?.success && Array.isArray(res.data.sent_today)) {
-          setSentRemindersSet(new Set(res.data.sent_today.map((c: string) => String(c).toUpperCase())));
+          const cleanCodes: string[] = [];
+          res.data.sent_today.forEach((c: string) => {
+            const s = String(c).trim().toUpperCase();
+            cleanCodes.push(s);
+            cleanCodes.push(s.replace(/[^A-Z0-9]/g, ""));
+          });
+          setSentRemindersSet(new Set(cleanCodes));
         }
       } catch (_) {}
     };
@@ -408,6 +440,13 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     const defaulter = complianceData.filter((r) => r.statusCategory === "defaulter").length;
     return { total, compliant, pending, defaulter };
   }, [complianceData]);
+
+  // Check if reminder is already sent to engineer
+  const isReminderSent = (code: string) => {
+    const raw = String(code || "").trim().toUpperCase();
+    const clean = raw.replace(/[^A-Z0-9]/g, "");
+    return sentRemindersSet.has(raw) || sentRemindersSet.has(clean);
+  };
 
   // Executive Email Reminder Sender (100% Automated Background API Dispatch)
   const handleSendEmailReminder = async (r: any) => {
@@ -774,7 +813,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                   {r.pendingDays > 0 ? (
                     <div className="flex items-center gap-1.5 pt-0.5">
                       {isAdmin && (
-                        sentRemindersSet.has(r.code.toUpperCase()) ? (
+                        isReminderSent(r.code) ? (
                           <div className="flex-1 py-1.5 px-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-[3px] text-2xs font-bold flex items-center justify-center gap-1 cursor-default">
                             <CheckCircle2 className="w-3 h-3 text-slate-500" />
                             <span>Mail Sent Today</span>
@@ -972,7 +1011,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                         <td className="py-1.5 px-2.5 text-right whitespace-nowrap">
                           {r.pendingDays > 0 ? (
                             <div className="inline-flex items-center gap-1 justify-end">
-                              {sentRemindersSet.has(r.code.toUpperCase()) ? (
+                              {isReminderSent(r.code) ? (
                                 <span
                                   className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-[3px] bg-slate-100 text-slate-500 border border-slate-200 text-3xs font-bold whitespace-nowrap cursor-default"
                                   title="Reminder email already sent today"
