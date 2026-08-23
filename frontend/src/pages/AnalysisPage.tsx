@@ -1,5 +1,4 @@
 import { useEffect, useState, useMemo } from "react";
-import * as XLSX from "xlsx";
 import { SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart, SaaS3DHybridTrendChart } from "../components/common/SaaSCharts";
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
@@ -7,9 +6,6 @@ import { adminService } from "../services/adminService";
 import AnalysisSkeleton from "../components/common/AnalysisSkeleton";
 import {
   Button,
-  Modal,
-  Table,
-  Input,
   Select
 } from "antd";
 import {
@@ -17,7 +13,6 @@ import {
   CloseOutlined,
   FileExcelOutlined,
   FundOutlined,
-  CheckOutlined,
   InfoCircleOutlined,
   TagOutlined,
   RocketOutlined,
@@ -748,565 +743,14 @@ export default function AnalysisPage() {
       .sort((a, b) => b.count - a.count);
   }, [activeExpenses, user?.district]);
 
-  // State for Breakdown Modals
-  const [activeModal, setActiveModal] = useState<"none" | "asset_tagging" | "pms" | "calls">("none");
-  const [isTaggingModalOpen, setIsTaggingModalOpen] = useState(false);
-  const [selectedTaggingDate, setSelectedTaggingDate] = useState<string | null>(null);
-  const [taggingSearchQuery, setTaggingSearchQuery] = useState("");
-  const [taggingPageSize, setTaggingPageSize] = useState(10);
-  const [taggingMobilePage, setTaggingMobilePage] = useState(1);
+  // Selected KPI Card Highlight State (No modals)
+  const [selectedKpi, setSelectedKpi] = useState<string>("all");
 
-  const [pmsSearchQuery, setPmsSearchQuery] = useState("");
-  const [pmsPageSize, setPmsPageSize] = useState(10);
-  const [pmsMobilePage, setPmsMobilePage] = useState(1);
-
-  const [callsSearchQuery, setCallsSearchQuery] = useState("");
-  const [callsPageSize, setCallsPageSize] = useState(10);
-  const [callsMobilePage, setCallsMobilePage] = useState(1);
-
-  // Helper to completely unfreeze page body and restore scrolling/clicks
-  const forceUnfreezePage = () => {
-    document.body.style.overflow = "";
-    document.body.style.overflowY = "";
-    document.body.style.pointerEvents = "";
-    document.body.classList.remove("ant-scrolling-effect");
-    document.documentElement.style.overflow = "";
-    document.documentElement.style.overflowY = "";
-    
-    // Clear residual backdrop overlays if left behind
-    setTimeout(() => {
-      document.body.style.overflow = "";
-      document.body.style.overflowY = "";
-      document.body.style.pointerEvents = "";
-      document.body.classList.remove("ant-scrolling-effect");
-      document.documentElement.style.overflow = "";
-      document.documentElement.style.overflowY = "";
-
-      const masks = document.querySelectorAll(".ant-modal-mask, .ant-modal-wrap");
-      masks.forEach(el => {
-        if (el && el.parentElement && activeModal === "none" && !isTaggingModalOpen) {
-          (el as HTMLElement).style.display = "none";
-        }
-      });
-    }, 150);
-  };
-
-  useEffect(() => {
-    if (activeModal === "none" && !isTaggingModalOpen) {
-      forceUnfreezePage();
-    }
-  }, [activeModal, isTaggingModalOpen]);
-
-  useEffect(() => {
-    return () => {
-      forceUnfreezePage();
-    };
-  }, []);
-
-  // Flatten asset tagging details for active expenses
-  const taggingBreakdownData = useMemo(() => {
-    const list: {
-      key: string;
-      date: string;
-      engineer: string;
-      district: string;
-      zone: string;
-      hospital_name: string;
-      equipment_name: string;
-      barcode: string;
-      quantity: number;
-      unit_cost: number;
-      total_val: number;
-    }[] = [];
-
-    let counter = 1;
-    activeExpenses.forEach(e => {
-      if (!e) return;
-      const engineerName = e.submitter_name || "Self";
-      const districtName = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
-      const zoneName = e.zone || "Unassigned";
-      const mainDate = String(e.date || e.itinerary || "").trim();
-      const fallbackHospital = e.hospital_name || e.destination || e.to || e.purpose || "Base Hospital / Site";
-      const fallbackBarcode = e.barcode || e.asset_code || e.serial_number || "N/A";
-
-      const details = Array.isArray(e.tagging_details) ? e.tagging_details : [];
-      if (details.length > 0) {
-        details.forEach((d: any) => {
-          const itemDate = d.itinerary_date || mainDate;
-          let dQty = Number(d.quantity || 1);
-          let unitCost = Number(d.unit_cost || 0);
-          let totalVal = Number(d.total_val || (dQty * unitCost) || 0);
-
-          if (dQty > 100000 || isNaN(dQty)) {
-            dQty = 1;
-            totalVal = unitCost > 0 && unitCost < 100000000 ? unitCost : 0;
-          } else if (totalVal > 100000000 || isNaN(totalVal)) {
-            totalVal = unitCost > 0 ? dQty * unitCost : 0;
-          }
-
-          list.push({
-            key: `tag_${counter++}`,
-            date: itemDate,
-            engineer: engineerName,
-            district: districtName,
-            zone: zoneName,
-            hospital_name: d.hospital_name || fallbackHospital,
-            equipment_name: d.equipment_name || "Tagged Asset",
-            barcode: d.barcode || d.asset_code || fallbackBarcode,
-            quantity: dQty,
-            unit_cost: unitCost,
-            total_val: totalVal
-          });
-        });
-      } else if (Number(e.asset_tagging || 0) > 0 || Number(e.asset_tagging_value || e.asset_tagging_val || 0) > 0) {
-        const { qty, val } = getAssetTaggingMetrics(e);
-        if (qty > 0 || val > 0) {
-          const unitCost = qty > 0 ? Math.round(val / qty) : val;
-          list.push({
-            key: `tag_${counter++}`,
-            date: mainDate,
-            engineer: engineerName,
-            district: districtName,
-            zone: zoneName,
-            hospital_name: fallbackHospital,
-            equipment_name: "Asset Tagging",
-            barcode: fallbackBarcode,
-            quantity: qty,
-            unit_cost: unitCost,
-            total_val: val
-          });
-        }
-      }
-    });
-
-    return list;
-  }, [activeExpenses]);
-
-  // Filter breakdown data by selected date & search query
-  const filteredTaggingBreakdown = useMemo(() => {
-    return taggingBreakdownData.filter(item => {
-      if (selectedTaggingDate) {
-        const itemDateStr = String(item.date || "").trim();
-        const dateMatch = itemDateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (dateMatch) {
-          const monthIdx = parseInt(dateMatch[2], 10) - 1;
-          const dayNum = parseInt(dateMatch[3], 10);
-          const dateLabel = `${dayNum} ${months[monthIdx]?.substring(0, 3)}`;
-          if (dateLabel !== selectedTaggingDate && itemDateStr !== selectedTaggingDate) {
-            return false;
-          }
-        } else if (itemDateStr && itemDateStr !== selectedTaggingDate) {
-          return false;
-        }
-      }
-
-      if (taggingSearchQuery.trim()) {
-        const q = taggingSearchQuery.trim().toLowerCase();
-        const matchEng = item.engineer.toLowerCase().includes(q);
-        const matchDist = item.district.toLowerCase().includes(q);
-        const matchEq = item.equipment_name.toLowerCase().includes(q);
-        const matchZone = item.zone.toLowerCase().includes(q);
-        if (!matchEng && !matchDist && !matchEq && !matchZone) return false;
-      }
-
-      return true;
-    });
-  }, [taggingBreakdownData, selectedTaggingDate, taggingSearchQuery]);
-
-  const taggingTableColumns = [
-    {
-      title: "Date",
-      dataIndex: "date",
-      key: "date",
-      width: 100,
-      render: (val: string) => <span className="font-mono text-xs font-semibold text-slate-700">{val || "—"}</span>,
-      sorter: (a: any, b: any) => (a.date || "").localeCompare(b.date || "")
-    },
-    {
-      title: "Engineer Name",
-      dataIndex: "engineer",
-      key: "engineer",
-      render: (val: string) => <span className="font-bold text-xs text-slate-900">{val}</span>,
-      sorter: (a: any, b: any) => a.engineer.localeCompare(b.engineer)
-    },
-    {
-      title: "District",
-      dataIndex: "district",
-      key: "district",
-      width: 120,
-      render: (val: string) => <span className="text-xs text-slate-600 font-medium">{val}</span>,
-      sorter: (a: any, b: any) => a.district.localeCompare(b.district)
-    },
-    {
-      title: "Equipment Name",
-      dataIndex: "equipment_name",
-      key: "equipment_name",
-      render: (val: string) => (
-        <span className="font-semibold text-xs text-slate-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-md">
-          {val}
-        </span>
-      ),
-      sorter: (a: any, b: any) => a.equipment_name.localeCompare(b.equipment_name)
-    },
-    {
-      title: "Hospital / Location",
-      dataIndex: "hospital_name",
-      key: "hospital_name",
-      width: 140,
-      render: (val: string) => <span className="text-xs text-slate-700 font-medium">{val || "—"}</span>,
-      sorter: (a: any, b: any) => (a.hospital_name || "").localeCompare(b.hospital_name || "")
-    },
-    {
-      title: "Equipment Name",
-      dataIndex: "equipment_name",
-      key: "equipment_name",
-      render: (val: string) => (
-        <span className="font-semibold text-xs text-slate-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-md">
-          {val}
-        </span>
-      ),
-      sorter: (a: any, b: any) => a.equipment_name.localeCompare(b.equipment_name)
-    },
-    {
-      title: "Barcode / Asset ID",
-      dataIndex: "barcode",
-      key: "barcode",
-      width: 130,
-      render: (val: string) => <span className="font-mono text-xs text-primary-700 font-bold bg-primary-50 px-1.5 py-0.5 rounded border border-primary-100">{val || "N/A"}</span>,
-      sorter: (a: any, b: any) => (a.barcode || "").localeCompare(b.barcode || "")
-    },
-    {
-      title: "Quantity",
-      dataIndex: "quantity",
-      key: "quantity",
-      width: 95,
-      align: "center" as const,
-      render: (val: number) => <span className="font-mono font-extrabold text-xs text-slate-700">{val} units</span>,
-      sorter: (a: any, b: any) => a.quantity - b.quantity
-    },
-    {
-      title: "Unit Price (₹)",
-      dataIndex: "unit_cost",
-      key: "unit_cost",
-      width: 125,
-      align: "right" as const,
-      render: (val: number) => <span className="font-mono text-xs text-slate-600">₹{val.toLocaleString('en-IN')}</span>,
-      sorter: (a: any, b: any) => a.unit_cost - b.unit_cost
-    },
-    {
-      title: "Total Tagged Value (₹)",
-      dataIndex: "total_val",
-      key: "total_val",
-      width: 155,
-      align: "right" as const,
-      render: (val: number) => <span className="font-mono font-extrabold text-xs text-emerald-600">₹{val.toLocaleString('en-IN')}</span>,
-      sorter: (a: any, b: any) => a.total_val - b.total_val
-    }
-  ];
-
-  // PMS Done Breakdown Data
-  const pmsBreakdownData = useMemo(() => {
-    const list: {
-      key: string;
-      date: string;
-      engineer: string;
-      district: string;
-      zone: string;
-      hospital_name: string;
-      equipment_name: string;
-      barcode: string;
-      pms_schedule: string;
-      pms_status: string;
-      pms_count: number;
-      purpose: string;
-    }[] = [];
-
-    let counter = 1;
-    activeExpenses.forEach(e => {
-      if (!e) return;
-      const pmsCount = Number(e.pms_count || 0);
-      if (pmsCount <= 0) return;
-
-      const engineerName = e.submitter_name || "Self";
-      const districtName = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
-      const zoneName = e.zone || "Unassigned";
-      const mainDate = String(e.date || e.itinerary || "").trim();
-      const hospitalName = e.hospital_name || e.destination || e.to || e.purpose || "District Hospital / Site";
-      const barcodeVal = e.barcode || e.asset_code || e.serial_number || "N/A";
-      const scheduleVal = e.pms_schedule || e.schedule || "Scheduled";
-      const statusVal = (e.status || "Completed").toLowerCase() === "approved" ? "Approved" : "Completed";
-
-      list.push({
-        key: `pms_${counter++}`,
-        date: mainDate,
-        engineer: engineerName,
-        district: districtName,
-        zone: zoneName,
-        hospital_name: hospitalName,
-        equipment_name: e.equipment_name || e.equipment || "Medical Equipment",
-        barcode: barcodeVal,
-        pms_schedule: scheduleVal,
-        pms_status: statusVal,
-        pms_count: pmsCount,
-        purpose: e.purpose || e.description || "Preventive Maintenance Service"
-      });
-    });
-
-    return list;
-  }, [activeExpenses]);
-
-  const filteredPmsBreakdown = useMemo(() => {
-    return pmsBreakdownData.filter(item => {
-      if (pmsSearchQuery.trim()) {
-        const q = pmsSearchQuery.trim().toLowerCase();
-        const matchEng = item.engineer.toLowerCase().includes(q);
-        const matchDist = item.district.toLowerCase().includes(q);
-        const matchHosp = item.hospital_name.toLowerCase().includes(q);
-        const matchEq = item.equipment_name.toLowerCase().includes(q);
-        const matchCode = item.barcode.toLowerCase().includes(q);
-        const matchZone = item.zone.toLowerCase().includes(q);
-        if (!matchEng && !matchDist && !matchHosp && !matchEq && !matchCode && !matchZone) return false;
-      }
-      return true;
-    });
-  }, [pmsBreakdownData, pmsSearchQuery]);
-
-  const pmsTableColumns = [
-    {
-      title: "Date",
-      dataIndex: "date",
-      key: "date",
-      width: 100,
-      render: (val: string) => <span className="font-mono text-xs font-semibold text-slate-700">{val || "—"}</span>,
-      sorter: (a: any, b: any) => (a.date || "").localeCompare(b.date || "")
-    },
-    {
-      title: "Engineer Name",
-      dataIndex: "engineer",
-      key: "engineer",
-      render: (val: string) => <span className="font-bold text-xs text-indigo-900">{val}</span>,
-      sorter: (a: any, b: any) => a.engineer.localeCompare(b.engineer)
-    },
-    {
-      title: "District / Zone",
-      key: "district_zone",
-      width: 130,
-      render: (_: any, record: any) => <span className="text-xs text-slate-600 font-medium">{record.district} ({record.zone})</span>,
-      sorter: (a: any, b: any) => a.district.localeCompare(b.district)
-    },
-    {
-      title: "Hospital / Location",
-      dataIndex: "hospital_name",
-      key: "hospital_name",
-      width: 140,
-      render: (val: string) => <span className="text-xs text-slate-700 font-medium">{val}</span>
-    },
-    {
-      title: "Equipment & Barcode",
-      key: "eq_barcode",
-      render: (_: any, record: any) => (
-        <div>
-          <span className="font-semibold text-xs text-slate-800 block">{record.equipment_name}</span>
-          <span className="font-mono text-[10px] text-teal-700 font-bold">BC: {record.barcode}</span>
-        </div>
-      )
-    },
-    {
-      title: "PMS Schedule",
-      dataIndex: "pms_schedule",
-      key: "pms_schedule",
-      width: 110,
-      render: (val: string) => <span className="text-xs font-semibold text-slate-600">{val}</span>
-    },
-    {
-      title: "PMS Done",
-      dataIndex: "pms_count",
-      key: "pms_count",
-      width: 110,
-      align: "center" as const,
-      render: (val: number) => <span className="font-mono font-extrabold text-xs text-teal-600 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">{val} Completed</span>,
-      sorter: (a: any, b: any) => a.pms_count - b.pms_count
-    }
-  ];
-
-  // Calls Activity Breakdown Data
-  const callsBreakdownData = useMemo(() => {
-    const list: {
-      key: string;
-      date: string;
-      engineer: string;
-      district: string;
-      zone: string;
-      hospital_name: string;
-      call_type: string;
-      call_status: string;
-      calls_assigned: number;
-      calls_completed: number;
-      completion_rate: number;
-      purpose: string;
-    }[] = [];
-
-    let counter = 1;
-    activeExpenses.forEach(e => {
-      if (!e) return;
-      const assigned = Number(e.calls_assigned || 0);
-      const completed = Number(e.calls_completed || 0);
-      if (assigned <= 0 && completed <= 0) return;
-
-      const engineerName = e.submitter_name || "Self";
-      const districtName = e.district || e.submitter_district || e.home_district || e.work_location || e.location || e.destination || e.city || "Unassigned District";
-      const zoneName = e.zone || "Unassigned";
-      const mainDate = String(e.date || e.itinerary || "").trim();
-      const hospitalName = e.hospital_name || e.destination || e.to || e.purpose || "District Hospital / Site";
-      const callTypeVal = e.call_type || e.travel_mode || e.category || "Breakdown Service";
-      const callStatusVal = completed > 0 ? (completed >= assigned ? "Closed" : "Attended") : "Pending";
-      const rate = assigned > 0 ? Math.min(100, Math.round((completed / assigned) * 100)) : (completed > 0 ? 100 : 0);
-
-      list.push({
-        key: `call_${counter++}`,
-        date: mainDate,
-        engineer: engineerName,
-        district: districtName,
-        zone: zoneName,
-        hospital_name: hospitalName,
-        call_type: callTypeVal,
-        call_status: callStatusVal,
-        calls_assigned: assigned,
-        calls_completed: completed,
-        completion_rate: rate,
-        purpose: e.purpose || e.description || "Service Call"
-      });
-    });
-
-    return list;
-  }, [activeExpenses]);
-
-  const filteredCallsBreakdown = useMemo(() => {
-    return callsBreakdownData.filter(item => {
-      if (callsSearchQuery.trim()) {
-        const q = callsSearchQuery.trim().toLowerCase();
-        const matchEng = item.engineer.toLowerCase().includes(q);
-        const matchDist = item.district.toLowerCase().includes(q);
-        const matchHosp = item.hospital_name.toLowerCase().includes(q);
-        const matchType = item.call_type.toLowerCase().includes(q);
-        const matchStat = item.call_status.toLowerCase().includes(q);
-        const matchZone = item.zone.toLowerCase().includes(q);
-        if (!matchEng && !matchDist && !matchHosp && !matchType && !matchStat && !matchZone) return false;
-      }
-      return true;
-    });
-  }, [callsBreakdownData, callsSearchQuery]);
-
-  const callsTableColumns = [
-    {
-      title: "Date",
-      dataIndex: "date",
-      key: "date",
-      width: 100,
-      render: (val: string) => <span className="font-mono text-xs font-semibold text-slate-700">{val || "—"}</span>,
-      sorter: (a: any, b: any) => (a.date || "").localeCompare(b.date || "")
-    },
-    {
-      title: "Engineer Name",
-      dataIndex: "engineer",
-      key: "engineer",
-      render: (val: string) => <span className="font-bold text-xs text-indigo-900">{val}</span>,
-      sorter: (a: any, b: any) => a.engineer.localeCompare(b.engineer)
-    },
-    {
-      title: "District / Zone",
-      key: "district_zone",
-      width: 130,
-      render: (_: any, record: any) => <span className="text-xs text-slate-600 font-medium">{record.district} ({record.zone})</span>,
-      sorter: (a: any, b: any) => a.district.localeCompare(b.district)
-    },
-    {
-      title: "Hospital / Location",
-      dataIndex: "hospital_name",
-      key: "hospital_name",
-      width: 140,
-      render: (val: string) => <span className="text-xs text-slate-700 font-medium">{val}</span>
-    },
-    {
-      title: "Call Type",
-      dataIndex: "call_type",
-      key: "call_type",
-      width: 120,
-      render: (val: string) => <span className="font-bold text-xs text-primary-600 bg-primary-50 px-2 py-0.5 rounded border border-primary-100">{val}</span>
-    },
-    {
-      title: "Call Status",
-      dataIndex: "call_status",
-      key: "call_status",
-      width: 110,
-      align: "center" as const,
-      render: (val: string) => (
-        <span className={`font-extrabold text-xs px-2 py-0.5 rounded-md ${val === 'Closed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-          {val}
-        </span>
-      )
-    },
-    {
-      title: "Calls Done / Assigned",
-      key: "calls_count",
-      width: 130,
-      align: "center" as const,
-      render: (_: any, record: any) => <span className="font-mono font-bold text-xs text-slate-800">{record.calls_completed} / {record.calls_assigned}</span>,
-      sorter: (a: any, b: any) => a.calls_completed - b.calls_completed
-    },
-    {
-      title: "Completion Rate",
-      dataIndex: "completion_rate",
-      key: "completion_rate",
-      width: 120,
-      align: "center" as const,
-      render: (val: number) => (
-        <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-md ${val >= 80 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-          {val}%
-        </span>
-      ),
-      sorter: (a: any, b: any) => a.completion_rate - b.completion_rate
-    }
-  ];
-
-  // Excel Export Handler - Exactly 10 fields in exact requested order (Issue 3)
-  const handleExportToExcel = (modalType: "asset_tagging" | "pms" | "calls") => {
-    const monthName = months[selectedMonth];
-    const monthQuery = `${monthName}_${selectedYear}`;
-    let rawList: any[] = [];
-    let fileName = "";
-
-    if (modalType === "asset_tagging") {
-      rawList = filteredTaggingBreakdown;
-      fileName = `Asset_Tagging_Breakdown_${monthQuery}.xlsx`;
-    } else if (modalType === "pms") {
-      rawList = filteredPmsBreakdown;
-      fileName = `PMS_Done_Breakdown_${monthQuery}.xlsx`;
-    } else if (modalType === "calls") {
-      rawList = filteredCallsBreakdown;
-      fileName = `Calls_Activity_Breakdown_${monthQuery}.xlsx`;
-    }
-
-    if (rawList.length === 0) return;
-
-    const exportData = rawList.map((item) => ({
-      "District Name": item.district || "",
-      "Hospital Name": item.hospital_name || item.hospital || "",
-      "Equipment Name": item.equipment_name || "",
-      "Bar Code": item.barcode || "",
-      "PMS Schedule": item.pms_schedule || item.schedule || "",
-      "PMS Time": item.pms_time || item.time || "",
-      "Call Type": item.call_type || item.travel_mode || "",
-      "Call Date": item.date || item.call_date || "",
-      "Engineer Name": item.engineer || item.submitter_name || "",
-      "Call Status": item.call_status || item.pms_status || item.status || ""
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Breakdown");
-    XLSX.writeFile(workbook, fileName);
-  };
+  // Average Expense Per Engineer
+  const avgExpensePerEngineer = useMemo(() => {
+    const totalEng = userWiseData.length;
+    return totalEng > 0 ? Math.round(totalAmount / totalEng) : 0;
+  }, [totalAmount, userWiseData.length]);
 
   // E. Zone-wise (from user.zone database field) - respects active filters
   // FULL_ACCESS_ROLES: single source of truth — see utils/constants.ts
@@ -1822,8 +1266,15 @@ export default function AnalysisPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5 my-2.5">
         {/* Card 1: Total Claimed */}
         <div
-          className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-accent-600 p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
-          onClick={() => setSelectedStatus("all")}
+          className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs ${
+            selectedKpi === "all"
+              ? "border-accent-600 ring-2 ring-accent-500/40 bg-accent-50/20"
+              : "border-[#4f4f4f]/30 hover:border-accent-600 hover:shadow-sm"
+          }`}
+          onClick={() => {
+            setSelectedKpi("all");
+            setSelectedStatus("all");
+          }}
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-600" />
           <div className="flex items-center justify-between">
@@ -1844,35 +1295,45 @@ export default function AnalysisPage() {
           </div>
         </div>
 
-        {/* Card 2: Approved */}
+        {/* Card 2: Avg Expense Per Engineer (Replaced Approved) */}
         <div
-          className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-emerald-600 p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
-          onClick={() => setSelectedStatus("approved")}
+          className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs ${
+            selectedKpi === "avg_engineer"
+              ? "border-emerald-600 ring-2 ring-emerald-500/40 bg-emerald-50/20"
+              : "border-[#4f4f4f]/30 hover:border-emerald-600 hover:shadow-sm"
+          }`}
+          onClick={() => {
+            setSelectedKpi("avg_engineer");
+          }}
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-600" />
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-800 font-sans truncate">
-              APPROVED
+              AVG / ENGINEER
             </span>
             <div className="w-5 h-5 rounded-[3px] bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 shrink-0">
-              <CheckOutlined style={{ fontSize: 10 }} />
+              <TeamOutlined style={{ fontSize: 10 }} />
             </div>
           </div>
           <div>
             <div className="text-sm font-bold font-mono text-emerald-800 leading-tight truncate">
-              {(statusStats.appAmt || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
+              {(avgExpensePerEngineer || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
             </div>
             <span className="text-[10px] text-emerald-700 font-medium leading-none mt-0.5 block font-mono truncate">
-              {statusStats.appCnt} Verified
+              {userWiseData.length} Active Engineers
             </span>
           </div>
         </div>
 
-        {/* Card 3: Total Asset Tagging (Replaced Image 3: Pending) */}
+        {/* Card 3: Total Asset Tagging */}
         <div
-          className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-blue-600 p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+          className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs ${
+            selectedKpi === "tagging"
+              ? "border-blue-600 ring-2 ring-blue-500/40 bg-blue-50/20"
+              : "border-[#4f4f4f]/30 hover:border-blue-600 hover:shadow-sm"
+          }`}
           onClick={() => {
-            setActiveModal("asset_tagging");
+            setSelectedKpi("tagging");
           }}
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-600" />
@@ -1894,11 +1355,15 @@ export default function AnalysisPage() {
           </div>
         </div>
 
-        {/* Card 4: Total Calibration (Replaced Image 2: Rejected) */}
+        {/* Card 4: Total Calibration */}
         <div
-          className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-amber-600 p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+          className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs ${
+            selectedKpi === "calibration"
+              ? "border-amber-600 ring-2 ring-amber-500/40 bg-amber-50/20"
+              : "border-[#4f4f4f]/30 hover:border-amber-600 hover:shadow-sm"
+          }`}
           onClick={() => {
-            setActiveModal("pms");
+            setSelectedKpi("calibration");
           }}
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-amber-500" />
@@ -1920,11 +1385,15 @@ export default function AnalysisPage() {
           </div>
         </div>
 
-        {/* Card 5: Total PMS (Replaced Image 1: Avg Claim) */}
+        {/* Card 5: Total PMS */}
         <div
-          className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-purple-600 p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+          className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs ${
+            selectedKpi === "pms"
+              ? "border-purple-600 ring-2 ring-purple-500/40 bg-purple-50/20"
+              : "border-[#4f4f4f]/30 hover:border-purple-600 hover:shadow-sm"
+          }`}
           onClick={() => {
-            setActiveModal("pms");
+            setSelectedKpi("pms");
           }}
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-purple-600" />
@@ -1946,8 +1415,17 @@ export default function AnalysisPage() {
           </div>
         </div>
 
-        {/* Card 6: Total Asset Mobilised (New Card) */}
-        <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-teal-600 p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+        {/* Card 6: Total Asset Mobilised */}
+        <div
+          className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs ${
+            selectedKpi === "mobilised"
+              ? "border-teal-600 ring-2 ring-teal-500/40 bg-teal-50/20"
+              : "border-[#4f4f4f]/30 hover:border-teal-600 hover:shadow-sm"
+          }`}
+          onClick={() => {
+            setSelectedKpi("mobilised");
+          }}
+        >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-teal-600" />
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-bold uppercase tracking-wider text-teal-800 font-sans truncate">
@@ -1969,9 +1447,13 @@ export default function AnalysisPage() {
 
         {/* Card 7: Calls Done */}
         <div
-          className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-indigo-600 p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm"
+          className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs ${
+            selectedKpi === "calls"
+              ? "border-indigo-600 ring-2 ring-indigo-500/40 bg-indigo-50/20"
+              : "border-[#4f4f4f]/30 hover:border-indigo-600 hover:shadow-sm"
+          }`}
           onClick={() => {
-            setActiveModal("calls");
+            setSelectedKpi("calls");
           }}
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-indigo-600" />
@@ -2295,596 +1777,6 @@ export default function AnalysisPage() {
           </div>
         </div>
       )}
-
-      {/* Asset Tagging Detailed Breakdown Modal */}
-      <Modal
-        open={isTaggingModalOpen || activeModal === "asset_tagging"}
-        onCancel={() => { 
-          setIsTaggingModalOpen(false); 
-          setActiveModal("none"); 
-          forceUnfreezePage();
-        }}
-        destroyOnClose={true}
-        afterClose={() => {
-          forceUnfreezePage();
-        }}
-        footer={null}
-        width={950}
-        centered
-        style={{ maxWidth: "96vw", top: 10, maxHeight: "85vh" }}
-        bodyStyle={{ padding: "12px 16px 16px 16px", maxHeight: "calc(85vh - 70px)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
-        className="asset-tagging-breakdown-modal"
-        title={
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
-            <div>
-              <span className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                <TagOutlined className="text-cyan-500" />
-                Asset Tagging Detailed Breakdown
-              </span>
-              <p className="text-[10px] sm:text-[11px] text-gray-500 font-normal m-0 mt-0.5">
-                {selectedTaggingDate ? `Filtered for ${selectedTaggingDate}` : `${months[selectedMonth]} ${selectedYear} — All Tagged Equipment`}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="small"
-                type="primary"
-                icon={<FileExcelOutlined />}
-                style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-                onClick={() => handleExportToExcel("asset_tagging")}
-                className="text-xs font-bold shadow-2xs"
-              >
-                Export Excel
-              </Button>
-              {selectedTaggingDate && (
-                <Button
-                  size="small"
-                  type="dashed"
-                  onClick={() => setSelectedTaggingDate(null)}
-                  className="text-xs text-indigo-600 font-bold"
-                >
-                  Clear Date Filter
-                </Button>
-              )}
-            </div>
-          </div>
-        }
-      >
-        <div className="space-y-3 pt-1">
-          {/* Summary Badges & Search Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
-              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Items</span>
-                <span className="text-xs font-black text-slate-800 font-mono">{filteredTaggingBreakdown.length} records</span>
-              </div>
-              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Tagged Quantity</span>
-                <span className="text-xs font-black text-cyan-600 font-mono">
-                  {filteredTaggingBreakdown.reduce((sum, item) => sum + item.quantity, 0)} units
-                </span>
-              </div>
-              <div className="col-span-2 sm:col-span-1 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Tagged Value</span>
-                <span className="text-xs font-black text-emerald-600 font-mono">
-                  ₹{filteredTaggingBreakdown.reduce((sum, item) => sum + item.total_val, 0).toLocaleString('en-IN')}
-                </span>
-              </div>
-            </div>
-
-            <div className="w-full sm:w-64">
-              <Input
-                placeholder="Search engineer, district, or equipment..."
-                prefix={<SearchOutlined className="text-gray-400" />}
-                value={taggingSearchQuery}
-                onChange={(e) => {
-                  setTaggingSearchQuery(e.target.value);
-                  setTaggingMobilePage(1);
-                }}
-                allowClear
-                size="small"
-                className="rounded-lg text-xs"
-              />
-            </div>
-          </div>
-
-          {/* Mobile Cards View (<768px) */}
-          <div className="block md:hidden space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
-            {filteredTaggingBreakdown.length === 0 ? (
-              <div className="py-8 text-center text-gray-400 text-xs font-bold">
-                No asset tagging records found for this selection
-              </div>
-            ) : (
-              (() => {
-                const totalMobileItems = filteredTaggingBreakdown.length;
-                const slicedMobile = filteredTaggingBreakdown.slice(
-                  (taggingMobilePage - 1) * taggingPageSize,
-                  taggingMobilePage * taggingPageSize
-                );
-                const maxMobilePage = Math.ceil(totalMobileItems / taggingPageSize) || 1;
-
-                return (
-                  <>
-                    <div className="space-y-2">
-                      {slicedMobile.map((item) => (
-                        <div key={item.key} className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs hover:border-cyan-300 transition-all">
-                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
-                            <span className="font-bold text-xs text-slate-800 bg-cyan-50 border border-cyan-200 px-2 py-0.5 rounded-md leading-snug">
-                              {item.equipment_name}
-                            </span>
-                            <span className="font-mono font-extrabold text-xs text-emerald-600 shrink-0">
-                              ₹{item.total_val.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Engineer</span>
-                              <span className="font-bold text-indigo-900">{item.engineer}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">District / Zone</span>
-                              <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Hospital / Location</span>
-                              <span className="font-medium text-slate-800 truncate block">{item.hospital_name}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Barcode / Asset ID</span>
-                              <span className="font-mono text-indigo-700 font-bold">{item.barcode}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Date</span>
-                              <span className="font-mono text-slate-600">{item.date || "—"}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Qty & Unit Price</span>
-                              <span className="font-mono text-slate-700 font-semibold">{item.quantity} units @ ₹{item.unit_cost.toLocaleString('en-IN')}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Mobile Pagination Controls */}
-                    <div className="pt-2 flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        {((taggingMobilePage - 1) * taggingPageSize) + 1}-{Math.min(taggingMobilePage * taggingPageSize, totalMobileItems)} of {totalMobileItems}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          size="small"
-                          disabled={taggingMobilePage === 1}
-                          onClick={() => setTaggingMobilePage(p => Math.max(1, p - 1))}
-                          className="text-[11px] px-2 font-bold"
-                        >
-                          Prev
-                        </Button>
-                        <span className="font-mono text-[11px] font-bold text-slate-700 px-1">
-                          {taggingMobilePage}/{maxMobilePage}
-                        </span>
-                        <Button
-                          size="small"
-                          disabled={taggingMobilePage >= maxMobilePage}
-                          onClick={() => setTaggingMobilePage(p => p + 1)}
-                          className="text-[11px] px-2 font-bold"
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                );
-              })()
-            )}
-          </div>
-
-          {/* Desktop Table View (≥768px) */}
-          <div className="hidden md:block admin-data-table-wrapper rounded-xl border border-slate-200 overflow-x-auto shadow-2xs">
-            <Table
-              columns={taggingTableColumns}
-              dataSource={filteredTaggingBreakdown}
-              size="small"
-              pagination={{
-                pageSize: taggingPageSize,
-                onChange: (_, size) => setTaggingPageSize(size),
-                onShowSizeChange: (_, size) => setTaggingPageSize(size),
-                showSizeChanger: true,
-                pageSizeOptions: ["10", "25", "50", "100"],
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} tagged items`
-              }}
-              bordered
-              scroll={{ x: 750, y: 380 }}
-              className="admin-data-table text-xs"
-            />
-          </div>
-        </div>
-      </Modal>
-
-      {/* PMS Done Detailed Breakdown Modal */}
-      <Modal
-        open={activeModal === "pms"}
-        onCancel={() => { 
-          setActiveModal("none"); 
-          forceUnfreezePage();
-        }}
-        destroyOnClose={true}
-        afterClose={() => {
-          forceUnfreezePage();
-        }}
-        footer={null}
-        width={900}
-        centered
-        style={{ maxWidth: "96vw", top: 10, maxHeight: "85vh" }}
-        bodyStyle={{ padding: "12px 16px 16px 16px", maxHeight: "calc(85vh - 70px)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
-        className="pms-breakdown-modal"
-        title={
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
-            <div>
-              <span className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                <CheckOutlined className="text-teal-500" />
-                PMS Done Detailed Breakdown
-              </span>
-              <p className="text-[10px] sm:text-[11px] text-gray-500 font-normal m-0 mt-0.5">
-                {months[selectedMonth]} {selectedYear} — Preventive Maintenance Records
-              </p>
-            </div>
-            <Button
-              size="small"
-              type="primary"
-              icon={<FileExcelOutlined />}
-              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-              onClick={() => handleExportToExcel("pms")}
-              className="text-xs font-bold shadow-2xs self-start sm:self-auto"
-            >
-              Export Excel
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-3 pt-1">
-          {/* Summary Badges & Search Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Records</span>
-                <span className="text-xs font-black text-slate-800 font-mono">{filteredPmsBreakdown.length} entries</span>
-              </div>
-              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total PMS Completed</span>
-                <span className="text-xs font-black text-teal-600 font-mono">
-                  {filteredPmsBreakdown.reduce((sum, item) => sum + item.pms_count, 0)} PMS
-                </span>
-              </div>
-            </div>
-
-            <div className="w-full sm:w-64">
-              <Input
-                placeholder="Search engineer, district, or details..."
-                prefix={<SearchOutlined className="text-gray-400" />}
-                value={pmsSearchQuery}
-                onChange={(e) => {
-                  setPmsSearchQuery(e.target.value);
-                  setPmsMobilePage(1);
-                }}
-                allowClear
-                size="small"
-                className="rounded-lg text-xs"
-              />
-            </div>
-          </div>
-
-          {/* Mobile Cards View (<768px) */}
-          <div className="block md:hidden space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
-            {filteredPmsBreakdown.length === 0 ? (
-              <div className="py-8 text-center text-gray-400 text-xs font-bold">
-                No PMS records found for this selection
-              </div>
-            ) : (
-              (() => {
-                const totalMobileItems = filteredPmsBreakdown.length;
-                const slicedMobile = filteredPmsBreakdown.slice(
-                  (pmsMobilePage - 1) * pmsPageSize,
-                  pmsMobilePage * pmsPageSize
-                );
-                const maxMobilePage = Math.ceil(totalMobileItems / pmsPageSize) || 1;
-
-                return (
-                  <>
-                    <div className="space-y-2">
-                      {slicedMobile.map((item) => (
-                        <div key={item.key} className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs hover:border-teal-300 transition-all">
-                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
-                            <span className="font-bold text-xs text-indigo-900">
-                              {item.engineer}
-                            </span>
-                            <span className="font-mono font-extrabold text-xs text-teal-600 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md shrink-0">
-                              {item.pms_count} PMS
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Hospital / Location</span>
-                              <span className="font-medium text-slate-800 truncate block">{item.hospital_name}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Equipment / Barcode</span>
-                              <span className="font-semibold text-slate-700 truncate block">{item.equipment_name} (BC: {item.barcode})</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">District / Zone</span>
-                              <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Date & PMS Schedule</span>
-                              <span className="font-mono text-slate-600">{item.date} ({item.pms_schedule})</span>
-                            </div>
-                            <div className="col-span-2">
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Purpose / Details</span>
-                              <span className="text-slate-700">{item.purpose}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Mobile Pagination Controls */}
-                    <div className="pt-2 flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        {((pmsMobilePage - 1) * pmsPageSize) + 1}-{Math.min(pmsMobilePage * pmsPageSize, totalMobileItems)} of {totalMobileItems}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          size="small"
-                          disabled={pmsMobilePage === 1}
-                          onClick={() => setPmsMobilePage(p => Math.max(1, p - 1))}
-                          className="text-[11px] px-2 font-bold"
-                        >
-                          Prev
-                        </Button>
-                        <span className="font-mono text-[11px] font-bold text-slate-700 px-1">
-                          {pmsMobilePage}/{maxMobilePage}
-                        </span>
-                        <Button
-                          size="small"
-                          disabled={pmsMobilePage >= maxMobilePage}
-                          onClick={() => setPmsMobilePage(p => p + 1)}
-                          className="text-[11px] px-2 font-bold"
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                );
-              })()
-            )}
-          </div>
-
-          {/* Desktop Table View (≥768px) */}
-          <div className="hidden md:block admin-data-table-wrapper rounded-xl border border-slate-200 overflow-x-auto shadow-2xs">
-            <Table
-              columns={pmsTableColumns}
-              dataSource={filteredPmsBreakdown}
-              size="small"
-              pagination={{
-                pageSize: pmsPageSize,
-                onChange: (_, size) => setPmsPageSize(size),
-                onShowSizeChange: (_, size) => setPmsPageSize(size),
-                showSizeChanger: true,
-                pageSizeOptions: ["10", "25", "50", "100"],
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} PMS records`
-              }}
-              bordered
-              scroll={{ x: 700, y: 380 }}
-              className="admin-data-table text-xs"
-            />
-          </div>
-        </div>
-      </Modal>
-
-      {/* Calls Activity Detailed Breakdown Modal */}
-      <Modal
-        open={activeModal === "calls"}
-        onCancel={() => { 
-          setActiveModal("none"); 
-          forceUnfreezePage();
-        }}
-        destroyOnClose={true}
-        afterClose={() => {
-          forceUnfreezePage();
-        }}
-        footer={null}
-        width={950}
-        centered
-        style={{ maxWidth: "96vw", top: 10, maxHeight: "85vh" }}
-        bodyStyle={{ padding: "12px 16px 16px 16px", maxHeight: "calc(85vh - 70px)", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
-        className="calls-breakdown-modal"
-        title={
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3 pr-6">
-            <div>
-              <span className="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                <FundOutlined className="text-indigo-500" />
-                Calls Activity Detailed Breakdown
-              </span>
-              <p className="text-[10px] sm:text-[11px] text-gray-500 font-normal m-0 mt-0.5">
-                {months[selectedMonth]} {selectedYear} — Service Calls Assigned vs Completed
-              </p>
-            </div>
-            <Button
-              size="small"
-              type="primary"
-              icon={<FileExcelOutlined />}
-              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
-              onClick={() => handleExportToExcel("calls")}
-              className="text-xs font-bold shadow-2xs self-start sm:self-auto"
-            >
-              Export Excel
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-3 pt-1">
-          {/* Summary Badges & Search Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
-              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Total Records</span>
-                <span className="text-xs font-black text-slate-800 font-mono">{filteredCallsBreakdown.length} entries</span>
-              </div>
-              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Calls Assigned</span>
-                <span className="text-xs font-black text-slate-700 font-mono">
-                  {filteredCallsBreakdown.reduce((sum, item) => sum + item.calls_assigned, 0)}
-                </span>
-              </div>
-              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Calls Completed</span>
-                <span className="text-xs font-black text-indigo-700 font-mono">
-                  {filteredCallsBreakdown.reduce((sum, item) => sum + item.calls_completed, 0)}
-                </span>
-              </div>
-              <div className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                <span className="text-[9px] text-gray-400 font-bold uppercase block">Overall Rate</span>
-                <span className="text-xs font-black text-emerald-600 font-mono">
-                  {(() => {
-                    const totAssigned = filteredCallsBreakdown.reduce((sum, item) => sum + item.calls_assigned, 0);
-                    const totDone = filteredCallsBreakdown.reduce((sum, item) => sum + item.calls_completed, 0);
-                    return totAssigned > 0 ? Math.min(100, Math.round((totDone / totAssigned) * 100)) : 100;
-                  })()}%
-                </span>
-              </div>
-            </div>
-
-            <div className="w-full sm:w-64">
-              <Input
-                placeholder="Search engineer, district, or details..."
-                prefix={<SearchOutlined className="text-gray-400" />}
-                value={callsSearchQuery}
-                onChange={(e) => {
-                  setCallsSearchQuery(e.target.value);
-                  setCallsMobilePage(1);
-                }}
-                allowClear
-                size="small"
-                className="rounded-lg text-xs"
-              />
-            </div>
-          </div>
-
-          {/* Mobile Cards View (<768px) */}
-          <div className="block md:hidden space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
-            {filteredCallsBreakdown.length === 0 ? (
-              <div className="py-8 text-center text-gray-400 text-xs font-bold">
-                No calls activity records found for this selection
-              </div>
-            ) : (
-              (() => {
-                const totalMobileItems = filteredCallsBreakdown.length;
-                const slicedMobile = filteredCallsBreakdown.slice(
-                  (callsMobilePage - 1) * callsPageSize,
-                  callsMobilePage * callsPageSize
-                );
-                const maxMobilePage = Math.ceil(totalMobileItems / callsPageSize) || 1;
-
-                return (
-                  <>
-                    <div className="space-y-2">
-                      {slicedMobile.map((item) => (
-                        <div key={item.key} className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs hover:border-indigo-300 transition-all">
-                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2 mb-2">
-                            <span className="font-bold text-xs text-indigo-900">
-                              {item.engineer}
-                            </span>
-                            <span className={`font-mono font-bold text-xs px-2 py-0.5 rounded-md ${item.completion_rate >= 80 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-                              {item.completion_rate}% Rate
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Hospital / Location</span>
-                              <span className="font-medium text-slate-800 truncate block">{item.hospital_name}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Call Type & Status</span>
-                              <span className="font-bold text-indigo-700 truncate block">{item.call_type} ({item.call_status})</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">District / Zone</span>
-                              <span className="font-semibold text-slate-700">{item.district} ({item.zone})</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Date</span>
-                              <span className="font-mono text-slate-600">{item.date || "—"}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Calls Done / Assigned</span>
-                              <span className="font-mono text-slate-800 font-bold">{item.calls_completed} / {item.calls_assigned}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400 text-[9px] uppercase font-bold block">Purpose</span>
-                              <span className="text-slate-700 truncate block">{item.purpose}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Mobile Pagination Controls */}
-                    <div className="pt-2 flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
-                      <span className="text-[10px] text-slate-500 font-medium">
-                        {((callsMobilePage - 1) * callsPageSize) + 1}-{Math.min(callsMobilePage * callsPageSize, totalMobileItems)} of {totalMobileItems}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          size="small"
-                          disabled={callsMobilePage === 1}
-                          onClick={() => setCallsMobilePage(p => Math.max(1, p - 1))}
-                          className="text-[11px] px-2 font-bold"
-                        >
-                          Prev
-                        </Button>
-                        <span className="font-mono text-[11px] font-bold text-slate-700 px-1">
-                          {callsMobilePage}/{maxMobilePage}
-                        </span>
-                        <Button
-                          size="small"
-                          disabled={callsMobilePage >= maxMobilePage}
-                          onClick={() => setCallsMobilePage(p => p + 1)}
-                          className="text-[11px] px-2 font-bold"
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                );
-              })()
-            )}
-          </div>
-
-          {/* Desktop Table View (≥768px) */}
-          <div className="hidden md:block admin-data-table-wrapper rounded-xl border border-slate-200 overflow-x-auto shadow-2xs">
-            <Table
-              columns={callsTableColumns}
-              dataSource={filteredCallsBreakdown}
-              size="small"
-              pagination={{
-                pageSize: callsPageSize,
-                onChange: (_, size) => setCallsPageSize(size),
-                onShowSizeChange: (_, size) => setCallsPageSize(size),
-                showSizeChanger: true,
-                pageSizeOptions: ["10", "25", "50", "100"],
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} calls records`
-              }}
-              bordered
-            />
-          </div>
-        </div>
-      </Modal>
 
       <style>{`
         .ant-modal-content {
