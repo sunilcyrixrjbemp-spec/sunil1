@@ -5,10 +5,13 @@ import {
   Clock, 
   AlertTriangle, 
   Search, 
-  MessageCircle, 
+  Mail, 
   X, 
-  ShieldCheck
+  ShieldCheck,
+  Loader2
 } from "lucide-react";
+import { toast } from "react-hot-toast";
+import api from "../../services/api";
 
 interface ZohoSubmissionComplianceWidgetProps {
   expenses: any[];
@@ -37,6 +40,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "compliant" | "pending" | "defaulter">("all");
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [sendingEmailCode, setSendingEmailCode] = useState<string | null>(null);
 
   // Parse Year and Month
   const { year, monthIndex, monthLabel } = useMemo(() => {
@@ -94,7 +98,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       amountByDate: Record<string, number>;
     }> = {};
 
-    // 1. Seed unique employees if available
+    // 1. Seed unique employees
     uniqueEmployees.forEach((u) => {
       const code = String(u.code || "").trim().toUpperCase();
       if (!code) return;
@@ -202,7 +206,6 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       };
     });
 
-    // Apply active global filters (Zone, District, Employee)
     return rows.filter((r) => {
       if (filterZone !== "all" && cleanZone(r.zone) !== cleanZone(filterZone)) return false;
       if (filterDistrict !== "all" && r.district.toLowerCase() !== filterDistrict.toLowerCase()) return false;
@@ -211,7 +214,6 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     }).sort((a, b) => b.pendingDays - a.pendingDays);
   }, [expenses, uniqueEmployees, dateList, totalWorkingDaysTillNow, filterZone, filterDistrict, filterEmployee]);
 
-  // Filtered rows by search & status
   const displayedRows = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return complianceData.filter((r) => {
@@ -226,7 +228,6 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     });
   }, [complianceData, statusFilter, searchQuery]);
 
-  // Aggregate summary counts
   const stats = useMemo(() => {
     const total = complianceData.length;
     const compliant = complianceData.filter((r) => r.statusCategory === "compliant").length;
@@ -235,37 +236,57 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     return { total, compliant, pending, defaulter };
   }, [complianceData]);
 
-  // WhatsApp Reminder
-  const handleSendWhatsApp = (r: any) => {
-    const missingSample = r.missingDates.slice(0, 4).map((d: string) => d.slice(8)).join(", ");
-    const msg = `Hi ${r.name}, your expense claim submission for ${r.pendingDays} working day(s) (Day ${missingSample}...) in ${monthLabel} is pending on Cyrix FieldOps. Kindly submit your daily operational claims today.`;
-    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank");
+  // Executive Email Reminder Sender (To: Engineer, CC: Manager, DM, Coordinator)
+  const handleSendEmailReminder = async (r: any) => {
+    setSendingEmailCode(r.code);
+    try {
+      const res = await api.post("/attendance/send-reminder", {
+        empCode: r.code,
+        pendingDays: r.pendingDays,
+        missingDates: r.missingDates,
+        monthName: monthLabel,
+        year,
+      });
+
+      if (res.data?.success) {
+        toast.success(
+          `Reminder sent to ${r.name}! (CC: Manager & Coordinator)`,
+          { id: `remind-${r.code}`, duration: 4000 }
+        );
+      } else {
+        toast.error(res.data?.error || "Failed to send reminder email.");
+      }
+    } catch (err: any) {
+      console.error("Reminder error:", err);
+      toast.error(err.response?.data?.error || "Failed to send email reminder.");
+    } finally {
+      setSendingEmailCode(null);
+    }
   };
 
   return (
     <div
-      className="bg-white rounded-[4px] border border-line/80 p-3 sm:p-3.5 space-y-3 shadow-xs"
+      className="bg-white rounded-[4px] border border-line/80 p-2.5 sm:p-3.5 space-y-3 shadow-xs"
       style={{
         boxShadow: "0 10px 30px -5px rgba(30, 27, 75, 0.04), 0 4px 12px -2px rgba(30, 27, 75, 0.02)",
       }}
     >
       {/* ── Header ── */}
-      <div className="flex items-center justify-between border-b border-line pb-2.5">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-line pb-2.5">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="w-7 h-7 rounded-[4px] bg-surface-sunken flex items-center justify-center text-accent-600 border border-line shrink-0">
             <ShieldCheck className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs font-bold font-display uppercase tracking-wider text-ink-900 m-0 leading-none">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h2 className="text-xs font-bold font-display uppercase tracking-wider text-ink-900 m-0 leading-tight">
                 DAILY EXPENSE SUBMISSION & PENDING TRACKER
               </h2>
-              <span className="text-[10px] font-bold text-accent-700 bg-accent-50 px-1.5 py-0.5 rounded border border-accent-200 font-mono leading-none">
+              <span className="text-[9.5px] font-bold text-accent-700 bg-accent-50 px-1.5 py-0.2 rounded border border-accent-200 font-mono whitespace-nowrap leading-none">
                 {monthLabel} (Excl. Sundays)
               </span>
             </div>
-            <p className="text-[10px] text-ink-500 font-sans mt-0.5 m-0 leading-none">
+            <p className="text-[10px] text-ink-500 font-sans mt-0.5 m-0 leading-tight truncate">
               Live tracking of engineer daily expense submissions, pending days, and non-submitters
             </p>
           </div>
@@ -274,7 +295,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
         <button
           type="button"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-2xs font-bold text-ink-500 hover:text-ink-900 transition-colors bg-surface-sunken border border-line px-2 py-0.5 rounded-[3px] cursor-pointer"
+          className="text-2xs font-bold text-ink-500 hover:text-ink-900 transition-colors bg-surface-sunken border border-line px-2 py-0.5 rounded-[3px] cursor-pointer self-end sm:self-auto"
         >
           {isCollapsed ? "Expand View" : "Collapse"}
         </button>
@@ -283,28 +304,28 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       {!isCollapsed && (
         <>
           {/* ── 4 Sleek Status Cards (82px ZohoKpiRow Tokens) ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {/* 1. Total Engineers */}
             <div
               onClick={() => setStatusFilter("all")}
-              className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs ${
+              className={`group bg-white rounded-[4px] border p-2 sm:p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[74px] sm:h-[78px] relative overflow-hidden shadow-2xs ${
                 statusFilter === "all" ? "border-accent-600 ring-1 ring-accent-600" : "border-[#4f4f4f]/30 hover:border-accent-600"
               }`}
             >
               <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-600" />
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-ink-700 font-sans">
-                  TOTAL ENGINEERS
+                <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider text-ink-700 font-sans truncate">
+                  TOTAL ACTIVE ENGINEERS
                 </span>
-                <div className="w-5 h-5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200">
+                <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200 shrink-0">
                   <Users className="w-2.5 h-2.5" />
                 </div>
               </div>
               <div>
-                <div className="text-sm sm:text-base font-bold font-mono text-ink-900 leading-tight">
-                  {stats.total} <span className="text-xs text-ink-500 font-normal">Active</span>
+                <div className="text-xs sm:text-sm md:text-base font-bold font-mono text-ink-900 leading-tight truncate">
+                  {stats.total} <span className="text-[10px] text-ink-500 font-normal">Active</span>
                 </div>
-                <span className="text-[10px] text-ink-500 font-medium leading-none mt-0.5 block font-mono">
+                <span className="text-[9.5px] sm:text-[10px] text-ink-500 font-medium leading-none mt-0.5 block font-mono truncate">
                   {totalWorkingDaysTillNow} Working Days
                 </span>
               </div>
@@ -313,25 +334,25 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
             {/* 2. Up-To-Date (0 Pending Days) */}
             <div
               onClick={() => setStatusFilter("compliant")}
-              className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs ${
+              className={`group bg-white rounded-[4px] border p-2 sm:p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[74px] sm:h-[78px] relative overflow-hidden shadow-2xs ${
                 statusFilter === "compliant" ? "border-emerald-600 ring-1 ring-emerald-600" : "border-[#4f4f4f]/30 hover:border-emerald-600"
               }`}
             >
               <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-600" />
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-800 font-sans">
+                <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider text-emerald-800 font-sans truncate">
                   100% UP-TO-DATE
                 </span>
-                <div className="w-5 h-5 rounded-[3px] bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+                <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-[3px] bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 shrink-0">
                   <CheckCircle2 className="w-2.5 h-2.5" />
                 </div>
               </div>
               <div>
-                <div className="text-sm sm:text-base font-bold font-mono text-emerald-700 leading-tight">
-                  {stats.compliant} <span className="text-xs text-emerald-600 font-normal">Engineers</span>
+                <div className="text-xs sm:text-sm md:text-base font-bold font-mono text-emerald-700 leading-tight truncate">
+                  {stats.compliant} <span className="text-[10px] text-emerald-600 font-normal">Engineers</span>
                 </div>
-                <span className="text-[10px] text-emerald-600/80 font-medium leading-none mt-0.5 block font-mono">
-                  0 Days Pending
+                <span className="text-[9.5px] sm:text-[10px] text-emerald-600/80 font-medium leading-none mt-0.5 block font-mono truncate">
+                  0 Days Overdue
                 </span>
               </div>
             </div>
@@ -339,25 +360,25 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
             {/* 3. Minor Due (1-3 Days) */}
             <div
               onClick={() => setStatusFilter("pending")}
-              className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs ${
+              className={`group bg-white rounded-[4px] border p-2 sm:p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[74px] sm:h-[78px] relative overflow-hidden shadow-2xs ${
                 statusFilter === "pending" ? "border-amber-600 ring-1 ring-amber-600" : "border-[#4f4f4f]/30 hover:border-amber-600"
               }`}
             >
               <div className="absolute top-0 left-0 right-0 h-[2px] bg-amber-500" />
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-800 font-sans">
+                <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider text-amber-800 font-sans truncate">
                   DUE (1–3 DAYS)
                 </span>
-                <div className="w-5 h-5 rounded-[3px] bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+                <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-[3px] bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 shrink-0">
                   <Clock className="w-2.5 h-2.5" />
                 </div>
               </div>
               <div>
-                <div className="text-sm sm:text-base font-bold font-mono text-amber-700 leading-tight">
-                  {stats.pending} <span className="text-xs text-amber-600 font-normal">Engineers</span>
+                <div className="text-xs sm:text-sm md:text-base font-bold font-mono text-amber-700 leading-tight truncate">
+                  {stats.pending} <span className="text-[10px] text-amber-600 font-normal">Engineers</span>
                 </div>
-                <span className="text-[10px] text-amber-600/80 font-medium leading-none mt-0.5 block font-mono">
-                  Partial Delay
+                <span className="text-[9.5px] sm:text-[10px] text-amber-600/80 font-medium leading-none mt-0.5 block font-mono truncate">
+                  Partial Lag
                 </span>
               </div>
             </div>
@@ -365,25 +386,25 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
             {/* 4. Critical Defaulters (4+ Days) */}
             <div
               onClick={() => setStatusFilter("defaulter")}
-              className={`group bg-white rounded-[4px] border p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs ${
+              className={`group bg-white rounded-[4px] border p-2 sm:p-2.5 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[74px] sm:h-[78px] relative overflow-hidden shadow-2xs ${
                 statusFilter === "defaulter" ? "border-rose-600 ring-1 ring-rose-600" : "border-[#4f4f4f]/30 hover:border-rose-600"
               }`}
             >
               <div className="absolute top-0 left-0 right-0 h-[2px] bg-rose-600" />
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-rose-800 font-sans">
+                <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider text-rose-800 font-sans truncate">
                   DEFAULTERS (4+ DAYS)
                 </span>
-                <div className="w-5 h-5 rounded-[3px] bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-200">
+                <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-[3px] bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-200 shrink-0">
                   <AlertTriangle className="w-2.5 h-2.5" />
                 </div>
               </div>
               <div>
-                <div className="text-sm sm:text-base font-bold font-mono text-rose-700 leading-tight">
-                  {stats.defaulter} <span className="text-xs text-rose-600 font-normal">Engineers</span>
+                <div className="text-xs sm:text-sm md:text-base font-bold font-mono text-rose-700 leading-tight truncate">
+                  {stats.defaulter} <span className="text-[10px] text-rose-600 font-normal">Engineers</span>
                 </div>
-                <span className="text-[10px] text-rose-600/80 font-medium leading-none mt-0.5 block font-mono">
-                  WhatsApp Reminder Needed
+                <span className="text-[9.5px] sm:text-[10px] text-rose-600/80 font-medium leading-none mt-0.5 block font-mono truncate">
+                  Mail Reminder Required
                 </span>
               </div>
             </div>
@@ -421,18 +442,133 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
             </div>
           </div>
 
-          {/* ── Matrix Table ── */}
-          <div className="border border-line rounded-[4px] overflow-hidden">
+          {/* ══════════════════════════════════════════════════════════════════
+              RESPONSIVE PRESENTATION:
+              1. MOBILE VIEW (sm:hidden) — Sleek, High-Density Cards
+              2. DESKTOP VIEW (hidden sm:block) — Wide Horizontal Matrix Table
+          ══════════════════════════════════════════════════════════════════ */}
+
+          {/* ── 1. Mobile Cards View (<640px) ── */}
+          <div className="block sm:hidden space-y-2 max-h-[360px] overflow-y-auto pr-0.5">
+            {displayedRows.length === 0 ? (
+              <div className="py-6 text-center text-ink-400 text-xs font-semibold">
+                No engineers found matching filter criteria.
+              </div>
+            ) : (
+              displayedRows.map((r) => (
+                <div
+                  key={r.code}
+                  className="bg-white border border-line rounded-[4px] p-2.5 space-y-2 shadow-2xs"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-bold text-ink-900 text-xs truncate">
+                        {r.name}
+                      </div>
+                      <div className="text-[10px] text-ink-500 font-mono mt-0.5">
+                        {r.code} • {r.district} • {r.zone}
+                      </div>
+                    </div>
+                    {r.pendingDays === 0 ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-[3px] shrink-0">
+                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> On Time
+                      </span>
+                    ) : r.pendingDays <= 3 ? (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-[3px] shrink-0">
+                        <Clock className="w-2.5 h-2.5 text-amber-600" /> {r.pendingDays}d Due
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-800 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-[3px] shrink-0">
+                        <AlertTriangle className="w-2.5 h-2.5 text-rose-600" /> {r.pendingDays}d Overdue
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Progress Line */}
+                  <div>
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-ink-600 font-bold">
+                        {r.submittedDays} of {r.expectedDays} Working Days Submitted
+                      </span>
+                      <span className="font-bold text-ink-900">{r.score}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1 border border-line/60">
+                      <div
+                        className={`h-full rounded-full ${
+                          r.score >= 90
+                            ? "bg-emerald-500"
+                            : r.score >= 70
+                            ? "bg-amber-500"
+                            : "bg-rose-500"
+                        }`}
+                        style={{ width: `${Math.min(100, r.score)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Missing Dates Badges Snippet (if overdue) */}
+                  {r.missingDates.length > 0 && (
+                    <div className="bg-rose-50/50 border border-rose-100 rounded p-1.5 text-[10px]">
+                      <span className="font-bold text-rose-800 block mb-1">
+                        Missing Claim Dates ({r.missingDates.length}):
+                      </span>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {r.missingDates.slice(0, 5).map((d: string) => (
+                          <span key={d} className="px-1 py-0.2 bg-white border border-rose-200 text-rose-700 font-mono text-[9px] rounded font-bold">
+                            {d.slice(5)}
+                          </span>
+                        ))}
+                        {r.missingDates.length > 5 && (
+                          <span className="text-rose-600 font-semibold text-[9px]">
+                            +{r.missingDates.length - 5} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action: Send Email */}
+                  {r.pendingDays > 0 ? (
+                    <button
+                      type="button"
+                      disabled={sendingEmailCode === r.code}
+                      onClick={() => handleSendEmailReminder(r)}
+                      className="w-full py-1.5 px-2 bg-[#4338CA] hover:bg-[#3730A3] text-white rounded-[3px] text-2xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
+                    >
+                      {sendingEmailCode === r.code ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Sending Official Reminder...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-3 h-3" />
+                          <span>Send Email Reminder (CC Manager & DM)</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="text-[10px] text-emerald-700 font-semibold text-center py-0.5">
+                      ✓ All working day expenses up to date
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* ── 2. Desktop Matrix Table (≥640px) ── */}
+          <div className="hidden sm:block border border-line rounded-[4px] overflow-hidden">
             <div className="max-h-[300px] overflow-y-auto overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead className="sticky top-0 bg-surface-sunken z-20 border-b border-line shadow-2xs">
                   <tr className="text-[9.5px] font-extrabold uppercase text-ink-600 font-sans tracking-wider">
-                    <th className="py-2 px-2.5 w-[180px] bg-surface-sunken sticky left-0 z-30">Engineer Name</th>
-                    <th className="py-2 px-2 text-center w-[90px]">Zone</th>
+                    <th className="py-2 px-2.5 w-[170px] bg-surface-sunken sticky left-0 z-30">Engineer Name</th>
+                    <th className="py-2 px-2 text-center w-[85px]">Zone</th>
                     <th className="py-2 px-2 text-center w-[95px]">Progress</th>
                     <th className="py-2 px-2 text-center w-[85px]">Status</th>
                     <th className="py-2 px-2 text-center">Daily Timeline (Day 1 – {dateList.length})</th>
-                    <th className="py-2 px-2.5 text-right w-[80px]">Action</th>
+                    <th className="py-2 px-2.5 text-right w-[95px]">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line/60 bg-white">
@@ -447,7 +583,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                       <tr key={r.code} className="hover:bg-surface-sunken/40 transition-colors">
                         {/* 1. Name & Code */}
                         <td className="py-1.5 px-2.5 bg-white hover:bg-surface-sunken/40 sticky left-0 z-10 border-r border-line/40">
-                          <div className="font-bold text-ink-900 text-xs leading-tight truncate max-w-[160px]">
+                          <div className="font-bold text-ink-900 text-xs leading-tight truncate max-w-[150px]">
                             {r.name}
                           </div>
                           <div className="text-[10px] text-ink-500 font-mono leading-none mt-0.5">
@@ -496,16 +632,16 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                           )}
                         </td>
 
-                        {/* 5. 31-Day Timeline */}
+                        {/* 5. 31-Day Timeline (Horizontal Non-Wrapping) */}
                         <td className="py-1.5 px-2">
-                          <div className="flex items-center justify-center gap-0.5 flex-wrap max-w-[480px] mx-auto">
+                          <div className="flex items-center justify-center gap-0.5 flex-nowrap min-w-[340px] max-w-[500px] mx-auto overflow-x-auto py-0.5">
                             {dateList.map((d) => {
                               const st = r.dailyMap[d.dayNum];
                               if (st.isSunday) {
                                 return (
                                   <div
                                     key={d.dayNum}
-                                    className="w-3.5 h-3.5 rounded-[2px] bg-slate-100 text-slate-400 text-[7.5px] font-bold flex items-center justify-center cursor-default"
+                                    className="w-3.5 h-3.5 rounded-[2px] bg-slate-100 text-slate-400 text-[7.5px] font-bold flex items-center justify-center shrink-0 cursor-default"
                                     title={`Day ${d.dayNum}: Sunday (Off)`}
                                   >
                                     S
@@ -516,7 +652,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                                 return (
                                   <div
                                     key={d.dayNum}
-                                    className="w-3.5 h-3.5 rounded-[2px] bg-slate-50 text-slate-300 text-[7.5px] flex items-center justify-center cursor-default"
+                                    className="w-3.5 h-3.5 rounded-[2px] bg-slate-50 text-slate-300 text-[7.5px] flex items-center justify-center shrink-0 cursor-default"
                                     title={`Day ${d.dayNum}: Upcoming`}
                                   >
                                     -
@@ -527,7 +663,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                                 return (
                                   <div
                                     key={d.dayNum}
-                                    className="w-3.5 h-3.5 rounded-[2px] bg-emerald-500 text-white text-[8px] font-bold flex items-center justify-center shadow-2xs cursor-pointer hover:scale-110 transition-transform"
+                                    className="w-3.5 h-3.5 rounded-[2px] bg-emerald-500 text-white text-[8px] font-bold flex items-center justify-center shrink-0 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
                                     title={`Day ${d.dayNum}: Submitted (₹${st.amount.toLocaleString('en-IN')})`}
                                   >
                                     ✓
@@ -537,7 +673,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                               return (
                                 <div
                                   key={d.dayNum}
-                                  className="w-3.5 h-3.5 rounded-[2px] bg-rose-500 text-white text-[7.5px] font-bold flex items-center justify-center shadow-2xs cursor-pointer hover:scale-110 transition-transform"
+                                  className="w-3.5 h-3.5 rounded-[2px] bg-rose-500 text-white text-[7.5px] font-bold flex items-center justify-center shrink-0 shadow-2xs cursor-pointer hover:scale-110 transition-transform"
                                   title={`Day ${d.dayNum}: Missing Claim (${d.dateStr})`}
                                 >
                                   ✕
@@ -547,16 +683,22 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                           </div>
                         </td>
 
-                        {/* 6. Action */}
+                        {/* 6. Action: Send Email Reminder */}
                         <td className="py-1.5 px-2.5 text-right">
                           {r.pendingDays > 0 ? (
                             <button
-                              onClick={() => handleSendWhatsApp(r)}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[3px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-3xs font-bold transition-all shadow-2xs"
-                              title="Send WhatsApp Reminder"
+                              type="button"
+                              disabled={sendingEmailCode === r.code}
+                              onClick={() => handleSendEmailReminder(r)}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                              title="Send official reminder email (CC Manager & DM)"
                             >
-                              <MessageCircle className="w-2.5 h-2.5 text-emerald-600" />
-                              <span>Remind</span>
+                              {sendingEmailCode === r.code ? (
+                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                              ) : (
+                                <Mail className="w-2.5 h-2.5 text-accent-600" />
+                              )}
+                              <span>Mail CC</span>
                             </button>
                           ) : (
                             <span className="text-3xs font-semibold text-emerald-600">✓ On time</span>

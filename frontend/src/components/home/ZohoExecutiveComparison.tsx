@@ -43,7 +43,6 @@ const MONTH_NAMES = [
 
 const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
 
-// Comprehensive breakdown extractor matching ZohoCategoryChart
 function computeCategoryBreakdown(claims: any[]) {
   let bikeAmt = 0;
   let carAmt = 0;
@@ -149,7 +148,6 @@ function computeCategoryBreakdown(claims: any[]) {
         }
       });
     } else {
-      // Flat claim fields check
       const total = Number(exp.amount != null ? exp.amount : (exp.total_amount || 0));
       const mode = String(exp.travel_mode || exp.category || "").trim().toLowerCase();
       const desc = String(exp.description || exp.purpose || "").trim().toLowerCase();
@@ -250,7 +248,6 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
   });
   const [_loadingPrev, setLoadingPrev] = useState(false);
 
-  // Parse current and previous month labels
   const { currLabel, prevLabel, prevMonthStr } = useMemo(() => {
     const [yStr, mStr] = (selectMonth || "2026-08").split("-");
     const currY = parseInt(yStr) || new Date().getFullYear();
@@ -269,7 +266,6 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
     return { currLabel, prevLabel, prevMonthStr };
   }, [selectMonth]);
 
-  // Fetch previous month claims in background with SWR cache
   useEffect(() => {
     let isMounted = true;
     const uId = user?.user_id || "";
@@ -313,7 +309,6 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
     return () => { isMounted = false; };
   }, [activeTab, isReviewerRole, prevMonthStr, user?.user_id]);
 
-  // Filter previous month claims matching current active filters
   const filteredPrevClaims = useMemo(() => {
     return (prevRawClaims || []).filter((c: any) => {
       if (!c) return false;
@@ -338,7 +333,6 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
     });
   }, [prevRawClaims, filterZone, filterDistrict, filterEmployee]);
 
-  // Financial aggregates
   const currStats = useMemo(() => {
     const total = currentClaims.reduce((s, c) => s + Number(c.amount != null ? c.amount : (c.total_amount || 0)), 0);
     const count = currentClaims.length;
@@ -359,7 +353,6 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
     : (currStats.total > 0 ? 100 : 0);
   const isGrowth = deltaAmount > 0;
 
-  // Day-by-Day Comparative Run-Rate (Day 1 to 31)
   const dailyComparisonData = useMemo(() => {
     const dayMap: Record<number, { day: number; current: number; previous: number }> = {};
     for (let i = 1; i <= 31; i++) {
@@ -389,7 +382,6 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
     return Object.values(dayMap);
   }, [currentClaims, filteredPrevClaims]);
 
-  // Accurate Category-wise Spend Breakdown Comparison
   const categoryComparisonData = useMemo(() => {
     const currCats = computeCategoryBreakdown(currentClaims);
     const prevCats = computeCategoryBreakdown(filteredPrevClaims);
@@ -407,38 +399,38 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
 
   return (
     <div
-      className="bg-white rounded-[4px] border border-line/80 p-3 sm:p-3.5 space-y-3 shadow-xs"
+      className="bg-white rounded-[4px] border border-line/80 p-2.5 sm:p-3.5 space-y-3 shadow-xs"
       style={{
         boxShadow: "0 10px 30px -5px rgba(30, 27, 75, 0.04), 0 4px 12px -2px rgba(30, 27, 75, 0.02)",
       }}
     >
-      {/* ── Compact Header matching Zoho Widgets ── */}
-      <div className="flex items-center justify-between border-b border-line pb-2.5">
-        <div className="flex items-center gap-2">
+      {/* ── Compact Header matching Zoho Widgets with Mobile-Clean Layout ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-line pb-2.5">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="w-7 h-7 rounded-[4px] bg-surface-sunken flex items-center justify-center text-accent-600 border border-line shrink-0">
             <Scale className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs font-bold font-display uppercase tracking-wider text-ink-900 m-0 leading-none">
-                MONTHLY EXPENSE VARIANCE ANALYSIS
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h2 className="text-xs font-bold font-display uppercase tracking-wider text-ink-900 m-0 leading-tight">
+                EXPENSE VARIANCE ANALYSIS
               </h2>
-              <span className="text-[10px] font-bold text-accent-700 bg-accent-50 px-1.5 py-0.5 rounded border border-accent-200 font-mono leading-none">
+              <span className="text-[9.5px] font-bold text-accent-700 bg-accent-50 px-1.5 py-0.2 rounded border border-accent-200 font-mono whitespace-nowrap leading-none">
                 {prevLabel} vs {currLabel}
               </span>
             </div>
-            <p className="text-[10px] text-ink-500 font-sans mt-0.5 m-0 leading-none">
+            <p className="text-[10px] text-ink-500 font-sans mt-0.5 m-0 leading-tight truncate">
               Comparative executive analytics model (Coordinator, Admin, Accountant, Travel Desk, MIS)
             </p>
           </div>
         </div>
 
         {/* Toggle between Daily and Category */}
-        <div className="flex items-center bg-surface-sunken border border-line rounded-[4px] p-0.5 text-2xs font-bold">
+        <div className="flex items-center bg-surface-sunken border border-line rounded-[4px] p-0.5 text-2xs font-bold shrink-0 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setChartMode("daily")}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10.5px] font-bold transition-all cursor-pointer border-0 ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10.5px] font-bold transition-all cursor-pointer border-0 whitespace-nowrap ${
               chartMode === "daily"
                 ? "bg-white text-ink-900 shadow-2xs"
                 : "bg-transparent text-ink-500 hover:text-ink-900"
@@ -450,7 +442,7 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
           <button
             type="button"
             onClick={() => setChartMode("category")}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10.5px] font-bold transition-all cursor-pointer border-0 ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] text-[10.5px] font-bold transition-all cursor-pointer border-0 whitespace-nowrap ${
               chartMode === "category"
                 ? "bg-white text-ink-900 shadow-2xs"
                 : "bg-transparent text-ink-500 hover:text-ink-900"
@@ -462,91 +454,91 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
         </div>
       </div>
 
-      {/* ── 4 Compact KPI Cards (100% Ditto ZohoKpiRow 78px-82px Height Tokens) ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      {/* ── 4 Compact KPI Cards (ZohoKpiRow 78px-82px Height Tokens) ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {/* Card 1: Last Month */}
-        <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-teal-600 p-2.5 transition-all duration-200 flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs">
+        <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-teal-600 p-2 sm:p-2.5 transition-all duration-200 flex flex-col justify-between h-[74px] sm:h-[78px] relative overflow-hidden shadow-2xs">
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-teal-600" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-teal-800 font-sans">
+            <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider text-teal-800 font-sans truncate">
               {prevLabel.toUpperCase()} TOTAL SPEND
             </span>
-            <div className="w-5 h-5 rounded-[3px] bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200">
+            <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-[3px] bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200 shrink-0">
               <Calendar className="w-2.5 h-2.5" />
             </div>
           </div>
           <div>
-            <div className="text-sm sm:text-base font-bold font-mono text-teal-900 leading-tight">
+            <div className="text-xs sm:text-sm md:text-base font-bold font-mono text-teal-900 leading-tight truncate">
               ₹{(prevStats.total || 0).toLocaleString("en-IN")}
             </div>
-            <span className="text-[10px] text-teal-700/80 font-medium leading-none mt-0.5 block truncate">
+            <span className="text-[9.5px] sm:text-[10px] text-teal-700/80 font-medium leading-none mt-0.5 block truncate">
               {prevStats.count} Claims • Avg ₹{prevStats.avg.toLocaleString("en-IN")}
             </span>
           </div>
         </div>
 
         {/* Card 2: Current Month */}
-        <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-accent-600 p-2.5 transition-all duration-200 flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs">
+        <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-accent-600 p-2 sm:p-2.5 transition-all duration-200 flex flex-col justify-between h-[74px] sm:h-[78px] relative overflow-hidden shadow-2xs">
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-600" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-accent-800 font-sans">
+            <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider text-accent-800 font-sans truncate">
               {currLabel.toUpperCase()} TOTAL SPEND
             </span>
-            <div className="w-5 h-5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200">
+            <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200 shrink-0">
               <Wallet className="w-2.5 h-2.5" />
             </div>
           </div>
           <div>
-            <div className="text-sm sm:text-base font-bold font-mono text-accent-900 leading-tight">
+            <div className="text-xs sm:text-sm md:text-base font-bold font-mono text-accent-900 leading-tight truncate">
               ₹{(currStats.total || 0).toLocaleString("en-IN")}
             </div>
-            <span className="text-[10px] text-accent-700/80 font-medium leading-none mt-0.5 block truncate">
+            <span className="text-[9.5px] sm:text-[10px] text-accent-700/80 font-medium leading-none mt-0.5 block truncate">
               {currStats.count} Claims • Avg ₹{currStats.avg.toLocaleString("en-IN")}
             </span>
           </div>
         </div>
 
         {/* Card 3: Net Variance Delta */}
-        <div className={`group bg-white rounded-[4px] border border-[#4f4f4f]/30 p-2.5 transition-all duration-200 flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs ${
+        <div className={`group bg-white rounded-[4px] border border-[#4f4f4f]/30 p-2 sm:p-2.5 transition-all duration-200 flex flex-col justify-between h-[74px] sm:h-[78px] relative overflow-hidden shadow-2xs ${
           isGrowth ? 'hover:border-rose-600' : 'hover:border-emerald-600'
         }`}>
           <div className={`absolute top-0 left-0 right-0 h-[2px] ${isGrowth ? 'bg-rose-500' : 'bg-emerald-600'}`} />
           <div className="flex items-center justify-between">
-            <span className={`text-[9px] font-bold uppercase tracking-wider font-sans ${isGrowth ? 'text-rose-800' : 'text-emerald-800'}`}>
+            <span className={`text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider font-sans truncate ${isGrowth ? 'text-rose-800' : 'text-emerald-800'}`}>
               {isGrowth ? "SPEND INCREASE" : deltaAmount < 0 ? "COST SAVINGS" : "NET VARIANCE"}
             </span>
-            <div className={`w-5 h-5 rounded-[3px] flex items-center justify-center border ${
+            <div className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-[3px] flex items-center justify-center border shrink-0 ${
               isGrowth ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
             }`}>
               {isGrowth ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
             </div>
           </div>
           <div>
-            <div className={`text-sm sm:text-base font-bold font-mono leading-tight ${isGrowth ? 'text-rose-700' : 'text-emerald-700'}`}>
+            <div className={`text-xs sm:text-sm md:text-base font-bold font-mono leading-tight truncate ${isGrowth ? 'text-rose-700' : 'text-emerald-700'}`}>
               {percentageDelta > 0 ? `+${percentageDelta.toFixed(1)}%` : `${percentageDelta.toFixed(1)}%`}
             </div>
-            <span className={`text-[10px] font-medium leading-none mt-0.5 block truncate font-mono ${isGrowth ? 'text-rose-600/90' : 'text-emerald-600/90'}`}>
-              {deltaAmount >= 0 ? `+₹${Math.abs(Math.round(deltaAmount)).toLocaleString('en-IN')}` : `-₹${Math.abs(Math.round(deltaAmount)).toLocaleString('en-IN')}`} net variance
+            <span className={`text-[9.5px] sm:text-[10px] font-medium leading-none mt-0.5 block truncate font-mono ${isGrowth ? 'text-rose-600/90' : 'text-emerald-600/90'}`}>
+              {deltaAmount >= 0 ? `+₹${Math.abs(Math.round(deltaAmount)).toLocaleString('en-IN')}` : `-₹${Math.abs(Math.round(deltaAmount)).toLocaleString('en-IN')}`}
             </span>
           </div>
         </div>
 
         {/* Card 4: Total Claims Volume Comparison */}
-        <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-indigo-600 p-2.5 transition-all duration-200 flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs">
+        <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-indigo-600 p-2 sm:p-2.5 transition-all duration-200 flex flex-col justify-between h-[74px] sm:h-[78px] relative overflow-hidden shadow-2xs">
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-indigo-600" />
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-800 font-sans">
-              CLAIMS SUBMITTED
+            <span className="text-[8.5px] sm:text-[9px] font-bold uppercase tracking-wider text-indigo-800 font-sans truncate">
+              CLAIMS VOLUME
             </span>
-            <div className="w-5 h-5 rounded-[3px] bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-200">
+            <div className="w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-[3px] bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-200 shrink-0">
               <FileText className="w-2.5 h-2.5" />
             </div>
           </div>
           <div>
-            <div className="text-sm sm:text-base font-bold font-mono text-indigo-900 leading-tight">
-              {currStats.count.toLocaleString("en-IN")} <span className="text-xs text-ink-500 font-normal">Claims</span>
+            <div className="text-xs sm:text-sm md:text-base font-bold font-mono text-indigo-900 leading-tight truncate">
+              {currStats.count.toLocaleString("en-IN")} <span className="text-[10px] text-ink-500 font-normal">Claims</span>
             </div>
-            <span className="text-[10px] text-indigo-600/80 font-medium leading-none mt-0.5 block truncate font-mono">
+            <span className="text-[9.5px] sm:text-[10px] text-indigo-600/80 font-medium leading-none mt-0.5 block truncate font-mono">
               vs {prevStats.count.toLocaleString("en-IN")} in {prevLabel} ({currStats.count - prevStats.count >= 0 ? '+' : ''}{(currStats.count - prevStats.count).toLocaleString("en-IN")})
             </span>
           </div>
@@ -554,19 +546,19 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
       </div>
 
       {/* ── Interactive Comparative Chart ── */}
-      <div className="bg-surface-sunken/30 border border-line rounded-[4px] p-2.5">
+      <div className="bg-surface-sunken/30 border border-line rounded-[4px] p-2 sm:p-2.5">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10.5px] font-bold uppercase tracking-wider text-ink-800 font-display flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-accent-600" />
-            {chartMode === "daily" ? `Day-by-Day Burn-Rate (${prevLabel} vs ${currLabel})` : `Category-wise Expenditure Breakdown (${prevLabel} vs ${currLabel})`}
+          <span className="text-[10.5px] font-bold uppercase tracking-wider text-ink-800 font-display flex items-center gap-1.5 truncate">
+            <Sparkles className="w-3 h-3 text-accent-600 shrink-0" />
+            {chartMode === "daily" ? `Day-by-Day Burn-Rate (${prevLabel} vs ${currLabel})` : `Category-wise Expenditure (${prevLabel} vs ${currLabel})`}
           </span>
-          <span className="text-[10px] text-ink-500 font-sans">Hover points for detailed delta metrics</span>
+          <span className="text-[9.5px] text-ink-500 font-sans hidden sm:inline">Hover points for detailed delta metrics</span>
         </div>
 
-        <div className="h-[200px] w-full">
+        <div className="h-[190px] sm:h-[200px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             {chartMode === "daily" ? (
-              <AreaChart data={dailyComparisonData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart data={dailyComparisonData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorCurr" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4338CA" stopOpacity={0.25} />
@@ -580,12 +572,12 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                 <XAxis 
                   dataKey="day" 
-                  tick={{ fontSize: 9, fill: "#64748B" }} 
+                  tick={{ fontSize: 8.5, fill: "#64748B" }} 
                   tickFormatter={(d) => `D${d}`}
                   stroke="#CBD5E1"
                 />
                 <YAxis 
-                  tick={{ fontSize: 9, fill: "#64748B" }} 
+                  tick={{ fontSize: 8.5, fill: "#64748B" }} 
                   tickFormatter={(v) => v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`}
                   stroke="#CBD5E1"
                 />
@@ -630,7 +622,7 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
                   verticalAlign="top" 
                   height={22} 
                   formatter={(val) => (
-                    <span className="text-[10px] font-bold text-ink-700">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold text-ink-700">
                       {val === "current" ? `${currLabel} (Current)` : `${prevLabel} (Last Month)`}
                     </span>
                   )}
@@ -656,15 +648,15 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
                 />
               </AreaChart>
             ) : (
-              <BarChart data={categoryComparisonData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={categoryComparisonData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fontSize: 9, fill: "#64748B" }} 
+                  tick={{ fontSize: 8, fill: "#64748B" }} 
                   stroke="#CBD5E1"
                 />
                 <YAxis 
-                  tick={{ fontSize: 9, fill: "#64748B" }} 
+                  tick={{ fontSize: 8.5, fill: "#64748B" }} 
                   tickFormatter={(v) => v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`}
                   stroke="#CBD5E1"
                 />
@@ -703,7 +695,7 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
                   verticalAlign="top" 
                   height={22} 
                   formatter={(val) => (
-                    <span className="text-[10px] font-bold text-ink-700">
+                    <span className="text-[9.5px] sm:text-[10px] font-bold text-ink-700">
                       {val === "current" ? `${currLabel} (Current)` : `${prevLabel} (Last Month)`}
                     </span>
                   )}

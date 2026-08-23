@@ -193,3 +193,83 @@ export async function handleGetAttendanceDiscrepancies(request, env, params, que
     return jsonResponse({ success: false, error: error.message }, 500);
   }
 }
+
+export async function handleSendSubmissionReminder(request, env, params, query, user) {
+  try {
+    const body = await request.json();
+    const { empCode, pendingDays, missingDates, monthName, year } = body;
+
+    if (!empCode) {
+      return jsonResponse({ success: false, error: "empCode is required" }, 400);
+    }
+
+    // 1. Fetch engineer info and reporting hierarchy
+    const empRows = await env.DB.prepare(`
+      SELECT 
+        u.id, u.user_id, u.name, u.mail_id, u.district, u.zone, u.designation,
+        u.manager_id, u.division_manager_id, u.coordinator_id
+      FROM users u
+      WHERE REPLACE(REPLACE(u.user_id, '-', ''), ' ', '') = REPLACE(REPLACE(?, '-', ''), ' ', '')
+         OR REPLACE(REPLACE(u.e_code, '-', ''), ' ', '') = REPLACE(REPLACE(?, '-', ''), ' ', '')
+         OR u.id = ?
+      LIMIT 1
+    `).bind(empCode, empCode, parseInt(empCode) || 0).all();
+
+    const emp = empRows.results?.[0];
+    if (!emp) {
+      return jsonResponse({ success: false, error: "Engineer not found in database" }, 404);
+    }
+
+    const engineerEmail = emp.mail_id;
+    if (!engineerEmail) {
+      return jsonResponse({ success: false, error: `Engineer ${emp.name} does not have a registered email address` }, 400);
+    }
+
+    // 2. Fetch hierarchy emails (Manager, DM, Coordinator) for CC
+    const managerIds = [emp.manager_id, emp.division_manager_id, emp.coordinator_id].filter(Boolean);
+    let ccList = [];
+
+    if (managerIds.length > 0) {
+      const placeholders = managerIds.map(() => "?").join(",");
+      const managerRows = await env.DB.prepare(`
+        SELECT mail_id FROM users WHERE id IN (${placeholders}) OR user_id IN (${placeholders})
+      `).bind(...managerIds, ...managerIds.map(String)).all();
+
+      ccList = (managerRows.results || [])
+        .map(m => m.mail_id)
+        .filter(m => m && m.includes("@") && m !== engineerEmail);
+    }
+
+    // Also include logged-in sender (coordinator/admin) in CC if different
+    if (user.email && user.email.includes("@") && user.email !== engineerEmail && !ccList.includes(user.email)) {
+      ccList.push(user.email);
+    }
+
+    const uniqueCC = [...new Set(ccList)];
+
+    const { sendSubmissionReminderEmail } = await import("../email/sender.js");
+    await sendSubmissionReminderEmail(env, {
+      to: engineerEmail,
+      name: emp.name,
+      userId: emp.user_id,
+      empCode: emp.user_id || empCode,
+      district: emp.district,
+      zone: emp.zone,
+      pendingDays: pendingDays || (missingDates?.length || 1),
+      missingDates: missingDates || [],
+      monthName: monthName || "Current Month",
+      year: year || 2026,
+      ccList: uniqueCC,
+    });
+
+    return jsonResponse({
+      success: true,
+      message: `Reminder email sent to ${emp.name} (${engineerEmail}) with ${uniqueCC.length} manager(s)/coordinator(s) in CC.`,
+      to: engineerEmail,
+      cc: uniqueCC,
+    });
+  } catch (error) {
+    console.error("handleSendSubmissionReminder error:", error);
+    return jsonResponse({ success: false, error: error.message }, 500);
+  }
+}

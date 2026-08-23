@@ -76,7 +76,7 @@ const emailWrapper = (content, previewText = "") => `<!DOCTYPE html>
                 Cyrix HealthCare Private Limited
               </p>
               <p style="margin:0;color:#94a3b8;font-size:11px;" class="dm-label">
-                This is an automated notification. For further support, contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;text-decoration:none;font-weight:600;">sunil.vishnoi@indrae.in</a>
+                This is an automated notification. For further support, contact <a href="mailto:support@indrae.in" style="color:#2563eb;text-decoration:none;font-weight:600;">support@indrae.in</a>
               </p>
             </td>
           </tr>
@@ -117,7 +117,7 @@ export function otpTemplate({ name, otp, userId, purpose = "Account Unlock", exp
     </div>
 
     <p style="margin:20px 0 0 0;font-size:13px;color:#94a3b8;line-height:1.6;border-top:1px solid #e2e8f0;padding-top:16px;">
-      Do not share this code with anyone. If you did not make this request or need assistance, please contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;font-weight:600;">sunil.vishnoi@indrae.in</a> immediately.
+      Do not share this code with anyone. If you did not make this request or need assistance, please contact <a href="mailto:support@indrae.in" style="color:#2563eb;font-weight:600;">support@indrae.in</a> immediately.
     </p>
 
     <p style="margin:20px 0 0 0;font-size:14px;color:#1e293b;line-height:1.6;">
@@ -126,7 +126,7 @@ export function otpTemplate({ name, otp, userId, purpose = "Account Unlock", exp
     </p>
   `;
 
-  const textPlain = `Dear ${name || "User"},\n\nWe have received a request for ${purpose} on your Cyrix Field Connect account.\n\nYour Verification Code (OTP): ${otp}\nValid for: ${expiryMinutes} minutes\n\nIf you cannot find this email in your Inbox, please check your Junk / Spam folder.\nDo not share this code with anyone. If you did not make this request, contact sunil.vishnoi@indrae.in immediately.\n\nThanks,\nCyrix HealthCare Team`;
+  const textPlain = `Dear ${name || "User"},\n\nWe have received a request for ${purpose} on your Cyrix Field Connect account.\n\nYour Verification Code (OTP): ${otp}\nValid for: ${expiryMinutes} minutes\n\nIf you cannot find this email in your Inbox, please check your Junk / Spam folder.\nDo not share this code with anyone. If you did not make this request, contact support@indrae.in immediately.\n\nThanks,\nCyrix HealthCare Team`;
 
   return {
     subject: `Verification Code for ${purpose} - Cyrix HealthCare`,
@@ -160,7 +160,7 @@ export function passwordResetTemplate({ name, otp, userId, expiryMinutes = 10 })
     </div>
 
     <p style="margin:20px 0 0 0;font-size:13px;color:#94a3b8;line-height:1.6;border-top:1px solid #e2e8f0;padding-top:16px;">
-      If you did not request a password reset, please ignore this email and contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#ea580c;font-weight:600;">sunil.vishnoi@indrae.in</a> immediately.
+      If you did not request a password reset, please ignore this email and contact <a href="mailto:support@indrae.in" style="color:#ea580c;font-weight:600;">support@indrae.in</a> immediately.
     </p>
 
     <p style="margin:20px 0 0 0;font-size:14px;color:#1e293b;line-height:1.6;">
@@ -231,7 +231,7 @@ export function expenseSubmittedTemplate({ employeeName, expenseCode, totalAmoun
       <tr><td style="padding:6px 0;"><strong style="color:${BRAND_COLOR};">Total Amount:</strong></td><td style="color:#333;font-weight:bold;">₹${(totalAmount || 0).toLocaleString("en-IN")}</td></tr>
       <tr><td style="padding:6px 0;"><strong style="color:${BRAND_COLOR};">Submitted At:</strong></td><td style="color:#333;">${submittedAt}</td></tr>
     </table>
-    <p style="color:#555;font-size:13px;">You will receive another email once your claim is approved or returned. For further support, contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;font-weight:600;">sunil.vishnoi@indrae.in</a>.</p>
+    <p style="color:#555;font-size:13px;">You will receive another email once your claim is approved or returned. For further support, contact <a href="mailto:support@indrae.in" style="color:#2563eb;font-weight:600;">support@indrae.in</a>.</p>
   `;
   return {
     subject: `Expense Submitted: ${expenseCode} — ₹${(totalAmount || 0).toLocaleString("en-IN")}`,
@@ -252,7 +252,7 @@ export function expenseApprovedTemplate({ employeeName, expenseCode, totalAmount
       <tr><td style="padding:6px 0;"><strong>Approved By:</strong></td><td>${approverName}</td></tr>
       <tr><td style="padding:6px 0;"><strong>Approved At:</strong></td><td>${approvedAt}</td></tr>
     </table>
-    <p style="color:#555;font-size:13px;">Your reimbursement will be processed as per your company's payment cycle. For further support, contact <a href="mailto:sunil.vishnoi@indrae.in" style="color:#2563eb;font-weight:600;">sunil.vishnoi@indrae.in</a>.</p>
+    <p style="color:#555;font-size:13px;">Your reimbursement will be processed as per your company's payment cycle. For further support, contact <a href="mailto:support@indrae.in" style="color:#2563eb;font-weight:600;">support@indrae.in</a>.</p>
   `;
   return {
     subject: `✓ Approved: ${expenseCode} — ₹${(totalAmount || 0).toLocaleString("en-IN")}`,
@@ -416,7 +416,7 @@ export function expenseRejectedTemplate({
         Please review the rejection reason carefully and contact
         <strong class="dm-val">${approverName || "your reporting manager"}</strong> for further guidance.
         For any questions or further support, please reach out to <strong>Sunil Vishnoi</strong> at
-        <a href="mailto:sunil.vishnoi@indrae.in" style="color:#1d4ed8;font-weight:700;text-decoration:underline;">sunil.vishnoi@indrae.in</a>.
+        <a href="mailto:support@indrae.in" style="color:#1d4ed8;font-weight:700;text-decoration:underline;">support@indrae.in</a>.
       </div>
     </div>
 
@@ -518,5 +518,94 @@ export function emailActionConfirmationTemplate({ action, expenseCode, approverN
   return {
     subject: `${icon} ${actionText}: ${expenseCode}`,
     html: emailWrapper(content),
+  };
+}
+
+// ─── Template: Daily Expense Submission Reminder ───────────────────────────
+
+export function submissionReminderTemplate({
+  employeeName,
+  employeeCode,
+  district,
+  zone,
+  pendingDays,
+  missingDates = [],
+  monthName,
+  year,
+}) {
+  const missingListHtml = (missingDates || []).map(d => `<li style="padding:2px 0;color:#dc2626;font-weight:600;">${d}</li>`).join("");
+
+  const content = `
+    <div style="padding-bottom:14px;border-bottom:1px solid #e2e8f0;margin-bottom:18px;">
+      <span style="background-color:#fef2f2;color:#dc2626;font-weight:700;font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid #fecaca;text-transform:uppercase;letter-spacing:0.5px;">
+        Action Required: Pending Expense Claims
+      </span>
+      <h2 style="margin:10px 0 4px 0;font-size:19px;color:#0f172a;font-weight:800;">
+        Daily Expense Submission Reminder
+      </h2>
+      <p style="margin:0;color:#64748b;font-size:12.5px;">
+        Billing Period: <strong>${monthName} ${year}</strong> (Sundays Excluded)
+      </p>
+    </div>
+
+    <p style="margin:0 0 12px 0;font-size:14px;color:#1e293b;line-height:1.6;">
+      Dear <strong>${employeeName}</strong> (${employeeCode}),
+    </p>
+
+    <p style="margin:0 0 14px 0;font-size:13px;color:#334155;line-height:1.6;">
+      This is an official notification regarding your field expense submissions for <strong>${monthName} ${year}</strong>. 
+      Our system records indicate that you have <strong><span style="color:#dc2626;font-size:14px;">${pendingDays} working day(s)</span></strong> with missing or unsubmitted expense entries.
+    </p>
+
+    <!-- Details Card -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;margin-bottom:16px;">
+      <tr>
+        <td style="padding:4px 0;font-size:12.5px;color:#64748b;"><strong>Engineer:</strong></td>
+        <td style="padding:4px 0;font-size:12.5px;color:#0f172a;font-weight:600;">${employeeName} (${employeeCode})</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;font-size:12.5px;color:#64748b;"><strong>District / Zone:</strong></td>
+        <td style="padding:4px 0;font-size:12.5px;color:#0f172a;font-weight:600;">${district || "Rajasthan"}, ${zone || "HQ"} Zone</td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;font-size:12.5px;color:#64748b;"><strong>Pending Submissions:</strong></td>
+        <td style="padding:4px 0;font-size:12.5px;color:#dc2626;font-weight:700;">${pendingDays} Working Day(s) Overdue</td>
+      </tr>
+    </table>
+
+    <div style="margin-bottom:18px;">
+      <p style="margin:0 0 6px 0;font-size:12.5px;color:#0f172a;font-weight:700;">
+        Missing Claim Dates:
+      </p>
+      <div style="background:#fff;border:1px solid #fecaca;border-radius:4px;padding:10px 14px;max-height:140px;overflow-y:auto;">
+        <ul style="margin:0;padding-left:16px;font-size:12px;font-family:monospace;">
+          ${missingListHtml}
+        </ul>
+      </div>
+    </div>
+
+    <!-- CTA Button -->
+    <div style="text-align:center;margin:24px 0 18px 0;">
+      <a href="https://indrae.in/#/submit-expense" target="_blank" style="display:inline-block;background-color:#4338ca;color:#ffffff;font-size:13.5px;font-weight:700;padding:10px 24px;border-radius:6px;text-decoration:none;box-shadow:0 2px 4px rgba(67,56,202,0.3);">
+        Submit Claims on Portal →
+      </a>
+    </div>
+
+    <p style="margin:14px 0 0 0;font-size:11.5px;color:#64748b;line-height:1.5;border-top:1px solid #e2e8f0;padding-top:12px;">
+      <strong>Note to Reporting Managers / Coordinators (in CC):</strong> Please coordinate with the engineer to ensure daily expense records are up to date.
+    </p>
+
+    <p style="margin:14px 0 0 0;font-size:13px;color:#0f172a;line-height:1.6;">
+      Warm regards,<br/>
+      <strong>Cyrix Field Operations Team</strong>
+    </p>
+  `;
+
+  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou have ${pendingDays} working day(s) with missing expense claims for ${monthName} ${year}.\n\nMissing Dates:\n${(missingDates || []).join("\n")}\n\nPlease login to Cyrix FieldOps (https://indrae.in) and submit your claims today.\n\nThanks,\nCyrix Field Operations Team`;
+
+  return {
+    subject: `[Action Required] ${pendingDays} Working Days Expense Submission Pending - ${employeeName} (${monthName} ${year})`,
+    html: emailWrapper(content, `Expense reminder: ${pendingDays} days pending`),
+    text: textPlain,
   };
 }

@@ -28,6 +28,7 @@ import {
   expenseApprovedTemplate,
   expenseRejectedTemplate,
   welcomeTemplate,
+  submissionReminderTemplate,
   emailActionConfirmationTemplate,
 } from "./templates.js";
 
@@ -51,7 +52,7 @@ async function sendViaCloudflareMail(env, opts) {
   const { to, toName, subject, html, text, cc = [] } = opts;
 
   const fromEmail = env.EMAIL_FROM_ADDRESS || "noreply@indrae.in";
-  const replyTo   = env.EMAIL_REPLY_TO     || "sunil.vishnoi@indrae.in";
+  const replyTo   = env.EMAIL_REPLY_TO     || "support@indrae.in";
   const fromName  = env.EMAIL_FROM_NAME   || "Cyrix Field Connect";
   const textBody  = text || "Cyrix Field Connect Security Verification Email.";
   const ccHeader  = cc.length > 0 ? cc.join(", ") : null;
@@ -551,4 +552,56 @@ export async function sendManagerDigests(env) {
   } catch (e) {
     staticLog.error("Manager digest generation failed", { error: e.message });
   }
+}
+
+export async function sendSubmissionReminderEmail(env, {
+  to,
+  name,
+  userId,
+  empCode,
+  district,
+  zone,
+  pendingDays,
+  missingDates,
+  monthName,
+  year,
+  ccList = [],
+}) {
+  const tmpl = submissionReminderTemplate({
+    employeeName: name,
+    employeeCode: empCode || userId,
+    district,
+    zone,
+    pendingDays,
+    missingDates,
+    monthName,
+    year,
+  });
+
+  const emailLogId = await logEmailIntent(env, {
+    to,
+    toName: name,
+    userId,
+    subject: tmpl.subject,
+    templateName: "expense_submission_reminder",
+    priority: 3,
+    relatedEntityType: "attendance",
+    relatedEntityId: empCode || userId,
+  });
+
+  const sendPromise = sendEmailDirect(env, {
+    to,
+    toName: name,
+    subject: tmpl.subject,
+    html: tmpl.html,
+    text: tmpl.text,
+    cc: ccList,
+    emailLogId,
+  });
+
+  if (env.ctx?.waitUntil) {
+    env.ctx.waitUntil(sendPromise);
+    return { success: true };
+  }
+  return sendPromise;
 }
