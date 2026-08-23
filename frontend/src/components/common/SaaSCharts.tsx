@@ -937,7 +937,7 @@ export const SaaSHorizontalBarChart: React.FC<SaaSHorizontalBarChartProps> = ({
               <div
                 className="h-full transition-all duration-500 rounded-none"
                 style={{
-                  width: `${Math.max(3, pct)}%`,
+                  width: pct > 0 ? `${Math.max(2, pct)}%` : `0%`,
                   backgroundColor: color
                 }}
               />

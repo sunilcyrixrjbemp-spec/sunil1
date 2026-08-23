@@ -34,6 +34,14 @@ const months = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+const ALL_RAJASTHAN_DISTRICTS = [
+  "Ajmer", "Alwar", "Anupgarh", "Balotra", "Banswara", "Baran", "Barmer", "Beawar", "Bharatpur", "Bhilwara",
+  "Bikaner", "Bundi", "Chittorgarh", "Churu", "Dausa", "Deeg", "Dholpur", "Didwana-Kuchaman", "Dudu", "Dungarpur",
+  "Gangapur City", "Hanumangarh", "Jaipur", "Jaipur Rural", "Jaisalmer", "Jalore", "Jhalawar", "Jhunjhunu", "Jodhpur", "Jodhpur Rural",
+  "Karauli", "Kekri", "Khairthal-Tijara", "Kota", "Kotputli-Behror", "Nagaur", "Neem Ka Thana", "Pali", "Phalodi", "Pratapgarh",
+  "Rajsamand", "Salumbar", "Sanchore", "Sawai Madhopur", "Shahpura", "Sikar", "Sirohi", "Sri Ganganagar", "Tonk", "Udaipur"
+];
+
 export default function AnalysisPage() {
   const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
 
@@ -498,19 +506,19 @@ export default function AnalysisPage() {
 
   const totalAmount = activeExpenses.reduce((s, e) => s + (e.amount || 0), 0);
   const count = activeExpenses.length;
-
-  // A. User-wise (Top 5 spenders)
+  // A. User-wise (All submitting engineers sorted Highest to Lowest)
   const userWiseData = useMemo(() => {
     const map: Record<string, number> = {};
     activeExpenses.forEach(e => {
-      const name = e.submitter_name || user?.name || "Self";
-      map[name] = (map[name] || 0) + (e.amount || 0);
+      const name = (e.submitter_name || user?.name || "Self").trim();
+      if (name) {
+        map[name] = (map[name] || 0) + (e.amount || 0);
+      }
     });
     return Object.entries(map)
       .map(([name, amount]) => ({ name, amount }))
-      .sort((a, b) => b.amount - a.amount)
-      .slice(0, 5);
-  }, [activeExpenses]);
+      .sort((a, b) => b.amount - a.amount);
+  }, [activeExpenses, user?.name]);
 
   // Status-wise Stats (Approved, Pending, Rejected amounts & counts)
   const statusStats = useMemo(() => {
@@ -725,9 +733,14 @@ export default function AnalysisPage() {
     ];
   }, [activeExpenses]);
 
-  // G. District-wise Calibration Breakdown
+  // G. District-wise Calibration Breakdown (All Districts, sorted Highest to Lowest)
   const districtWiseCalibrationData = useMemo(() => {
     const map: Record<string, number> = {};
+
+    // Initialize all Rajasthan districts with 0 so all districts appear
+    ALL_RAJASTHAN_DISTRICTS.forEach(d => {
+      map[d] = 0;
+    });
 
     activeExpenses.forEach(e => {
       const calCount = parseSanitizedCount(e.calibration_count);
@@ -1320,7 +1333,7 @@ export default function AnalysisPage() {
               {(avgExpensePerEngineer || 0).toLocaleString("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 })}
             </div>
             <span className="text-[10px] text-emerald-700 font-medium leading-none mt-0.5 block font-mono truncate">
-              {userWiseData.length} Active Engineers
+              {userWiseData.length} Engineers Logged
             </span>
           </div>
         </div>
