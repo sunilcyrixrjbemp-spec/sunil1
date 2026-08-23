@@ -135,7 +135,9 @@ import {
   handleMigrateGdrive, handleMigrationStatus,
   handleAnalyticsDashboard, handleAnalyticsBilling,
   handleFileHealth, handleStorageReport, handleRunMigrationsV2,
+  handleCfInfraAnalytics,
 } from "./routes/adminEnterprise.js";
+
 
 import { handleEmailAction } from "./routes/emailAction.js";
 
@@ -375,6 +377,11 @@ router.get("/api/admin/analytics/billing", async (req, env, params, query, user)
   if (!handleAnalyticsBilling) return errorResponse("Billing analytics not yet available", 503);
   return handleAnalyticsBilling(req, env, params, query, user);
 }, true, ["Admin"]);
+
+router.get("/api/admin/analytics/cf-infra", async (req, env, params, query, user) => {
+  return handleCfInfraAnalytics(req, env, params, query, user);
+}, true, ["Admin"]);
+
 
 router.get("/api/admin/files/health", async (req, env, params, query, user) => {
   if (!handleFileHealth) return errorResponse("File management not yet available", 503);

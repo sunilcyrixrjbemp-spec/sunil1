@@ -60,6 +60,7 @@ import {
   Save,
   LucideIcon
 } from "lucide-react";
+
 import ResetApprovalLevelModal from "../components/admin/ResetApprovalLevelModal";
 import { 
   Table, 
@@ -529,6 +530,7 @@ export default function AdminPage() {
   const [chartRoleFilter, setChartRoleFilter] = useState<string>("all");
   const [chartZoneFilter, setChartZoneFilter] = useState<string>("all");
   const [chartDistrictFilter, setChartDistrictFilter] = useState<string>("all");
+
 
   // Modals visibility
   const [showSingleUserModal, setShowSingleUserModal] = useState(false);
@@ -2607,425 +2609,415 @@ export default function AdminPage() {
             {/* ================= SECTION 3: ANALYTICS DASHBOARD ================= */}
             {activeTab === "analytics" && (
               <div className="space-y-4 animate-fadeIn">
-                
                 {/* ── 4 Zoho-Style Hero KPI Cards (Home Page Parity) ── */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                  
-                  {/* Card 1: Total Employees */}
-                  <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
-                        Total Workforce
-                      </span>
-                      <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-bold border border-accent-200 shadow-2xs">
-                        <Users className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div className="flex items-baseline gap-2.5 mt-2">
-                      <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
-                        {users.length}
-                      </span>
-                      <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active ({Math.round(((users.filter(u => u.user_status === 'active' || !u.user_status).length) / (users.length || 1)) * 100)}%)
-                      </span>
-                    </div>
-                    <div className="mt-2 text-2xs text-ink-400 font-medium flex items-center gap-1.5">
-                      <span>{users.filter(u => u.user_status === 'inactive').length} Inactive</span>
-                      <span>·</span>
-                      <span>{users.filter(u => u.user_type === 'Employee').length} Permanent Staff</span>
-                    </div>
-                  </div>
-
-                  {/* Card 2: Field vs Management */}
-                  <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
-                        Role Breakdown
-                      </span>
-                      <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold border border-teal-200 shadow-2xs">
-                        <BarChart3 className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                      <span className="text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
-                        {users.filter(u => u.role?.toLowerCase().includes('engineer')).length} Engineers
-                      </span>
-                      <span className="text-xs font-bold text-accent-800 bg-accent-50 px-2 py-0.5 rounded-lg border border-accent-200">
-                        {users.filter(u => u.role?.toLowerCase().includes('manager')).length} Managers
-                      </span>
-                      <span className="text-xs font-bold text-purple-800 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">
-                        {users.filter(u => u.role?.toLowerCase().includes('admin')).length} Admin
-                      </span>
-                    </div>
-                    <div className="mt-2 text-2xs text-ink-400 font-medium">
-                      <span>Across 8 standard organizational levels</span>
-                    </div>
-                  </div>
-
-                  {/* Card 3: Regional Footprint */}
-                  <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
-                        Regional Coverage
-                      </span>
-                      <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold border border-amber-200 shadow-2xs">
-                        <Building2 className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div className="flex items-baseline gap-2 mt-2">
-                      <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
-                        {availableUserZones.length}
-                      </span>
-                      <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                        Zones Active
-                      </span>
-                    </div>
-                    <div className="mt-2 text-2xs text-ink-400 font-medium flex items-center gap-1.5">
-                      <span className="font-bold text-ink-700 font-mono">{availableUserDistricts.length}</span>
-                      <span>Assigned Districts across state</span>
-                    </div>
-                  </div>
-
-                  {/* Card 4: Hierarchy Health */}
-                  <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-                    <div className="flex items-center justify-between">
-                      <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
-                        Hierarchy Routing
-                      </span>
-                      <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200 shadow-2xs">
-                        <ShieldCheck className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div className="flex items-baseline gap-2 mt-2">
-                      <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
-                        {hierarchies.length}
-                      </span>
-                      {users.filter(u => !u.manager || u.manager === 'N/A').length > 0 ? (
-                        <span className="text-2xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                          {users.filter(u => !u.manager || u.manager === 'N/A').length} Unmapped
-                        </span>
-                      ) : (
-                        <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          100% Mapped
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 text-2xs text-ink-400 font-medium">
-                      <span>Multi-tier approval sequences active</span>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* ── Filter Toolbar ── */}
-                <div className="bg-surface border border-line rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                  <div>
-                    <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0 font-display flex items-center gap-2">
-                      <BarChart3 className="w-3.5 h-3.5 text-accent-600" />
-                      <span>Workforce Analytics &amp; Visual Distributions</span>
-                    </h4>
-                    <p className="text-ink-500 text-2xs mt-0.5 font-medium m-0">
-                      Real-time interactive distribution breakdown filtered by role, zone, and district.
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Role Filter */}
-                    <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
-                      <label className="text-2xs font-bold uppercase text-ink-500">Role:</label>
-                      <select
-                        value={chartRoleFilter}
-                        onChange={(e) => setChartRoleFilter(e.target.value)}
-                        className="bg-transparent text-xs font-bold text-ink-800 outline-none cursor-pointer"
-                      >
-                        <option value="all">All Roles</option>
-                        <option value="engineer">Engineer</option>
-                        <option value="manager">Manager</option>
-                        <option value="admin">Admin</option>
-                        <option value="coordinator">Coordinator</option>
-                        <option value="accountant">Accountant</option>
-                        <option value="mis">MIS</option>
-                      </select>
-                    </div>
-
-                    {/* Zone Filter */}
-                    <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
-                      <label className="text-2xs font-bold uppercase text-ink-500">Zone:</label>
-                      <select
-                        value={chartZoneFilter}
-                        onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
-                        className="bg-transparent text-xs font-bold text-ink-800 outline-none cursor-pointer"
-                      >
-                        <option value="all">All Zones</option>
-                        {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
-                          <option key={zone} value={zone}>{zone}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* District Filter */}
-                    <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
-                      <label className="text-2xs font-bold uppercase text-ink-500">District:</label>
-                      <select
-                        value={chartDistrictFilter}
-                        onChange={(e) => setChartDistrictFilter(e.target.value)}
-                        disabled={chartZoneFilter === "all"}
-                        className={`bg-transparent text-xs font-bold outline-none ${
-                          chartZoneFilter === "all" ? "text-ink-400 cursor-not-allowed opacity-60" : "text-ink-800 cursor-pointer"
-                        }`}
-                      >
-                        <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
-                        {chartZoneDistricts.map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {(chartRoleFilter !== "all" || chartZoneFilter !== "all" || chartDistrictFilter !== "all") && (
-                      <button
-                        type="button"
-                        onClick={() => { setChartRoleFilter("all"); setChartZoneFilter("all"); setChartDistrictFilter("all"); }}
-                        className="text-2xs font-bold text-accent-700 hover:text-accent-800 bg-accent-50 px-2.5 py-1 rounded-xl border border-accent-200 cursor-pointer transition-all"
-                      >
-                        Clear Filters
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── 4 Modern Analytics Chart Cards (No "Others" Category) ── */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  
-                  {/* Chart 1: Zone Distribution */}
-                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
-                    <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-accent-600" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
-                          Zone Workforce Distribution
-                        </span>
-                      </div>
-                      <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
-                        {getZoneData().reduce((s, x) => s + x.value, 0)} Total Employees
-                      </span>
-                    </div>
-
-                    <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
-                        <SaaSDonutChart
-                          data={getZoneData().map((z, i) => ({
-                            name: z.name,
-                            value: z.value,
-                            count: z.value,
-                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                          }))}
-                          height={240}
-                          centerTitle="Zone Users"
-                          valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                        />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                      
+                      {/* Card 1: Total Employees */}
+                      <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
+                            Total Workforce
+                          </span>
+                          <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-bold border border-accent-200 shadow-2xs">
+                            <Users className="w-4 h-4" />
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-2.5 mt-2">
+                          <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
+                            {users.length}
+                          </span>
+                          <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active ({Math.round(((users.filter(u => u.user_status === 'active' || !u.user_status).length) / (users.length || 1)) * 100)}%)
+                          </span>
+                        </div>
+                        <div className="mt-2 text-2xs text-ink-400 font-medium flex items-center gap-1.5">
+                          <span>{users.filter(u => u.user_status === 'inactive').length} Inactive</span>
+                          <span>·</span>
+                          <span>{users.filter(u => u.user_type === 'Employee').length} Permanent Staff</span>
+                        </div>
                       </div>
 
-                      {/* Rank List breakdown */}
-                      <div className="w-full md:w-1/2 space-y-2">
-                        {getZoneData().map((z, i) => {
-                          const total = getZoneData().reduce((s, x) => s + x.value, 0) || 1;
-                          const pct = Math.round((z.value / total) * 100);
-                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
-
-                          return (
-                            <div key={z.name} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
-                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                  <span className="truncate">{z.name}</span>
-                                </span>
-                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
-                                  {z.value} ({pct}%)
-                                </span>
-                              </div>
-                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
-                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Chart 2: District Distribution */}
-                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
-                    <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-teal-600" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
-                          Top Districts Distribution
-                        </span>
-                      </div>
-                      <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
-                        {getDistrictData().reduce((s, x) => s + x.value, 0)} Total Employees
-                      </span>
-                    </div>
-
-                    <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
-                        <SaaSDonutChart
-                          data={getDistrictData().map((d, i) => ({
-                            name: d.name,
-                            value: d.value,
-                            count: d.value,
-                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                          }))}
-                          height={240}
-                          centerTitle="District Users"
-                          valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                        />
+                      {/* Card 2: Field vs Management */}
+                      <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
+                            Role Breakdown
+                          </span>
+                          <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold border border-teal-200 shadow-2xs">
+                            <BarChart3 className="w-4 h-4" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                          <span className="text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                            {users.filter(u => u.role?.toLowerCase().includes('engineer')).length} Engineers
+                          </span>
+                          <span className="text-xs font-bold text-accent-800 bg-accent-50 px-2 py-0.5 rounded-lg border border-accent-200">
+                            {users.filter(u => u.role?.toLowerCase().includes('manager')).length} Managers
+                          </span>
+                          <span className="text-xs font-bold text-purple-800 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">
+                            {users.filter(u => u.role?.toLowerCase().includes('admin')).length} Admin
+                          </span>
+                        </div>
+                        <div className="mt-2 text-2xs text-ink-400 font-medium">
+                          <span>Across 8 standard organizational levels</span>
+                        </div>
                       </div>
 
-                      {/* Rank List breakdown */}
-                      <div className="w-full md:w-1/2 space-y-2">
-                        {getDistrictData().map((d, i) => {
-                          const total = getDistrictData().reduce((s, x) => s + x.value, 0) || 1;
-                          const pct = Math.round((d.value / total) * 100);
-                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
-
-                          return (
-                            <div key={d.name} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
-                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                  <span className="truncate">{d.name}</span>
-                                </span>
-                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
-                                  {d.value} ({pct}%)
-                                </span>
-                              </div>
-                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
-                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                              </div>
-                            </div>
-                          );
-                        })}
+                      {/* Card 3: Regional Footprint */}
+                      <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
+                            Regional Coverage
+                          </span>
+                          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold border border-amber-200 shadow-2xs">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-2 mt-2">
+                          <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
+                            {availableUserZones.length}
+                          </span>
+                          <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                            Zones Active
+                          </span>
+                        </div>
+                        <div className="mt-2 text-2xs text-ink-400 font-medium flex items-center gap-1.5">
+                          <span className="font-bold text-ink-700 font-mono">{availableUserDistricts.length}</span>
+                          <span>Assigned Districts across state</span>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Chart 3: Manager Team Load */}
-                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
-                    <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-600" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
-                          Manager Reporting Distribution
-                        </span>
+                      {/* Card 4: Hierarchy Health */}
+                      <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
+                        <div className="flex items-center justify-between">
+                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
+                            Hierarchy Routing
+                          </span>
+                          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200 shadow-2xs">
+                            <ShieldCheck className="w-4 h-4" />
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-2 mt-2">
+                          <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
+                            {hierarchies.length}
+                          </span>
+                          {users.filter(u => !u.manager || u.manager === 'N/A').length > 0 ? (
+                            <span className="text-2xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                              {users.filter(u => !u.manager || u.manager === 'N/A').length} Unmapped
+                            </span>
+                          ) : (
+                            <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                              100% Mapped
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 text-2xs text-ink-400 font-medium">
+                          <span>Multi-tier approval sequences active</span>
+                        </div>
                       </div>
-                      <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
-                        {getManagerData().reduce((s, x) => s + x.value, 0)} Mapped Members
-                      </span>
+
                     </div>
 
-                    <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
-                        <SaaSDonutChart
-                          data={getManagerData().map((m, i) => ({
-                            name: m.name,
-                            value: m.value,
-                            count: m.value,
-                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                          }))}
-                          height={240}
-                          centerTitle="Team Load"
-                          valueFormatter={(v) => `${v.toLocaleString()} Staff`}
-                        />
+                    {/* ── Filter Toolbar ── */}
+                    <div className="bg-surface border border-line rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                      <div>
+                        <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0 font-display flex items-center gap-2">
+                          <BarChart3 className="w-3.5 h-3.5 text-accent-600" />
+                          <span>Workforce Analytics &amp; Visual Distributions</span>
+                        </h4>
+                        <p className="text-ink-500 text-2xs mt-0.5 font-medium m-0">
+                          Real-time interactive distribution breakdown filtered by role, zone, and district.
+                        </p>
                       </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Role Filter */}
+                        <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
+                          <label className="text-2xs font-bold uppercase text-ink-500">Role:</label>
+                          <select
+                            value={chartRoleFilter}
+                            onChange={(e) => setChartRoleFilter(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-ink-800 outline-none cursor-pointer"
+                          >
+                            <option value="all">All Roles</option>
+                            <option value="engineer">Engineer</option>
+                            <option value="manager">Manager</option>
+                            <option value="admin">Admin</option>
+                            <option value="coordinator">Coordinator</option>
+                            <option value="accountant">Accountant</option>
+                            <option value="mis">MIS</option>
+                          </select>
+                        </div>
 
-                      {/* Rank List breakdown */}
-                      <div className="w-full md:w-1/2 space-y-2">
-                        {getManagerData().map((m, i) => {
-                          const total = getManagerData().reduce((s, x) => s + x.value, 0) || 1;
-                          const pct = Math.round((m.value / total) * 100);
-                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                        {/* Zone Filter */}
+                        <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
+                          <label className="text-2xs font-bold uppercase text-ink-500">Zone:</label>
+                          <select
+                            value={chartZoneFilter}
+                            onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
+                            className="bg-transparent text-xs font-bold text-ink-800 outline-none cursor-pointer"
+                          >
+                            <option value="all">All Zones</option>
+                            {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
+                              <option key={zone} value={zone}>{zone}</option>
+                            ))}
+                          </select>
+                        </div>
 
-                          return (
-                            <div key={m.name} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
-                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                  <span className="truncate">{m.name}</span>
-                                </span>
-                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
-                                  {m.value} staff ({pct}%)
-                                </span>
-                              </div>
-                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
-                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                        {/* District Filter */}
+                        <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
+                          <label className="text-2xs font-bold uppercase text-ink-500">District:</label>
+                          <select
+                            value={chartDistrictFilter}
+                            onChange={(e) => setChartDistrictFilter(e.target.value)}
+                            disabled={chartZoneFilter === "all"}
+                            className={`bg-transparent text-xs font-bold outline-none ${
+                              chartZoneFilter === "all" ? "text-ink-400 cursor-not-allowed opacity-60" : "text-ink-800 cursor-pointer"
+                            }`}
+                          >
+                            <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
+                            {chartZoneDistricts.map(d => (
+                              <option key={d} value={d}>{d}</option>
+                            ))}
+                          </select>
+                        </div>
 
-                  {/* Chart 4: Designation & Role Allocation */}
-                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
-                    <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-600" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
-                          Designation &amp; Role Allocation
-                        </span>
-                      </div>
-                      <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
-                        {getDesignationData().reduce((s, x) => s + x.value, 0)} Total Roles
-                      </span>
-                    </div>
-
-                    <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
-                        <SaaSDonutChart
-                          data={getDesignationData().map((d, i) => ({
-                            name: d.name,
-                            value: d.value,
-                            count: d.value,
-                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                          }))}
-                          height={240}
-                          centerTitle="Designations"
-                          valueFormatter={(v) => `${v.toLocaleString()} Roles`}
-                        />
-                      </div>
-
-                      {/* Rank List breakdown */}
-                      <div className="w-full md:w-1/2 space-y-2">
-                        {getDesignationData().map((d, i) => {
-                          const total = getDesignationData().reduce((s, x) => s + x.value, 0) || 1;
-                          const pct = Math.round((d.value / total) * 100);
-                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
-
-                          return (
-                            <div key={d.name} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
-                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                  <span className="truncate">{d.name}</span>
-                                </span>
-                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
-                                  {d.value} ({pct}%)
-                                </span>
-                              </div>
-                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
-                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {(chartRoleFilter !== "all" || chartZoneFilter !== "all" || chartDistrictFilter !== "all") && (
+                          <button
+                            type="button"
+                            onClick={() => { setChartRoleFilter("all"); setChartZoneFilter("all"); setChartDistrictFilter("all"); }}
+                            className="text-2xs font-bold text-accent-700 hover:text-accent-800 bg-accent-50 px-2.5 py-1 rounded-xl border border-accent-200 cursor-pointer transition-all"
+                          >
+                            Clear Filters
+                          </button>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                </div>
+                    {/* ── 4 Modern Analytics Chart Cards (No "Others" Category) ── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      
+                      {/* Chart 1: Zone Distribution */}
+                      <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                        <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-accent-600" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                              Zone Workforce Distribution
+                            </span>
+                          </div>
+                          <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                            {getZoneData().reduce((s, x) => s + x.value, 0)} Total Employees
+                          </span>
+                        </div>
 
+                        <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
+                          <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
+                            <SaaSDonutChart
+                              data={getZoneData().map((z, i) => ({
+                                name: z.name,
+                                value: z.value,
+                                count: z.value,
+                                color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                              }))}
+                              height={240}
+                              centerTitle="Zone Users"
+                              valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                            />
+                          </div>
+
+                          <div className="w-full md:w-1/2 space-y-2">
+                            {getZoneData().map((z, i) => {
+                              const total = getZoneData().reduce((s, x) => s + x.value, 0) || 1;
+                              const pct = Math.round((z.value / total) * 100);
+                              const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                              return (
+                                <div key={z.name} className="space-y-1">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                      <span className="truncate">{z.name}</span>
+                                    </span>
+                                    <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                      {z.value} ({pct}%)
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Chart 2: District Distribution */}
+                      <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                        <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-teal-600" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                              Top Districts Distribution
+                            </span>
+                          </div>
+                          <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                            {getDistrictData().reduce((s, x) => s + x.value, 0)} Total Employees
+                          </span>
+                        </div>
+
+                        <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
+                          <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
+                            <SaaSDonutChart
+                              data={getDistrictData().map((d, i) => ({
+                                name: d.name,
+                                value: d.value,
+                                count: d.value,
+                                color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                              }))}
+                              height={240}
+                              centerTitle="District Users"
+                              valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                            />
+                          </div>
+
+                          <div className="w-full md:w-1/2 space-y-2">
+                            {getDistrictData().map((d, i) => {
+                              const total = getDistrictData().reduce((s, x) => s + x.value, 0) || 1;
+                              const pct = Math.round((d.value / total) * 100);
+                              const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                              return (
+                                <div key={d.name} className="space-y-1">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                      <span className="truncate">{d.name}</span>
+                                    </span>
+                                    <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                      {d.value} ({pct}%)
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Chart 3: Manager Team Load */}
+                      <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                        <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-600" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                              Manager Reporting Distribution
+                            </span>
+                          </div>
+                          <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                            {getManagerData().reduce((s, x) => s + x.value, 0)} Mapped Members
+                          </span>
+                        </div>
+
+                        <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
+                          <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
+                            <SaaSDonutChart
+                              data={getManagerData().map((m, i) => ({
+                                name: m.name,
+                                value: m.value,
+                                count: m.value,
+                                color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                              }))}
+                              height={240}
+                              centerTitle="Team Load"
+                              valueFormatter={(v) => `${v.toLocaleString()} Staff`}
+                            />
+                          </div>
+
+                          <div className="w-full md:w-1/2 space-y-2">
+                            {getManagerData().map((m, i) => {
+                              const total = getManagerData().reduce((s, x) => s + x.value, 0) || 1;
+                              const pct = Math.round((m.value / total) * 100);
+                              const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                              return (
+                                <div key={m.name} className="space-y-1">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                      <span className="truncate">{m.name}</span>
+                                    </span>
+                                    <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                      {m.value} staff ({pct}%)
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Chart 4: Designation & Role Allocation */}
+                      <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                        <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-purple-600" />
+                            <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                              Designation &amp; Role Allocation
+                            </span>
+                          </div>
+                          <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                            {getDesignationData().reduce((s, x) => s + x.value, 0)} Total Roles
+                          </span>
+                        </div>
+
+                        <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
+                          <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
+                            <SaaSDonutChart
+                              data={getDesignationData().map((d, i) => ({
+                                name: d.name,
+                                value: d.value,
+                                count: d.value,
+                                color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                              }))}
+                              height={240}
+                              centerTitle="Designations"
+                              valueFormatter={(v) => `${v.toLocaleString()} Roles`}
+                            />
+                          </div>
+
+                          <div className="w-full md:w-1/2 space-y-2">
+                            {getDesignationData().map((d, i) => {
+                              const total = getDesignationData().reduce((s, x) => s + x.value, 0) || 1;
+                              const pct = Math.round((d.value / total) * 100);
+                              const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                              return (
+                                <div key={d.name} className="space-y-1">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                      <span className="truncate">{d.name}</span>
+                                    </span>
+                                    <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                      {d.value} ({pct}%)
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
               </div>
             )}
 

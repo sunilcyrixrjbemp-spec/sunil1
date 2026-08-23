@@ -265,6 +265,12 @@ export const adminService = {
   getAuditLogs: async (search?: string, limit: number = 50): Promise<any> => {
     const response = await api.get(`/admin/audit-logs?limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
     return response.data;
-  }
+  },
+
+  getCfInfraAnalytics: async (): Promise<any> => {
+    const response = await api.get("/admin/analytics/cf-infra");
+    return response.data;
+  },
 };
+
 
