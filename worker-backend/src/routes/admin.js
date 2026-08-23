@@ -2045,7 +2045,16 @@ export async function handleSaveFacility(request, env) {
 
     if (env.OTPS_KV) {
       env.OTPS_KV.delete("cache:ref:facilities_dict:v1").catch(() => {});
+      env.OTPS_KV.delete("cache:auth:dropdowns:v1").catch(() => {});
     }
+
+    try {
+      await runWrite(
+        env,
+        "INSERT INTO audit_logs (action, entity_type, entity_id, performed_by_name, performed_by_role, new_value, created_at) VALUES ('FACILITY_ADD', 'facility', ?, 'Admin', 'Admin', ?, ?)",
+        [facilityName, JSON.stringify({ facilityName, districtName, targetTable }), timestamp]
+      );
+    } catch (_) {}
 
     return jsonResponse({
       success: true,
@@ -2056,6 +2065,63 @@ export async function handleSaveFacility(request, env) {
   }
 }
 
+export async function handleUpdateFacility(request, env, params, query, user) {
+  try {
+    const facilityId = params.id;
+    if (!facilityId) return jsonResponse({ success: false, error: "Facility ID is required" }, 400);
+
+    const body = await request.json();
+    const facilityName = (body.facility_name || body.hospital_name || body.facilityName || body.hospitalName || "").trim();
+    const districtName = (body.district_name || body.districtName || "").trim();
+    const facilityIncharge = (body.facility_incharge || body.facilityIncharge || "N/A").trim();
+    const dmName = (body.dm_name || body.dmName || "N/A").trim();
+    const coordinatorName = (body.coordinator_name || body.coordinatorName || "N/A").trim();
+    const facilityType = (body.facility_type || body.facilityType || "Standard Facility").trim();
+    const zoneName = (body.zone_name || body.zoneName || "Rajasthan").trim();
+    const targetTable = (body.target_table || (body.is_no_ta_da ? "no_ta_da" : "standard")).trim().toLowerCase();
+
+    if (!facilityName || !districtName) {
+      return jsonResponse({ success: false, error: "Facility name and district name are required" }, 400);
+    }
+
+    const timestamp = new Date().toISOString();
+
+    if (targetTable === "standard") {
+      await runWrite(
+        env,
+        "UPDATE facility_details SET facility_name = ?, district_name = ?, facility_incharge = ?, dm_name = ?, coordinator_name = ?, facility_type = ?, zone_name = ? WHERE ROWID = ? OR id = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))",
+        [facilityName, districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName, facilityId, facilityId, facilityId]
+      );
+    } else {
+      await runWrite(
+        env,
+        "UPDATE no_ta_da_hospitals SET hospital_name = ?, district_name = ? WHERE ROWID = ? OR id = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))",
+        [facilityName, districtName, facilityId, facilityId, facilityId]
+      );
+    }
+
+    if (env.OTPS_KV) {
+      env.OTPS_KV.delete("cache:ref:facilities_dict:v1").catch(() => {});
+      env.OTPS_KV.delete("cache:auth:dropdowns:v1").catch(() => {});
+    }
+
+    try {
+      await runWrite(
+        env,
+        "INSERT INTO audit_logs (action, entity_type, entity_id, performed_by_name, performed_by_role, new_value, created_at) VALUES ('FACILITY_EDIT', 'facility', ?, 'Admin', 'Admin', ?, ?)",
+        [facilityName, JSON.stringify({ facilityName, districtName, targetTable }), timestamp]
+      );
+    } catch (_) {}
+
+    return jsonResponse({
+      success: true,
+      message: `Facility '${facilityName}' updated successfully.`
+    });
+  } catch (e) {
+    return jsonResponse({ success: false, error: e.message || "Failed to update facility" }, 500);
+  }
+}
+
 export async function handleDeleteFacility(request, env, params, query) {
   try {
     const facilityId = params.id;
@@ -2063,17 +2129,26 @@ export async function handleDeleteFacility(request, env, params, query) {
     if (!facilityId) return jsonResponse({ success: false, error: "Facility ID required" }, 400);
 
     if (targetTable === "standard") {
-      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [facilityId, facilityId]);
+      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ? OR id = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
     } else if (targetTable === "no_ta_da") {
       await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR id = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
     } else {
-      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR id = ?", [facilityId, facilityId]);
-      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ?", [facilityId]);
+      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR id = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
+      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ? OR id = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
     }
 
     if (env.OTPS_KV) {
       env.OTPS_KV.delete("cache:ref:facilities_dict:v1").catch(() => {});
+      env.OTPS_KV.delete("cache:auth:dropdowns:v1").catch(() => {});
     }
+
+    try {
+      await runWrite(
+        env,
+        "INSERT INTO audit_logs (action, entity_type, entity_id, performed_by_name, performed_by_role, old_value, created_at) VALUES ('FACILITY_DELETE', 'facility', ?, 'Admin', 'Admin', ?, ?)",
+        [String(facilityId), targetTable, new Date().toISOString()]
+      );
+    } catch (_) {}
 
     return jsonResponse({ success: true, message: "Facility removed successfully." });
   } catch (e) {

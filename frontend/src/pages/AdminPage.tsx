@@ -365,6 +365,10 @@ export default function AdminPage() {
   const [newFacilityType, setNewFacilityType] = useState("District Hospital (DH)");
   const [newFacilityZone, setNewFacilityZone] = useState("Zone Jaipur");
   const [newFacilityTargetTable, setNewFacilityTargetTable] = useState<"standard" | "no_ta_da">("standard");
+  const [isEditFacilityModalOpen, setIsEditFacilityModalOpen] = useState(false);
+  const [editingFacility, setEditingFacility] = useState<any | null>(null);
+  const [facilityZoneFilter, setFacilityZoneFilter] = useState("all");
+  const [facilityDistrictFilter, setFacilityDistrictFilter] = useState("all");
 
   const fetchFacilities = async () => {
     setFacilityLoading(true);
@@ -410,7 +414,47 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteFacility = async (id: number, type: "standard" | "no_ta_da") => {
+  const openEditFacilityModal = (fac: any, type: "standard" | "no_ta_da") => {
+    setEditingFacility({ ...fac, target_table: type });
+    setNewFacilityName(fac.facility_name || fac.hospital_name || "");
+    setNewFacilityDistrict(fac.district_name || "");
+    setNewFacilityIncharge(fac.facility_incharge || "");
+    setNewFacilityDmName(fac.dm_name || "");
+    setNewFacilityCoordinatorName(fac.coordinator_name || "");
+    setNewFacilityType(fac.facility_type || "District Hospital (DH)");
+    setNewFacilityZone(fac.zone_name || "Zone Jaipur");
+    setNewFacilityTargetTable(type);
+    setIsEditFacilityModalOpen(true);
+  };
+
+  const handleEditFacilitySubmit = async () => {
+    if (!editingFacility) return;
+    if (!newFacilityName.trim() || !newFacilityDistrict.trim()) {
+      toast.error("Facility Name and District Name are required!");
+      return;
+    }
+    try {
+      const idToUpdate = editingFacility.id || editingFacility.facility_name || editingFacility.hospital_name;
+      const res = await adminService.updateFacility(idToUpdate, {
+        facility_name: newFacilityName.trim(),
+        district_name: newFacilityDistrict.trim(),
+        target_table: newFacilityTargetTable,
+        facility_incharge: newFacilityIncharge.trim() || "N/A",
+        dm_name: newFacilityDmName.trim() || "N/A",
+        coordinator_name: newFacilityCoordinatorName.trim() || "N/A",
+        facility_type: newFacilityType.trim() || "District Hospital (DH)",
+        zone_name: newFacilityZone.trim() || "Zone Jaipur",
+      });
+      toast.success(res.message || "Facility updated successfully!");
+      setIsEditFacilityModalOpen(false);
+      setEditingFacility(null);
+      fetchFacilities();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || e.message || "Failed to update facility");
+    }
+  };
+
+  const handleDeleteFacility = async (id: number | string, type: "standard" | "no_ta_da") => {
     try {
       const res = await adminService.deleteFacility(id, type);
       toast.success(res.message || "Facility removed");
@@ -3317,46 +3361,46 @@ export default function AdminPage() {
 
             {/* ================= SECTION 5: FACILITIES & NO TA/DA TAB ================= */}
             {activeTab === "facilities" && (
-              <div className="space-y-3 animate-fadeIn">
-                {/* Top Action Bar with Export & Sub-Tabs */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                  <div className="bg-surface-sunken p-1 rounded-xl flex gap-1 border border-line flex-1">
-                    <button
-                      type="button"
-                      onClick={() => setFacilitySubTab("expense")}
-                      className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-2 ${
-                        facilitySubTab === "expense"
-                          ? "bg-surface text-accent-700 shadow-xs border border-line"
-                          : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
-                      }`}
-                    >
-                      <span>🏢 Expense Facilities (facility_details)</span>
-                      <span className="bg-accent-100 text-accent-700 px-2 py-0.2 rounded-full text-2xs font-mono font-bold">
-                        {standardFacilities.length}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setFacilitySubTab("notada")}
-                      className={`flex-1 py-2 px-3 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-lg flex items-center justify-center gap-2 ${
-                        facilitySubTab === "notada"
-                          ? "bg-surface text-rose-700 shadow-xs border border-line"
-                          : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
-                      }`}
-                    >
-                      <span>🛑 No TA / DA Exceptions (no_ta_da_hospitals)</span>
-                      <span className="bg-rose-100 text-rose-700 px-2 py-0.2 rounded-full text-2xs font-mono font-bold">
-                        {noTaDaHospitals.length}
-                      </span>
-                    </button>
+              <div className="space-y-4 animate-fadeIn">
+                {/* Header Overview Banner */}
+                <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-black shrink-0 border border-indigo-200 shadow-xs">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-accent-600 text-white text-2xs font-mono font-bold uppercase px-2 py-0.5 rounded-full tracking-wider">
+                          OPERATIONAL LOCATIONS MASTER
+                        </span>
+                        <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 border border-approved-border rounded-full flex items-center gap-1">
+                          <Check className="w-3 h-3" /> LIVE D1 &amp; KV SYNCED
+                        </span>
+                      </div>
+                      <h3 className="text-base font-bold text-ink-900 mt-1.5 mb-0 font-display">
+                        Facilities Directory &amp; Policy Exception Master
+                      </h3>
+                      <p className="text-xs text-ink-500 font-medium m-0 mt-0.5">
+                        Central master database for all selectable expense facilities (<code>facility_details</code>) and ₹0 DA policy exception hospitals (<code>no_ta_da_hospitals</code>).
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
+                      onClick={fetchFacilities}
+                      disabled={facilityLoading}
+                      className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
+                      title="Reload Facilities"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${facilityLoading ? "animate-spin" : ""}`} />
+                      <span>{facilityLoading ? "Reloading..." : "Reload"}</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleExportFacilitiesExcel}
-                      className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white"
+                      className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl bg-white shadow-xs"
                       title="Export Facilities to Excel"
                     >
                       <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
@@ -3366,6 +3410,11 @@ export default function AdminPage() {
                       type="button"
                       onClick={() => {
                         setNewFacilityTargetTable(facilitySubTab === "expense" ? "standard" : "no_ta_da");
+                        setNewFacilityName("");
+                        setNewFacilityDistrict("");
+                        setNewFacilityIncharge("");
+                        setNewFacilityDmName("");
+                        setNewFacilityCoordinatorName("");
                         setIsAddFacilityModalOpen(true);
                       }}
                       className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white text-xs h-9 px-4 flex items-center gap-1.5 font-bold cursor-pointer rounded-xl shadow-xs hover:shadow-md transition-all border-0"
@@ -3376,43 +3425,124 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Sub-Tab 1: Standard Facilities */}
+                {/* Sub-Tab Navigation Bar */}
+                <div className="bg-surface-sunken p-1 rounded-2xl flex gap-1.5 border border-line shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setFacilitySubTab("expense")}
+                    className={`flex-1 py-2.5 px-4 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-xl flex items-center justify-center gap-2 ${
+                      facilitySubTab === "expense"
+                        ? "bg-surface text-accent-700 shadow-xs border border-line"
+                        : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
+                    }`}
+                  >
+                    <span>🏢 Standard Expense Facilities (facility_details)</span>
+                    <span className="bg-accent-100 text-accent-700 px-2 py-0.5 rounded-full text-2xs font-mono font-bold">
+                      {standardFacilities.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFacilitySubTab("notada")}
+                    className={`flex-1 py-2.5 px-4 text-xs font-bold uppercase tracking-wider border-0 cursor-pointer transition-all rounded-xl flex items-center justify-center gap-2 ${
+                      facilitySubTab === "notada"
+                        ? "bg-surface text-rose-700 shadow-xs border border-line"
+                        : "bg-transparent text-ink-600 hover:text-ink-900 hover:bg-surface/50"
+                    }`}
+                  >
+                    <span>🛑 No TA / DA Exceptions (no_ta_da_hospitals)</span>
+                    <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full text-2xs font-mono font-bold">
+                      {noTaDaHospitals.length}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Filter Toolbar */}
+                <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+                    <div className="relative flex-1 min-w-[200px]">
+                      <Search className="w-4 h-4 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search facility name, district, incharge, DM..."
+                        value={facilitySearch}
+                        onChange={(e) => setFacilitySearch(e.target.value)}
+                        className="input-lte pl-9 h-9 text-xs w-full rounded-xl"
+                      />
+                    </div>
+
+                    <select
+                      value={facilityZoneFilter}
+                      onChange={(e) => setFacilityZoneFilter(e.target.value)}
+                      className="input-lte h-9 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[140px]"
+                    >
+                      <option value="all">All Zones</option>
+                      {dropdowns?.zones && Object.keys(dropdowns.zones).map((z: string) => (
+                        <option key={z} value={z}>{z}</option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={facilityDistrictFilter}
+                      onChange={(e) => setFacilityDistrictFilter(e.target.value)}
+                      className="input-lte h-9 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[140px]"
+                    >
+                      <option value="all">All Districts</option>
+                      {availableUserDistricts.map((d: string) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="text-2xs font-mono font-bold text-ink-500">
+                    Showing {facilitySubTab === "expense" ? standardFacilities.length : noTaDaHospitals.length} entries
+                  </div>
+                </div>
+
+                {/* Sub-Tab 1: Standard Facilities Table */}
                 {facilitySubTab === "expense" && (
-                  <div className="bg-surface border border-line rounded-lg overflow-hidden shadow-none">
-                    <div className="bg-surface-sunken px-4 py-2.5 border-b border-line flex items-center justify-between">
+                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs">
+                    <div className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white px-5 py-3.5 flex items-center justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0 font-mono flex items-center gap-1.5">
-                          <span>🏢 Window 1: Expense Page Facilities Directory</span>
-                        </h4>
-                        <p className="text-2xs text-ink-500 font-medium m-0 mt-0.5">
-                          Saved in DB table: <code className="bg-surface text-ink-700 px-1 py-0.2 rounded text-2xs font-mono font-bold border border-line">facility_details</code>. Selectable on Expense Page.
-                        </p>
+                        <span className="text-xs font-bold uppercase tracking-wider font-mono">
+                          🏢 Table: facility_details (Expense Dropdown Master)
+                        </span>
+                        <div className="text-2xs text-accent-200 mt-0.5">
+                          Directly queried by Expense Submit page (<code>GET /api/expenses/init</code>). Selectable in daily claim legs.
+                        </div>
                       </div>
+                      <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-accent-100 font-bold border border-white/10">
+                        {standardFacilities.length} Records
+                      </span>
                     </div>
 
                     {facilityLoading ? (
-                      <div className="p-8 text-center text-ink-500 font-bold text-xs bg-surface">
-                        <LteSpinner /> Loading Expense Facilities...
+                      <div className="p-12 text-center text-ink-500 font-bold text-xs bg-surface flex flex-col items-center justify-center gap-3">
+                        <LteSpinner />
+                        <span>Loading Expense Facilities from D1...</span>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
-                            <tr className="bg-surface-sunken text-ink-500 border-b border-line font-bold text-2xs uppercase tracking-wider">
-                              <th className="py-2.5 px-3"># ID</th>
-                              <th className="py-2.5 px-3">Facility Name</th>
-                              <th className="py-2.5 px-3">District</th>
-                              <th className="py-2.5 px-3">Facility Type</th>
-                              <th className="py-2.5 px-3">Zone</th>
-                              <th className="py-2.5 px-3">Facility Incharge</th>
-                              <th className="py-2.5 px-3">DM Name</th>
-                              <th className="py-2.5 px-3">Coordinator</th>
-                              <th className="py-2.5 px-3 text-right">Actions</th>
+                            <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                              <th className="py-3 px-3"># ID</th>
+                              <th className="py-3 px-4">Facility Name</th>
+                              <th className="py-3 px-3">District</th>
+                              <th className="py-3 px-3">Facility Type</th>
+                              <th className="py-3 px-3">Zone</th>
+                              <th className="py-3 px-3">Incharge</th>
+                              <th className="py-3 px-3">DM Name</th>
+                              <th className="py-3 px-3">Coordinator</th>
+                              <th className="py-3 px-3 text-right min-w-[100px]">Actions</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-line text-ink-700">
+                          <tbody className="divide-y divide-line text-ink-900 font-medium">
                             {standardFacilities
                               .filter((f) => {
+                                if (facilityZoneFilter !== "all" && (f.zone_name || "").toLowerCase() !== facilityZoneFilter.toLowerCase()) return false;
+                                if (facilityDistrictFilter !== "all" && (f.district_name || "").toLowerCase() !== facilityDistrictFilter.toLowerCase()) return false;
                                 if (!facilitySearch.trim()) return true;
                                 const q = facilitySearch.toLowerCase();
                                 return (
@@ -3426,34 +3556,57 @@ export default function AdminPage() {
                                 );
                               })
                               .map((f, idx) => (
-                                <tr key={f.id || idx} className="hover:bg-accent-50/40 transition-colors">
-                                  <td className="py-2 px-3 font-mono font-bold text-ink-500">#{f.id}</td>
-                                  <td className="py-2 px-3 font-bold text-ink-900">{f.facility_name}</td>
-                                  <td className="py-2 px-3 font-bold text-accent-700 font-mono">{f.district_name}</td>
-                                  <td className="py-2 px-3 font-medium text-ink-700">{f.facility_type || "Hospital"}</td>
-                                  <td className="py-2 px-3 font-medium text-ink-600">{f.zone_name || "Rajasthan"}</td>
-                                  <td className="py-2 px-3 text-ink-700">{f.facility_incharge || "N/A"}</td>
-                                  <td className="py-2 px-3 text-ink-700">{f.dm_name || "N/A"}</td>
-                                  <td className="py-2 px-3 text-ink-700">{f.coordinator_name || "N/A"}</td>
-                                  <td className="py-2 px-3 text-right">
-                                    <Popconfirm
-                                      title="Delete Expense Facility?"
-                                      description="Are you sure you want to remove this facility from facility_details?"
-                                      onConfirm={() => handleDeleteFacility(f.id, "standard")}
-                                      okText="Yes, Delete"
-                                      cancelText="Cancel"
-                                      okButtonProps={{ danger: true, size: "small" }}
-                                    >
-                                      <button type="button" className="p-1 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 rounded border border-line text-2xs font-bold cursor-pointer transition-all">
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                <tr key={f.id || idx} className="hover:bg-accent-50/30 transition-colors">
+                                  <td className="py-2.5 px-3 font-mono font-bold text-ink-500">#{f.id}</td>
+                                  <td className="py-2.5 px-4">
+                                    <div className="font-bold text-ink-900 text-xs">{f.facility_name}</div>
+                                    <span className="text-2xs text-ink-500 font-mono">
+                                      source: {f.source || "facility_details"}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 font-bold text-accent-700 font-mono">{f.district_name}</td>
+                                  <td className="py-2.5 px-3">
+                                    <span className="px-2 py-0.5 bg-surface-sunken text-ink-700 rounded border border-line text-2xs font-semibold">
+                                      {f.facility_type || "Hospital"}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 px-3 font-medium text-ink-600">{f.zone_name || "Rajasthan"}</td>
+                                  <td className="py-2.5 px-3 text-ink-700">{f.facility_incharge || "N/A"}</td>
+                                  <td className="py-2.5 px-3 text-ink-700">{f.dm_name || "N/A"}</td>
+                                  <td className="py-2.5 px-3 text-ink-700">{f.coordinator_name || "N/A"}</td>
+                                  <td className="py-2.5 px-3 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => openEditFacilityModal(f, "standard")}
+                                        className="p-1.5 bg-surface hover:bg-accent-50 text-ink-700 hover:text-accent-700 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                        title="Edit Facility"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
                                       </button>
-                                    </Popconfirm>
+                                      <Popconfirm
+                                        title="Delete Expense Facility?"
+                                        description="Are you sure you want to remove this facility from facility_details?"
+                                        onConfirm={() => handleDeleteFacility(f.id || f.facility_name, "standard")}
+                                        okText="Yes, Delete"
+                                        cancelText="Cancel"
+                                        okButtonProps={{ danger: true, size: "small" }}
+                                      >
+                                        <button
+                                          type="button"
+                                          className="p-1.5 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                          title="Delete Facility"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </Popconfirm>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
                             {standardFacilities.length === 0 && (
                               <tr>
-                                <td colSpan={9} className="py-6 text-center text-ink-400 font-medium">
+                                <td colSpan={9} className="py-8 text-center text-ink-400 font-medium">
                                   No Expense Facilities found in facility_details table.
                                 </td>
                               </tr>
@@ -3465,77 +3618,96 @@ export default function AdminPage() {
                   </div>
                 )}
 
-                {/* Sub-Tab 2: No TA/DA Hospitals */}
+                {/* Sub-Tab 2: No TA/DA Exceptions Table */}
                 {facilitySubTab === "notada" && (
-                  <div className="bg-surface border border-line rounded-lg overflow-hidden shadow-none">
-                    <div className="bg-rose-50/70 px-4 py-2.5 border-b border-rose-200 flex items-center justify-between">
+                  <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs">
+                    <div className="bg-gradient-to-r from-[#991B1B] to-[#DC2626] text-white px-5 py-3.5 flex items-center justify-between">
                       <div>
-                        <h4 className="text-xs font-bold text-rose-950 uppercase tracking-wider m-0 font-mono flex items-center gap-1.5">
-                          <span>🛑 Window 2: No TA / DA Policy Exception Hospitals</span>
-                        </h4>
-                        <p className="text-2xs text-rose-800 font-medium m-0 mt-0.5">
-                          Saved in DB table: <code className="bg-rose-100 text-rose-900 px-1 py-0.2 rounded text-2xs font-mono font-bold">no_ta_da_hospitals</code>. Visits attract ₹0 TA / ₹0 DA.
-                        </p>
+                        <span className="text-xs font-bold uppercase tracking-wider font-mono">
+                          🛑 Table: no_ta_da_hospitals (Policy Exemption Master)
+                        </span>
+                        <div className="text-2xs text-rose-100 mt-0.5">
+                          Directly queried by <code>GET /api/auth/dropdowns</code>. Visits to these hospitals attract ₹0 DA policy deduction.
+                        </div>
                       </div>
+                      <span className="text-2xs font-mono bg-white/10 px-2.5 py-1 rounded-full text-rose-100 font-bold border border-white/10">
+                        {noTaDaHospitals.length} Exceptions
+                      </span>
                     </div>
 
                     {facilityLoading ? (
-                      <div className="p-8 text-center text-ink-500 font-bold text-xs bg-surface">
-                        <LteSpinner /> Loading No TA/DA Exception Hospitals...
+                      <div className="p-12 text-center text-ink-500 font-bold text-xs bg-surface flex flex-col items-center justify-center gap-3">
+                        <LteSpinner />
+                        <span>Loading No TA/DA Hospitals from D1...</span>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
-                            <tr className="bg-surface-sunken text-ink-500 border-b border-line font-bold text-2xs uppercase tracking-wider">
-                              <th className="py-2.5 px-3"># ID</th>
-                              <th className="py-2.5 px-3">Hospital Name</th>
-                              <th className="py-2.5 px-3">District Name</th>
-                              <th className="py-2.5 px-3">Created At</th>
-                              <th className="py-2.5 px-3">Policy Exception Status</th>
-                              <th className="py-2.5 px-3 text-right">Actions</th>
+                            <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                              <th className="py-3 px-3"># ID</th>
+                              <th className="py-3 px-4">Hospital Name</th>
+                              <th className="py-3 px-4">District</th>
+                              <th className="py-3 px-4">Created Date</th>
+                              <th className="py-3 px-3 text-right min-w-[100px]">Actions</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-line text-ink-700">
+                          <tbody className="divide-y divide-line text-ink-900 font-medium">
                             {noTaDaHospitals
                               .filter((f) => {
+                                if (facilityDistrictFilter !== "all" && (f.district_name || "").toLowerCase() !== facilityDistrictFilter.toLowerCase()) return false;
                                 if (!facilitySearch.trim()) return true;
                                 const q = facilitySearch.toLowerCase();
                                 return (
-                                  (f.hospital_name || "").toLowerCase().includes(q) ||
+                                  (f.hospital_name || f.facility_name || "").toLowerCase().includes(q) ||
                                   (f.district_name || "").toLowerCase().includes(q)
                                 );
                               })
                               .map((f, idx) => (
-                                <tr key={f.id || idx} className="hover:bg-rose-50/40 transition-colors">
-                                  <td className="py-2 px-3 font-mono font-bold text-ink-500">#{f.id}</td>
-                                  <td className="py-2 px-3 font-bold text-ink-900">{f.hospital_name}</td>
-                                  <td className="py-2 px-3 font-bold text-accent-700 font-mono">{f.district_name}</td>
-                                  <td className="py-2 px-3 text-2xs text-ink-500 font-mono">{f.created_at || "--"}</td>
-                                  <td className="py-2 px-3">
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200 text-2xs font-bold">
-                                      🛑 ₹0 TA &amp; ₹0 DA Exception
-                                    </span>
+                                <tr key={f.id || idx} className="hover:bg-rose-50/30 transition-colors">
+                                  <td className="py-2.5 px-3 font-mono font-bold text-ink-500">#{f.id || idx + 1}</td>
+                                  <td className="py-2.5 px-4 font-bold text-ink-900 text-xs">
+                                    {f.hospital_name || f.facility_name}
                                   </td>
-                                  <td className="py-2 px-3 text-right">
-                                    <Popconfirm
-                                      title="Delete No TA/DA Hospital?"
-                                      description="Are you sure you want to remove this hospital from No TA/DA exception list?"
-                                      onConfirm={() => handleDeleteFacility(f.id, "no_ta_da")}
-                                      okText="Yes, Delete"
-                                      cancelText="Cancel"
-                                      okButtonProps={{ danger: true, size: "small" }}
-                                    >
-                                      <button type="button" className="p-1 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 rounded border border-line text-2xs font-bold cursor-pointer transition-all">
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                  <td className="py-2.5 px-4 font-bold text-rose-700 font-mono">
+                                    {f.district_name}
+                                  </td>
+                                  <td className="py-2.5 px-4 text-2xs font-mono text-ink-500">
+                                    {f.created_at ? formatToIST(f.created_at) : "—"}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => openEditFacilityModal(f, "no_ta_da")}
+                                        className="p-1.5 bg-surface hover:bg-rose-50 text-ink-700 hover:text-rose-700 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                        title="Edit Hospital"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
                                       </button>
-                                    </Popconfirm>
+                                      <Popconfirm
+                                        title="Remove No TA/DA Exception?"
+                                        description="Are you sure you want to remove this hospital from no_ta_da_hospitals?"
+                                        onConfirm={() => handleDeleteFacility(f.id || f.hospital_name, "no_ta_da")}
+                                        okText="Yes, Delete"
+                                        cancelText="Cancel"
+                                        okButtonProps={{ danger: true, size: "small" }}
+                                      >
+                                        <button
+                                          type="button"
+                                          className="p-1.5 bg-surface hover:bg-rose-50 text-ink-500 hover:text-rose-600 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                          title="Delete Hospital"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </Popconfirm>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
                             {noTaDaHospitals.length === 0 && (
                               <tr>
-                                <td colSpan={6} className="py-6 text-center text-ink-400 font-medium">
+                                <td colSpan={5} className="py-8 text-center text-ink-400 font-medium">
                                   No Hospitals found in no_ta_da_hospitals table.
                                 </td>
                               </tr>
@@ -3549,8 +3721,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* ================= SECTION 6: WHATSAPP GATEWAY ================= */}
-            
             {/* ================= SECTION: ROLES & PERMISSIONS MATRIX ================= */}
             {activeTab === "permissions" && (
               <div className="space-y-4 animate-fadeIn">
@@ -4170,6 +4340,180 @@ export default function AdminPage() {
                   className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold"
                 >
                   Save Facility
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT FACILITY / NO TA DA HOSPITAL ================= */}
+      {isEditFacilityModalOpen && editingFacility && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4">
+          <div className="bg-surface border border-line rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-scale-up flex flex-col">
+            {/* Standardized Header */}
+            <div className="bg-surface border-b border-line px-5 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-bold border border-accent-200 shadow-2xs">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-ink-900 m-0">
+                    {newFacilityTargetTable === "standard" ? "Edit Expense Facility" : "Edit No TA/DA Hospital"}
+                  </h3>
+                  <p className="text-2xs text-ink-500 m-0 font-mono">ID: #{editingFacility.id || "New"}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditFacilityModalOpen(false)}
+                className="p-1 rounded-lg text-ink-400 hover:text-ink-700 hover:bg-surface-sunken transition-colors cursor-pointer border-0 bg-transparent"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleEditFacilitySubmit();
+              }}
+              className="flex-1 flex flex-col overflow-hidden"
+            >
+              <div className="p-5 space-y-3.5 overflow-y-auto max-h-[70vh]">
+                <div>
+                  <label className="label-lte text-2xs block mb-1">Target Master Table *</label>
+                  <select
+                    value={newFacilityTargetTable}
+                    onChange={(e) => setNewFacilityTargetTable(e.target.value as any)}
+                    className="input-lte h-9 text-xs font-bold w-full rounded-xl"
+                  >
+                    <option value="standard">🏢 facility_details (Expense Page Dropdown)</option>
+                    <option value="no_ta_da">🛑 no_ta_da_hospitals (No TA/DA Exception List)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label-lte text-2xs block mb-1">Facility / Hospital Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newFacilityName}
+                    onChange={(e) => setNewFacilityName(e.target.value)}
+                    placeholder="e.g. SMS Hospital Jaipur"
+                    className="input-lte h-9 text-xs font-bold w-full rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="label-lte text-2xs block mb-1">District Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newFacilityDistrict}
+                    onChange={(e) => setNewFacilityDistrict(e.target.value)}
+                    placeholder="e.g. Jaipur"
+                    className="input-lte h-9 text-xs font-bold w-full rounded-xl font-mono"
+                  />
+                </div>
+
+                {newFacilityTargetTable === "standard" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">Facility Type</label>
+                        <select
+                          value={newFacilityType}
+                          onChange={(e) => setNewFacilityType(e.target.value)}
+                          className="input-lte h-9 text-xs font-semibold w-full rounded-xl cursor-pointer"
+                        >
+                          <option value="District Hospital (DH)">District Hospital (DH)</option>
+                          <option value="Community Health Centre (CHC)">CHC</option>
+                          <option value="Primary Health Centre (PHC)">PHC</option>
+                          <option value="Sub District Hospital (SDH)">SDH</option>
+                          <option value="Medical College">Medical College</option>
+                          <option value="Hospital">Hospital</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">Zone Name</label>
+                        <select
+                          value={newFacilityZone}
+                          onChange={(e) => setNewFacilityZone(e.target.value)}
+                          className="input-lte h-9 text-xs font-semibold w-full rounded-xl cursor-pointer"
+                        >
+                          {dropdowns?.zones && Object.keys(dropdowns.zones).map((z: string) => (
+                            <option key={z} value={z}>{z}</option>
+                          ))}
+                          {!dropdowns?.zones && (
+                            <>
+                              <option value="Zone Jaipur">Zone Jaipur</option>
+                              <option value="Zone Jodhpur">Zone Jodhpur</option>
+                              <option value="Zone Udaipur">Zone Udaipur</option>
+                              <option value="Zone Kota">Zone Kota</option>
+                              <option value="Zone Bikaner">Zone Bikaner</option>
+                              <option value="Zone Ajmer">Zone Ajmer</option>
+                              <option value="Zone Bharatpur">Zone Bharatpur</option>
+                            </>
+                          )}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="label-lte text-2xs block mb-1">Facility Incharge</label>
+                      <input
+                        type="text"
+                        value={newFacilityIncharge}
+                        onChange={(e) => setNewFacilityIncharge(e.target.value)}
+                        placeholder="e.g. Dr. Sharma"
+                        className="input-lte h-9 text-xs font-medium w-full rounded-xl"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">DM Name</label>
+                        <input
+                          type="text"
+                          value={newFacilityDmName}
+                          onChange={(e) => setNewFacilityDmName(e.target.value)}
+                          placeholder="e.g. Sunil Bishnoi"
+                          className="input-lte h-9 text-xs font-medium w-full rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="label-lte text-2xs block mb-1">Coordinator Name</label>
+                        <input
+                          type="text"
+                          value={newFacilityCoordinatorName}
+                          onChange={(e) => setNewFacilityCoordinatorName(e.target.value)}
+                          placeholder="e.g. Ramesh Kumar"
+                          className="input-lte h-9 text-xs font-medium w-full rounded-xl"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Footer Actions */}
+              <div className="bg-surface-sunken border-t border-line px-5 py-3.5 flex items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsEditFacilityModalOpen(false)}
+                  className="btn-lte-secondary h-9 px-4 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] text-white h-9 px-5 text-xs font-bold rounded-xl cursor-pointer shadow-xs hover:shadow-md transition-all border-0"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

@@ -63,7 +63,7 @@ import {
   handleGetExpenseHierarchyLevels, handleResetExpenseApprovalLevel,
   handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates,
   handleTestTime, handleRevertClaimDeductions, handleBulkToggleBulkApproval,
-  handleGetFacilities, handleSaveFacility, handleDeleteFacility,
+  handleGetFacilities, handleSaveFacility, handleUpdateFacility, handleDeleteFacility,
   handleGetAdminAuditLogs
 } from "./routes/admin.js";
 
@@ -333,6 +333,7 @@ router.post("/api/admin/logout-all", handleLogoutAllUsers, true, ["Admin"]);
 router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true, ["Admin"]);
 router.get("/api/admin/facilities", handleGetFacilities, true, ["Admin"]);
 router.post("/api/admin/facilities", handleSaveFacility, true, ["Admin"]);
+router.put("/api/admin/facilities/:id", handleUpdateFacility, true, ["Admin"]);
 router.delete("/api/admin/facilities/:id", handleDeleteFacility, true, ["Admin"]);
 router.get("/api/admin/audit-logs", handleGetAdminAuditLogs, true, ["Admin"]);
 
