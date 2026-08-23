@@ -217,36 +217,36 @@ export const Navbar: React.FC<NavbarProps> = ({
           </kbd>
         </button>
 
-        {/* Right Section: Mobile Search, PWA Install, Notifications, User Profile */}
-        <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+        {/* Right Section: Mobile Search, PWA Install (Desktop only), Notifications, User Profile */}
+        <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
           {/* Mobile Command Palette Search Trigger */}
           <button
             type="button"
             onClick={() => setIsCmdOpen(true)}
-            className="md:hidden p-2 text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+            className="md:hidden p-1.5 sm:p-2 text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
             title="Search"
             aria-label="Search"
           >
             <Search className="w-4 h-4" />
           </button>
 
-          {/* PWA Install Button */}
+          {/* PWA Install Button (Desktop / Tablet Only - Hidden on Mobile) */}
           {!isStandalone && (
             <button
               type="button"
               onClick={handleInstallApp}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-accent-700 bg-accent-50 hover:bg-accent-100 rounded-lg border border-accent-200 transition-all cursor-pointer shadow-none"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-accent-700 bg-accent-50 hover:bg-accent-100 rounded-lg border border-accent-200 transition-all cursor-pointer shadow-none"
               title="Install Cyrix FieldOps App"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Install App</span>
+              <span>Install App</span>
             </button>
           )}
 
           {/* Notification Bell with Unread Badge */}
           <Link
             to="/notifications"
-            className="relative p-2 text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
+            className="relative p-1.5 sm:p-2 text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-lg transition-colors cursor-pointer"
             title="Notifications"
             aria-label="Notifications"
           >
@@ -261,7 +261,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={() => setIsUserMenuOpen((prev) => !prev)}
-              className="flex items-center gap-2 p-1 rounded-lg hover:bg-surface-sunken transition-colors cursor-pointer focus:outline-none border border-transparent hover:border-line"
+              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-surface-sunken transition-colors cursor-pointer focus:outline-none border border-transparent hover:border-line"
               title="User Account Menu"
               aria-expanded={isUserMenuOpen}
               aria-haspopup="true"
