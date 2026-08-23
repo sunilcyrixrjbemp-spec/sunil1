@@ -1463,11 +1463,19 @@ export default function AdminPage() {
     });
   };
 
+  const normalizeZoneName = (zone?: string) => {
+    if (!zone) return "";
+    let clean = zone.trim().replace(/^zone\s+/i, "").trim();
+    if (!clean) return "";
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
+  };
+
   const availableUserZones = useMemo(() => {
     const zones = new Set<string>();
     safeUsers.forEach(u => {
-      if (u.zone && u.zone.trim() && u.zone.trim().toLowerCase() !== "all") {
-        zones.add(u.zone.trim());
+      const z = normalizeZoneName(u.zone);
+      if (z && z.toLowerCase() !== "all") {
+        zones.add(z);
       }
     });
     return Array.from(zones).sort();
@@ -1476,7 +1484,7 @@ export default function AdminPage() {
   const availableUserDistricts = useMemo(() => {
     const districts = new Set<string>();
     safeUsers.forEach(u => {
-      if (userZoneFilter !== "all" && (u.zone || "").trim().toLowerCase() !== userZoneFilter.trim().toLowerCase()) {
+      if (userZoneFilter !== "all" && normalizeZoneName(u.zone).toLowerCase() !== normalizeZoneName(userZoneFilter).toLowerCase()) {
         return;
       }
       if (u.district && u.district.trim() && u.district.trim().toLowerCase() !== "all") {
@@ -1514,12 +1522,13 @@ export default function AdminPage() {
     return Array.from(statuses).sort();
   }, [safeUsers]);
 
-  // Dedicated dynamic districts and zones for Facilities Master
+  // Dedicated dynamic deduplicated zones for Facilities Master
   const availableFacilityZones = useMemo(() => {
     const zones = new Set<string>();
     standardFacilities.forEach(f => {
-      if (f.zone_name && f.zone_name.trim() && f.zone_name.trim().toLowerCase() !== "all") {
-        zones.add(f.zone_name.trim());
+      const z = normalizeZoneName(f.zone_name);
+      if (z && z.toLowerCase() !== "all") {
+        zones.add(z);
       }
     });
     return Array.from(zones).sort();
@@ -1558,7 +1567,7 @@ export default function AdminPage() {
 
   const filteredUsers = useMemo(() => {
     return safeUsers.filter(u => {
-      if (userZoneFilter !== "all" && (u.zone || "").trim().toLowerCase() !== userZoneFilter.trim().toLowerCase()) return false;
+      if (userZoneFilter !== "all" && normalizeZoneName(u.zone).toLowerCase() !== normalizeZoneName(userZoneFilter).toLowerCase()) return false;
       if (userDistrictFilter !== "all" && (u.district || "").trim().toLowerCase() !== userDistrictFilter.trim().toLowerCase()) return false;
       if (userManagerFilter !== "all" && (u.manager || "").trim().toLowerCase() !== userManagerFilter.trim().toLowerCase() && (u.zonal_manager || "").trim().toLowerCase() !== userManagerFilter.trim().toLowerCase()) return false;
       if (userRoleFilter !== "all" && (u.role || "").trim().toLowerCase() !== userRoleFilter.trim().toLowerCase()) return false;
@@ -3278,13 +3287,13 @@ export default function AdminPage() {
             {activeTab === "facilities" && (
               <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs animate-fadeIn">
                 {/* Clean Integrated Header Bar: Sub-Tabs + Filters + Quick Actions */}
-                <div className="p-3.5 sm:p-4 border-b border-line bg-surface flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-                  {/* Left: Clean Segmented Sub-Tab Switcher */}
-                  <div className="bg-surface-sunken p-1 rounded-xl flex gap-1 border border-line shrink-0">
+                <div className="p-3 border-b border-line bg-surface flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
+                  {/* Left: Clean Segmented Sub-Tab Switcher (1 line) */}
+                  <div className="bg-surface-sunken p-1 rounded-xl flex items-center gap-1 border border-line shrink-0">
                     <button
                       type="button"
                       onClick={() => setFacilitySubTab("expense")}
-                      className={`py-1.5 px-3.5 text-xs font-bold border-0 cursor-pointer transition-all rounded-lg flex items-center gap-1.5 ${
+                      className={`py-1.5 px-3 text-xs font-bold border-0 cursor-pointer transition-all rounded-lg flex items-center gap-1.5 whitespace-nowrap ${
                         facilitySubTab === "expense"
                           ? "bg-surface text-accent-700 shadow-2xs border border-line"
                           : "bg-transparent text-ink-600 hover:text-ink-900"
@@ -3300,7 +3309,7 @@ export default function AdminPage() {
                     <button
                       type="button"
                       onClick={() => setFacilitySubTab("notada")}
-                      className={`py-1.5 px-3.5 text-xs font-bold border-0 cursor-pointer transition-all rounded-lg flex items-center gap-1.5 ${
+                      className={`py-1.5 px-3 text-xs font-bold border-0 cursor-pointer transition-all rounded-lg flex items-center gap-1.5 whitespace-nowrap ${
                         facilitySubTab === "notada"
                           ? "bg-surface text-rose-700 shadow-2xs border border-line"
                           : "bg-transparent text-ink-600 hover:text-ink-900"
@@ -3314,23 +3323,32 @@ export default function AdminPage() {
                     </button>
                   </div>
 
-                  {/* Right: Search & Filters */}
-                  <div className="flex flex-wrap items-center gap-2 flex-1 justify-start lg:justify-end">
-                    <div className="relative min-w-[180px] sm:min-w-[220px] flex-1 sm:flex-initial">
+                  {/* Right: Search & Filters in the exact same single row */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="relative w-48 sm:w-56 lg:w-64">
                       <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Search name, district, incharge, manager..."
+                        placeholder="Search name, district, manager..."
                         value={facilitySearch}
                         onChange={(e) => setFacilitySearch(e.target.value)}
-                        className="input-lte pl-8 h-8 text-xs w-full rounded-xl"
+                        className="input-lte pl-8 h-8 text-xs w-full rounded-xl bg-white"
                       />
+                      {facilitySearch && (
+                        <button
+                          type="button"
+                          onClick={() => setFacilitySearch("")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 p-0.5 border-0 bg-transparent cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
 
                     <select
                       value={facilityZoneFilter}
                       onChange={(e) => setFacilityZoneFilter(e.target.value)}
-                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[125px] bg-white"
+                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-32 bg-white shrink-0"
                     >
                       <option value="all">All Zones ({availableFacilityZones.length})</option>
                       {availableFacilityZones.map((z: string) => (
@@ -3341,7 +3359,7 @@ export default function AdminPage() {
                     <select
                       value={facilityDistrictFilter}
                       onChange={(e) => setFacilityDistrictFilter(e.target.value)}
-                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[125px] bg-white"
+                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-36 bg-white shrink-0"
                     >
                       <option value="all">All Districts ({availableFacilityDistricts.length})</option>
                       {availableFacilityDistricts.map((d: string) => (
@@ -3357,7 +3375,7 @@ export default function AdminPage() {
                           setFacilityZoneFilter("all");
                           setFacilityDistrictFilter("all");
                         }}
-                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8.5 px-3 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8 px-2.5 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0"
                         title="Clear all filters"
                       >
                         <RefreshCw className="w-3 h-3" />
@@ -3394,7 +3412,7 @@ export default function AdminPage() {
                           <tbody className="divide-y divide-line text-ink-900 font-medium">
                             {standardFacilities
                               .filter((f) => {
-                                if (facilityZoneFilter !== "all" && (f.zone_name || "").toLowerCase().replace(/^zone\s+/i, "").trim() !== facilityZoneFilter.toLowerCase().replace(/^zone\s+/i, "").trim()) return false;
+                                if (facilityZoneFilter !== "all" && normalizeZoneName(f.zone_name).toLowerCase() !== normalizeZoneName(facilityZoneFilter).toLowerCase()) return false;
                                 if (facilityDistrictFilter !== "all" && (f.district_name || "").toLowerCase() !== facilityDistrictFilter.toLowerCase()) return false;
                                 if (!facilitySearch.trim()) return true;
                                 const q = facilitySearch.toLowerCase();
