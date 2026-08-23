@@ -225,6 +225,36 @@ export async function handleSendSubmissionReminder(request, env, params, query, 
       return jsonResponse({ success: false, error: `Engineer ${emp.name} does not have a registered email address` }, 400);
     }
 
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const monthStr = monthName || `${year}-08`;
+
+    // Ensure reminder logs table exists
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS attendance_reminder_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        employee_code TEXT NOT NULL,
+        month TEXT NOT NULL,
+        sent_date TEXT NOT NULL,
+        sent_by TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(employee_code, month, sent_date)
+      )
+    `).run();
+
+    // Check if reminder was already sent to this engineer today
+    const alreadySent = await env.DB.prepare(`
+      SELECT id FROM attendance_reminder_logs 
+      WHERE (employee_code = ? OR employee_code = ?) AND sent_date = ?
+      LIMIT 1
+    `).bind(empCode, emp.user_id, todayStr).first();
+
+    if (alreadySent) {
+      return jsonResponse({ 
+        success: false, 
+        error: `A reminder email has already been sent to ${emp.name} today. Cannot re-send.` 
+      }, 400);
+    }
+
     // 2. Fetch hierarchy emails (Manager, Zonal Manager, Coordinator) strictly from database hierarchy
     const managerRefs = [emp.manager, emp.zonal_manager, emp.coordinator].filter(Boolean);
     let ccList = [];
@@ -463,5 +493,38 @@ export async function handleDeleteEngineerLeave(request, env, params, query, use
   } catch (error) {
     console.error("handleDeleteEngineerLeave error:", error);
     return jsonResponse({ success: false, error: error.message }, 500);
+  }
+}
+
+
+/**
+ * GET /api/attendance/reminder-status?date=YYYY-MM-DD
+ */
+export async function handleGetSentReminders(request, env, params, query, user) {
+  try {
+    const todayStr = query.get("date") || new Date().toISOString().slice(0, 10);
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS attendance_reminder_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        employee_code TEXT NOT NULL,
+        month TEXT NOT NULL,
+        sent_date TEXT NOT NULL,
+        sent_by TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(employee_code, month, sent_date)
+      )
+    `).run();
+
+    const rows = await env.DB.prepare(`
+      SELECT employee_code, month, sent_date, created_at FROM attendance_reminder_logs
+      WHERE sent_date = ?
+    `).bind(todayStr).all();
+
+    return jsonResponse({
+      success: true,
+      sent_today: (rows.results || []).map(r => r.employee_code)
+    });
+  } catch (error) {
+    return jsonResponse({ success: true, sent_today: [] });
   }
 }

@@ -626,7 +626,7 @@ export function submissionReminderTemplate({
   const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou currently have ${pendingDays} working day(s) with missing expense claims for ${periodLabel}.\n\nPending Dates:\n${(missingDates || []).join("\n")}\n\nNotice: If you were on approved leave or absent on any of these dates, please log in to Cyrix FieldOps (https://indrae.in) and mark those specific dates as 'On Leave' to clear your overdue status.\n\nPlease submit your pending daily claims or record your leaves today.\n\nSincerely,\nCyrix Field Operations Team`;
 
   return {
-    subject: `[Action Required] ${pendingDays} Working Days Expense Submission Pending - ${employeeName} (${periodLabel})`,
+    subject: `Pending Expense Reminder: ${employeeName} (${periodLabel})`,
     html: emailWrapper(content, `Expense submission reminder: ${pendingDays} days pending`),
     text: textPlain,
   };
