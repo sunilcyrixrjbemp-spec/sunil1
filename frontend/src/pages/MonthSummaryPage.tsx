@@ -1,4 +1,3 @@
-import { generateEngineerVectorPdf, generateBulkZipFast } from "../utils/fastVectorPdfGenerator";
 import { useEffect, useState, useRef, useMemo } from "react";
 import toast from "react-hot-toast";
 import { expenseService } from "../services/expenseService";
@@ -856,12 +855,24 @@ ${attachmentsSection}
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
 export default function MonthSummaryPage() {
+
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
   const cancelZipRef = useRef(false);
+
+  const [zipProgress, setZipProgress] = useState<{
+    active: boolean;
+    stage: "fetching" | "rendering" | "compressing" | "complete" | "error";
+    current: number;
+    total: number;
+    currentName: string;
+    percent: number;
+    message: string;
+  } | null>(null);
 
   // Modal states
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
@@ -1016,39 +1027,177 @@ export default function MonthSummaryPage() {
     fetchData(f);
   };
 
+  // Filtered dataset matching all cascading criteria + quick search
+  const filtered = useMemo(() => {
+    return data.filter((r: any) => {
+      if (filterZone !== "all" && (r.zone || r.state || "").trim() !== filterZone) return false;
+      if (filterDistrict !== "all" && (r.district || "").trim() !== filterDistrict) return false;
+      if (filterCoordinator !== "all" && (r.coordinator || r.manager || "").trim() !== filterCoordinator) return false;
+      if (filterEngineer !== "all" && r.e_code !== filterEngineer) return false;
 
+      if (!search.trim()) return true;
+      const q = search.toLowerCase().trim();
+      return (
+        (r.name || "").toLowerCase().includes(q) ||
+        (r.e_code || "").toLowerCase().includes(q) ||
+        (r.district || "").toLowerCase().includes(q) ||
+        (r.zone || "").toLowerCase().includes(q) ||
+        (r.coordinator || r.manager || "").toLowerCase().includes(q)
+      );
+    });
+  }, [data, filterZone, filterDistrict, filterCoordinator, filterEngineer, search]);
 
+  const hasActiveFilters =
+    filterZone !== "all" ||
+    filterDistrict !== "all" ||
+    filterCoordinator !== "all" ||
+    filterEngineer !== "all" ||
+    Boolean(search.trim());
 
+  const totalEngineers = filtered.length;
+  const totalClaims = filtered.reduce((s: number, r: any) => s + (r.claim_count || 0), 0);
+  const totalAmount = filtered.reduce((s: number, r: any) => s + (r.total_amount || 0), 0);
+  const totalKM = filtered.reduce((s: number, r: any) => s + (r.total_km || 0), 0);
 
-  const handleDownloadSingle = async (row: any) => {
-    const key = `${row.user_id}-${row.month}-${row.year}`;
-    setPdfLoadingId(key);
-    try {
-      const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
-      const userObj = res.user || row;
-      const claims = res.claims || [];
-      if (claims.length === 0) {
-        toast.error("No approved claim data found");
-        return;
-      }
-
-      const pdfBlob = await generateEngineerVectorPdf(userObj, claims, row.advance_amount || 0, true);
-      const safeName = (userObj.name || "Staff").replace(/[^a-zA-Z0-9]/g, "_");
-      const filename = `${safeName}_${userObj.e_code || row.e_code || "E"}_${row.month}_${row.year}.pdf`;
-
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(pdfBlob);
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("PDF downloaded instantly!");
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to generate PDF");
-    } finally {
-      setPdfLoadingId(null);
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedKeys(filtered.map((r: any) => `${r.user_id}-${r.month}-${r.year}`));
+    } else {
+      setSelectedKeys([]);
     }
+  };
+
+  const handleSelectRow = (key: string, checked: boolean) => {
+    if (checked) {
+      setSelectedKeys((prev) => [...prev, key]);
+    } else {
+      setSelectedKeys((prev) => prev.filter((k) => k !== key));
+    }
+  };
+
+  const renderHTMLToPDFBlob = async (html: string): Promise<Blob> => {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+
+    const { jsPDF } = (window as any).jspdf;
+    const h2c = (window as any).html2canvas;
+
+    const A4_W_CSS = 1122; // A4 landscape width at 96dpi
+    const SCALE = 1.5; // High crisp speed scale
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "0";
+    iframe.style.left = "0";
+    iframe.style.width = `${A4_W_CSS}px`;
+    iframe.style.height = "10000px";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+    iframe.style.border = "none";
+    iframe.style.zIndex = "-9999";
+    document.body.appendChild(iframe);
+
+    const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iDoc) {
+      if (document.body.contains(iframe)) document.body.removeChild(iframe);
+      throw new Error("No iframe document available for PDF rendering");
+    }
+
+    iDoc.open();
+    iDoc.write(html);
+    iDoc.close();
+
+    // Fast image load check with 1.5s fallback timeout
+    await new Promise<void>((resolve) => {
+      const imgs = Array.from(iDoc.getElementsByTagName("img"));
+      if (imgs.length === 0) { setTimeout(resolve, 50); return; }
+      let loadedCount = 0;
+      let failedCount = 0;
+      let isResolved = false;
+
+      const finish = () => {
+        if (!isResolved) {
+          isResolved = true;
+          setTimeout(resolve, 50);
+        }
+      };
+
+      const check = () => {
+        if (loadedCount + failedCount >= imgs.length) {
+          finish();
+        }
+      };
+
+      imgs.forEach((img) => {
+        const imageEl = img as HTMLImageElement;
+        if (imageEl.complete) {
+          loadedCount++;
+          check();
+        } else {
+          imageEl.addEventListener("load", () => {
+            loadedCount++;
+            check();
+          });
+          imageEl.addEventListener("error", () => {
+            failedCount++;
+            check();
+          });
+        }
+      });
+
+      setTimeout(() => {
+        if (!isResolved) {
+          finish();
+        }
+      }, 1500);
+    });
+
+    const pagesToRender: HTMLElement[] = [];
+    const summaryPages = Array.from(iDoc.querySelectorAll(".summary-page, .wrap")) as HTMLElement[];
+    const uniqueSummaryPages = Array.from(new Set(summaryPages));
+    pagesToRender.push(...uniqueSummaryPages);
+
+    const attPages = Array.from(iDoc.querySelectorAll(".attachment-page")) as HTMLElement[];
+    const uniqueAttPages = Array.from(new Set(attPages)).filter(el => !pagesToRender.includes(el));
+    pagesToRender.push(...uniqueAttPages);
+
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+      compress: true
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();   // 297 mm
+    const pdfHeight = pdf.internal.pageSize.getHeight(); // 210 mm
+
+    for (let i = 0; i < pagesToRender.length; i++) {
+      const el = pagesToRender[i];
+      const canvas = await h2c(el, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: false,
+        logging: false,
+        width: A4_W_CSS,
+        height: el.offsetHeight || 793,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: A4_W_CSS,
+        windowHeight: el.offsetHeight || 793,
+      });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.88);
+      if (i > 0) {
+        pdf.addPage("a4", "landscape");
+      }
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+    }
+
+    if (document.body.contains(iframe)) {
+      document.body.removeChild(iframe);
+    }
+
+    return pdf.output("blob");
   };
 
   const handleOpenAdvanceModal = (r: any) => {
@@ -1063,19 +1212,71 @@ export default function MonthSummaryPage() {
       onSave: async (amount: number) => {
         try {
           await expenseService.saveEngineerAdvance(r.user_id, r.month, r.year, amount);
-          setData(prev => prev.map(item => {
-            if (item.user_id === r.user_id && item.month === r.month && item.year === r.year) {
-              return { ...item, advance_amount: amount };
-            }
-            return item;
-          }));
+          setData((prev) =>
+            prev.map((item) => {
+              if (item.user_id === r.user_id && item.month === r.month && item.year === r.year) {
+                return { ...item, advance_amount: amount };
+              }
+              return item;
+            })
+          );
           toast.success("Advance updated successfully");
         } catch (err: any) {
           toast.error(err?.response?.data?.detail || "Failed to save advance");
         }
-      }
+      },
     });
     setShowAdvanceModal(true);
+  };
+
+  const handleDownloadSingle = async (row: any) => {
+    const key = `${row.user_id}-${row.month}-${row.year}`;
+    setPdfLoadingId(key);
+    try {
+      const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
+      const userObj = res.user || row;
+      const claims = res.claims || [];
+      if (claims.length === 0) {
+        toast.error("No approved claim data found");
+        return;
+      }
+
+      await Promise.all(
+        claims.map(async (claim: any) => {
+          try {
+            const details = await expenseService.getExpenseDetails(claim.expense_code);
+            if (details) {
+              if (details.attachments && Array.isArray(details.attachments)) {
+                claim.attachments = details.attachments;
+              }
+              if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
+                claim.attachments_detailed = details.attachments_detailed;
+              }
+            }
+          } catch (e) {}
+        })
+      );
+
+      const attachments = await prepareConvertedAttachments(claims);
+      const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
+      const pdfBlob = await renderHTMLToPDFBlob(html);
+
+      const safeName = (userObj.name || "Staff").replace(/[^a-zA-Z0-9]/g, "_");
+      const filename = `${safeName}_${userObj.e_code || row.e_code || "E"}_${row.month}_${row.year}.pdf`;
+
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(pdfBlob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("PDF downloaded successfully!");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to generate PDF");
+    } finally {
+      setPdfLoadingId(null);
+    }
   };
 
   const handlePrintSingle = async (row: any) => {
@@ -1119,174 +1320,53 @@ export default function MonthSummaryPage() {
     }
   };
 
-  const filtered = useMemo(() => {
-    return data.filter((r: any) => {
-      if (filterZone !== "all" && (r.zone || r.state || "").trim() !== filterZone) return false;
-      if (filterDistrict !== "all" && (r.district || "").trim() !== filterDistrict) return false;
-      if (filterCoordinator !== "all" && (r.coordinator || r.manager || "").trim() !== filterCoordinator) return false;
-      if (filterEngineer !== "all" && r.e_code !== filterEngineer) return false;
-
-      if (!search.trim()) return true;
-      const q = search.toLowerCase().trim();
-      return (
-        (r.name || "").toLowerCase().includes(q) ||
-        (r.e_code || "").toLowerCase().includes(q) ||
-        (r.district || "").toLowerCase().includes(q) ||
-        (r.zone || "").toLowerCase().includes(q) ||
-        (r.coordinator || r.manager || "").toLowerCase().includes(q)
-      );
-    });
-  }, [data, filterZone, filterDistrict, filterCoordinator, filterEngineer, search]);
-
-  const hasActiveFilters =
-    filterZone !== "all" ||
-    filterDistrict !== "all" ||
-    filterCoordinator !== "all" ||
-    filterEngineer !== "all" ||
-    Boolean(search.trim());
-
-  const totalEngineers = filtered.length;
-  const totalClaims = filtered.reduce((s, r) => s + (r.claims_count || 0), 0);
-  const totalAmount = filtered.reduce((s, r) => s + (r.total_amount || 0), 0);
-  const totalKM = filtered.reduce((s, r) => s + (r.total_km || 0), 0);
-
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedKeys(filtered.map(r => `${r.user_id}-${r.month}-${r.year}`));
-    } else {
-      setSelectedKeys([]);
-    }
-  };
-
-  const handleSelectRow = (key: string, checked: boolean) => {
-    if (checked) {
-      setSelectedKeys(prev => [...prev, key]);
-    } else {
-      setSelectedKeys(prev => prev.filter(k => k !== key));
-    }
-  };
-
   const generateBulkPrintCombined = (fetched: any[], advancesMap: Record<string, number>) => {
-    let combinedBody = "";
-    let combinedStyles = "";
-    let first = true;
+    let combinedHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Combined Claims Report</title>
+        <style>
+          @page { size: A4 landscape; margin: 0; }
+          body { margin: 0; padding: 0; font-family: Calibri, sans-serif; background: #fff; }
+          .page-break { page-break-after: always; break-after: page; }
+        </style>
+      </head>
+      <body>
+    `;
 
-    for (const item of fetched) {
-      const user = item.res.user || item.row;
+    fetched.forEach((item, index) => {
+      const userObj = item.res.user || item.row;
       const claims = item.res.claims || [];
       const attachments = item.res.attachments || [];
-      if (claims.length === 0) continue;
+      if (claims.length === 0) return;
 
       const key = `${item.row.user_id}-${item.row.month}-${item.row.year}`;
       const advance = advancesMap[key] || 0;
+      const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
 
-      const html = buildExcelPrintHTML(user, claims, attachments, advance);
-      
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, "text/html");
-      const bodyContent = doc.querySelector(".wrap")?.innerHTML || "";
-      const styleContent = doc.querySelector("style")?.innerHTML || "";
-      
-      if (first) {
-        combinedStyles = styleContent;
-        first = false;
-      }
+      const bodyContent = html.replace(/^[\s\S]*?<body[^>]*>/i, "").replace(/<\/body>[\s\S]*$/i, "");
+      combinedHTML += `<div class="${index < fetched.length - 1 ? "page-break" : ""}">${bodyContent}</div>`;
+    });
 
-      combinedBody += `
-        <div class="wrap" style="page-break-after: always; min-height: 100vh; box-sizing: border-box; padding: 4mm;">
-          ${bodyContent}
-        </div>
-      `;
-    }
+    combinedHTML += `</body></html>`;
 
-    if (!combinedBody) {
-      toast.error("No valid claim data found to print");
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Pop-up blocked. Please allow pop-ups for this site.");
       return;
     }
 
-    const combinedHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Bulk Expense Reimbursement Sheet</title>
-  <style>
-    ${combinedStyles}
-    @media print {
-      .wrap {
-        page-break-after: always!important;
-        break-after: page!important;
-      }
-    }
-  </style>
-</head>
-<body>
-  ${combinedBody}
-  <script>
-    (function() {
-      function doPrint() {
-        const images = Array.from(document.getElementsByTagName('img'));
-        let loadedCount = 0;
-        
-        function trigger() {
-          setTimeout(function() {
-            try {
-              window.print();
-            } catch (e) {
-              console.warn("Print failed:", e);
-            }
-          }, 500);
-        }
-        
-        if (images.length === 0) {
-          trigger();
-        } else {
-          images.forEach(function(img) {
-            if (img.complete) {
-              loadedCount++;
-              if (loadedCount === images.length) trigger();
-            } else {
-              img.onload = function() {
-                loadedCount++;
-                if (loadedCount === images.length) trigger();
-              };
-              img.onerror = function() {
-                loadedCount++;
-                if (loadedCount === images.length) trigger();
-              };
-            }
-          });
-        }
-      }
+    printWindow.document.open();
+    printWindow.document.write(combinedHTML);
+    printWindow.document.close();
 
-      if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        doPrint();
-      } else {
-        document.addEventListener('DOMContentLoaded', doPrint);
-        window.addEventListener('load', doPrint);
-        // Fallback safety timeout
-        setTimeout(doPrint, 1500);
-      }
-    })();
-  </script>
-</body>
-</html>`;
-
-    const win = window.open("", "_blank", "width=1400,height=900");
-    if (!win) { toast.error("Allow popups to print"); return; }
-    win.document.write(combinedHTML);
-    win.document.close();
-    
-    // Fallback print trigger directly on the popup window instance
     setTimeout(() => {
       try {
-        if (win && !win.closed) {
-          win.focus();
-          win.print();
-        }
+        printWindow.focus();
+        printWindow.print();
       } catch (e) {
-        console.warn("Direct popup print failed:", e);
+        console.error(e);
       }
     }, 1500);
 
@@ -1302,12 +1382,12 @@ export default function MonthSummaryPage() {
       const keysWithNoAdvance: any[] = [];
 
       const promises = selectedKeys.map(async (key) => {
-        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
+        const row = data.find((r: any) => `${r.user_id}-${r.month}-${r.year}` === key);
         if (!row) return;
         try {
           const [claimRes, advRes] = await Promise.all([
             expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
-            expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
+            expenseService.getEngineerAdvance(row.user_id, row.month, row.year),
           ]);
           fetched.push({ row, res: claimRes });
           const amt = advRes?.advance_amount || 0;
@@ -1333,7 +1413,7 @@ export default function MonthSummaryPage() {
         setAdvanceAmountInput("0");
         setAdvanceModalConfig({
           title: "Set Default Advance",
-          description: `You selected ${selectedKeys.length} claims, and ${keysWithNoAdvance.length} of them have no saved advance. Enter a default advance (₹) to save in the database for these ${keysWithNoAdvance.length} engineers:`,
+          description: `You selected ${selectedKeys.length} claims, and ${keysWithNoAdvance.length} of them have no saved advance. Enter a default advance (₹) to save in the database:`,
           initialValue: 0,
           userCode: "BULK",
           month: "",
@@ -1341,11 +1421,11 @@ export default function MonthSummaryPage() {
           onSave: async (amount: number) => {
             const saveTid = toast.loading("Saving advances...");
             try {
-              const savePromises = keysWithNoAdvance.map(item => 
+              const savePromises = keysWithNoAdvance.map((item) =>
                 expenseService.saveEngineerAdvance(item.row.user_id, item.row.month, item.row.year, amount)
               );
               await Promise.all(savePromises);
-              keysWithNoAdvance.forEach(item => {
+              keysWithNoAdvance.forEach((item) => {
                 advancesMap[item.key] = amount;
               });
               toast.success("Advances saved successfully");
@@ -1356,7 +1436,7 @@ export default function MonthSummaryPage() {
               toast.dismiss(saveTid);
             }
             generateBulkPrintCombined(fetched, advancesMap);
-          }
+          },
         });
         setShowAdvanceModal(true);
       } else {
@@ -1368,23 +1448,11 @@ export default function MonthSummaryPage() {
     }
   };
 
-  const [zipProgress, setZipProgress] = useState<{
-    active: boolean;
-    stage: "fetching" | "rendering" | "compressing" | "complete" | "error";
-    current: number;
-    total: number;
-    currentName: string;
-    percent: number;
-    message: string;
-  } | null>(null);
-
   const handleCancelZIP = () => {
     cancelZipRef.current = true;
     setZipProgress(null);
     toast("ZIP generation cancelled", { icon: "ℹ️" });
   };
-
-
 
   const handleBulkDownloadZIP = async () => {
     if (selectedKeys.length === 0) return;
@@ -1394,15 +1462,118 @@ export default function MonthSummaryPage() {
       selectedKeys.includes(`${r.user_id}-${r.month}-${r.year}`)
     );
 
+    setZipProgress({
+      active: true,
+      stage: "fetching",
+      current: 0,
+      total: selectedRows.length,
+      currentName: "Starting parallel data fetch...",
+      percent: 5,
+      message: `Fetching claim records and attachments for ${selectedRows.length} engineers...`
+    });
+
     try {
-      const zipBlob = await generateBulkZipFast(
-        selectedRows,
-        appliedFilters.month || "Selected",
-        appliedFilters.year || 2026,
-        (progress) => {
-          setZipProgress(progress);
-        },
-        () => cancelZipRef.current
+      await Promise.all([
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js")
+      ]);
+
+      const zip = new (window as any).JSZip();
+      const total = selectedRows.length;
+      let completedPdfs = 0;
+
+      // 4-Worker Parallel Concurrency Queue (Exact original PDF format)
+      const CONCURRENCY = 4;
+      for (let i = 0; i < total; i += CONCURRENCY) {
+        if (cancelZipRef.current) break;
+
+        const chunk = selectedRows.slice(i, i + CONCURRENCY);
+        await Promise.all(
+          chunk.map(async (row: any) => {
+            if (cancelZipRef.current) return;
+
+            const engName = row.name || row.user_id || "Engineer";
+            try {
+              const res = await expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year);
+              const userObj = res.user || row;
+              const claims = res.claims || [];
+              if (claims.length === 0) return;
+
+              await Promise.all(
+                claims.map(async (claim: any) => {
+                  try {
+                    const details = await expenseService.getExpenseDetails(claim.expense_code);
+                    if (details) {
+                      if (details.attachments && Array.isArray(details.attachments)) {
+                        claim.attachments = details.attachments;
+                      }
+                      if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
+                        claim.attachments_detailed = details.attachments_detailed;
+                      }
+                    }
+                  } catch (e) {}
+                })
+              );
+
+              const attachments = await prepareConvertedAttachments(claims);
+              const html = buildExcelPrintHTML(userObj, claims, attachments, row.advance_amount || 0, false);
+              const pdfBlob = await renderHTMLToPDFBlob(html);
+
+              const safeName = (userObj.name || "Staff").replace(/[^a-zA-Z0-9]/g, "_");
+              const filename = `${safeName}_${userObj.e_code || row.e_code || "E"}_${row.month}_${row.year}.pdf`;
+              zip.file(filename, pdfBlob);
+
+              completedPdfs++;
+              const percent = 10 + Math.round((completedPdfs / total) * 75);
+
+              setZipProgress({
+                active: true,
+                stage: "rendering",
+                current: completedPdfs,
+                total,
+                currentName: `Generated PDF for ${engName}`,
+                percent: Math.min(percent, 85),
+                message: `Generated ${completedPdfs} / ${total} PDFs (${Math.round((completedPdfs / total) * 100)}%)...`
+              });
+            } catch (err) {
+              console.error(`Error rendering PDF for ${engName}`, err);
+              completedPdfs++;
+            }
+          })
+        );
+      }
+
+      if (cancelZipRef.current) {
+        setZipProgress(null);
+        toast("ZIP generation cancelled", { icon: "ℹ️" });
+        return;
+      }
+
+      setZipProgress({
+        active: true,
+        stage: "compressing",
+        current: total,
+        total,
+        currentName: "Packaging ZIP archive...",
+        percent: 88,
+        message: "Packing all original PDFs into ZIP package..."
+      });
+
+      const zipBlob = await zip.generateAsync(
+        { type: "blob", compression: "DEFLATE", compressionOptions: { level: 4 } },
+        (metadata: any) => {
+          const compPercent = 88 + Math.round((metadata.percent / 100) * 11);
+          setZipProgress({
+            active: true,
+            stage: "compressing",
+            current: total,
+            total,
+            currentName: metadata.currentFile ? `Packing ${metadata.currentFile}` : "Finalizing ZIP file...",
+            percent: Math.min(compPercent, 99),
+            message: `Compressing ZIP file (${Math.round(metadata.percent)}%)...`
+          });
+        }
       );
 
       const link = document.createElement("a");
@@ -1412,18 +1583,29 @@ export default function MonthSummaryPage() {
       link.click();
       document.body.removeChild(link);
 
-      toast.success(`ZIP archive with ${selectedRows.length} reports downloaded!`);
+      setZipProgress({
+        active: true,
+        stage: "complete",
+        current: total,
+        total,
+        currentName: "Download Ready",
+        percent: 100,
+        message: `ZIP folder containing ${completedPdfs} reports downloaded successfully!`
+      });
+
+      toast.success(`ZIP package downloaded (${completedPdfs} reports)!`);
       setTimeout(() => {
         setZipProgress(null);
       }, 2500);
-    } catch (e: any) {
+
+    } catch (e) {
       if (cancelZipRef.current) {
         setZipProgress(null);
         toast("ZIP generation cancelled", { icon: "ℹ️" });
         return;
       }
       console.error(e);
-      toast.error("ZIP generation failed");
+      toast.error("Failed to generate ZIP");
       setZipProgress(null);
     }
   };
