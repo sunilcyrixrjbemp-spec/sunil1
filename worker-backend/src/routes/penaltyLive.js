@@ -516,7 +516,7 @@ export async function handleLivePenaltyRecords(request, env, params, query, user
     const nowMs = Date.now();
 
     const page = Math.max(parseInt(query?.page, 10) || 1, 1);
-    const limit = Math.min(Math.max(parseInt(query?.limit, 10) || 50, 10), 500);
+    const limit = Math.min(Math.max(parseInt(query?.limit, 10) || 50, 1), 50000);
     const offset = (page - 1) * limit;
 
     const districtFilter = (query?.district || "").trim().toLowerCase();

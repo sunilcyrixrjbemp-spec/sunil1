@@ -299,7 +299,7 @@ export default function AnalysisPage() {
         }
 
         try {
-          const pRes = await penaltyLiveService.getRecords({ limit: 10000, status: "all" });
+          const pRes = await penaltyLiveService.getRecords({ limit: 50000, status: "all" });
           if (pRes && Array.isArray(pRes.records)) {
             setComplaintRecords(pRes.records);
           }
@@ -989,12 +989,24 @@ export default function AnalysisPage() {
     };
   }, [activeExpenses, user?.district]);
 
-  // J. Online Calls Portal Verification & Match Analysis (Detailed District Data)
+  // J. Online Calls Portal Verification & Match Analysis (True cross-referencing against uploaded complaints DB)
   const portalMatchAnalysis = useMemo(() => {
     let totalOnline = 0;
     let matchedOnline = 0;
     const districtMap: Record<string, { totalOnline: number; matched: number; unmatched: number }> = {};
 
+    // 1. Build fast lookup Set of all verified Complaint IDs from uploaded complaints DB
+    const verifiedComplaintSet = new Set<string>();
+    (complaintRecords || []).forEach(r => {
+      const cid = String(r.complaint_id || "").trim().toLowerCase();
+      if (cid) {
+        verifiedComplaintSet.add(cid);
+        const cleanAlphaNum = cid.replace(/[^a-z0-9]/gi, "");
+        if (cleanAlphaNum) verifiedComplaintSet.add(cleanAlphaNum);
+      }
+    });
+
+    // 2. Cross-reference engineer submitted expense calls against verifiedComplaintSet
     activeExpenses.forEach(e => {
       const rawDist = (e.district || e.facility_district || user?.district || "").trim();
       if (!rawDist || rawDist.toLowerCase() === "all" || rawDist.toLowerCase() === "undefined") return;
@@ -1004,14 +1016,16 @@ export default function AnalysisPage() {
       if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
         e.calls_details.forEach((c: any) => {
           const typeStr = String(c.type || c.call_type || c.calls_type || "").toLowerCase();
-          const cId = String(c.complaint_id || c.calls_complaint_id || "").trim();
+          const cId = String(c.complaint_id || c.calls_complaint_id || c.call_number || c.ticket_no || "").trim().toLowerCase();
           const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
 
           if (!isSupport) {
             totalOnline += 1;
             districtMap[cleanDist].totalOnline += 1;
 
-            const isMatched = c.is_portal_matched || c.is_matched || (cId.length > 5 && !/^SCRJ/i.test(cId));
+            const cleanCId = cId.replace(/[^a-z0-9]/gi, "");
+            const isMatched = (cId && verifiedComplaintSet.has(cId)) || (cleanCId && verifiedComplaintSet.has(cleanCId));
+            
             if (isMatched) {
               matchedOnline += 1;
               districtMap[cleanDist].matched += 1;
@@ -1024,14 +1038,16 @@ export default function AnalysisPage() {
         const completed = parseSanitizedCount(e.calls_completed) || parseSanitizedCount(e.calls_assigned);
         if (completed > 0) {
           const typeStr = String(e.calls_type || e.call_type || "").toLowerCase();
-          const cId = String(e.complaint_id || e.calls_complaint_id || "").trim();
+          const cId = String(e.complaint_id || e.calls_complaint_id || e.ticket_no || "").trim().toLowerCase();
           const isSupport = typeStr.includes("support") || /^SCRJ/i.test(cId);
 
           if (!isSupport) {
             totalOnline += completed;
             districtMap[cleanDist].totalOnline += completed;
 
-            const isMatched = e.is_portal_matched || e.is_matched || (cId.length > 5 && !/^SCRJ/i.test(cId)) || true;
+            const cleanCId = cId.replace(/[^a-z0-9]/gi, "");
+            const isMatched = (cId && verifiedComplaintSet.has(cId)) || (cleanCId && verifiedComplaintSet.has(cleanCId));
+
             if (isMatched) {
               matchedOnline += completed;
               districtMap[cleanDist].matched += completed;
@@ -1043,7 +1059,7 @@ export default function AnalysisPage() {
       }
     });
 
-    const matchRate = totalOnline > 0 ? ((matchedOnline / totalOnline) * 100).toFixed(1) : "100.0";
+    const matchRate = totalOnline > 0 ? ((matchedOnline / totalOnline) * 100).toFixed(1) : "0.0";
     const districtList = Object.entries(districtMap)
       .filter(([name, data]) => data.totalOnline > 0 && name.toLowerCase() !== "all")
       .map(([name, data]) => {
@@ -1063,9 +1079,10 @@ export default function AnalysisPage() {
       matchedOnline,
       unmatchedOnline: Math.max(0, totalOnline - matchedOnline),
       matchRate,
-      districtList
+      districtList,
+      totalVerifiedDBComplaints: verifiedComplaintSet.size
     };
-  }, [activeExpenses, user?.district]);
+  }, [activeExpenses, complaintRecords, user?.district]);
 
   // Selected KPI Card Highlight State (No modals)
   const [selectedKpi, setSelectedKpi] = useState<string>("all");
