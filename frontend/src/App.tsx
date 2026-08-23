@@ -32,7 +32,6 @@ import DBMonitoringPage from "./pages/DBMonitoringPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
 import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
-import AdminEnterprisePage from "./pages/AdminEnterprisePage";
 import ComplaintUploadPage from "./pages/ComplaintUploadPage";
 import ComplaintUploadAccessAdmin from "./pages/ComplaintUploadAccessAdmin";
 import ClaimLevelResetPage from "./pages/ClaimLevelResetPage";
@@ -322,7 +321,6 @@ function App() {
                 <Route path="/trc-module" element={<TRCModulePage />} />
                 <Route path="/receive-machine" element={<TRCModulePage />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
-                <Route path="/admin/enterprise" element={<AdminEnterprisePage />} />
                 <Route path="/db-monitor" element={<DBMonitoringPage />} />
                 <Route path="/design-system" element={<DesignSystemPage />} />
                 <Route path="/not-found" element={<NotFoundPage />} />

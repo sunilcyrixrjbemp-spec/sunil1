@@ -785,13 +785,13 @@ export default function AdminPage() {
     e.preventDefault();
     setSingleUserError(null);
 
-    // Verify all fields are compulsory
+    // Verify all fields are compulsory (baseReportingLocation is optional)
     if (
       !eCode.trim() || !userName.trim() || !password.trim() || !role || !designation ||
       !grade || !zone || !district || !mobileNumber.trim() || !mailId.trim() || !userType ||
-      !dateOfJoining || !dateOfBirth || !eUpkaranId.trim() || !baseReportingLocation.trim()
+      !dateOfJoining || !dateOfBirth || !eUpkaranId.trim()
     ) {
-      setSingleUserError("All input details corresponding to user profile columns are compulsory.");
+      setSingleUserError("All input details corresponding to user profile columns are compulsory (except Base Reporting Location).");
       return;
     }
 
@@ -918,14 +918,14 @@ export default function AdminPage() {
     if (!editingUser) return;
     setEditUserError(null);
     
-    // Verify compulsory edits
+    // Verify compulsory edits (baseReportingLocation is optional)
     if (
       !editName.trim() || !editRole || !editDesignation || !editGrade || 
       !editZone || !editDistrict || !editMobileNumber.trim() || !editMailId.trim() || 
       !editUserType || !editDateOfJoining || !editDateOfBirth || !editEUpkaranId.trim() ||
-      !editBaseReportingLocation.trim() || !editUserId.trim() || !editECode.trim()
+      !editUserId.trim() || !editECode.trim()
     ) {
-      setEditUserError("All input details corresponding to user profile columns are compulsory.");
+      setEditUserError("All input details corresponding to user profile columns are compulsory (except Base Reporting Location).");
       return;
     }
 
@@ -1958,9 +1958,6 @@ export default function AdminPage() {
                 <span className="text-2xs font-bold text-accent-700 bg-accent-50 px-2.5 py-0.5 rounded-full border border-accent-200 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-accent-600" />
                   {NAV_ITEMS.find(n => n.id === activeTab)?.label || "Dashboard"}
-                </span>
-                <span className="hidden sm:inline-flex items-center gap-1 text-2xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live D1
                 </span>
               </div>
             </div>
@@ -4700,24 +4697,23 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Base Reporting Location Section */}
+                {/* Base Reporting Location Section (Optional) */}
                 <div className="space-y-1">
-                  <label className="label-lte text-2xs block mb-1">Base Reporting Location(s) *</label>
+                  <label className="label-lte text-2xs block mb-1">Base Reporting Location(s) (Optional)</label>
                   {dropdowns?.facilities?.[district] && dropdowns.facilities[district].length > 0 ? (
                     <MultiSelectDropdown
                       options={dropdowns.facilities[district]}
                       selectedValues={parseSelectedLocations(baseReportingLocation, dropdowns.facilities[district] || [])}
                       onChange={(vals) => setBaseReportingLocation(vals.join(", "))}
-                      placeholder="-- Select Base Reporting Location(s) --"
+                      placeholder="-- Select Base Reporting Location(s) (Optional) --"
                     />
                   ) : (
                     <input
                       type="text"
-                      placeholder="e.g. PHC Location or custom hospital"
+                      placeholder="e.g. PHC Location or custom hospital (Optional)"
                       value={baseReportingLocation}
                       onChange={(e) => setBaseReportingLocation(e.target.value)}
                       className="input-lte w-full h-8 text-xs font-bold"
-                      required
                     />
                   )}
                 </div>
@@ -4766,18 +4762,18 @@ export default function AdminPage() {
               </div>
 
               {/* Sunken Footer */}
-              <div className="bg-surface-sunken border-t border-line px-5 py-3 flex items-center justify-end gap-2 shrink-0">
+              <div className="bg-surface-sunken/60 border-t border-line px-5 py-3 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowSingleUserModal(false)}
-                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
+                  className="bg-white hover:bg-surface-sunken text-ink-700 font-bold text-xs px-4 h-8 rounded-lg border border-line shadow-2xs transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={singleUserLoading}
-                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold flex items-center gap-2 disabled:opacity-60"
+                  className="bg-[#1E1B4B] hover:bg-[#2D286B] text-white font-bold text-xs px-5 h-8 rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border-0 active:scale-[0.98] disabled:opacity-60"
                 >
                   {singleUserLoading && <LteSpinner />}
                   <span>Register Employee</span>
@@ -5087,9 +5083,9 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Base Reporting Location Section */}
+                {/* Base Reporting Location Section (Optional) */}
                 <div className="space-y-1">
-                  <label className="label-lte text-2xs block mb-1">Base Reporting Location(s) *</label>
+                  <label className="label-lte text-2xs block mb-1">Base Reporting Location(s) (Optional)</label>
                   {dropdowns?.facilities?.[editDistrict] && dropdowns.facilities[editDistrict].length > 0 ? (
                     <MultiSelectDropdown
                       options={[
@@ -5098,16 +5094,15 @@ export default function AdminPage() {
                       ]}
                       selectedValues={parseSelectedLocations(editBaseReportingLocation, dropdowns.facilities[editDistrict] || [])}
                       onChange={(vals) => setEditBaseReportingLocation(vals.join(", "))}
-                      placeholder="-- Select Base Reporting Location(s) --"
+                      placeholder="-- Select Base Reporting Location(s) (Optional) --"
                     />
                   ) : (
                     <input
                       type="text"
-                      placeholder="e.g. PHC Location or custom hospital"
+                      placeholder="e.g. PHC Location or custom hospital (Optional)"
                       value={editBaseReportingLocation}
                       onChange={(e) => setEditBaseReportingLocation(e.target.value)}
                       className="input-lte w-full h-8 text-xs font-bold"
-                      required
                     />
                   )}
                 </div>
@@ -5202,21 +5197,21 @@ export default function AdminPage() {
               </div>
 
               {/* Sunken Footer */}
-              <div className="bg-surface-sunken border-t border-line px-5 py-3 flex items-center justify-end gap-2 shrink-0">
+              <div className="bg-surface-sunken/60 border-t border-line px-5 py-3 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditUserModal(false);
                     setEditingUser(null);
                   }}
-                  className="btn-lte-secondary text-xs h-8 px-4 cursor-pointer"
+                  className="bg-white hover:bg-surface-sunken text-ink-700 font-bold text-xs px-4 h-8 rounded-lg border border-line shadow-2xs transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editUserLoading}
-                  className="btn-lte-primary text-xs h-8 px-4 cursor-pointer font-bold flex items-center gap-2 disabled:opacity-60"
+                  className="bg-[#1E1B4B] hover:bg-[#2D286B] text-white font-bold text-xs px-5 h-8 rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer border-0 active:scale-[0.98] disabled:opacity-60"
                 >
                   {editUserLoading && <LteSpinner />}
                   <span>Save Updates</span>

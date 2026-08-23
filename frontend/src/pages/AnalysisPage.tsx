@@ -1924,29 +1924,32 @@ export default function AnalysisPage() {
 
       {/* Dashboard Full-Bleed Grid */}
       {count === 0 ? (
-        <div className="bg-white border border-slate-200/80 rounded-none p-8 text-center shadow-2xs my-4">
+        <div className="bg-white border border-line rounded-xl p-8 text-center shadow-xs my-4">
           <InfoCircleOutlined style={{ fontSize: 36, color: "#94a3b8", marginBottom: 12 }} />
-          <h3 className="text-sm font-bold text-slate-800">No Expense Claims Recorded</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+          <h3 className="text-sm font-bold text-ink-900">No Expense Claims Recorded</h3>
+          <p className="text-xs text-ink-500 mt-1 max-w-md mx-auto">
             No data matched your active filters for {months[selectedMonth]} {selectedYear}. Try adjusting the zone, district, or month selection.
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Main Grid: Row 1 - Spend Burn Line & Status Pie */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
             {/* Daily Spend Burn Line Chart (col-span-8) */}
-            <div className="lg:col-span-8 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <LineChartOutlined style={{ fontSize: 13 }} />
-                  DAILY SPEND BURN
+            <div className="lg:col-span-8 bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+              <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display flex items-center gap-2">
+                  <LineChartOutlined className="text-accent-600" />
+                  Daily Spend Burn
+                </span>
+                <span className="text-2xs font-mono font-bold bg-white px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                  {fullMonthTrendData.length} Days Recorded
                 </span>
               </div>
-              <div className="p-3" style={{ height: 300 }}>
+              <div className="p-4" style={{ height: 350 }}>
                 <SaaS3DHybridTrendChart
                   data={fullMonthTrendData.map(d => ({ x: d.date, y: d.amount }))}
-                  height={275}
+                  height={320}
                   mode="expense"
                   showPeakLimit={false}
                   valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
@@ -1955,14 +1958,14 @@ export default function AnalysisPage() {
             </div>
 
             {/* Status & Approval Ratios 3D Chart (col-span-4) */}
-            <div className="lg:col-span-4 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-1.5 truncate">
-                  <PieChartOutlined style={{ fontSize: 13 }} />
-                  CLAIM STATUS RATIOS
+            <div className="lg:col-span-4 bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+              <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display flex items-center gap-2 truncate">
+                  <PieChartOutlined className="text-teal-600" />
+                  Claim Status Ratios
                 </span>
               </div>
-              <div className="p-2 flex flex-col justify-between" style={{ minHeight: 330 }}>
+              <div className="p-4 flex flex-col justify-between flex-1" style={{ minHeight: 350 }}>
                 <SaaSDonutChart
                   data={statusWiseData.map(d => ({
                     name: d.name,
@@ -1970,7 +1973,7 @@ export default function AnalysisPage() {
                     count: d.count,
                     color: d.name === "Approved" ? "#10b981" : d.name === "Rejected" ? "#ef4444" : "#f59e0b"
                   }))}
-                  height={330}
+                  height={320}
                   centerTitle="Claims"
                   valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
                 />
@@ -1978,24 +1981,25 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-
-
-          {/* Row 3: District Expenditure & Top Spenders Leaderboard */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* Row 2: District Expenditure & Top Spenders Leaderboard */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
             {/* District Expenditure Combined 3D Bar + Line Chart (col-span-6) */}
-            <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <BarChartOutlined style={{ fontSize: 13 }} />
-                  DISTRICT EXPENDITURE
+            <div className="lg:col-span-6 bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+              <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display flex items-center gap-2">
+                  <BarChartOutlined className="text-accent-600" />
+                  District Expenditure
+                </span>
+                <span className="text-2xs font-mono font-bold bg-white px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                  {districtWiseData.length} Districts
                 </span>
               </div>
-              <div className="p-3" style={{ height: 290 }}>
+              <div className="p-4" style={{ height: 350 }}>
                 <SaaSBarChart
                   data={districtWiseData}
                   valueKey="amount"
                   nameKey="name"
-                  height={270}
+                  height={320}
                   isCurrency={true}
                   showLineOverlay={true}
                   valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
@@ -2004,20 +2008,23 @@ export default function AnalysisPage() {
             </div>
 
             {/* Top Employee Expenses Financial Chart (col-span-6) */}
-            <div className="lg:col-span-6 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs flex flex-col">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <WalletOutlined style={{ fontSize: 13 }} />
-                  EMPLOYEE EXPENSES
+            <div className="lg:col-span-6 bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+              <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display flex items-center gap-2">
+                  <WalletOutlined className="text-amber-600" />
+                  Employee &amp; Engineer Expenses
+                </span>
+                <span className="text-2xs font-mono font-bold bg-white px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                  Top {Math.min(userWiseData.length, 10)} Spenders
                 </span>
               </div>
-              <div className="p-3" style={{ height: 290 }}>
+              <div className="p-4" style={{ height: 350 }}>
                 {userWiseData.length > 0 ? (
                   <SaaSHorizontalBarChart
-                    data={userWiseData.slice(0, 6)}
+                    data={userWiseData.slice(0, 10)}
                     valueKey="amount"
                     nameKey="name"
-                    height={270}
+                    height={320}
                     isCurrency={true}
                     valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
                   />
@@ -2030,22 +2037,22 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          {/* Row 4: Operations Activity & Zone/Coordinator Split */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* Row 3: Operations Activity & Zone/Coordinator Split */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
             {/* Operations Activity (col-span-7) */}
-            <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <RocketOutlined style={{ fontSize: 13 }} />
-                  FIELD OPERATIONS
+            <div className="lg:col-span-7 bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+              <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display flex items-center gap-2">
+                  <RocketOutlined className="text-purple-600" />
+                  Field Operations Activity
                 </span>
               </div>
-              <div className="p-3" style={{ height: 290 }}>
+              <div className="p-4" style={{ height: 350 }}>
                 <SaaSBarChart
                   data={activityChartData}
                   valueKey="count"
                   nameKey="name"
-                  height={270}
+                  height={320}
                   isCurrency={false}
                   valueFormatter={(v) => `${v.toLocaleString('en-IN')}`}
                 />
@@ -2053,28 +2060,28 @@ export default function AnalysisPage() {
             </div>
 
             {/* Zone Distribution (col-span-5) */}
-            <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <GlobalOutlined style={{ fontSize: 13 }} />
-                  ZONE DISTRIBUTION
+            <div className="lg:col-span-5 bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+              <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display flex items-center gap-2">
+                  <GlobalOutlined className="text-teal-600" />
+                  Zone Distribution
                 </span>
               </div>
-              <div className="p-3" style={{ height: 290 }}>
+              <div className="p-4" style={{ height: 350 }}>
                 <SaaSDonutChart
                   data={zoneWiseData.map((z, idx) => ({
                     name: z.name,
                     value: z.value,
                     color: [
-                      "#4f46e5", // Vibrant Royal Indigo
-                      "#059669", // Emerald Green
-                      "#d97706", // Amber
-                      "#e11d48", // Rose Red
-                      "#0891b2", // Cyan
-                      "#7c3aed"  // Violet
+                      "#4f46e5",
+                      "#059669",
+                      "#d97706",
+                      "#e11d48",
+                      "#0891b2",
+                      "#7c3aed"
                     ][idx % 6]
                   }))}
-                  height={270}
+                  height={320}
                   centerTitle="Zones"
                   valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
                 />
@@ -2082,17 +2089,17 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          {/* Row 5: Coordinator Expenses Pie & Day-wise Asset Value Tagging Trend */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          {/* Row 4: Coordinator Expenses Pie & Day-wise Asset Value Tagging Trend */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
             {/* Coordinator Expenses Pie Chart (col-span-5) */}
-            <div className="lg:col-span-5 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <PieChartOutlined style={{ fontSize: 13 }} />
-                  COORDINATOR EXPENSES
+            <div className="lg:col-span-5 bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+              <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display flex items-center gap-2">
+                  <PieChartOutlined className="text-amber-600" />
+                  Coordinator Expenses
                 </span>
               </div>
-              <div className="p-3" style={{ height: 310 }}>
+              <div className="p-4" style={{ height: 350 }}>
                 {coordinatorWiseData.length > 0 ? (
                   <SaaSDonutChart
                     data={coordinatorWiseData.map((c: any) => ({
@@ -2100,7 +2107,7 @@ export default function AnalysisPage() {
                       value: c.value,
                       count: (c as any).count
                     }))}
-                    height={290}
+                    height={320}
                     centerTitle="Coordinators"
                     valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}
                   />
@@ -2113,14 +2120,14 @@ export default function AnalysisPage() {
             </div>
 
             {/* Asset Value Tagging Day-wise Trend Chart (col-span-7) */}
-            <div className="lg:col-span-7 bg-white border border-slate-200/80 rounded-none overflow-hidden shadow-2xs">
-              <div className="bg-[#4A6A8A] text-white px-3.5 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-white flex items-center gap-2">
-                  <TagOutlined style={{ fontSize: 13 }} />
-                  ASSET VALUE TAGGING (DAY-WISE)
+            <div className="lg:col-span-7 bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+              <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display flex items-center gap-2">
+                  <TagOutlined className="text-accent-600" />
+                  Asset Value Tagging (Day-Wise)
                 </span>
               </div>
-              <div className="p-3" style={{ height: 310 }}>
+              <div className="p-4" style={{ height: 350 }}>
                 {dayWiseAssetTaggingValueData.filter(d => (d.value || 0) > 0).length > 0 ? (
                   <SaaS3DHybridTrendChart
                     data={dayWiseAssetTaggingValueData
@@ -2129,7 +2136,7 @@ export default function AnalysisPage() {
                         x: d.date,
                         y: d.value
                       }))}
-                    height={285}
+                    height={320}
                     mode="asset"
                     showPeakLimit={false}
                     valueFormatter={(v) => `₹${v.toLocaleString('en-IN')}`}

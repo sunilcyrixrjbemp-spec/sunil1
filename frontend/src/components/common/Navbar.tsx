@@ -42,7 +42,6 @@ const ROUTE_TITLES: Record<string, string> = {
   "/attendance": "Attendance Roster",
   "/admin": "Admin Panel",
   "/admin/claim-level-reset": "Claim Level Reset",
-  "/admin/enterprise": "Enterprise Panel",
   "/admin/analytics": "CF Analytics",
   "/complaint-upload": "Complaint Upload",
   "/asset-upload": "Asset Master",

@@ -179,10 +179,6 @@ export const ZohoPendingTasks: React.FC<ZohoPendingTasksProps> = ({
         <span className="text-ink-500 font-medium">
           {taskItems.length} active priority item{taskItems.length !== 1 ? "s" : ""}
         </span>
-        <span className="text-accent-600 font-semibold flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Live Sync
-        </span>
       </div>
     </div>
   );

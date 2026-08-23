@@ -351,9 +351,9 @@ export default function AdminAnalyticsDashboard() {
     <div className="min-h-screen bg-[var(--canvas,#FAFAF9)] p-4 sm:p-6 text-ink-900 font-sans">
       
       {/* ── Top Header Toolbar ── */}
-      <div className="bg-surface rounded-2xl border border-line p-5 shadow-xs mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white rounded-xl border border-line p-5 shadow-xs mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white rounded-2xl flex items-center justify-center shadow-xs">
+          <div className="w-11 h-11 bg-gradient-to-br from-[#1E1B4B] to-[#4338CA] text-white rounded-xl flex items-center justify-center shadow-xs">
             <Globe className="w-5.5 h-5.5" />
           </div>
           <div>
@@ -361,9 +361,8 @@ export default function AdminAnalyticsDashboard() {
               <h1 className="text-lg font-black text-ink-900 tracking-tight font-display m-0">
                 Cloudflare Analytics &amp; Infrastructure
               </h1>
-              <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Workers Paid ($5/mo) · Live API
+              <span className="text-2xs font-bold text-accent-700 bg-accent-50 px-2.5 py-0.5 rounded-full border border-accent-200 flex items-center gap-1">
+                Workers Paid Plan ($5/mo)
               </span>
             </div>
             <p className="text-2xs text-ink-500 mt-1 m-0">
@@ -380,12 +379,12 @@ export default function AdminAnalyticsDashboard() {
           className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E1B4B] hover:bg-[#2D286B] active:bg-[#1E1B4B] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer border border-[#1E1B4B]"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>{loading ? "Fetching..." : "Refresh Live CF Data"}</span>
+          <span>{loading ? "Refreshing..." : "Refresh Usage Data"}</span>
         </button>
       </div>
 
       {/* ── Segmented Navigation Tabs ── */}
-      <div className="flex items-center gap-1.5 bg-surface-sunken/60 p-1.5 rounded-2xl w-fit mb-6 text-xs font-bold overflow-x-auto max-w-full border border-line shadow-xs">
+      <div className="flex items-center gap-1.5 bg-surface-sunken/60 p-1.5 rounded-xl w-fit mb-6 text-xs font-bold overflow-x-auto max-w-full border border-line shadow-xs">
         {TABS.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.id;
@@ -420,7 +419,7 @@ export default function AdminAnalyticsDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
             {/* Card 1: Active Plan */}
-            <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all">
+            <div className="bg-white border border-line rounded-xl p-4 shadow-xs hover:shadow-sm transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">Cloudflare Plan</span>
                 <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center">
@@ -441,7 +440,7 @@ export default function AdminAnalyticsDashboard() {
             </div>
 
             {/* Card 2: Workers Requests */}
-            <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all">
+            <div className="bg-white border border-line rounded-xl p-4 shadow-xs hover:shadow-sm transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">Worker Requests</span>
                 <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
@@ -464,7 +463,7 @@ export default function AdminAnalyticsDashboard() {
             </div>
 
             {/* Card 3: Workers CPU Time */}
-            <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all">
+            <div className="bg-white border border-line rounded-xl p-4 shadow-xs hover:shadow-sm transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">CPU Duration</span>
                 <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
@@ -483,7 +482,7 @@ export default function AdminAnalyticsDashboard() {
             </div>
 
             {/* Card 4: Estimated Bill */}
-            <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all">
+            <div className="bg-white border border-line rounded-xl p-4 shadow-xs hover:shadow-sm transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">Monthly Billing</span>
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
@@ -504,7 +503,7 @@ export default function AdminAnalyticsDashboard() {
           </div>
 
           {/* Row 2: Usage & Billing Products Table matching Cloudflare Dashboard screenshots */}
-          <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs">
+          <div className="bg-white border border-line rounded-xl overflow-hidden shadow-xs">
             <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-accent-600" />
@@ -601,7 +600,7 @@ export default function AdminAnalyticsDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
             {/* D1 Usage Meter */}
-            <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs space-y-3">
+            <div className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-line">
                 <Database className="w-4 h-4 text-teal-600" />
                 <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">D1 Database Quota</span>
@@ -629,7 +628,7 @@ export default function AdminAnalyticsDashboard() {
             </div>
 
             {/* R2 Storage Meter */}
-            <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs space-y-3">
+            <div className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-line">
                 <HardDrive className="w-4 h-4 text-purple-600" />
                 <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">R2 Storage Quota</span>
@@ -657,7 +656,7 @@ export default function AdminAnalyticsDashboard() {
             </div>
 
             {/* KV Operations Meter */}
-            <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs space-y-3">
+            <div className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-3">
               <div className="flex items-center gap-2 pb-2 border-b border-line">
                 <Zap className="w-4 h-4 text-amber-600" />
                 <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">KV Namespace Quota</span>
@@ -697,7 +696,7 @@ export default function AdminAnalyticsDashboard() {
           
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
+            <div className="bg-white rounded-xl border border-line p-4 shadow-xs flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
                 <Send className="w-6 h-6" />
               </div>
@@ -708,7 +707,7 @@ export default function AdminAnalyticsDashboard() {
               </div>
             </div>
 
-            <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
+            <div className="bg-white rounded-xl border border-line p-4 shadow-xs flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 border border-violet-100">
                 <Zap className="w-6 h-6" />
               </div>
@@ -719,7 +718,7 @@ export default function AdminAnalyticsDashboard() {
               </div>
             </div>
 
-            <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
+            <div className="bg-white rounded-xl border border-line p-4 shadow-xs flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
                 <Users className="w-6 h-6" />
               </div>
@@ -730,7 +729,7 @@ export default function AdminAnalyticsDashboard() {
               </div>
             </div>
 
-            <div className="bg-surface rounded-2xl border border-line p-4 shadow-xs flex items-center gap-4">
+            <div className="bg-white rounded-xl border border-line p-4 shadow-xs flex items-center gap-4">
               <div className="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 border border-sky-100">
                 <Clock className="w-6 h-6" />
               </div>
@@ -743,7 +742,7 @@ export default function AdminAnalyticsDashboard() {
           </div>
 
           {/* Cloudflare Email Delivery Log Console */}
-          <div className="bg-surface rounded-2xl border border-line overflow-hidden shadow-xs">
+          <div className="bg-white rounded-xl border border-line overflow-hidden shadow-xs">
             {/* Header & Filter Toolbar */}
             <div className="p-5 border-b border-line bg-surface-sunken/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -758,7 +757,7 @@ export default function AdminAnalyticsDashboard() {
                     </span>
                   </h3>
                   <p className="text-2xs text-ink-500 mt-0.5 m-0">
-                    Live delivery status, recipient addresses, and template dispatch tracking from Cloudflare Worker
+                    Delivery status, recipient addresses, and template dispatch tracking from Cloudflare Worker
                   </p>
                 </div>
               </div>
@@ -775,7 +774,7 @@ export default function AdminAnalyticsDashboard() {
                       setCurrentPage(1);
                     }}
                     placeholder="Search recipient or subject..."
-                    className="w-full pl-8.5 pr-3 py-1.5 bg-surface border border-line rounded-xl text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 transition-colors"
+                    className="w-full pl-8.5 pr-3 py-1.5 bg-white border border-line rounded-xl text-xs text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 transition-colors"
                   />
                   {emailSearch && (
                     <button
@@ -790,7 +789,7 @@ export default function AdminAnalyticsDashboard() {
                   )}
                 </div>
 
-                <div className="flex items-center bg-surface border border-line rounded-xl p-0.5 text-2xs font-bold">
+                <div className="flex items-center bg-white border border-line rounded-xl p-0.5 text-2xs font-bold">
                   {["all", "sent", "failed"].map((st) => (
                     <button
                       key={st}
@@ -815,7 +814,7 @@ export default function AdminAnalyticsDashboard() {
             {/* Email Records Table */}
             {!paginatedEmails.length ? (
               <div className="p-12 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-surface-sunken border border-line flex items-center justify-center mx-auto mb-3 text-ink-400">
+                <div className="w-12 h-12 rounded-xl bg-surface-sunken border border-line flex items-center justify-center mx-auto mb-3 text-ink-400">
                   <Inbox className="w-6 h-6" />
                 </div>
                 <h4 className="text-xs font-bold text-ink-800 m-0">No email logs found</h4>
@@ -923,7 +922,7 @@ export default function AdminAnalyticsDashboard() {
                                 e.stopPropagation();
                                 setSelectedEmail(item);
                               }}
-                              className="p-1.5 rounded-lg bg-surface border border-line text-ink-500 group-hover:text-accent-700 group-hover:border-accent-300 transition-all cursor-pointer"
+                              className="p-1.5 rounded-lg bg-white border border-line text-ink-500 group-hover:text-accent-700 group-hover:border-accent-300 transition-all cursor-pointer"
                               title="View details"
                             >
                               <Eye className="w-4 h-4" />
@@ -951,7 +950,7 @@ export default function AdminAnalyticsDashboard() {
                     type="button"
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-line bg-surface text-ink-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-sunken cursor-pointer text-2xs font-bold"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-line bg-white text-ink-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-sunken cursor-pointer text-2xs font-bold"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                     <span>Previous</span>
@@ -963,7 +962,7 @@ export default function AdminAnalyticsDashboard() {
                     type="button"
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-line bg-surface text-ink-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-sunken cursor-pointer text-2xs font-bold"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-line bg-white text-ink-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-sunken cursor-pointer text-2xs font-bold"
                   >
                     <span>Next</span>
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -975,7 +974,7 @@ export default function AdminAnalyticsDashboard() {
 
           {/* Other Events & Weekly Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-surface rounded-2xl border border-line p-5 shadow-xs">
+            <div className="bg-white rounded-xl border border-line p-5 shadow-xs">
               <div className="flex items-center gap-2 text-sm font-bold text-ink-900 mb-4 pb-3 border-b border-line font-display">
                 <Activity className="w-4 h-4 text-violet-600" />
                 <span>Edge Events by Type (7 Days)</span>
@@ -1004,7 +1003,7 @@ export default function AdminAnalyticsDashboard() {
               )}
             </div>
 
-            <div className="bg-surface rounded-2xl border border-line p-5 shadow-xs">
+            <div className="bg-white rounded-xl border border-line p-5 shadow-xs">
               <div className="flex items-center gap-2 text-sm font-bold text-ink-900 mb-4 pb-3 border-b border-line font-display">
                 <Mail className="w-4 h-4 text-emerald-600" />
                 <span>Email Delivery Status Summary</span>
@@ -1039,7 +1038,7 @@ export default function AdminAnalyticsDashboard() {
           TAB 3: AUDIT LOG
           ══════════════════════════════════════════════════════════════════════ */}
       {tab === "audit" && (
-        <div className="bg-surface rounded-2xl border border-line p-5 shadow-xs animate-fadeIn">
+        <div className="bg-white rounded-xl border border-line p-5 shadow-xs animate-fadeIn">
           <div className="flex items-center gap-2 text-sm font-bold text-ink-900 mb-4 pb-3 border-b border-line font-display">
             <ShieldCheck className="w-4 h-4 text-accent-600" />
             <span>Audit Log Activity</span>
@@ -1079,7 +1078,7 @@ export default function AdminAnalyticsDashboard() {
           ══════════════════════════════════════════════════════════════════════ */}
       {selectedEmail && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-surface rounded-2xl border border-line w-full max-w-lg shadow-xl overflow-hidden animate-scaleIn">
+          <div className="bg-white rounded-xl border border-line w-full max-w-lg shadow-xl overflow-hidden animate-scaleIn">
             
             {/* Modal Header */}
             <div className="px-5 py-4 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
@@ -1095,7 +1094,7 @@ export default function AdminAnalyticsDashboard() {
               <button
                 type="button"
                 onClick={() => setSelectedEmail(null)}
-                className="w-8 h-8 rounded-xl bg-surface border border-line text-ink-400 hover:text-ink-900 flex items-center justify-center cursor-pointer transition-colors"
+                className="w-8 h-8 rounded-xl bg-white border border-line text-ink-400 hover:text-ink-900 flex items-center justify-center cursor-pointer transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1167,7 +1166,7 @@ export default function AdminAnalyticsDashboard() {
               <button
                 type="button"
                 onClick={() => setSelectedEmail(null)}
-                className="px-4 py-2 bg-surface border border-line rounded-xl text-xs font-bold text-ink-700 hover:text-ink-900 cursor-pointer"
+                className="px-4 py-2 bg-white border border-line rounded-xl text-xs font-bold text-ink-700 hover:text-ink-900 cursor-pointer"
               >
                 Close
               </button>

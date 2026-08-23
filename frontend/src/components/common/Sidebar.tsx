@@ -20,7 +20,6 @@ import {
   UploadCloud,
   RotateCcw,
   Wrench,
-  Zap,
   Activity,
   Bell,
 } from "lucide-react";
@@ -79,7 +78,6 @@ export const NAV_STRUCTURE: {
       { id: "asset_upload", name: "Asset Master", path: "/asset-upload", icon: Package, roles: ["Admin", "Coordinator", "MIS", "Engineer"] },
       { id: "attendance", name: "Attendance Roster", path: "/attendance", icon: Calendar, roles: ["Admin"] },
       { id: "claim_level_reset", name: "Claim Level Reset", path: "/admin/claim-level-reset", icon: RotateCcw, roles: ["Admin"] },
-      { id: "admin_enterprise", name: "Enterprise Panel", path: "/admin/enterprise", icon: Zap, roles: ["Admin"] },
       { id: "admin_analytics", name: "CF Analytics", path: "/admin/analytics", icon: Activity, roles: ["Admin"] },
     ],
   },
