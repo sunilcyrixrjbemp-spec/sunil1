@@ -193,25 +193,25 @@
   height: 36px;
   padding: 0 12px;
   background-color: #FFFFFF;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 0px !important;
+  border: 1px solid #E7E5E1;
+  border-radius: 8px;
   font-size: 12px;
-  font-weight: 600;
-  color: #0f172a;
+  font-weight: 500;
+  color: #12151A;
   transition: all 0.15s ease-in-out;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
 }
 
 .input-lte:focus {
-  outline: none !important;
-  border-color: #4A6A8A !important;
-  box-shadow: 0 0 0 2px rgba(74, 106, 138, 0.25) !important;
+  outline: none;
+  border-color: #4338CA;
+  box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
 }
 
 .input-lte:disabled {
-  background-color: #f1f5f9 !important;
-  color: #475569 !important;
-  border-color: #cbd5e1 !important;
+  background-color: #F4F3F1;
+  color: #6B7280;
+  border-color: #E7E5E1;
   cursor: not-allowed;
   opacity: 0.95;
 }

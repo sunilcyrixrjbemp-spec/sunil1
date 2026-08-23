@@ -55,7 +55,6 @@ import {
   DollarSign,
   Sparkles,
   History,
-  Activity,
   Clock,
   Save,
   ArrowUpRight,
@@ -2264,7 +2263,7 @@ export default function AdminPage() {
                         placeholder="Search name, emp code, mobile, email..."
                         value={userSearchTerm}
                         onChange={(e) => setUserSearchTerm(e.target.value)}
-                        className="pl-8.5 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
+                        className="pl-9 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
                       />
                       {userSearchTerm && (
                         <button
@@ -2608,7 +2607,7 @@ export default function AdminPage() {
                         placeholder="Search HQ team, employee name, or approver..."
                         value={hierarchySearch}
                         onChange={(e) => setHierarchySearch(e.target.value)}
-                        className="pl-8.5 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
+                        className="pl-9 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
                       />
                       {hierarchySearch && (
                         <button
@@ -2750,416 +2749,301 @@ export default function AdminPage() {
 
             {/* ================= SECTION 3: ANALYTICS DASHBOARD ================= */}
             {activeTab === "analytics" && (
-              <div className="space-y-4 animate-fadeIn">
-                {/* ── 4 Zoho-Style Hero KPI Cards (Home Page Parity) ── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                      
-                      {/* Card 1: Total Employees */}
-                      <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
-                            Total Workforce
-                          </span>
-                          <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-bold border border-accent-200 shadow-2xs">
-                            <Users className="w-4 h-4" />
-                          </div>
-                        </div>
-                        <div className="flex items-baseline gap-2.5 mt-2">
-                          <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
-                            {users.length}
-                          </span>
-                          <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            {users.filter(u => u.user_status === 'active' || !u.user_status).length} Active ({Math.round(((users.filter(u => u.user_status === 'active' || !u.user_status).length) / (users.length || 1)) * 100)}%)
-                          </span>
-                        </div>
-                        <div className="mt-2 text-2xs text-ink-400 font-medium flex items-center gap-1.5">
-                          <span>{users.filter(u => u.user_status === 'inactive').length} Inactive</span>
-                          <span>·</span>
-                          <span>{users.filter(u => u.user_type === 'Employee').length} Permanent Staff</span>
-                        </div>
-                      </div>
+              <div className="space-y-3 animate-fadeIn">
+                {/* ── Filter Toolbar (Ditto HomePage Card Style) ── */}
+                <div className="bg-white border border-line rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200">
+                      <BarChart3 className="w-3.5 h-3.5 text-accent-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0 font-display">
+                        Workforce Distributions
+                      </h4>
+                      <p className="text-ink-500 text-2xs font-sans mt-0.5 m-0 font-medium">
+                        Real-time interactive distribution breakdown filtered by role, zone, and district.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Role Filter */}
+                    <select
+                      value={chartRoleFilter}
+                      onChange={(e) => setChartRoleFilter(e.target.value)}
+                      className="h-8 text-xs font-semibold py-1 px-2.5 rounded-lg border border-line bg-white text-ink-800 focus:outline-none focus:border-accent-600 cursor-pointer shadow-2xs w-auto min-w-[110px]"
+                    >
+                      <option value="all">All Roles</option>
+                      <option value="engineer">Engineer</option>
+                      <option value="manager">Manager</option>
+                      <option value="admin">Admin</option>
+                      <option value="coordinator">Coordinator</option>
+                      <option value="accountant">Accountant</option>
+                      <option value="mis">MIS</option>
+                    </select>
 
-                      {/* Card 2: Field vs Management */}
-                      <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
-                            Role Breakdown
-                          </span>
-                          <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-bold border border-teal-200 shadow-2xs">
-                            <BarChart3 className="w-4 h-4" />
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-                          <span className="text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
-                            {users.filter(u => u.role?.toLowerCase().includes('engineer')).length} Engineers
-                          </span>
-                          <span className="text-xs font-bold text-accent-800 bg-accent-50 px-2 py-0.5 rounded-lg border border-accent-200">
-                            {users.filter(u => u.role?.toLowerCase().includes('manager')).length} Managers
-                          </span>
-                          <span className="text-xs font-bold text-purple-800 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200">
-                            {users.filter(u => u.role?.toLowerCase().includes('admin')).length} Admin
-                          </span>
-                        </div>
-                        <div className="mt-2 text-2xs text-ink-400 font-medium">
-                          <span>Across 8 standard organizational levels</span>
-                        </div>
-                      </div>
+                    {/* Zone Filter */}
+                    <select
+                      value={chartZoneFilter}
+                      onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
+                      className="h-8 text-xs font-semibold py-1 px-2.5 rounded-lg border border-line bg-white text-ink-800 focus:outline-none focus:border-accent-600 cursor-pointer shadow-2xs w-auto min-w-[110px]"
+                    >
+                      <option value="all">All Zones</option>
+                      {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
+                        <option key={zone} value={zone}>{zone}</option>
+                      ))}
+                    </select>
 
-                      {/* Card 3: Regional Footprint */}
-                      <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
-                            Regional Coverage
-                          </span>
-                          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold border border-amber-200 shadow-2xs">
-                            <Building2 className="w-4 h-4" />
-                          </div>
-                        </div>
-                        <div className="flex items-baseline gap-2 mt-2">
-                          <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
-                            {availableUserZones.length}
-                          </span>
-                          <span className="text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                            Zones Active
-                          </span>
-                        </div>
-                        <div className="mt-2 text-2xs text-ink-400 font-medium flex items-center gap-1.5">
-                          <span className="font-bold text-ink-700 font-mono">{availableUserDistricts.length}</span>
-                          <span>Assigned Districts across state</span>
-                        </div>
-                      </div>
+                    {/* District Filter */}
+                    <select
+                      value={chartDistrictFilter}
+                      onChange={(e) => setChartDistrictFilter(e.target.value)}
+                      disabled={chartZoneFilter === "all"}
+                      className={`h-8 text-xs font-semibold py-1 px-2.5 rounded-lg border border-line bg-white focus:outline-none focus:border-accent-600 shadow-2xs w-auto min-w-[115px] ${
+                        chartZoneFilter === "all" ? "text-ink-400 cursor-not-allowed opacity-60" : "text-ink-800 cursor-pointer"
+                      }`}
+                    >
+                      <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
+                      {chartZoneDistricts.map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
 
-                      {/* Card 4: Hierarchy Health */}
-                      <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs hover:shadow-sm transition-all relative overflow-hidden group">
-                        <div className="flex items-center justify-between">
-                          <span className="text-2xs font-bold uppercase tracking-wider text-ink-500">
-                            Hierarchy Routing
-                          </span>
-                          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200 shadow-2xs">
-                            <ShieldCheck className="w-4 h-4" />
-                          </div>
-                        </div>
-                        <div className="flex items-baseline gap-2 mt-2">
-                          <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
-                            {hierarchies.length}
-                          </span>
-                          {users.filter(u => !u.manager || u.manager === 'N/A').length > 0 ? (
-                            <span className="text-2xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
-                              {users.filter(u => !u.manager || u.manager === 'N/A').length} Unmapped
-                            </span>
-                          ) : (
-                            <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                              100% Mapped
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-2 text-2xs text-ink-400 font-medium">
-                          <span>Multi-tier approval sequences active</span>
-                        </div>
-                      </div>
+                    {(chartRoleFilter !== "all" || chartZoneFilter !== "all" || chartDistrictFilter !== "all") && (
+                      <button
+                        type="button"
+                        onClick={() => { setChartRoleFilter("all"); setChartZoneFilter("all"); setChartDistrictFilter("all"); }}
+                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
 
+                {/* ── 4 Modern Analytics Chart Cards (Home Page Parity) ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                  {/* Chart 1: Zone Distribution */}
+                  <div className="bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                    <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-accent-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                          Zone Workforce Distribution
+                        </span>
+                      </div>
+                      <span className="text-2xs font-mono font-bold bg-white px-2 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                        {getZoneData().reduce((s, x) => s + x.value, 0)} Total Employees
+                      </span>
                     </div>
 
-                    {/* ── Filter Toolbar ── */}
-                    <div className="bg-surface border border-line rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                      <div>
-                        <h4 className="text-xs font-bold text-ink-900 uppercase tracking-wider m-0 font-display flex items-center gap-2">
-                          <BarChart3 className="w-3.5 h-3.5 text-accent-600" />
-                          <span>Workforce Analytics &amp; Visual Distributions</span>
-                        </h4>
-                        <p className="text-ink-500 text-2xs mt-0.5 font-medium m-0">
-                          Real-time interactive distribution breakdown filtered by role, zone, and district.
-                        </p>
+                    <div className="p-4 flex-1 flex flex-col md:flex-row items-center justify-between gap-5">
+                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 220 }}>
+                        <SaaSDonutChart
+                          data={getZoneData().map((z, i) => ({
+                            name: z.name,
+                            value: z.value,
+                            count: z.value,
+                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                          }))}
+                          height={220}
+                          centerTitle="Zone Users"
+                          valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                        />
                       </div>
-                      
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Role Filter */}
-                        <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
-                          <label className="text-2xs font-bold uppercase text-ink-500">Role:</label>
-                          <select
-                            value={chartRoleFilter}
-                            onChange={(e) => setChartRoleFilter(e.target.value)}
-                            className="bg-transparent text-xs font-bold text-ink-800 outline-none cursor-pointer"
-                          >
-                            <option value="all">All Roles</option>
-                            <option value="engineer">Engineer</option>
-                            <option value="manager">Manager</option>
-                            <option value="admin">Admin</option>
-                            <option value="coordinator">Coordinator</option>
-                            <option value="accountant">Accountant</option>
-                            <option value="mis">MIS</option>
-                          </select>
-                        </div>
 
-                        {/* Zone Filter */}
-                        <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
-                          <label className="text-2xs font-bold uppercase text-ink-500">Zone:</label>
-                          <select
-                            value={chartZoneFilter}
-                            onChange={(e) => { setChartZoneFilter(e.target.value); setChartDistrictFilter("all"); }}
-                            className="bg-transparent text-xs font-bold text-ink-800 outline-none cursor-pointer"
-                          >
-                            <option value="all">All Zones</option>
-                            {Array.from(new Set(safeUsers.map(u => u.zone?.trim()).filter(Boolean))).sort((a, b) => a!.localeCompare(b!)).map(zone => (
-                              <option key={zone} value={zone}>{zone}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* District Filter */}
-                        <div className="flex items-center gap-1.5 bg-surface-sunken px-2.5 py-1 rounded-xl border border-line">
-                          <label className="text-2xs font-bold uppercase text-ink-500">District:</label>
-                          <select
-                            value={chartDistrictFilter}
-                            onChange={(e) => setChartDistrictFilter(e.target.value)}
-                            disabled={chartZoneFilter === "all"}
-                            className={`bg-transparent text-xs font-bold outline-none ${
-                              chartZoneFilter === "all" ? "text-ink-400 cursor-not-allowed opacity-60" : "text-ink-800 cursor-pointer"
-                            }`}
-                          >
-                            <option value="all">{chartZoneFilter === "all" ? "Select Zone first" : "All Districts"}</option>
-                            {chartZoneDistricts.map(d => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {(chartRoleFilter !== "all" || chartZoneFilter !== "all" || chartDistrictFilter !== "all") && (
-                          <button
-                            type="button"
-                            onClick={() => { setChartRoleFilter("all"); setChartZoneFilter("all"); setChartDistrictFilter("all"); }}
-                            className="text-2xs font-bold text-accent-700 hover:text-accent-800 bg-accent-50 px-2.5 py-1 rounded-xl border border-accent-200 cursor-pointer transition-all"
-                          >
-                            Clear Filters
-                          </button>
-                        )}
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {getZoneData().map((z, i) => {
+                          const total = getZoneData().reduce((s, x) => s + x.value, 0) || 1;
+                          const pct = Math.round((z.value / total) * 100);
+                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                          return (
+                            <div key={z.name} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                  <span className="truncate">{z.name}</span>
+                                </span>
+                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                  {z.value} ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
+                  </div>
 
-                    {/* ── 4 Modern Analytics Chart Cards (No "Others" Category) ── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      
-                      {/* Chart 1: Zone Distribution */}
-                      <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
-                        <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-accent-600" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
-                              Zone Workforce Distribution
-                            </span>
-                          </div>
-                          <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
-                            {getZoneData().reduce((s, x) => s + x.value, 0)} Total Employees
-                          </span>
-                        </div>
-
-                        <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
-                          <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
-                            <SaaSDonutChart
-                              data={getZoneData().map((z, i) => ({
-                                name: z.name,
-                                value: z.value,
-                                count: z.value,
-                                color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                              }))}
-                              height={240}
-                              centerTitle="Zone Users"
-                              valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                            />
-                          </div>
-
-                          <div className="w-full md:w-1/2 space-y-2">
-                            {getZoneData().map((z, i) => {
-                              const total = getZoneData().reduce((s, x) => s + x.value, 0) || 1;
-                              const pct = Math.round((z.value / total) * 100);
-                              const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
-                              return (
-                                <div key={z.name} className="space-y-1">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
-                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                      <span className="truncate">{z.name}</span>
-                                    </span>
-                                    <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
-                                      {z.value} ({pct}%)
-                                    </span>
-                                  </div>
-                                  <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
-                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                  {/* Chart 2: District Distribution */}
+                  <div className="bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                    <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-teal-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                          Top Districts Distribution
+                        </span>
                       </div>
-
-                      {/* Chart 2: District Distribution */}
-                      <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
-                        <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-teal-600" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
-                              Top Districts Distribution
-                            </span>
-                          </div>
-                          <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
-                            {getDistrictData().reduce((s, x) => s + x.value, 0)} Total Employees
-                          </span>
-                        </div>
-
-                        <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
-                          <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
-                            <SaaSDonutChart
-                              data={getDistrictData().map((d, i) => ({
-                                name: d.name,
-                                value: d.value,
-                                count: d.value,
-                                color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                              }))}
-                              height={240}
-                              centerTitle="District Users"
-                              valueFormatter={(v) => `${v.toLocaleString()} Users`}
-                            />
-                          </div>
-
-                          <div className="w-full md:w-1/2 space-y-2">
-                            {getDistrictData().map((d, i) => {
-                              const total = getDistrictData().reduce((s, x) => s + x.value, 0) || 1;
-                              const pct = Math.round((d.value / total) * 100);
-                              const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
-                              return (
-                                <div key={d.name} className="space-y-1">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
-                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                      <span className="truncate">{d.name}</span>
-                                    </span>
-                                    <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
-                                      {d.value} ({pct}%)
-                                    </span>
-                                  </div>
-                                  <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
-                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Chart 3: Manager Team Load */}
-                      <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
-                        <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-amber-600" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
-                              Manager Reporting Distribution
-                            </span>
-                          </div>
-                          <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
-                            {getManagerData().reduce((s, x) => s + x.value, 0)} Mapped Members
-                          </span>
-                        </div>
-
-                        <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
-                          <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
-                            <SaaSDonutChart
-                              data={getManagerData().map((m, i) => ({
-                                name: m.name,
-                                value: m.value,
-                                count: m.value,
-                                color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                              }))}
-                              height={240}
-                              centerTitle="Team Load"
-                              valueFormatter={(v) => `${v.toLocaleString()} Staff`}
-                            />
-                          </div>
-
-                          <div className="w-full md:w-1/2 space-y-2">
-                            {getManagerData().map((m, i) => {
-                              const total = getManagerData().reduce((s, x) => s + x.value, 0) || 1;
-                              const pct = Math.round((m.value / total) * 100);
-                              const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
-                              return (
-                                <div key={m.name} className="space-y-1">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
-                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                      <span className="truncate">{m.name}</span>
-                                    </span>
-                                    <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
-                                      {m.value} staff ({pct}%)
-                                    </span>
-                                  </div>
-                                  <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
-                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Chart 4: Designation & Role Allocation */}
-                      <div className="bg-surface border border-line rounded-2xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
-                        <div className="px-5 py-3.5 bg-surface-sunken/60 border-b border-line flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-purple-600" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
-                              Designation &amp; Role Allocation
-                            </span>
-                          </div>
-                          <span className="text-2xs font-mono font-bold bg-surface px-2.5 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
-                            {getDesignationData().reduce((s, x) => s + x.value, 0)} Total Roles
-                          </span>
-                        </div>
-
-                        <div className="p-5 flex-1 flex flex-col md:flex-row items-center justify-between gap-6">
-                          <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 240 }}>
-                            <SaaSDonutChart
-                              data={getDesignationData().map((d, i) => ({
-                                name: d.name,
-                                value: d.value,
-                                count: d.value,
-                                color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
-                              }))}
-                              height={240}
-                              centerTitle="Designations"
-                              valueFormatter={(v) => `${v.toLocaleString()} Roles`}
-                            />
-                          </div>
-
-                          <div className="w-full md:w-1/2 space-y-2">
-                            {getDesignationData().map((d, i) => {
-                              const total = getDesignationData().reduce((s, x) => s + x.value, 0) || 1;
-                              const pct = Math.round((d.value / total) * 100);
-                              const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
-                              return (
-                                <div key={d.name} className="space-y-1">
-                                  <div className="flex items-center justify-between text-xs">
-                                    <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
-                                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                                      <span className="truncate">{d.name}</span>
-                                    </span>
-                                    <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
-                                      {d.value} ({pct}%)
-                                    </span>
-                                  </div>
-                                  <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
-                                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
+                      <span className="text-2xs font-mono font-bold bg-white px-2 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                        {getDistrictData().reduce((s, x) => s + x.value, 0)} Total Employees
+                      </span>
                     </div>
+
+                    <div className="p-4 flex-1 flex flex-col md:flex-row items-center justify-between gap-5">
+                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 220 }}>
+                        <SaaSDonutChart
+                          data={getDistrictData().map((d, i) => ({
+                            name: d.name,
+                            value: d.value,
+                            count: d.value,
+                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                          }))}
+                          height={220}
+                          centerTitle="District Users"
+                          valueFormatter={(v) => `${v.toLocaleString()} Users`}
+                        />
+                      </div>
+
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {getDistrictData().map((d, i) => {
+                          const total = getDistrictData().reduce((s, x) => s + x.value, 0) || 1;
+                          const pct = Math.round((d.value / total) * 100);
+                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                          return (
+                            <div key={d.name} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                  <span className="truncate">{d.name}</span>
+                                </span>
+                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                  {d.value} ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chart 3: Manager Team Load */}
+                  <div className="bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                    <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                          Manager Reporting Distribution
+                        </span>
+                      </div>
+                      <span className="text-2xs font-mono font-bold bg-white px-2 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                        {getManagerData().reduce((s, x) => s + x.value, 0)} Mapped Members
+                      </span>
+                    </div>
+
+                    <div className="p-4 flex-1 flex flex-col md:flex-row items-center justify-between gap-5">
+                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 220 }}>
+                        <SaaSDonutChart
+                          data={getManagerData().map((m, i) => ({
+                            name: m.name,
+                            value: m.value,
+                            count: m.value,
+                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                          }))}
+                          height={220}
+                          centerTitle="Team Load"
+                          valueFormatter={(v) => `${v.toLocaleString()} Staff`}
+                        />
+                      </div>
+
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {getManagerData().map((m, i) => {
+                          const total = getManagerData().reduce((s, x) => s + x.value, 0) || 1;
+                          const pct = Math.round((m.value / total) * 100);
+                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                          return (
+                            <div key={m.name} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                  <span className="truncate">{m.name}</span>
+                                </span>
+                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                  {m.value} staff ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chart 4: Designation & Role Allocation */}
+                  <div className="bg-white border border-line rounded-xl overflow-hidden shadow-xs hover:shadow-sm transition-all flex flex-col">
+                    <div className="px-4 py-2.5 bg-surface-sunken/40 border-b border-line flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-purple-600" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink-900 font-display">
+                          Designation &amp; Role Allocation
+                        </span>
+                      </div>
+                      <span className="text-2xs font-mono font-bold bg-white px-2 py-0.5 rounded-full border border-line text-ink-700 shadow-2xs">
+                        {getDesignationData().reduce((s, x) => s + x.value, 0)} Total Roles
+                      </span>
+                    </div>
+
+                    <div className="p-4 flex-1 flex flex-col md:flex-row items-center justify-between gap-5">
+                      <div className="w-full md:w-1/2 flex items-center justify-center" style={{ minHeight: 220 }}>
+                        <SaaSDonutChart
+                          data={getDesignationData().map((d, i) => ({
+                            name: d.name,
+                            value: d.value,
+                            count: d.value,
+                            color: LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length]
+                          }))}
+                          height={220}
+                          centerTitle="Designations"
+                          valueFormatter={(v) => `${v.toLocaleString()} Roles`}
+                        />
+                      </div>
+
+                      <div className="w-full md:w-1/2 space-y-2">
+                        {getDesignationData().map((d, i) => {
+                          const total = getDesignationData().reduce((s, x) => s + x.value, 0) || 1;
+                          const pct = Math.round((d.value / total) * 100);
+                          const color = LEDGER_CHART_COLORS[i % LEDGER_CHART_COLORS.length];
+                          return (
+                            <div key={d.name} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-bold text-ink-800 flex items-center gap-1.5 truncate">
+                                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                                  <span className="truncate">{d.name}</span>
+                                </span>
+                                <span className="text-2xs font-mono font-bold text-ink-600 shrink-0">
+                                  {d.value} ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 bg-surface-sunken rounded-full overflow-hidden border border-line/40">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -3229,60 +3113,60 @@ export default function AdminPage() {
 
                 {/* --- MODULE 1: CLAIM SUBMISSION & CUTOFFS --- */}
                 {(settingsSubTab === "submission" || settingsSubTab === "home") && (
-                  <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-5 animate-fadeIn">
+                  <div className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-4 animate-fadeIn">
                     <div className="flex items-center justify-between pb-3 border-b border-line">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200">
-                          <Calendar className="w-4.5 h-4.5" />
+                        <div className="w-8 h-8 rounded-lg bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200">
+                          <Calendar className="w-4 h-4" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-ink-900 text-sm m-0">Claim Submission &amp; Cutoff Policy</h3>
-                          <p className="text-2xs text-ink-500 m-0">Control maximum retrospective expense logging windows and monthly financial cutoffs</p>
+                          <h3 className="font-bold text-ink-900 text-xs font-display uppercase tracking-wider m-0">Claim Submission &amp; Cutoff Policy</h3>
+                          <p className="text-2xs text-ink-500 font-sans mt-0.5 m-0">Control maximum retrospective expense logging windows and monthly financial cutoffs</p>
                         </div>
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                         Live Policy
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                       {/* Max Past Days */}
-                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                      <div className="bg-surface-sunken/60 p-3.5 rounded-lg border border-line space-y-1.5">
                         <label className="text-xs font-bold text-ink-900 block">
                           Past-Day Expense Logging Limit (Days)
                         </label>
-                        <p className="text-2xs text-ink-500 leading-relaxed">
+                        <p className="text-2xs text-ink-500 leading-relaxed m-0">
                           Maximum number of days in the past an engineer is allowed to log a travel or daily allowance claim.
                         </p>
-                        <div className="flex items-center gap-3 pt-1">
+                        <div className="flex items-center gap-2.5 pt-1">
                           <input
                             type="number"
                             min={1}
                             max={60}
                             value={settings.max_past_days_limit || 15}
                             onChange={(e) => setSettings({ ...settings, max_past_days_limit: Number(e.target.value) })}
-                            className="input-lte h-9 w-32 font-mono font-bold text-xs rounded-xl bg-white border border-line px-3"
+                            className="h-8 w-28 font-mono font-bold text-xs rounded-lg bg-white border border-line px-2.5 focus:outline-none focus:border-accent-600 shadow-2xs text-ink-900"
                           />
                           <span className="text-xs text-ink-600 font-semibold">Days from today</span>
                         </div>
                       </div>
 
                       {/* Monthly Cutoff Day */}
-                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                      <div className="bg-surface-sunken/60 p-3.5 rounded-lg border border-line space-y-1.5">
                         <label className="text-xs font-bold text-ink-900 block">
                           Monthly Submission Cutoff Day
                         </label>
-                        <p className="text-2xs text-ink-500 leading-relaxed">
+                        <p className="text-2xs text-ink-500 leading-relaxed m-0">
                           Day of the next month when previous month claims are locked from further editing.
                         </p>
-                        <div className="flex items-center gap-3 pt-1">
+                        <div className="flex items-center gap-2.5 pt-1">
                           <input
                             type="number"
                             min={1}
                             max={31}
                             value={settings.monthly_cutoff_day || 3}
                             onChange={(e) => setSettings({ ...settings, monthly_cutoff_day: Number(e.target.value) })}
-                            className="input-lte h-9 w-32 font-mono font-bold text-xs rounded-xl bg-white border border-line px-3"
+                            className="h-8 w-28 font-mono font-bold text-xs rounded-lg bg-white border border-line px-2.5 focus:outline-none focus:border-accent-600 shadow-2xs text-ink-900"
                           />
                           <span className="text-xs text-ink-600 font-semibold">th of every month</span>
                         </div>
@@ -3290,16 +3174,16 @@ export default function AdminPage() {
                     </div>
 
                     {/* Footer Save Button */}
-                    <div className="flex items-center justify-between pt-3 border-t border-line">
-                      <span className="text-2xs text-ink-500">Changes apply immediately across all field engineer claim forms.</span>
+                    <div className="flex items-center justify-between pt-2.5 border-t border-line">
+                      <span className="text-2xs text-ink-500 font-medium">Changes apply immediately across all field engineer claim forms.</span>
                       <button
                         type="button"
                         onClick={handleSaveSettings}
                         disabled={savingSettings}
-                        className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-4 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0"
+                        className="bg-[#1E1B4B] hover:bg-[#2D286B] text-white text-xs font-bold px-3.5 h-8 rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0 active:scale-[0.98]"
                       >
                         <Save className="w-3.5 h-3.5" />
-                        <span>{savingSettings ? "Saving..." : "Save Submission Policy"}</span>
+                        <span>{savingSettings ? "Saving..." : "Save Policy"}</span>
                       </button>
                     </div>
                   </div>
@@ -3307,57 +3191,57 @@ export default function AdminPage() {
 
                 {/* --- MODULE 2: APPROVAL AUTOMATION & EXPIRY --- */}
                 {settingsSubTab === "automation" && (
-                  <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-5 animate-fadeIn">
+                  <div className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-4 animate-fadeIn">
                     <div className="flex items-center justify-between pb-3 border-b border-line">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
-                          <Zap className="w-4.5 h-4.5" />
+                        <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+                          <Zap className="w-4 h-4" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-ink-900 text-sm m-0">Approval Automation &amp; Expiry Escalations</h3>
-                          <p className="text-2xs text-ink-500 m-0">Configure auto-escalation actions when manager review exceeds timeout</p>
+                          <h3 className="font-bold text-ink-900 text-xs font-display uppercase tracking-wider m-0">Approval Automation &amp; Expiry Escalations</h3>
+                          <p className="text-2xs text-ink-500 font-sans mt-0.5 m-0">Configure auto-escalation actions when manager review exceeds timeout</p>
                         </div>
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                      <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                         Workflow Rule
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                       {/* Auto Expiry Days */}
-                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                      <div className="bg-surface-sunken/60 p-3.5 rounded-lg border border-line space-y-1.5">
                         <label className="text-xs font-bold text-ink-900 block">
                           Manager Approval Timeout (Days)
                         </label>
-                        <p className="text-2xs text-ink-500 leading-relaxed">
+                        <p className="text-2xs text-ink-500 leading-relaxed m-0">
                           Number of days an approval request can remain pending before automated rule triggers.
                         </p>
-                        <div className="flex items-center gap-3 pt-1">
+                        <div className="flex items-center gap-2.5 pt-1">
                           <input
                             type="number"
                             min={1}
                             max={30}
                             value={settings.pending_auto_expiry_days || 5}
                             onChange={(e) => setSettings({ ...settings, pending_auto_expiry_days: Number(e.target.value) })}
-                            className="input-lte h-9 w-32 font-mono font-bold text-xs rounded-xl bg-white border border-line px-3"
+                            className="h-8 w-28 font-mono font-bold text-xs rounded-lg bg-white border border-line px-2.5 focus:outline-none focus:border-accent-600 shadow-2xs text-ink-900"
                           />
                           <span className="text-xs text-ink-600 font-semibold">Days pending</span>
                         </div>
                       </div>
 
                       {/* Action on Timeout */}
-                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                      <div className="bg-surface-sunken/60 p-3.5 rounded-lg border border-line space-y-1.5">
                         <label className="text-xs font-bold text-ink-900 block">
                           Timeout Action Trigger
                         </label>
-                        <p className="text-2xs text-ink-500 leading-relaxed">
+                        <p className="text-2xs text-ink-500 leading-relaxed m-0">
                           Automated system behavior when approval timeout threshold is reached.
                         </p>
                         <div className="pt-1">
                           <select
                             value={settings.pending_auto_action || "reject"}
                             onChange={(e) => setSettings({ ...settings, pending_auto_action: e.target.value })}
-                            className="input-lte h-9 text-xs font-bold rounded-xl bg-white border border-line px-3 w-full cursor-pointer"
+                            className="h-8 text-xs font-semibold rounded-lg bg-white border border-line px-2.5 w-full cursor-pointer focus:outline-none focus:border-accent-600 shadow-2xs text-ink-900"
                           >
                             <option value="reject">Auto-Reject (Return to Draft with Timeout Reason)</option>
                             <option value="approve">Auto-Approve (Move to Next Approval Level)</option>
@@ -3368,16 +3252,16 @@ export default function AdminPage() {
                     </div>
 
                     {/* Footer Save Button */}
-                    <div className="flex items-center justify-between pt-3 border-t border-line">
-                      <span className="text-2xs text-ink-500">Cron runner evaluates pending claims daily at 00:00 IST.</span>
+                    <div className="flex items-center justify-between pt-2.5 border-t border-line">
+                      <span className="text-2xs text-ink-500 font-medium">Cron runner evaluates pending claims daily at 00:00 IST.</span>
                       <button
                         type="button"
                         onClick={handleSaveSettings}
                         disabled={savingSettings}
-                        className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-4 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0"
+                        className="bg-[#1E1B4B] hover:bg-[#2D286B] text-white text-xs font-bold px-3.5 h-8 rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0 active:scale-[0.98]"
                       >
                         <Save className="w-3.5 h-3.5" />
-                        <span>{savingSettings ? "Saving..." : "Save Automation Policy"}</span>
+                        <span>{savingSettings ? "Saving..." : "Save Policy"}</span>
                       </button>
                     </div>
                   </div>
@@ -3385,18 +3269,18 @@ export default function AdminPage() {
 
                 {/* --- MODULE 3: ALLOWANCE RATES (TA / DA) MASTER --- */}
                 {settingsSubTab === "allowances" && (
-                  <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-5 animate-fadeIn">
+                  <div className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-4 animate-fadeIn">
                     <div className="flex items-center justify-between pb-3 border-b border-line">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
-                          <DollarSign className="w-4.5 h-4.5" />
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+                          <DollarSign className="w-4 h-4" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-ink-900 text-sm m-0">Daily Allowance (DA) &amp; Travel Rates Master</h3>
-                          <p className="text-2xs text-ink-500 m-0">Configure standard Daily Allowance (DA) and Travel Allowance (TA) rates per designation</p>
+                          <h3 className="font-bold text-ink-900 text-xs font-display uppercase tracking-wider m-0">Daily Allowance (DA) &amp; Travel Rates Master</h3>
+                          <p className="text-2xs text-ink-500 font-sans mt-0.5 m-0">Configure standard Daily Allowance (DA) and Travel Allowance (TA) rates per designation</p>
                         </div>
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                         Financial Master
                       </span>
                     </div>
@@ -3407,7 +3291,7 @@ export default function AdminPage() {
                         <span>Loading Allowance Rates...</span>
                       </div>
                     ) : (
-                      <div className="border border-line rounded-xl overflow-x-auto text-xs">
+                      <div className="border border-line rounded-lg overflow-x-auto text-xs">
                         <table className="w-full text-left border-collapse">
                           <thead className="bg-surface-sunken text-2xs uppercase text-ink-600 font-bold">
                             <tr>
@@ -3444,16 +3328,16 @@ export default function AdminPage() {
                     )}
 
                     {/* Footer Save Button */}
-                    <div className="flex items-center justify-between pt-3 border-t border-line">
-                      <span className="text-2xs text-ink-500">Auto-calculates daily allowances on expense submission forms.</span>
+                    <div className="flex items-center justify-between pt-2.5 border-t border-line">
+                      <span className="text-2xs text-ink-500 font-medium">Auto-calculates daily allowances on expense submission forms.</span>
                       <button
                         type="button"
                         onClick={handleSaveAllowanceRates}
                         disabled={savingRates}
-                        className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] hover:from-[#2A2663] hover:to-[#4F46E5] text-white text-xs font-semibold px-4 h-8.5 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0"
+                        className="bg-[#1E1B4B] hover:bg-[#2D286B] text-white text-xs font-bold px-3.5 h-8 rounded-lg shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 border-0 active:scale-[0.98]"
                       >
                         <Save className="w-3.5 h-3.5" />
-                        <span>{savingRates ? "Saving..." : "Save Allowance Rates"}</span>
+                        <span>{savingRates ? "Saving..." : "Save Rates"}</span>
                       </button>
                     </div>
                   </div>
@@ -3461,50 +3345,50 @@ export default function AdminPage() {
 
                 {/* --- MODULE 4: SECURITY & SESSION GOVERNANCE --- */}
                 {settingsSubTab === "security" && (
-                  <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs space-y-5 animate-fadeIn">
+                  <div className="bg-white border border-line rounded-xl p-4 shadow-xs space-y-4 animate-fadeIn">
                     <div className="flex items-center justify-between pb-3 border-b border-line">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200">
-                          <ShieldCheck className="w-4.5 h-4.5" />
+                        <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200">
+                          <ShieldCheck className="w-4 h-4" />
                         </div>
                         <div>
-                          <h3 className="font-bold text-ink-900 text-sm m-0">Security, Session &amp; Field Locks</h3>
-                          <p className="text-2xs text-ink-500 m-0">Configure authentication session duration and sensitive field lock policies</p>
+                          <h3 className="font-bold text-ink-900 text-xs font-display uppercase tracking-wider m-0">Security, Session &amp; Field Locks</h3>
+                          <p className="text-2xs text-ink-500 font-sans mt-0.5 m-0">Configure authentication session duration and sensitive field lock policies</p>
                         </div>
                       </div>
-                      <span className="px-2.5 py-0.5 rounded-full text-2xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                      <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
                         Security Layer
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                       {/* Session Idle Timeout */}
-                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                      <div className="bg-surface-sunken/60 p-3.5 rounded-lg border border-line space-y-1.5">
                         <label className="text-xs font-bold text-ink-900 block">
                           User Session Idle Timeout
                         </label>
-                        <p className="text-2xs text-ink-500 leading-relaxed">
+                        <p className="text-2xs text-ink-500 leading-relaxed m-0">
                           Inactivity duration after which a web or mobile session requires re-authentication.
                         </p>
-                        <div className="flex items-center gap-3 pt-1">
+                        <div className="flex items-center gap-2.5 pt-1">
                           <input
                             type="number"
                             min={15}
                             max={1440}
                             value={settings.session_timeout_mins || 120}
                             onChange={(e) => setSettings({ ...settings, session_timeout_mins: Number(e.target.value) })}
-                            className="input-lte h-9 w-32 font-mono font-bold text-xs rounded-xl bg-white border border-line px-3"
+                            className="h-8 w-28 font-mono font-bold text-xs rounded-lg bg-white border border-line px-2.5 focus:outline-none focus:border-accent-600 shadow-2xs text-ink-900"
                           />
                           <span className="text-xs text-ink-600 font-semibold">Minutes (Default: 120m)</span>
                         </div>
                       </div>
 
                       {/* Sensitive Fields Protection */}
-                      <div className="bg-surface-sunken p-4 rounded-xl border border-line space-y-2">
+                      <div className="bg-surface-sunken/60 p-3.5 rounded-lg border border-line space-y-1.5">
                         <label className="text-xs font-bold text-ink-900 block">
                           Sensitive Profile Fields Lock
                         </label>
-                        <p className="text-2xs text-ink-500 leading-relaxed">
+                        <p className="text-2xs text-ink-500 leading-relaxed m-0">
                           Requires admin password confirmation before modifying bank account numbers or PAN records.
                         </p>
                         <div className="flex items-center gap-2 pt-1">
@@ -3517,8 +3401,8 @@ export default function AdminPage() {
                     </div>
 
                     {/* Footer Save Button */}
-                    <div className="flex items-center justify-between pt-3 border-t border-line">
-                      <span className="text-2xs text-ink-500">Protects sensitive operational &amp; banking records from unauthorized tampering.</span>
+                    <div className="flex items-center justify-between pt-2.5 border-t border-line">
+                      <span className="text-2xs text-ink-500 font-medium">Protects sensitive operational &amp; banking records from unauthorized tampering.</span>
                       <button
                         type="button"
                         onClick={handleSaveSettings}
@@ -3578,13 +3462,13 @@ export default function AdminPage() {
                   <div className="flex flex-wrap items-center gap-2 flex-1 justify-end min-w-0">
                     {/* Flexible Search Box */}
                     <div className="relative flex-1 min-w-[150px] max-w-[280px]">
-                      <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <Search className="w-3.5 h-3.5 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
                         placeholder="Search facility, incharge, manager..."
                         value={facilitySearch}
                         onChange={(e) => { setFacilitySearch(e.target.value); setFacilityPage(1); }}
-                        className="pl-8 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
+                        className="pl-9 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
                       />
                       {facilitySearch && (
                         <button
@@ -3870,75 +3754,39 @@ export default function AdminPage() {
 
             {/* ================= SECTION: ACTIVITY & AUDIT LOG ================= */}
             {activeTab === "audit" && (
-              <div className="space-y-4 animate-fadeIn">
-                {/* Header Overview Banner */}
-                <div className="bg-surface border border-line rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-accent-50 text-accent-700 flex items-center justify-center font-black shrink-0 border border-accent-200 shadow-xs">
-                      <History className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-accent-600 text-white text-2xs font-mono font-bold uppercase px-2 py-0.5 rounded-full tracking-wider">
-                          LIVE GOVERNANCE LEDGER
-                        </span>
-                        <span className="text-2xs font-mono font-bold text-approved bg-approved-bg px-2 py-0.5 border border-approved-border rounded-full flex items-center gap-1">
-                          <Activity className="w-3 h-3 animate-pulse" /> REAL-TIME D1 AUDIT
-                        </span>
-                      </div>
-                      <h3 className="text-base font-bold text-ink-900 mt-1.5 mb-0 font-display">
-                        System Activity &amp; Audit Trail
-                      </h3>
-                      <p className="text-xs text-ink-500 font-medium m-0 mt-0.5">
-                        Chronological, tamper-evident record of administrative changes, user credential updates, facility edits, and approval resets.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => fetchAuditLogs(auditSearch)}
-                      disabled={auditLoading}
-                      className="btn-lte-outline text-xs h-9 px-3.5 flex items-center gap-2 font-bold cursor-pointer rounded-xl bg-white"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${auditLoading ? "animate-spin" : ""}`} />
-                      <span>{auditLoading ? "Refreshing..." : "Refresh Audit Log"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Audit Toolbar */}
-                <div className="bg-surface border border-line rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="relative flex-1 w-full sm:w-96">
-                    <Search className="w-4 h-4 text-ink-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div className="space-y-3 animate-fadeIn">
+                {/* Audit Toolbar (Ditto HomePage Card Style) */}
+                <div className="bg-white border border-line rounded-xl p-3 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-2.5">
+                  <div className="relative flex-1 w-full sm:max-w-md">
+                    <Search className="w-3.5 h-3.5 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
                       placeholder="Search by actor, action, or entity..."
                       value={auditSearch}
                       onChange={(e) => setAuditSearch(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && fetchAuditLogs(auditSearch)}
-                      className="w-full !pl-10 !pr-8 h-10 bg-white border border-line rounded-xl text-xs font-semibold text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 focus:ring-2 focus:ring-accent-600/15 transition-all shadow-2xs"
+                      className="w-full pl-9 pr-8 h-8 bg-white border border-line rounded-lg text-xs font-medium text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
                     />
                     {auditSearch && (
                       <button
                         type="button"
                         onClick={() => { setAuditSearch(""); fetchAuditLogs(""); }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 cursor-pointer p-0.5"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-700 cursor-pointer p-0.5 border-0 bg-transparent"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-3 h-3" />
                       </button>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => fetchAuditLogs(auditSearch)}
-                      className="h-10 px-4 bg-white hover:bg-surface-sunken text-ink-800 font-bold text-xs rounded-xl border border-line shadow-2xs flex items-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
+                      disabled={auditLoading}
+                      className="h-8 px-3 bg-white hover:bg-surface-sunken text-ink-800 font-bold text-xs rounded-lg border border-line shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
                     >
                       <RefreshCw className={`w-3.5 h-3.5 text-accent-600 ${auditLoading ? "animate-spin" : ""}`} />
-                      <span>Refresh</span>
+                      <span>{auditLoading ? "Refreshing..." : "Refresh"}</span>
                     </button>
                     <button
                       type="button"
