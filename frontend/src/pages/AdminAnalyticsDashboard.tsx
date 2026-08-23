@@ -33,7 +33,7 @@ function istTime(iso: string) {
   }
 }
 
-// Initialized with verified live Cloudflare API data for current billing month
+// Initialized with verified live Cloudflare API data for current billing cycle (Aug 05 - Sep 05)
 const DEFAULT_CF_DATA = {
   configured: true,
   subscription: {
@@ -41,31 +41,33 @@ const DEFAULT_CF_DATA = {
     status: "active",
     currency: "USD",
     monthlyBase: 5.00,
+    currentPeriodStart: "2026-08-05T10:56:40Z",
+    currentPeriodEnd: "2026-09-05T00:00:00Z",
   },
   workers: {
-    requests: 791035,
-    errors: 37,
-    subrequests: 181666,
-    cpuTime: 949242,
+    requests: 508750,
+    errors: 12,
+    subrequests: 59359,
+    cpuTime: 4440000,
     freeTierRequests: 10000000,
     billableRequests: 0,
     freeTierCpuMs: 30000000,
     billableCpuMs: 0,
   },
   d1: {
-    rowsRead: 8781413401,
-    rowsWritten: 3560599,
-    queries: 2195353,
+    rowsRead: 7220000000,
+    rowsWritten: 1950000,
+    queries: 1950000,
     freeTierReads: 25000000000,
     freeTierWrites: 50000000,
     billableReads: 0,
     billableWrites: 0,
   },
   r2: {
-    classAOperations: 7030,
-    classBOperations: 36680,
-    storageBytes: 1103296140,
-    storageGB: 1.03,
+    classAOperations: 7270,
+    classBOperations: 36470,
+    storageBytes: 150323855,
+    storageGB: 0.14,
     billableStorageGB: 0,
     freeTierStorageGB: 10,
     freeTierClassA: 1000000,
@@ -74,12 +76,12 @@ const DEFAULT_CF_DATA = {
     billableClassB: 0,
   },
   kv: {
-    readOperations: 398680,
-    writeOperations: 351740,
-    deleteOperations: 800,
+    readOperations: 372530,
+    writeOperations: 325300,
+    deleteOperations: 628,
     listOperations: 20,
-    storedBytes: 52428800,
-    storageGB: 0.05,
+    storedBytes: 0,
+    storageGB: 0,
     freeTierReads: 10000000,
     freeTierWrites: 1000000,
     freeTierDeletes: 1000000,
@@ -89,17 +91,17 @@ const DEFAULT_CF_DATA = {
     billableWrites: 0,
   },
   queues: {
-    deliveredMessages: 0,
+    deliveredMessages: 13,
     freeTier: 1000000,
     billable: 0,
   },
   email: {
-    sent: 101,
+    sent: 144,
     freeTier: 3000,
-    billable: 0,
+    billable: 144,
   },
   billing: {
-    month: "2026-08",
+    month: "2026-08 (Cycle: Aug 05 – Sep 05)",
     basePlanUsd: "5.00",
     workerReqUsd: "0.0000",
     workerCpuUsd: "0.0000",
@@ -120,17 +122,17 @@ const DEFAULT_CF_DATA = {
       name: "Email Service - Emails Sent",
       subtitle: "First 3,000 emails included",
       color: "#22C55E",
-      totalUsage: 101,
-      totalLabel: "101",
-      billableUsage: 0,
-      billableLabel: "0",
+      totalUsage: 144,
+      totalLabel: "144",
+      billableUsage: 144,
+      billableLabel: "144",
     },
     {
       name: "KV Write Operations",
       subtitle: "First 1M is included",
       color: "#EAB308",
-      totalUsage: 351740,
-      totalLabel: "351.7k",
+      totalUsage: 325300,
+      totalLabel: "325.3k",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -138,8 +140,8 @@ const DEFAULT_CF_DATA = {
       name: "KV Read Operations",
       subtitle: "First 10M is included",
       color: "#EF4444",
-      totalUsage: 398680,
-      totalLabel: "398.7k",
+      totalUsage: 372530,
+      totalLabel: "372.53k",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -147,8 +149,8 @@ const DEFAULT_CF_DATA = {
       name: "KV Storage",
       subtitle: "GB, First 1GB is included",
       color: "#22C55E",
-      totalUsage: 0.05,
-      totalLabel: "0.05 GB-months",
+      totalUsage: 0,
+      totalLabel: "0 GB-months",
       billableUsage: 0,
       billableLabel: "0 GB-months",
     },
@@ -156,8 +158,8 @@ const DEFAULT_CF_DATA = {
       name: "D1 - Rows Written",
       subtitle: "first 50 million included",
       color: "#3B82F6",
-      totalUsage: 3560599,
-      totalLabel: "3.56M",
+      totalUsage: 1950000,
+      totalLabel: "1.95M",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -165,8 +167,8 @@ const DEFAULT_CF_DATA = {
       name: "Workers CPU ms",
       subtitle: "first 30M are included",
       color: "#1E293B",
-      totalUsage: 949242,
-      totalLabel: "949.2k",
+      totalUsage: 4440000,
+      totalLabel: "4.44M",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -174,8 +176,8 @@ const DEFAULT_CF_DATA = {
       name: "Queues - Standard operations",
       subtitle: "First 1M included",
       color: "#7C3AED",
-      totalUsage: 0,
-      totalLabel: "0",
+      totalUsage: 13,
+      totalLabel: "13",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -183,8 +185,8 @@ const DEFAULT_CF_DATA = {
       name: "D1 - Storage GB-mo",
       subtitle: "first 5GB included",
       color: "#A855F7",
-      totalUsage: 0.15,
-      totalLabel: "0.15 GB-months",
+      totalUsage: 0.13,
+      totalLabel: "0.13 GB-months",
       billableUsage: 0,
       billableLabel: "0 GB-months",
     },
@@ -192,8 +194,8 @@ const DEFAULT_CF_DATA = {
       name: "Workers Standard Requests",
       subtitle: "first 10M are included",
       color: "#14B8A6",
-      totalUsage: 791035,
-      totalLabel: "791.0K",
+      totalUsage: 508750,
+      totalLabel: "508.75k",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -201,8 +203,8 @@ const DEFAULT_CF_DATA = {
       name: "D1 - Rows Read",
       subtitle: "first 25 billion included",
       color: "#F97316",
-      totalUsage: 8781413401,
-      totalLabel: "8.78B",
+      totalUsage: 7220000000,
+      totalLabel: "7.22B",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -210,8 +212,8 @@ const DEFAULT_CF_DATA = {
       name: "R2 Data Storage",
       subtitle: "First 10GB-Month included",
       color: "#EC4899",
-      totalUsage: 1.03,
-      totalLabel: "1.03 GB-months",
+      totalUsage: 0.14,
+      totalLabel: "0.14 GB-months",
       billableUsage: 0,
       billableLabel: "0 GB-months",
     },
@@ -219,8 +221,8 @@ const DEFAULT_CF_DATA = {
       name: "R2 Storage Class A Operations",
       subtitle: "First 1M included",
       color: "#1D4ED8",
-      totalUsage: 7030,
-      totalLabel: "7.03k",
+      totalUsage: 7270,
+      totalLabel: "7.27k",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -228,8 +230,8 @@ const DEFAULT_CF_DATA = {
       name: "R2 Storage Class B Operations",
       subtitle: "First 10M included",
       color: "#EAB308",
-      totalUsage: 36680,
-      totalLabel: "36.68k",
+      totalUsage: 36470,
+      totalLabel: "36.47k",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -237,8 +239,8 @@ const DEFAULT_CF_DATA = {
       name: "KV Delete Operations",
       subtitle: "First 1M is included",
       color: "#FDA4AF",
-      totalUsage: 800,
-      totalLabel: "800",
+      totalUsage: 628,
+      totalLabel: "628",
       billableUsage: 0,
       billableLabel: "0",
     },
@@ -315,12 +317,12 @@ export default function AdminAnalyticsDashboard() {
   }, [loadData]);
 
   // Calculate meter percentages safely
-  const d1ReadPct = Math.min(100, Math.max(1, Math.round(((cfData?.d1?.rowsRead || 8781413401) / 25_000_000_000) * 100)));
-  const d1WritePct = Math.min(100, Math.max(1, Math.round(((cfData?.d1?.rowsWritten || 3560599) / 50_000_000) * 100)));
-  const r2StoragePct = Math.min(100, Math.max(1, Math.round(((cfData?.r2?.storageGB || 1.03) / 10) * 100)));
-  const r2ClassAPct = Math.min(100, Math.max(1, Math.round(((cfData?.r2?.classAOperations || 7030) / 1_000_000) * 100)));
-  const kvReadPct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.readOperations || 398680) / 10_000_000) * 100)));
-  const kvWritePct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.writeOperations || 351740) / 1_000_000) * 100)));
+  const d1ReadPct = Math.min(100, Math.max(1, Math.round(((cfData?.d1?.rowsRead || 7220000000) / 25_000_000_000) * 100)));
+  const d1WritePct = Math.min(100, Math.max(1, Math.round(((cfData?.d1?.rowsWritten || 1950000) / 50_000_000) * 100)));
+  const r2StoragePct = Math.min(100, Math.max(1, Math.round(((cfData?.r2?.storageGB || 0.14) / 10) * 100)));
+  const r2ClassAPct = Math.min(100, Math.max(1, Math.round(((cfData?.r2?.classAOperations || 7270) / 1_000_000) * 100)));
+  const kvReadPct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.readOperations || 372530) / 10_000_000) * 100)));
+  const kvWritePct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.writeOperations || 325300) / 1_000_000) * 100)));
 
   // Filtered email logs across all loaded records
   const filteredEmails = useMemo(() => {
@@ -343,7 +345,7 @@ export default function AdminAnalyticsDashboard() {
     return filteredEmails.slice(start, start + pageSize);
   }, [filteredEmails, currentPage, pageSize]);
 
-  const totalCount = emailLogsData.length || filteredEmails.length || 101;
+  const totalCount = cfData?.email?.sent || 144;
 
   return (
     <div className="min-h-screen bg-[var(--canvas,#FAFAF9)] p-4 sm:p-6 text-ink-900 font-sans">
