@@ -13,7 +13,7 @@ function fmtNum(n: number) {
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + "B";
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
-  return String(n);
+  return n.toLocaleString();
 }
 
 function istTime(iso: string) {
@@ -32,25 +32,6 @@ function istTime(iso: string) {
   }
 }
 
-// Exact $5/month Workers Paid Plan limits from Cloudflare Dashboard
-const FREE_TIERS = {
-  EMAIL_SENT: 3_000,
-  KV_WRITES: 1_000_000,
-  KV_READS: 10_000_000,
-  KV_STORAGE_GB: 1,
-  KV_DELETES: 1_000_000,
-  KV_LISTS: 1_000_000,
-  D1_ROWS_WRITTEN: 50_000_000,
-  D1_ROWS_READ: 25_000_000_000,
-  D1_STORAGE_GB: 5,
-  WORKER_CPU_MS: 30_000_000,
-  WORKER_REQUESTS: 10_000_000,
-  QUEUES_OPS: 1_000_000,
-  R2_STORAGE_GB: 10,
-  R2_CLASS_A: 1_000_000,
-  R2_CLASS_B: 10_000_000,
-};
-
 const TABS = [
   { id: "billing", label: "Usage & Billing ($5 Plan)", icon: CreditCard },
   { id: "overview", label: "Edge Traffic & Events", icon: Activity },
@@ -64,219 +45,28 @@ export default function AdminAnalyticsDashboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshTs, setRefreshTs] = useState<Date | null>(null);
 
-  // Load Cloudflare Analytics & Billing with intelligent fallback
+  // Load Cloudflare Analytics & Billing directly from live CF APIs
   const loadData = useCallback(async (showToast = false) => {
     setLoading(true);
     try {
-      // 1. Try real CF API endpoint first
-      const cfRes = await adminService.getCfInfraAnalytics().catch(() => null);
-      
-      // 2. Also fetch D1 analytics
-      const [anaRes, billRes, storRes] = await Promise.allSettled([
-        api.get("/admin/analytics/dashboard"),
-        api.get("/admin/analytics/billing"),
-        api.get("/admin/files/storage-report"),
-      ]);
+      // 1. Fetch real live Cloudflare API data
+      const cfRes = await adminService.getCfInfraAnalytics().catch((e) => {
+        console.error("CF API Error:", e);
+        return null;
+      });
 
-      const aData = anaRes.status === "fulfilled" ? anaRes.value.data : null;
-      const bData = billRes.status === "fulfilled" ? billRes.value.data?.billing : null;
-      const sData = storRes.status === "fulfilled" ? storRes.value.data : null;
+      // 2. Fetch D1 edge traffic & audit data
+      const anaRes = await api.get("/admin/analytics/dashboard").catch(() => null);
+      if (anaRes && anaRes.data) {
+        setAnalytics(anaRes.data);
+      }
 
-      if (aData) setAnalytics(aData);
-
-      if (cfRes && cfRes.configured) {
+      if (cfRes) {
         setCfData(cfRes);
-      } else {
-        // Construct fallback using D1 data
-        const totalRequests = aData?.analytics?.monthEvents || bData?.workerRequests?.count || 12450;
-        const d1Reads = bData?.d1RowsRead?.count || 45200;
-        const d1Writes = bData?.d1RowsWritten?.count || 8300;
-        const r2Bytes = sData?.totalBytes || 0;
-        const r2GB = parseFloat((r2Bytes / (1024 ** 3)).toFixed(3));
-        const emailCount = aData?.analytics?.todayEvents ? Math.round(aData.analytics.todayEvents * 0.1) : 42;
-
-        const products = [
-          {
-            name: "Email Service - Emails Sent",
-            subtitle: "First 3,000 emails included",
-            color: "#22C55E",
-            totalUsage: emailCount,
-            totalLabel: emailCount.toLocaleString(),
-            billableUsage: Math.max(0, emailCount - FREE_TIERS.EMAIL_SENT),
-            billableLabel: emailCount > FREE_TIERS.EMAIL_SENT ? (emailCount - FREE_TIERS.EMAIL_SENT).toLocaleString() : "0",
-          },
-          {
-            name: "KV Write Operations",
-            subtitle: "First 1M is included",
-            color: "#EAB308",
-            totalUsage: 1200,
-            totalLabel: "1.2k",
-            billableUsage: 0,
-            billableLabel: "0",
-          },
-          {
-            name: "KV Read Operations",
-            subtitle: "First 10M is included",
-            color: "#EF4444",
-            totalUsage: 8900,
-            totalLabel: "8.9k",
-            billableUsage: 0,
-            billableLabel: "0",
-          },
-          {
-            name: "KV Storage",
-            subtitle: "GB, First 1GB is included",
-            color: "#22C55E",
-            totalUsage: 0.05,
-            totalLabel: "0.05 GB-months",
-            billableUsage: 0,
-            billableLabel: "0 GB-months",
-          },
-          {
-            name: "D1 - Rows Written",
-            subtitle: "first 50 million included",
-            color: "#3B82F6",
-            totalUsage: d1Writes,
-            totalLabel: d1Writes >= 1_000_000 ? `${(d1Writes / 1_000_000).toFixed(2)}M` : `${(d1Writes / 1000).toFixed(1)}k`,
-            billableUsage: Math.max(0, d1Writes - FREE_TIERS.D1_ROWS_WRITTEN),
-            billableLabel: "0",
-          },
-          {
-            name: "Workers CPU ms",
-            subtitle: "first 30M are included",
-            color: "#1E293B",
-            totalUsage: 845000,
-            totalLabel: "845.0k",
-            billableUsage: 0,
-            billableLabel: "0",
-          },
-          {
-            name: "Queues - Standard operations",
-            subtitle: "First 1M included",
-            color: "#7C3AED",
-            totalUsage: 450,
-            totalLabel: "450",
-            billableUsage: 0,
-            billableLabel: "0",
-          },
-          {
-            name: "D1 - Storage GB-mo",
-            subtitle: "first 5GB included",
-            color: "#A855F7",
-            totalUsage: 0.12,
-            totalLabel: "0.12 GB-months",
-            billableUsage: 0,
-            billableLabel: "0 GB-months",
-          },
-          {
-            name: "Workers Standard Requests",
-            subtitle: "first 10M are included",
-            color: "#14B8A6",
-            totalUsage: totalRequests,
-            totalLabel: totalRequests >= 1_000_000 ? `${(totalRequests / 1_000_000).toFixed(2)}M` : `${(totalRequests / 1000).toFixed(1)}k`,
-            billableUsage: Math.max(0, totalRequests - FREE_TIERS.WORKER_REQUESTS),
-            billableLabel: "0",
-          },
-          {
-            name: "D1 - Rows Read",
-            subtitle: "first 25 billion included",
-            color: "#F97316",
-            totalUsage: d1Reads,
-            totalLabel: d1Reads >= 1_000_000 ? `${(d1Reads / 1_000_000).toFixed(2)}M` : `${(d1Reads / 1000).toFixed(1)}k`,
-            billableUsage: Math.max(0, d1Reads - FREE_TIERS.D1_ROWS_READ),
-            billableLabel: "0",
-          },
-          {
-            name: "R2 Data Storage",
-            subtitle: "First 10GB-Month included",
-            color: "#EC4899",
-            totalUsage: r2GB,
-            totalLabel: `${r2GB} GB-months`,
-            billableUsage: Math.max(0, r2GB - FREE_TIERS.R2_STORAGE_GB),
-            billableLabel: "0 GB-months",
-          },
-          {
-            name: "R2 Storage Class A Operations",
-            subtitle: "First 1M included",
-            color: "#1D4ED8",
-            totalUsage: 1450,
-            totalLabel: "1.45k",
-            billableUsage: 0,
-            billableLabel: "0",
-          },
-          {
-            name: "R2 Storage Class B Operations",
-            subtitle: "First 10M included",
-            color: "#EAB308",
-            totalUsage: 9200,
-            totalLabel: "9.2k",
-            billableUsage: 0,
-            billableLabel: "0",
-          },
-          {
-            name: "KV Delete Operations",
-            subtitle: "First 1M is included",
-            color: "#FDA4AF",
-            totalUsage: 35,
-            totalLabel: "35",
-            billableUsage: 0,
-            billableLabel: "0",
-          },
-          {
-            name: "KV List Operations",
-            subtitle: "First 1M is included",
-            color: "#22D3EE",
-            totalUsage: 120,
-            totalLabel: "120",
-            billableUsage: 0,
-            billableLabel: "0",
-          },
-        ];
-
-        setCfData({
-          configured: true,
-          subscription: {
-            plan: "Workers Paid ($5/mo)",
-            status: "active",
-            currency: "USD",
-            monthlyBase: 5.00,
-          },
-          workers: {
-            requests: totalRequests,
-            freeTierRequests: FREE_TIERS.WORKER_REQUESTS,
-            billableRequests: 0,
-            cpuTime: 845000,
-            freeTierCpuMs: FREE_TIERS.WORKER_CPU_MS,
-            billableCpuMs: 0,
-            errors: aData?.analytics?.errorsToday || 0,
-            subrequests: 210,
-          },
-          d1: {
-            rowsRead: d1Reads,
-            rowsWritten: d1Writes,
-            freeTierReads: FREE_TIERS.D1_ROWS_READ,
-            freeTierWrites: FREE_TIERS.D1_ROWS_WRITTEN,
-            queries: Math.round(d1Reads / 4),
-          },
-          r2: {
-            storageGB: r2GB,
-            freeTierStorageGB: FREE_TIERS.R2_STORAGE_GB,
-            classAOperations: 1450,
-            classBOperations: 9200,
-          },
-          products,
-          billing: {
-            month: new Date().toISOString().slice(0, 7),
-            subscriptionUsd: "5.00",
-            totalEstimatedUsd: "5.00",
-            currency: "USD",
-            note: "All products within included plan allowances. Zero billable overages.",
-          },
-        });
       }
 
       setRefreshTs(new Date());
-      if (showToast) toast.success("Cloudflare analytics refreshed!");
+      if (showToast) toast.success("Live Cloudflare usage updated!");
     } catch (_) {
       toast.error("Failed to load metrics");
     } finally {
@@ -287,6 +77,14 @@ export default function AdminAnalyticsDashboard() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Calculate meter percentages safely
+  const d1ReadPct = Math.min(100, Math.max(1, Math.round(((cfData?.d1?.rowsRead || 0) / 25_000_000_000) * 100)));
+  const d1WritePct = Math.min(100, Math.max(1, Math.round(((cfData?.d1?.rowsWritten || 0) / 50_000_000) * 100)));
+  const r2StoragePct = Math.min(100, Math.max(1, Math.round(((cfData?.r2?.storageGB || 0) / 10) * 100)));
+  const r2ClassAPct = Math.min(100, Math.max(1, Math.round(((cfData?.r2?.classAOperations || 0) / 1_000_000) * 100)));
+  const kvReadPct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.readOperations || 0) / 10_000_000) * 100)));
+  const kvWritePct = Math.min(100, Math.max(1, Math.round(((cfData?.kv?.writeOperations || 0) / 1_000_000) * 100)));
 
   return (
     <div className="min-h-screen bg-[var(--canvas,#FAFAF9)] p-4 sm:p-6 text-ink-900 font-sans">
@@ -304,11 +102,11 @@ export default function AdminAnalyticsDashboard() {
               </h1>
               <span className="text-2xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Workers Paid ($5/mo) · Active
+                Workers Paid ($5/mo) · Live API
               </span>
             </div>
             <p className="text-2xs text-ink-500 mt-1 m-0">
-              Cloudflare Edge Runtime · D1 Single-Primary · R2 Storage · KV Rate Limiter · Queues
+              Direct Cloudflare Analytics · GraphQL Engine · D1 Single-Primary · R2 Storage · KV Rate Limiter
               {refreshTs && ` · Last updated ${refreshTs.toLocaleTimeString("en-IN")}`}
             </p>
           </div>
@@ -321,7 +119,7 @@ export default function AdminAnalyticsDashboard() {
           className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E1B4B] hover:bg-[#2D286B] active:bg-[#1E1B4B] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer border border-[#1E1B4B]"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>{loading ? "Refreshing..." : "Refresh Cloudflare"}</span>
+          <span>{loading ? "Fetching..." : "Refresh Live CF Data"}</span>
         </button>
       </div>
 
@@ -396,6 +194,8 @@ export default function AdminAnalyticsDashboard() {
                 <span className="font-bold text-emerald-600">0 Overages</span>
                 <span>·</span>
                 <span>{cfData?.workers?.errors || 0} Errors</span>
+                <span>·</span>
+                <span>{fmtNum(cfData?.workers?.subrequests || 0)} Subreqs</span>
               </div>
             </div>
 
@@ -409,7 +209,7 @@ export default function AdminAnalyticsDashboard() {
               </div>
               <div className="flex items-baseline gap-2 mt-2">
                 <span className="text-2xl font-black font-display text-ink-900 tabular-nums tracking-tight">
-                  {cfData?.workers?.cpuTime ? `${(cfData.workers.cpuTime / 1000).toFixed(0)}k` : "845k"}
+                  {cfData?.workers?.cpuTime ? fmtNum(cfData.workers.cpuTime) : "—"}
                 </span>
                 <span className="text-xs text-ink-500 font-medium">ms / 30M Free</span>
               </div>
@@ -533,7 +333,7 @@ export default function AdminAnalyticsDashboard() {
             </div>
           </div>
 
-          {/* Row 3: Subsystems & Meters Grid */}
+          {/* Row 3: Subsystems & Meters Grid directly from live API */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
             {/* D1 Usage Meter */}
@@ -549,7 +349,7 @@ export default function AdminAnalyticsDashboard() {
                     <span className="text-ink-500 font-mono">{fmtNum(cfData?.d1?.rowsRead || 0)} / 25B free</span>
                   </div>
                   <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden mt-1 border border-line/40">
-                    <div className="h-full bg-teal-500 rounded-full" style={{ width: "1%" }} />
+                    <div className="h-full bg-teal-500 rounded-full" style={{ width: `${d1ReadPct}%` }} />
                   </div>
                 </div>
                 <div>
@@ -558,7 +358,7 @@ export default function AdminAnalyticsDashboard() {
                     <span className="text-ink-500 font-mono">{fmtNum(cfData?.d1?.rowsWritten || 0)} / 50M free</span>
                   </div>
                   <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden mt-1 border border-line/40">
-                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: "1%" }} />
+                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${d1WritePct}%` }} />
                   </div>
                 </div>
               </div>
@@ -574,10 +374,10 @@ export default function AdminAnalyticsDashboard() {
                 <div>
                   <div className="flex justify-between font-medium">
                     <span className="text-ink-700 font-bold">Bucket Storage</span>
-                    <span className="text-ink-500 font-mono">{cfData?.r2?.storageGB || 0} GB / 10 GB free</span>
+                    <span className="text-ink-500 font-mono">{cfData?.r2?.storageGB || "0.00"} GB / 10 GB free</span>
                   </div>
                   <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden mt-1 border border-line/40">
-                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, ((cfData?.r2?.storageGB || 0)/10)*100)}%` }} />
+                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${r2StoragePct}%` }} />
                   </div>
                 </div>
                 <div>
@@ -586,7 +386,7 @@ export default function AdminAnalyticsDashboard() {
                     <span className="text-ink-500 font-mono">{fmtNum(cfData?.r2?.classAOperations || 0)} / 1M free</span>
                   </div>
                   <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden mt-1 border border-line/40">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: "1%" }} />
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${r2ClassAPct}%` }} />
                   </div>
                 </div>
               </div>
@@ -602,19 +402,19 @@ export default function AdminAnalyticsDashboard() {
                 <div>
                   <div className="flex justify-between font-medium">
                     <span className="text-ink-700 font-bold">KV Read Ops</span>
-                    <span className="text-ink-500 font-mono">8.9k / 10M free</span>
+                    <span className="text-ink-500 font-mono">{fmtNum(cfData?.kv?.readOperations || 0)} / 10M free</span>
                   </div>
                   <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden mt-1 border border-line/40">
-                    <div className="h-full bg-amber-500 rounded-full" style={{ width: "1%" }} />
+                    <div className="h-full bg-amber-500 rounded-full" style={{ width: `${kvReadPct}%` }} />
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between font-medium">
                     <span className="text-ink-700 font-bold">KV Write Ops</span>
-                    <span className="text-ink-500 font-mono">1.2k / 1M free</span>
+                    <span className="text-ink-500 font-mono">{fmtNum(cfData?.kv?.writeOperations || 0)} / 1M free</span>
                   </div>
                   <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden mt-1 border border-line/40">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: "1%" }} />
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${kvWritePct}%` }} />
                   </div>
                 </div>
               </div>
