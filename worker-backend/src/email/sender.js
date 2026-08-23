@@ -122,7 +122,7 @@ async function sendViaCloudflareMail(env, opts) {
         `X-Mailer: Cyrix FieldConnect Mail Engine`,
         `Auto-Submitted: auto-generated`,
         `X-Auto-Response-Suppress: All`,
-        `List-Unsubscribe: <mailto:${replyTo}?subject=unsubscribe>`,
+        `List-Unsubscribe: <mailto:${fromEmail}?subject=unsubscribe>`,
         `Content-Type: multipart/alternative; boundary="${boundary}"`,
         ``,
         `--${boundary}`,

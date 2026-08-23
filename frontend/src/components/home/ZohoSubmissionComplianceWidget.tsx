@@ -14,6 +14,7 @@ import { toast } from "react-hot-toast";
 import api from "../../services/api";
 
 interface ZohoSubmissionComplianceWidgetProps {
+  user?: any;
   expenses: any[];
   selectMonth: string; // e.g. "2026-08"
   filterZone?: string;
@@ -30,6 +31,7 @@ const MONTH_NAMES = [
 const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
 
 export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWidgetProps> = ({
+  user,
   expenses = [],
   selectMonth = "2026-08",
   filterZone = "all",
@@ -41,6 +43,11 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
   const [statusFilter, setStatusFilter] = useState<"all" | "compliant" | "pending" | "defaulter">("all");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [sendingEmailCode, setSendingEmailCode] = useState<string | null>(null);
+
+  const isAdmin = useMemo(() => {
+    const role = (user?.role || "").toLowerCase().trim();
+    return role.includes("admin") || role.includes("superadmin") || role === "director" || role === "vp";
+  }, [user?.role]);
 
   // Parse Year and Month
   const { year, monthIndex, monthLabel } = useMemo(() => {
@@ -527,26 +534,32 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                     </div>
                   )}
 
-                  {/* Action: Send Email */}
+                  {/* Action: Send Email (Admin Only) */}
                   {r.pendingDays > 0 ? (
-                    <button
-                      type="button"
-                      disabled={sendingEmailCode === r.code}
-                      onClick={() => handleSendEmailReminder(r)}
-                      className="w-full py-1.5 px-2 bg-[#4338CA] hover:bg-[#3730A3] text-white rounded-[3px] text-2xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
-                    >
-                      {sendingEmailCode === r.code ? (
-                        <>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          <span>Sending Official Reminder...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="w-3 h-3" />
-                          <span>Send Email Reminder (CC Manager & DM)</span>
-                        </>
-                      )}
-                    </button>
+                    isAdmin ? (
+                      <button
+                        type="button"
+                        disabled={sendingEmailCode === r.code}
+                        onClick={() => handleSendEmailReminder(r)}
+                        className="w-full py-1.5 px-2 bg-[#4338CA] hover:bg-[#3730A3] text-white rounded-[3px] text-2xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs disabled:opacity-50"
+                      >
+                        {sendingEmailCode === r.code ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>Sending Official Reminder...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="w-3 h-3" />
+                            <span>Send Email Reminder (CC Manager & DM)</span>
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="text-[10px] text-rose-700 font-medium text-center py-0.5 bg-rose-50 border border-rose-100 rounded">
+                        Pending claim submission ({r.pendingDays} working days)
+                      </div>
+                    )
                   ) : (
                     <div className="text-[10px] text-emerald-700 font-semibold text-center py-0.5">
                       ✓ All working day expenses up to date
@@ -684,22 +697,33 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                         </td>
 
                         {/* 6. Action: Send Email Reminder */}
-                        <td className="py-1.5 px-2.5 text-right">
+                        <td className="py-1.5 px-2.5 text-right whitespace-nowrap w-[100px]">
                           {r.pendingDays > 0 ? (
-                            <button
-                              type="button"
-                              disabled={sendingEmailCode === r.code}
-                              onClick={() => handleSendEmailReminder(r)}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-                              title="Send official reminder email (CC Manager & DM)"
-                            >
-                              {sendingEmailCode === r.code ? (
-                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                              ) : (
-                                <Mail className="w-2.5 h-2.5 text-accent-600" />
-                              )}
-                              <span>Mail CC</span>
-                            </button>
+                            isAdmin ? (
+                              <button
+                                type="button"
+                                disabled={sendingEmailCode === r.code}
+                                onClick={() => handleSendEmailReminder(r)}
+                                className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-[3px] bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 whitespace-nowrap min-w-[76px]"
+                                title="Send official reminder email (CC Manager & DM)"
+                              >
+                                {sendingEmailCode === r.code ? (
+                                  <>
+                                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                    <span>Sending...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Mail className="w-2.5 h-2.5 text-accent-600 shrink-0" />
+                                    <span>Remind</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="text-3xs font-bold text-rose-600 font-mono">
+                                {r.pendingDays}d Due
+                              </span>
+                            )
                           ) : (
                             <span className="text-3xs font-semibold text-emerald-600">✓ On time</span>
                           )}

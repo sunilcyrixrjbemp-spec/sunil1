@@ -533,7 +533,7 @@ export function submissionReminderTemplate({
   monthName,
   year,
 }) {
-  const missingListHtml = (missingDates || []).map(d => `<li style="padding:2px 0;color:#dc2626;font-weight:600;">${d}</li>`).join("");
+  const missingListHtml = (missingDates || []).map(d => '<li style="padding:2px 0;color:#dc2626;font-weight:600;">' + d + '</li>').join("");
 
   const content = `
     <div style="padding-bottom:14px;border-bottom:1px solid #e2e8f0;margin-bottom:18px;">
@@ -573,6 +573,12 @@ export function submissionReminderTemplate({
       </tr>
     </table>
 
+    <!-- Submission Policy & Cutoff Warning Box -->
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#92400e;line-height:1.5;">
+      ⏰ <strong>Submission Window & Cutoff Policy:</strong><br/>
+      As per Cyrix operational policy, all retrospective claims must be submitted within the active billing window (Monthly Cutoff: <strong>3rd of the following month</strong>). Expenses submitted after the cutoff cannot be processed without senior management approval. Please log all missing claims immediately before the window expires.
+    </div>
+
     <div style="margin-bottom:18px;">
       <p style="margin:0 0 6px 0;font-size:12.5px;color:#0f172a;font-weight:700;">
         Missing Claim Dates:
@@ -592,7 +598,7 @@ export function submissionReminderTemplate({
     </div>
 
     <p style="margin:14px 0 0 0;font-size:11.5px;color:#64748b;line-height:1.5;border-top:1px solid #e2e8f0;padding-top:12px;">
-      <strong>Note to Reporting Managers / Coordinators (in CC):</strong> Please coordinate with the engineer to ensure daily expense records are up to date.
+      <strong>Note to Reporting Managers & Coordinators (in CC):</strong> Please ensure the engineer logs all pending field claims before the financial cycle close.
     </p>
 
     <p style="margin:14px 0 0 0;font-size:13px;color:#0f172a;line-height:1.6;">
@@ -601,7 +607,7 @@ export function submissionReminderTemplate({
     </p>
   `;
 
-  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou have ${pendingDays} working day(s) with missing expense claims for ${monthName} ${year}.\n\nMissing Dates:\n${(missingDates || []).join("\n")}\n\nPlease login to Cyrix FieldOps (https://indrae.in) and submit your claims today.\n\nThanks,\nCyrix Field Operations Team`;
+  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou have ${pendingDays} working day(s) with missing expense claims for ${monthName} ${year}.\n\nMissing Dates:\n${(missingDates || []).join("\n")}\n\nPolicy Notice: Expenses must be logged before the monthly cutoff (3rd of the following month).\n\nPlease login to Cyrix FieldOps (https://indrae.in) and submit your claims today.\n\nThanks,\nCyrix Field Operations Team`;
 
   return {
     subject: `[Action Required] ${pendingDays} Working Days Expense Submission Pending - ${employeeName} (${monthName} ${year})`,
