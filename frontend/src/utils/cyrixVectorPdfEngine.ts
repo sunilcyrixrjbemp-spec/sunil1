@@ -69,7 +69,6 @@ function cleanReturnText(text: string, isHomeDistrict: boolean): string {
 
   for (const p of returnPhrases) {
     if (lower.includes(p)) {
-      // In home district, remove return phrase or replace with Field visit
       const cleaned = text.replace(new RegExp(p, "gi"), "").replace(/^[\s,;\-]+|[\s,;\-]+$/g, "").trim();
       return cleaned || "Field visit";
     }
@@ -156,6 +155,8 @@ export async function generateCyrixVectorPdf(
   const tableWidth = pageWidth - margin * 2; // Exact 287mm
 
   const userDistrict = user.district || "";
+  const managerName = user.manager || user.manager_name || "Manager";
+  const coordinatorName = user.coordinator || user.coordinator_name || "Coordinator";
 
   const allLegs: { date: string; expCode: string; leg: any }[] = [];
   for (const claim of claims) {
@@ -221,15 +222,15 @@ export async function generateCyrixVectorPdf(
 
   // Dynamic Balanced Page Splitting
   const totalLegCount = allLegs.length;
-  let ROWS_PER_PAGE = 14;
-  if (totalLegCount <= 14) {
-    ROWS_PER_PAGE = 14;
-  } else if (totalLegCount <= 28) {
+  let ROWS_PER_PAGE = 15;
+  if (totalLegCount <= 15) {
+    ROWS_PER_PAGE = 15;
+  } else if (totalLegCount <= 30) {
     ROWS_PER_PAGE = Math.ceil(totalLegCount / 2); // e.g. 24 rows = 12 + 12
-  } else if (totalLegCount <= 42) {
+  } else if (totalLegCount <= 45) {
     ROWS_PER_PAGE = Math.ceil(totalLegCount / 3);
   } else {
-    ROWS_PER_PAGE = 14;
+    ROWS_PER_PAGE = 15;
   }
 
   const numPages = Math.max(1, Math.ceil(totalLegCount / ROWS_PER_PAGE));
@@ -239,7 +240,7 @@ export async function generateCyrixVectorPdf(
       doc.addPage("a4", "landscape");
     }
 
-    const isLastPage = pageIdx === numPages - 1;
+    const isLastPage = (pageIdx === numPages - 1);
     const pageLegs = allLegs.slice(pageIdx * ROWS_PER_PAGE, (pageIdx + 1) * ROWS_PER_PAGE);
 
     // 1. Header Banner (Width exact 287mm)
@@ -304,6 +305,7 @@ export async function generateCyrixVectorPdf(
       ];
     });
 
+    // ONLY construct footer on the VERY LAST page!
     const footRows: any[] = [];
     if (isLastPage) {
       footRows.push([
@@ -334,11 +336,13 @@ export async function generateCyrixVectorPdf(
       ]);
     }
 
-    // AutoTable fitting exactly 287mm tableWidth
+    // AutoTable fitting exact 287mm tableWidth and NO unintended page breaking
     autoTable(doc, {
       startY: 20.5,
       margin: { left: margin, right: margin },
       tableWidth: tableWidth,
+      pageBreak: "avoid",
+      showFoot: isLastPage ? "lastPage" : "never",
       head: [
         [
           { content: "Date\n(DD-MM-YY)", rowSpan: 2 },
@@ -361,12 +365,12 @@ export async function generateCyrixVectorPdf(
         ["From", "To", "Description", "Amount"]
       ],
       body: tableBody,
-      foot: footRows,
+      foot: isLastPage ? footRows : undefined,
       theme: "grid",
       styles: {
-        fontSize: 7.2,
-        cellPadding: 2.2,
-        minCellHeight: 6.2,
+        fontSize: 7,
+        cellPadding: 1.6,
+        minCellHeight: 5.4,
         halign: "center",
         valign: "middle",
         lineColor: [71, 85, 105],
@@ -378,31 +382,31 @@ export async function generateCyrixVectorPdf(
         textColor: [255, 255, 255],
         fontStyle: "bold",
         fontSize: 6.8,
-        cellPadding: 2
+        cellPadding: 1.8
       },
       columnStyles: {
-        0: { cellWidth: 15 },
-        1: { cellWidth: 20 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 16 },
-        4: { cellWidth: 11, fontStyle: "bold" },
-        5: { cellWidth: 12 },
+        0: { cellWidth: 14 },
+        1: { cellWidth: 18 },
+        2: { cellWidth: 18 },
+        3: { cellWidth: 15 },
+        4: { cellWidth: 8, fontStyle: "bold" },
+        5: { cellWidth: 11 },
         6: { cellWidth: 14 },
         7: { cellWidth: 12 },
-        8: { cellWidth: 12 },
-        9: { cellWidth: 14 },
-        10: { cellWidth: 14 },
+        8: { cellWidth: 15 }, // D.A. column: 15mm ensures 2750.00 never wraps
+        9: { cellWidth: 12 },
+        10: { cellWidth: 15 }, // Hotel column: 15mm ensures 9200.00 never wraps
         11: { cellWidth: 18 },
-        12: { cellWidth: 14 },
-        13: { cellWidth: 21, fontStyle: "bold" }, // Total column: 21mm ensures 19155.00 never clips
-        14: { cellWidth: 32 },
-        15: { cellWidth: 14, fontStyle: "bold" },
-        16: { cellWidth: 12 },
+        12: { cellWidth: 12 },
+        13: { cellWidth: 20, fontStyle: "bold" }, // Total column: 20mm ensures 19155.00 never wraps
+        14: { cellWidth: 35 },
+        15: { cellWidth: 13, fontStyle: "bold" },
+        16: { cellWidth: 11 },
         17: { cellWidth: 16 }
       }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY || 160;
+    const finalY = (doc as any).lastAutoTable.finalY || 140;
 
     if (isLastPage) {
       // Amount in words box
@@ -412,11 +416,17 @@ export async function generateCyrixVectorPdf(
       doc.setFont("helvetica", "normal");
       doc.text(`Amount in words: ${amountWords(gTotal - advance).toUpperCase()}`, pageWidth / 2, finalY + 4.8, { align: "center" });
 
-      // Remarks Box
+      // Remarks Box with Coordinator and Manager names!
       doc.setFillColor(241, 245, 249);
       doc.rect(margin, finalY + 6.5, tableWidth, 5.5, "FD");
       doc.setFont("helvetica", "bold");
-      doc.text("REMARKS: AUDITED & APPROVED BY CYRIX MANAGEMENT", pageWidth / 2, finalY + 10.3, { align: "center" });
+      doc.setFontSize(7.2);
+      doc.text(
+        `REMARKS: AUDITED BY: ${coordinatorName.toUpperCase()} | APPROVED BY: ${managerName.toUpperCase()}`,
+        pageWidth / 2,
+        finalY + 10.3,
+        { align: "center" }
+      );
 
       // Signature Table Box
       const sigY = finalY + 12;
@@ -428,8 +438,8 @@ export async function generateCyrixVectorPdf(
 
       const sigs = [
         { label: "Claimed By:", name: user.name || "" },
-        { label: "Approved By (Manager):", name: user.manager || "" },
-        { label: "Checked By (Coordinator):", name: user.coordinator || "" },
+        { label: "Approved By (Manager):", name: managerName },
+        { label: "Audited By (Coordinator):", name: coordinatorName },
         { label: "Accounted By:", name: "Amit Rawat" }
       ];
 
@@ -444,7 +454,7 @@ export async function generateCyrixVectorPdf(
         doc.setFontSize(6.8);
         doc.text(sig.label, x + colW / 2, sigY + 4, { align: "center" });
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
+        doc.setFontSize(7.8);
         doc.text(sig.name, x + colW / 2, sigY + 8.5, { align: "center" });
         doc.setFont("helvetica", "normal");
         doc.setFontSize(6.8);
@@ -453,7 +463,7 @@ export async function generateCyrixVectorPdf(
     }
   }
 
-  // 4. Attachments (Dedicated 1 page per bill attachment)
+  // 4. Attachments (Dedicated 1 page per unique bill attachment)
   if (Array.isArray(attachments) && attachments.length > 0) {
     for (let aIdx = 0; aIdx < attachments.length; aIdx++) {
       const att = attachments[aIdx];
