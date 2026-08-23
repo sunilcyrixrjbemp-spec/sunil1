@@ -3,6 +3,7 @@ import { SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart, SaaS3DHybridTrend
 import { expenseService } from "../services/expenseService";
 import { authService } from "../services/authService";
 import { adminService } from "../services/adminService";
+import { penaltyLiveService, ComplaintPenaltyRecord } from "../services/penaltyLiveService";
 import AnalysisSkeleton from "../components/common/AnalysisSkeleton";
 import {
   Button,
@@ -29,10 +30,10 @@ import {
   SwapOutlined,
   ThunderboltOutlined,
   SafetyCertificateOutlined,
-  AuditOutlined,
-  CheckCircleOutlined
+  AuditOutlined
 } from "@ant-design/icons";
 import { hasFullAccess } from "../utils/constants";
+
 const months = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -62,6 +63,7 @@ export default function AnalysisPage() {
     const cached = localStorage.getItem(keyV4) || localStorage.getItem(keyOld);
     return cached ? JSON.parse(cached) : [];
   });
+
   const [teamExpenses, setTeamExpenses] = useState<any[]>(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return [];
@@ -75,6 +77,9 @@ export default function AnalysisPage() {
     const cached = localStorage.getItem(keyV4) || localStorage.getItem(keyOld);
     return cached ? JSON.parse(cached) : [];
   });
+
+  const [complaintRecords, setComplaintRecords] = useState<ComplaintPenaltyRecord[]>([]);
+
   const [loading, setLoading] = useState(() => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) return false;
@@ -87,7 +92,10 @@ export default function AnalysisPage() {
     const keyTeamV4 = `cache_v4_team_expenses_${currentUser.user_id}_${y}-${monthStr}`;
     const hasCache = !!(localStorage.getItem(keyV4) || localStorage.getItem(keyTeamV4));
     return !hasCache;
-  });  const [viewMode, setViewMode] = useState<"my" | "team">(() => {
+  });
+
+  const [viewMode, setViewMode] = useState<"my" | "team">(() => {
+
     const saved = localStorage.getItem("analysis_viewMode");
     if (saved === "my" || saved === "team") return saved;
     const currentUser = authService.getCurrentUser();
@@ -243,6 +251,15 @@ export default function AnalysisPage() {
           if (uId) {
             localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
           }
+        }
+
+        try {
+          const pRes = await penaltyLiveService.getRecords({ limit: 10000, status: "all" });
+          if (pRes && Array.isArray(pRes.records)) {
+            setComplaintRecords(pRes.records);
+          }
+        } catch (pErr) {
+          // Graceful fallback
         }
       } catch (err) {
         console.error("Error fetching analysis data:", err);
@@ -760,43 +777,82 @@ export default function AnalysisPage() {
       .sort((a, b) => b.count - a.count);
   }, [activeExpenses, user?.district]);
 
-  // H. District-wise First Time Fix Rate (FTFR - 24 Hours Resolution)
+  // H. District-wise First Time Fix Rate (FTFR - 24 Hours Resolution from Complaint / Penalty Data)
   const districtFtfrData = useMemo(() => {
     const map: Record<string, { totalCalls: number; closed24h: number }> = {};
+    const targetMonthStr = String(selectedMonth + 1).padStart(2, "0");
+    const targetYearStr = String(selectedYear);
 
-    ALL_RAJASTHAN_DISTRICTS.forEach(d => {
-      map[d] = { totalCalls: 0, closed24h: 0 };
-    });
-
-    activeExpenses.forEach(e => {
-      const rawDist = (e.district || e.facility_district || user?.district || "Other").trim();
-      const cleanDist = rawDist ? rawDist.charAt(0).toUpperCase() + rawDist.slice(1) : "Other";
-      if (!map[cleanDist]) map[cleanDist] = { totalCalls: 0, closed24h: 0 };
-
-      if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
-        e.calls_details.forEach((c: any) => {
-          map[cleanDist].totalCalls += 1;
-          const isClosed = c.call_status === "Resolved" || c.call_status === "Completed" || c.status === "Closed" || c.status === "Resolved";
-          const is24h = c.tat_hours <= 24 || c.is_ftfr || isClosed;
-          if (is24h) {
-            map[cleanDist].closed24h += 1;
-          }
-        });
-      } else {
-        const assigned = parseSanitizedCount(e.calls_assigned);
-        const completed = parseSanitizedCount(e.calls_completed);
-        if (assigned > 0 || completed > 0) {
-          const tot = Math.max(assigned, completed);
-          map[cleanDist].totalCalls += tot;
-          map[cleanDist].closed24h += completed;
-        }
+    // 1. Primary: Use uploaded complaint records from Penalty & Complaint Management system
+    const monthlyComplaints = complaintRecords.filter(r => {
+      const raiseDate = r.complaint_raise_date || r.attend_date || "";
+      if (!raiseDate) return false;
+      const match = raiseDate.match(/^(\d{4})-(\d{2})/);
+      if (match) {
+        return match[1] === targetYearStr && match[2] === targetMonthStr;
       }
+      return false;
     });
+
+    if (monthlyComplaints.length > 0) {
+      monthlyComplaints.forEach(r => {
+        const rawDist = (r.district_name || "Other").trim();
+        const cleanDist = rawDist ? rawDist.charAt(0).toUpperCase() + rawDist.slice(1) : "Other";
+        if (!map[cleanDist]) map[cleanDist] = { totalCalls: 0, closed24h: 0 };
+
+        map[cleanDist].totalCalls += 1;
+        const isClosed = r.status === "Closed" || (r.complaint_status || "").toLowerCase().includes("close") || (r.complaint_status || "").toLowerCase().includes("resolve");
+        const hoursDiff = Number(r.attend_hour_diff || r.total_downtime_hours || 0);
+        
+        let is24h = false;
+        if (hoursDiff > 0 && hoursDiff <= 24) {
+          is24h = true;
+        } else if (r.complaint_raise_date && r.complaint_close_date) {
+          const diffMs = new Date(r.complaint_close_date).getTime() - new Date(r.complaint_raise_date).getTime();
+          if (diffMs >= 0 && diffMs <= 24 * 3600 * 1000) {
+            is24h = true;
+          }
+        } else if (isClosed && (!r.attend_hour_diff || r.attend_hour_diff <= 24)) {
+          is24h = true;
+        }
+
+        if (is24h) {
+          map[cleanDist].closed24h += 1;
+        }
+      });
+    } else {
+      // Fallback: Use activeExpenses calls data if no standalone complaint records uploaded for this month
+      activeExpenses.forEach(e => {
+        const rawDist = (e.district || e.facility_district || user?.district || "Other").trim();
+        const cleanDist = rawDist ? rawDist.charAt(0).toUpperCase() + rawDist.slice(1) : "Other";
+        if (!map[cleanDist]) map[cleanDist] = { totalCalls: 0, closed24h: 0 };
+
+        if (Array.isArray(e.calls_details) && e.calls_details.length > 0) {
+          e.calls_details.forEach((c: any) => {
+            map[cleanDist].totalCalls += 1;
+            const isClosed = c.call_status === "Resolved" || c.call_status === "Completed" || c.status === "Closed" || c.status === "Resolved";
+            const is24h = c.tat_hours <= 24 || c.is_ftfr || isClosed;
+            if (is24h) {
+              map[cleanDist].closed24h += 1;
+            }
+          });
+        } else {
+          const assigned = parseSanitizedCount(e.calls_assigned);
+          const completed = parseSanitizedCount(e.calls_completed);
+          if (assigned > 0 || completed > 0) {
+            const tot = Math.max(assigned, completed);
+            map[cleanDist].totalCalls += tot;
+            map[cleanDist].closed24h += completed;
+          }
+        }
+      });
+    }
 
     let overallTotal = 0;
     let overall24h = 0;
 
     const list = Object.entries(map)
+      .filter(([_, stat]) => stat.totalCalls > 0)
       .map(([name, stat]) => {
         overallTotal += stat.totalCalls;
         overall24h += stat.closed24h;
@@ -805,13 +861,11 @@ export default function AnalysisPage() {
           name,
           totalCalls: stat.totalCalls,
           closed24h: stat.closed24h,
-          rate
+          rate,
+          amount: rate // for SaaSHorizontalBarChart compatibility
         };
       })
-      .sort((a, b) => {
-        if (b.totalCalls !== a.totalCalls) return b.totalCalls - a.totalCalls;
-        return b.rate - a.rate;
-      });
+      .sort((a, b) => b.rate - a.rate);
 
     const overallRate = overallTotal > 0 ? ((overall24h / overallTotal) * 100).toFixed(1) : "100.0";
 
@@ -821,7 +875,7 @@ export default function AnalysisPage() {
       overall24h,
       overallRate
     };
-  }, [activeExpenses, user?.district]);
+  }, [complaintRecords, selectedMonth, selectedYear, activeExpenses, user?.district]);
 
   // I. Online Calls vs Support Calls Breakdown
   const callTypeBreakdown = useMemo(() => {
@@ -1996,58 +2050,22 @@ export default function AnalysisPage() {
                   DISTRICT-WISE FIRST TIME FIX RATE (FTFR - 24H RESOLUTION)
                 </span>
                 <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-[3px]">
-                  {districtFtfrData.overallRate}% FTFR Overall
+                  {districtFtfrData.overallRate}% FTFR ({districtFtfrData.overall24h}/{districtFtfrData.overallTotal} &lt;24h)
                 </span>
               </div>
-              <div className="p-3 overflow-y-auto custom-scrollbar" style={{ height: 320 }}>
+              <div className="p-3 overflow-y-auto custom-scrollbar" style={{ height: 310 }}>
                 {districtFtfrData.list.length > 0 ? (
-                  <div className="space-y-2">
-                    {districtFtfrData.list.map((item, idx) => {
-                      const hasCalls = item.totalCalls > 0;
-                      const isHigh = item.rate >= 80;
-                      const isMed = item.rate >= 50 && item.rate < 80;
-                      const barColor = !hasCalls ? "#cbd5e1" : (isHigh ? "#10b981" : (isMed ? "#f59e0b" : "#ef4444"));
-
-                      return (
-                        <div key={idx} className="bg-slate-50 border border-slate-200/70 p-2 flex flex-col space-y-1 hover:bg-slate-100/70 transition-all">
-                          <div className="flex items-center justify-between gap-2 text-xs">
-                            <span className="font-bold text-slate-900 truncate max-w-[180px] leading-tight">
-                              {item.name}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] font-mono font-bold text-slate-500">
-                                {hasCalls ? `${item.closed24h}/${item.totalCalls} (<24h)` : "0 Calls"}
-                              </span>
-                              <span className={`font-mono font-black px-1.5 py-0.5 rounded-none text-[11px] border ${
-                                !hasCalls
-                                  ? "bg-slate-100 text-slate-400 border-slate-200"
-                                  : isHigh
-                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                  : isMed
-                                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                                  : "bg-rose-50 text-rose-700 border-rose-200"
-                              }`}>
-                                {item.rate}% FTFR
-                              </span>
-                            </div>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="w-full bg-slate-200/80 h-2 overflow-hidden relative">
-                            <div
-                              className="h-full transition-all duration-500"
-                              style={{
-                                width: hasCalls ? `${Math.max(3, item.rate)}%` : "0%",
-                                backgroundColor: barColor
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <SaaSHorizontalBarChart
+                    data={districtFtfrData.list}
+                    valueKey="rate"
+                    nameKey="name"
+                    height={286}
+                    isCurrency={false}
+                    valueFormatter={(v) => `${v}% FTFR`}
+                  />
                 ) : (
                   <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
-                    No district complaint/call records
+                    No complaint records found for this period
                   </div>
                 )}
               </div>
@@ -2061,68 +2079,24 @@ export default function AnalysisPage() {
                   ONLINE VS SUPPORT CALLS BREAKDOWN
                 </span>
                 <span className="text-[10px] font-mono font-bold text-white/80 bg-white/10 px-2 py-0.5 rounded-[3px]">
-                  {callTypeBreakdown.totalCalls} Total Calls
+                  {callTypeBreakdown.onlineTotal} Online / {callTypeBreakdown.supportTotal} Support
                 </span>
               </div>
-              <div className="p-3 overflow-y-auto custom-scrollbar flex flex-col justify-between" style={{ height: 320 }}>
-                {/* Summary Row */}
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="bg-cyan-50/70 border border-cyan-200/80 p-2 text-center">
-                    <span className="text-[10px] font-bold text-cyan-800 uppercase block tracking-wider">
-                      Online Calls (Portal)
-                    </span>
-                    <span className="text-lg font-black font-mono text-cyan-900">
-                      {callTypeBreakdown.onlineTotal}
-                    </span>
-                    <span className="text-[9px] font-medium text-cyan-600 block">
-                      {callTypeBreakdown.totalCalls > 0 ? Math.round((callTypeBreakdown.onlineTotal / callTypeBreakdown.totalCalls) * 100) : 0}% of Total
-                    </span>
+              <div className="p-3 overflow-y-auto custom-scrollbar" style={{ height: 310 }}>
+                {callTypeBreakdown.engineerList.length > 0 ? (
+                  <SaaSHorizontalBarChart
+                    data={callTypeBreakdown.engineerList}
+                    valueKey="total"
+                    nameKey="name"
+                    height={286}
+                    isCurrency={false}
+                    valueFormatter={(v) => `${v} Calls`}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No engineer call distribution
                   </div>
-                  <div className="bg-indigo-50/70 border border-indigo-200/80 p-2 text-center">
-                    <span className="text-[10px] font-bold text-indigo-800 uppercase block tracking-wider">
-                      Support Calls (Internal)
-                    </span>
-                    <span className="text-lg font-black font-mono text-indigo-900">
-                      {callTypeBreakdown.supportTotal}
-                    </span>
-                    <span className="text-[9px] font-medium text-indigo-600 block">
-                      {callTypeBreakdown.totalCalls > 0 ? Math.round((callTypeBreakdown.supportTotal / callTypeBreakdown.totalCalls) * 100) : 0}% of Total
-                    </span>
-                  </div>
-                </div>
-
-                {/* Engineer-wise Breakdown */}
-                <div className="space-y-1.5 overflow-y-auto custom-scrollbar flex-1 pr-1" style={{ maxHeight: 210 }}>
-                  {callTypeBreakdown.engineerList.length > 0 ? (
-                    callTypeBreakdown.engineerList.map((eng, idx) => {
-                      const onlinePct = eng.total > 0 ? Math.round((eng.online / eng.total) * 100) : 0;
-                      const supportPct = eng.total > 0 ? 100 - onlinePct : 0;
-
-                      return (
-                        <div key={idx} className="bg-slate-50 border border-slate-200/70 p-1.5 px-2 text-xs">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-bold text-slate-800 truncate max-w-[150px]">{eng.name}</span>
-                            <div className="flex items-center gap-2 font-mono text-[10px]">
-                              <span className="text-cyan-700 font-bold">Online: {eng.online}</span>
-                              <span className="text-slate-300">|</span>
-                              <span className="text-indigo-700 font-bold">Support: {eng.support}</span>
-                              <span className="text-slate-800 font-black bg-white px-1 border border-slate-200">{eng.total} Total</span>
-                            </div>
-                          </div>
-                          {/* Dual segment bar */}
-                          <div className="w-full bg-slate-200 h-2 flex overflow-hidden">
-                            <div style={{ width: `${onlinePct}%` }} className="bg-cyan-500 h-full" title={`Online: ${onlinePct}%`} />
-                            <div style={{ width: `${supportPct}%` }} className="bg-indigo-600 h-full" title={`Support: ${supportPct}%`} />
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="flex items-center justify-center h-28 text-slate-400 text-xs font-bold">
-                      No engineer call distribution
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
 
@@ -2134,84 +2108,24 @@ export default function AnalysisPage() {
                   ONLINE CALLS PORTAL MATCH & VERIFICATION ANALYSIS
                 </span>
                 <span className="text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded-[3px]">
-                  {portalMatchAnalysis.matchRate}% Portal Verified
+                  {portalMatchAnalysis.matchRate}% Portal Verified ({portalMatchAnalysis.matchedOnline}/{portalMatchAnalysis.totalOnline} Calls)
                 </span>
               </div>
-              <div className="p-3">
-                {/* 3 Metric Header Chips */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-3">
-                  <div className="bg-slate-50 border border-slate-200 p-2.5 flex items-center justify-between">
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500 block">
-                        TOTAL ONLINE CALLS LOGGED
-                      </span>
-                      <span className="text-base font-bold font-mono text-slate-900">
-                        {portalMatchAnalysis.totalOnline} Calls
-                      </span>
-                    </div>
-                    <div className="w-7 h-7 bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center">
-                      <RocketOutlined style={{ fontSize: 13 }} />
-                    </div>
+              <div className="p-3 overflow-y-auto custom-scrollbar" style={{ height: 310 }}>
+                {portalMatchAnalysis.districtList.length > 0 ? (
+                  <SaaSHorizontalBarChart
+                    data={portalMatchAnalysis.districtList}
+                    valueKey="matched"
+                    nameKey="name"
+                    height={286}
+                    isCurrency={false}
+                    valueFormatter={(v) => `${v} Matched`}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-slate-400 text-xs font-bold">
+                    No online portal call records recorded
                   </div>
-
-                  <div className="bg-emerald-50/50 border border-emerald-200 p-2.5 flex items-center justify-between">
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-800 block">
-                        PORTAL MATCHED (VERIFIED)
-                      </span>
-                      <span className="text-base font-bold font-mono text-emerald-800">
-                        {portalMatchAnalysis.matchedOnline} Calls
-                      </span>
-                    </div>
-                    <div className="w-7 h-7 bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center justify-center">
-                      <CheckCircleOutlined style={{ fontSize: 13 }} />
-                    </div>
-                  </div>
-
-                  <div className="bg-indigo-50/50 border border-indigo-200 p-2.5 flex items-center justify-between">
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-800 block">
-                        PORTAL MATCH ACCURACY
-                      </span>
-                      <span className="text-base font-bold font-mono text-indigo-900">
-                        {portalMatchAnalysis.matchRate}%
-                      </span>
-                    </div>
-                    <div className="w-7 h-7 bg-indigo-100 text-indigo-700 border border-indigo-300 flex items-center justify-center">
-                      <AuditOutlined style={{ fontSize: 13 }} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* District-wise Portal Match Grid */}
-                <div className="space-y-1.5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
-                  {portalMatchAnalysis.districtList.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {portalMatchAnalysis.districtList.map((d, idx) => (
-                        <div key={idx} className="bg-slate-50 border border-slate-200/80 p-2 text-xs flex flex-col justify-between space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-slate-800 truncate max-w-[130px]">{d.name}</span>
-                            <span className="font-mono font-bold text-emerald-700 text-[11px] bg-white border border-slate-200 px-1">
-                              {d.rate}% Matched
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-                            <span>Logged: {d.totalOnline}</span>
-                            <span>Matched: {d.matched}</span>
-                            {d.unmatched > 0 && <span className="text-rose-600 font-bold">Unmatched: {d.unmatched}</span>}
-                          </div>
-                          <div className="w-full bg-slate-200 h-1.5 overflow-hidden">
-                            <div style={{ width: `${d.rate}%` }} className="bg-emerald-600 h-full" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-24 text-slate-400 text-xs font-bold">
-                      No portal match records available
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
