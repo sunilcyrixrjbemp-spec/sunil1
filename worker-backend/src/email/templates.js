@@ -587,10 +587,10 @@ export function submissionReminderTemplate({
       If you were on approved leave, official weekly off, or did not perform field operations on any of the listed dates below, please log in to the Cyrix FieldOps portal and mark those specific dates as <strong>"On Leave"</strong>. Marking a date as leave immediately clears it from your overdue submission count and prevents compliance escalations.
     </div>
 
-    <!-- Submission Policy & Past-Day Limit Notice Box -->
+    <!-- Past-Day Submission Window Notice Box -->
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:#92400e;line-height:1.5;">
-      ⏰ <strong>Expense Submission Window & Policy Notice:</strong><br/>
-      In accordance with company expense policy, retrospective claims can only be submitted within your active past-day logging window (<strong>up to 25 days from today</strong>). Submissions for dates older than the 25-day limit are locked and cannot be processed without administrative approval.
+      ⏰ <strong>Past-Day Expense Logging Window:</strong><br/>
+      Please note that expense claims can only be submitted within your active logging window (<strong>up to 25 days from today</strong>). Submissions for dates older than the 25-day limit are locked in the portal and cannot be logged without administrative approval.
     </div>
 
     <!-- Missing Dates Section -->
@@ -623,7 +623,7 @@ export function submissionReminderTemplate({
     </p>
   `;
 
-  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou currently have ${pendingDays} working day(s) with missing expense claims for ${periodLabel}.\n\nPending Dates:\n${(missingDates || []).join("\n")}\n\nNotice: If you were on approved leave or absent on any of these dates, please log in to Cyrix FieldOps (https://indrae.in) and mark those specific dates as 'On Leave' to clear your overdue status.\n\nPlease submit your pending daily claims or record your leaves today.\n\nSincerely,\nCyrix Field Operations Team`;
+  const textPlain = `Dear ${employeeName} (${employeeCode}),\n\nYou currently have ${pendingDays} working day(s) with missing expense claims for ${periodLabel}.\n\nPending Dates:\n${(missingDates || []).join("\n")}\n\nAbsence Notice: If you were on approved leave or absent on any of these dates, please log in to Cyrix FieldOps (https://indrae.in) and mark those specific dates as 'On Leave' to clear your overdue status.\n\nLogging Window Notice: Expense claims can only be submitted within your active logging window (up to 25 days from today). Older dates are locked in the portal.\n\nPlease submit your pending daily claims or record your leaves today.\n\nSincerely,\nCyrix Field Operations Team`;
 
   return {
     subject: `Pending Expense Reminder: ${employeeName} (${periodLabel})`,
