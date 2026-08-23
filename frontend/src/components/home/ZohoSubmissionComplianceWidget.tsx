@@ -57,18 +57,16 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
   const [leaveReason, setLeaveReason] = useState<string>("");
   const [savingLeave, setSavingLeave] = useState(false);
 
-  // Check admin role
+  // Strict Admin Role Check — ONLY Admins & Superadmins see the Remind / Sent action button!
   const isAdmin = useMemo(() => {
-    const role = (user?.role || user?.designation || "").toLowerCase().trim();
+    const role = String(user?.role || user?.designation || "").toLowerCase().trim();
     if (
-      role.includes("admin") || 
-      role.includes("superadmin") || 
-      role.includes("coordinator") || 
-      role.includes("director") || 
-      role.includes("vp") || 
-      role.includes("head") ||
-      user?.is_admin ||
-      user?.isAdmin
+      role === "admin" || 
+      role === "superadmin" || 
+      role === "super_admin" || 
+      role.includes("super admin") ||
+      user?.is_admin === true || 
+      user?.isAdmin === true
     ) {
       return true;
     }
@@ -77,23 +75,21 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       const stored = localStorage.getItem("cyrix_user") || localStorage.getItem("user");
       if (stored) {
         const u = JSON.parse(stored);
-        const r = (u.role || u.designation || "").toLowerCase().trim();
+        const r = String(u.role || u.designation || "").toLowerCase().trim();
         if (
-          r.includes("admin") || 
-          r.includes("superadmin") || 
-          r.includes("coordinator") || 
-          r.includes("director") || 
-          r.includes("vp") || 
-          r.includes("head") ||
-          u.is_admin ||
-          u.isAdmin
+          r === "admin" || 
+          r === "superadmin" || 
+          r === "super_admin" || 
+          r.includes("super admin") ||
+          u.is_admin === true || 
+          u.isAdmin === true
         ) {
           return true;
         }
       }
     } catch (_) {}
 
-    return true; // management view default
+    return false; // Non-admin (Engineer, Coordinator, Manager) strictly gets false!
   }, [user]);
 
   // Parse Year and Month
@@ -112,7 +108,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     let isMounted = true;
     const fetchSentStatus = async () => {
       try {
-        const res = await api.get("/attendance/reminder-status");
+        const res = await api.get(`/attendance/reminder-status?month=${selectMonth}`);
         if (isMounted && res.data?.success && Array.isArray(res.data.sent_today)) {
           setSentRemindersSet(new Set(res.data.sent_today.map((c: string) => String(c).toUpperCase())));
         }

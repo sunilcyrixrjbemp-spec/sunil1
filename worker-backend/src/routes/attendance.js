@@ -500,9 +500,15 @@ export async function handleDeleteEngineerLeave(request, env, params, query, use
 /**
  * GET /api/attendance/reminder-status?date=YYYY-MM-DD
  */
+/**
+ * GET /api/attendance/reminder-status?date=YYYY-MM-DD&month=YYYY-MM
+ */
 export async function handleGetSentReminders(request, env, params, query, user) {
   try {
     const todayStr = query.get("date") || new Date().toISOString().slice(0, 10);
+    const monthQuery = query.get("month") || "";
+
+    // 1. Check attendance_reminder_logs
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS attendance_reminder_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -515,16 +521,33 @@ export async function handleGetSentReminders(request, env, params, query, user) 
       )
     `).run();
 
-    const rows = await env.DB.prepare(`
-      SELECT employee_code, month, sent_date, created_at FROM attendance_reminder_logs
-      WHERE sent_date = ?
-    `).bind(todayStr).all();
+    const attLogs = await env.DB.prepare(`
+      SELECT DISTINCT employee_code FROM attendance_reminder_logs
+      WHERE sent_date = ? OR (month = ? AND month != '')
+    `).bind(todayStr, monthQuery).all().catch(() => ({ results: [] }));
+
+    // 2. Check email_logs table for dispatched reminders
+    const emailLogs = await env.DB.prepare(`
+      SELECT DISTINCT related_entity_id, user_id FROM email_logs
+      WHERE (template_name = 'expense_submission_reminder' OR subject LIKE '%Expense%Reminder%')
+        AND (DATE(created_at) = ? OR created_at LIKE ?)
+    `).bind(todayStr, `${todayStr}%`).all().catch(() => ({ results: [] }));
+
+    const sentSet = new Set();
+    (attLogs.results || []).forEach(r => {
+      if (r.employee_code) sentSet.add(String(r.employee_code).trim().toUpperCase());
+    });
+    (emailLogs.results || []).forEach(r => {
+      if (r.related_entity_id) sentSet.add(String(r.related_entity_id).trim().toUpperCase());
+      if (r.user_id) sentSet.add(String(r.user_id).trim().toUpperCase());
+    });
 
     return jsonResponse({
       success: true,
-      sent_today: (rows.results || []).map(r => r.employee_code)
+      sent_today: Array.from(sentSet)
     });
   } catch (error) {
+    console.warn("handleGetSentReminders error:", error);
     return jsonResponse({ success: true, sent_today: [] });
   }
 }
