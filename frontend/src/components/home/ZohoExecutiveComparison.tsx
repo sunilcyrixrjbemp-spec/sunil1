@@ -14,13 +14,13 @@ import {
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
-  Activity, 
   Calendar, 
-  Sparkles, 
-  BarChart3, 
-  LineChart, 
-  Wallet, 
-  Scale 
+  Sparkles,
+  BarChart3,
+  LineChart,
+  Wallet,
+  Scale,
+  FileText
 } from "lucide-react";
 import { expenseService } from "../../services/expenseService";
 import { swrFetch } from "../../utils/dataCache";
@@ -42,6 +42,185 @@ const MONTH_NAMES = [
 ];
 
 const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "").toLowerCase();
+
+// Comprehensive breakdown extractor matching ZohoCategoryChart
+function computeCategoryBreakdown(claims: any[]) {
+  let bikeAmt = 0;
+  let carAmt = 0;
+  let busAmt = 0;
+  let trainAmt = 0;
+  let autoAmt = 0;
+  let daAmt = 0;
+  let hotelAmt = 0;
+  let sparesAmt = 0;
+  let courierAmt = 0;
+  let printingAmt = 0;
+  let mobileAmt = 0;
+  let miscAmt = 0;
+
+  claims.forEach((exp) => {
+    if (!exp) return;
+
+    let rawLegs = exp.itineraries || exp.legs || exp.items;
+    if (typeof rawLegs === "string") {
+      try {
+        rawLegs = JSON.parse(rawLegs);
+      } catch {
+        rawLegs = null;
+      }
+    }
+
+    if (Array.isArray(rawLegs) && rawLegs.length > 0) {
+      rawLegs.forEach((leg: any) => {
+        if (!leg) return;
+        const mode = (leg.travel_mode || leg.mode || "").trim().toLowerCase();
+        const sub_mode = (leg.sub_mode || "").trim().toLowerCase();
+        const fare = Number(leg.travel_amount || leg.fare || 0);
+
+        if (mode === "bike") {
+          const dist = Number(leg.distance_km || 0);
+          bikeAmt += dist > 0 ? (fare || dist * 5.0) : fare;
+        } else if (mode === "car") {
+          const dist = Number(leg.distance_km || 0);
+          carAmt += dist > 0 ? (fare || dist * 11.0) : fare;
+        } else if (mode === "bus") {
+          busAmt += fare;
+        } else if (mode === "train") {
+          trainAmt += fare;
+        } else if (mode === "auto" || mode.includes("cab") || mode.includes("uber") || mode.includes("rapido") || mode.includes("taxi")) {
+          autoAmt += fare;
+        }
+
+        if (sub_mode === "auto" || sub_mode.includes("cab") || sub_mode.includes("uber") || sub_mode.includes("rapido")) {
+          autoAmt += Number(leg.sub_amount || 0);
+        }
+
+        daAmt += Number(leg.da_amount || leg.da || 0);
+        hotelAmt += Number(leg.hotel_amount || leg.hotel || 0);
+        sparesAmt += Number(leg.local_purchase || leg.spare_purchase || leg.spare || leg.spare_cost || 0);
+
+        const oth_desc = (leg.other_desc || leg.desc || exp.description || exp.purpose || "").trim().toLowerCase();
+        const oth_amt = Number(leg.other_amount || leg.other || leg.misc || 0);
+
+        if (oth_amt > 0) {
+          if (
+            oth_desc.includes("courier") ||
+            oth_desc.includes("courrier") ||
+            oth_desc.includes("post") ||
+            oth_desc.includes("speed post") ||
+            oth_desc.includes("dispatch") ||
+            oth_desc.includes("parcel") ||
+            oth_desc.includes("dtdc")
+          ) {
+            courierAmt += oth_amt;
+          } else if (
+            oth_desc.includes("print") ||
+            oth_desc.includes("stationery") ||
+            oth_desc.includes("xerox") ||
+            oth_desc.includes("paper") ||
+            oth_desc.includes("photocopy")
+          ) {
+            printingAmt += oth_amt;
+          } else if (
+            oth_desc.includes("recharge") ||
+            oth_desc.includes("mobile") ||
+            oth_desc.includes("sim") ||
+            oth_desc.includes("internet") ||
+            oth_desc.includes("wifi")
+          ) {
+            mobileAmt += oth_amt;
+          } else if (
+            oth_desc.includes("hotel") ||
+            oth_desc.includes("stay") ||
+            oth_desc.includes("lodge") ||
+            oth_desc.includes("room")
+          ) {
+            hotelAmt += oth_amt;
+          } else if (
+            oth_desc.includes("spare") ||
+            oth_desc.includes("purchase") ||
+            oth_desc.includes("part") ||
+            oth_desc.includes("battery")
+          ) {
+            sparesAmt += oth_amt;
+          } else {
+            miscAmt += oth_amt;
+          }
+        }
+      });
+    } else {
+      // Flat claim fields check
+      const total = Number(exp.amount != null ? exp.amount : (exp.total_amount || 0));
+      const mode = String(exp.travel_mode || exp.category || "").trim().toLowerCase();
+      const desc = String(exp.description || exp.purpose || "").trim().toLowerCase();
+
+      const flatHotel = Number(exp.hotel_amount || exp.hotel || exp.boarding_lodging || 0);
+      const flatDa = Number(exp.da_amount || exp.da || exp.daily_allowance || 0);
+      const flatSpares = Number(exp.local_purchase || exp.spare_purchase || exp.spare_cost || exp.spare || 0);
+      const flatCourier = Number(exp.courier_charges || exp.courier_amount || 0);
+      const flatPrinting = Number(exp.printing_stationery || exp.printing_amount || 0);
+      const flatMobile = Number(exp.mobile_recharge || 0);
+      const flatMisc = Number(exp.misc_expenses || exp.other_amount || 0);
+
+      if (flatHotel > 0 || flatDa > 0 || flatSpares > 0 || flatCourier > 0 || flatPrinting > 0 || flatMobile > 0 || flatMisc > 0) {
+        hotelAmt += flatHotel;
+        daAmt += flatDa;
+        sparesAmt += flatSpares;
+        courierAmt += flatCourier;
+        printingAmt += flatPrinting;
+        mobileAmt += flatMobile;
+        miscAmt += flatMisc;
+
+        const remainder = total - (flatHotel + flatDa + flatSpares + flatCourier + flatPrinting + flatMobile + flatMisc);
+        if (remainder > 0) {
+          if (mode.includes("bike")) bikeAmt += remainder;
+          else if (mode.includes("car")) carAmt += remainder;
+          else if (mode.includes("bus")) busAmt += remainder;
+          else if (mode.includes("train")) trainAmt += remainder;
+          else if (mode.includes("auto") || mode.includes("cab")) autoAmt += remainder;
+          else miscAmt += remainder;
+        }
+      } else {
+        if (mode.includes("bike")) {
+          bikeAmt += total;
+        } else if (mode.includes("car")) {
+          carAmt += total;
+        } else if (mode.includes("bus")) {
+          busAmt += total;
+        } else if (mode.includes("train")) {
+          trainAmt += total;
+        } else if (mode.includes("auto") || mode.includes("cab") || mode.includes("taxi")) {
+          autoAmt += total;
+        } else if (mode.includes("hotel") || mode.includes("stay") || mode.includes("boarding") || mode.includes("lodging") || desc.includes("hotel")) {
+          hotelAmt += total;
+        } else if (mode.includes("da") || mode.includes("allowance") || mode.includes("food") || mode.includes("meal") || desc.includes("da")) {
+          daAmt += total;
+        } else if (mode.includes("spare") || mode.includes("purchase") || mode.includes("battery") || desc.includes("spare")) {
+          sparesAmt += total;
+        } else if (mode.includes("courier") || desc.includes("courier") || desc.includes("speed post")) {
+          courierAmt += total;
+        } else if (mode.includes("print") || mode.includes("stationery") || desc.includes("print")) {
+          printingAmt += total;
+        } else if (mode.includes("mobile") || mode.includes("recharge") || mode.includes("internet")) {
+          mobileAmt += total;
+        } else {
+          miscAmt += total;
+        }
+      }
+    }
+  });
+
+  return {
+    travelTA: bikeAmt + carAmt + busAmt + trainAmt + autoAmt,
+    daAmt,
+    hotelAmt,
+    sparesAmt,
+    courierAmt,
+    printingAmt,
+    mobileAmt,
+    miscAmt
+  };
+}
 
 export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = ({
   currentClaims = [],
@@ -180,7 +359,7 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
     : (currStats.total > 0 ? 100 : 0);
   const isGrowth = deltaAmount > 0;
 
-  // Data Scientist Grade: Day-by-Day Comparative Run-Rate (Day 1 to 31)
+  // Day-by-Day Comparative Run-Rate (Day 1 to 31)
   const dailyComparisonData = useMemo(() => {
     const dayMap: Record<number, { day: number; current: number; previous: number }> = {};
     for (let i = 1; i <= 31; i++) {
@@ -210,39 +389,20 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
     return Object.values(dayMap);
   }, [currentClaims, filteredPrevClaims]);
 
-  // Data Scientist Grade: Category-wise Spend Variance
+  // Accurate Category-wise Spend Breakdown Comparison
   const categoryComparisonData = useMemo(() => {
-    const categories = ["Travel", "Daily Allowance", "Hotel/Stay", "Courier", "Spares", "Others"];
-    const catMap: Record<string, { name: string; current: number; previous: number }> = {};
-    categories.forEach(cat => {
-      catMap[cat] = { name: cat, current: 0, previous: 0 };
-    });
+    const currCats = computeCategoryBreakdown(currentClaims);
+    const prevCats = computeCategoryBreakdown(filteredPrevClaims);
 
-    const normalizeCat = (raw: string) => {
-      const s = (raw || "").toLowerCase();
-      if (s.includes("bike") || s.includes("car") || s.includes("bus") || s.includes("train") || s.includes("travel") || s.includes("auto") || s.includes("fuel")) return "Travel";
-      if (s.includes("da") || s.includes("food") || s.includes("meal") || s.includes("allowance")) return "Daily Allowance";
-      if (s.includes("hotel") || s.includes("stay") || s.includes("lodge") || s.includes("accommodation")) return "Hotel/Stay";
-      if (s.includes("courier") || s.includes("courrier") || s.includes("postage")) return "Courier";
-      if (s.includes("spare") || s.includes("part") || s.includes("purchase") || s.includes("repair")) return "Spares";
-      return "Others";
-    };
-
-    currentClaims.forEach((c) => {
-      const cat = normalizeCat(c.travel_mode || c.category || "");
-      if (catMap[cat]) {
-        catMap[cat].current += Number(c.amount != null ? c.amount : (c.total_amount || 0));
-      }
-    });
-
-    filteredPrevClaims.forEach((c) => {
-      const cat = normalizeCat(c.travel_mode || c.category || "");
-      if (catMap[cat]) {
-        catMap[cat].previous += Number(c.amount != null ? c.amount : (c.total_amount || 0));
-      }
-    });
-
-    return Object.values(catMap);
+    return [
+      { name: "Travel (TA)", current: currCats.travelTA, previous: prevCats.travelTA },
+      { name: "Daily Allowance (DA)", current: currCats.daAmt, previous: prevCats.daAmt },
+      { name: "Hotel / Lodging", current: currCats.hotelAmt, previous: prevCats.hotelAmt },
+      { name: "Spares / Purchase", current: currCats.sparesAmt, previous: prevCats.sparesAmt },
+      { name: "Courier & Postage", current: currCats.courierAmt, previous: prevCats.courierAmt },
+      { name: "Stationery & Print", current: currCats.printingAmt, previous: prevCats.printingAmt },
+      { name: "Mobile & Misc", current: currCats.mobileAmt + currCats.miscAmt, previous: prevCats.mobileAmt + prevCats.miscAmt },
+    ];
   }, [currentClaims, filteredPrevClaims]);
 
   return (
@@ -302,7 +462,7 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
         </div>
       </div>
 
-      {/* ── 4 Compact KPI Cards (100% Ditto ZohoKpiRow 82px Height Tokens) ── */}
+      {/* ── 4 Compact KPI Cards (100% Ditto ZohoKpiRow 78px-82px Height Tokens) ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
         {/* Card 1: Last Month */}
         <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-teal-600 p-2.5 transition-all duration-200 flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs">
@@ -371,23 +531,23 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
           </div>
         </div>
 
-        {/* Card 4: Run-Rate Velocity */}
+        {/* Card 4: Total Claims Volume Comparison */}
         <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-indigo-600 p-2.5 transition-all duration-200 flex flex-col justify-between h-[78px] relative overflow-hidden shadow-2xs">
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-indigo-600" />
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-800 font-sans">
-              RUN-RATE RATIO
+              CLAIMS SUBMITTED
             </span>
             <div className="w-5 h-5 rounded-[3px] bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-200">
-              <Activity className="w-2.5 h-2.5" />
+              <FileText className="w-2.5 h-2.5" />
             </div>
           </div>
           <div>
             <div className="text-sm sm:text-base font-bold font-mono text-indigo-900 leading-tight">
-              {prevStats.total > 0 ? `${(currStats.total / prevStats.total).toFixed(2)}x` : '1.00x'} Spend
+              {currStats.count.toLocaleString("en-IN")} <span className="text-xs text-ink-500 font-normal">Claims</span>
             </div>
             <span className="text-[10px] text-indigo-600/80 font-medium leading-none mt-0.5 block truncate font-mono">
-              {prevStats.count > 0 ? `${(currStats.count / prevStats.count).toFixed(2)}x` : '1.00x'} Claim Volume
+              vs {prevStats.count.toLocaleString("en-IN")} in {prevLabel} ({currStats.count - prevStats.count >= 0 ? '+' : ''}{(currStats.count - prevStats.count).toLocaleString("en-IN")})
             </span>
           </div>
         </div>
@@ -398,7 +558,7 @@ export const ZohoExecutiveComparison: React.FC<ZohoExecutiveComparisonProps> = (
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[10.5px] font-bold uppercase tracking-wider text-ink-800 font-display flex items-center gap-1.5">
             <Sparkles className="w-3 h-3 text-accent-600" />
-            {chartMode === "daily" ? `Day-by-Day Burn-Rate (${prevLabel} vs ${currLabel})` : `Category-wise Expenditure (${prevLabel} vs ${currLabel})`}
+            {chartMode === "daily" ? `Day-by-Day Burn-Rate (${prevLabel} vs ${currLabel})` : `Category-wise Expenditure Breakdown (${prevLabel} vs ${currLabel})`}
           </span>
           <span className="text-[10px] text-ink-500 font-sans">Hover points for detailed delta metrics</span>
         </div>
