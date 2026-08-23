@@ -223,7 +223,6 @@ const ALL_WINDOWS = [
   { id: "report", name: "Month Report" },
   { id: "mis_report", name: "MIS Report" },
   { id: "kpi", name: "KPI Dashboard" },
-  { id: "new_dashboard", name: "New Dashboard" },
   { id: "complaint_upload", name: "Complaint Upload" },
   { id: "claim_level_reset", name: "Claim Level Reset" },
   { id: "asset_upload", name: "Asset Inventory" },

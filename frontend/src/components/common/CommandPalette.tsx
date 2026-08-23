@@ -14,7 +14,6 @@ import {
   Gauge,
   ShieldAlert,
   Package,
-  TrendingUp,
   X,
   ArrowRight,
 } from "lucide-react";
@@ -30,7 +29,6 @@ export interface CommandItem {
 
 const COMMANDS: CommandItem[] = [
   { id: "home", name: "Overview Dashboard", category: "Navigation", path: "/home", icon: Home },
-  { id: "new_dashboard", name: "Executive Analytics", category: "Navigation", path: "/new-dashboard", icon: TrendingUp },
   { id: "expense", name: "Submit New Claim", category: "Actions", path: "/submit-expense", icon: FilePlus },
   { id: "approval", name: "Approval Center", category: "Actions", path: "/approval-center", icon: CheckSquare },
   { id: "mis_report", name: "MIS Reports", category: "Reports", path: "/mis-report", icon: FileSpreadsheet },

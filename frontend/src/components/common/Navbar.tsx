@@ -27,7 +27,6 @@ export interface NavbarProps {
 const ROUTE_TITLES: Record<string, string> = {
   "/home": "Overview",
   "/": "Overview",
-  "/new-dashboard": "Executive Dashboard",
   "/trc-repair": "TRC Repair Hub",
   "/trc-module": "TRC Repair Hub",
   "/receive-machine": "TRC Receive Machine",

@@ -14,7 +14,6 @@ import {
   ShieldAlert,
   Package,
   ClipboardList,
-  TrendingUp,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -55,7 +54,6 @@ export const NAV_STRUCTURE: {
     { id: "expense", name: "Expense Claims (₹)", path: "/submit-expense", icon: FilePlus },
     { id: "approval", name: "Approval Center", path: "/approval-center", icon: CheckSquare },
     { id: "trc_repair", name: "TRC Repair Hub", path: "/trc-repair", icon: Wrench },
-    { id: "new_dashboard", name: "Executive Dashboard", path: "/new-dashboard", icon: TrendingUp },
   ],
   reportsGroup: {
     id: "reports_group",

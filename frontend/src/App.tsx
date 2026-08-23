@@ -7,7 +7,6 @@ import { Fingerprint, Lock, ScanFace } from "lucide-react";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import ErrorBoundary from "./components/common/ErrorBoundary";
-import NewDashboardPage from "./pages/NewDashboardPage";
 import { ConfigProvider } from "antd";
 import { antdTheme } from "./styles/themeConfig";
 
@@ -309,7 +308,6 @@ function App() {
                 <Route path="/penalty-report" element={<PenaltyModulePage />} />
                 <Route path="/penalty-module" element={<PenaltyModulePage />} />
                 <Route path="/analysis" element={<AnalysisPage />} />
-                <Route path="/new-dashboard" element={<NewDashboardPage />} />
                 <Route path="/month-report" element={<MonthSummaryPage />} />
                 <Route path="/consolidated-report" element={<ConsolidatedReportPage />} />
                 <Route path="/attendance" element={<AttendancePage />} />
