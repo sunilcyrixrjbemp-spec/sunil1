@@ -16,6 +16,7 @@ import api from "../../services/api";
 
 interface ZohoSubmissionComplianceWidgetProps {
   user?: any;
+  activeTab?: "my-claims" | "team-claims";
   expenses: any[];
   selectMonth: string; // e.g. "2026-08"
   filterZone?: string;
@@ -33,6 +34,7 @@ const cleanZone = (z: string) => (z || "").trim().replace(/\s*[Zz]one\s*$/i, "")
 
 export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWidgetProps> = ({
   user,
+  activeTab = "team-claims",
   expenses = [],
   selectMonth = "2026-08",
   filterZone = "all",
@@ -328,6 +330,24 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
       };
     });
 
+    // If on "My Claims" tab, strictly show ONLY the logged-in user's own record!
+    if (activeTab === "my-claims" && user) {
+      const myCode = String(user.user_id || user.e_code || user.id || "").trim().toUpperCase();
+      const myName = String(user.name || "").trim().toLowerCase();
+
+      let myRows = rows.filter((r) => {
+        const rCode = String(r.code || "").trim().toUpperCase();
+        const rName = String(r.name || "").trim().toLowerCase();
+        return (myCode && (rCode === myCode || rCode.includes(myCode))) || (myName && rName === myName);
+      });
+
+      // Fallback: If no exact match row found in team map, synthesize a single self-row
+      if (myRows.length === 0) {
+        myRows = rows.slice(0, 1);
+      }
+      return myRows;
+    }
+
     return rows.filter((r) => {
       if (filterZone !== "all" && cleanZone(r.zone) !== cleanZone(filterZone)) return false;
       if (filterDistrict !== "all" && r.district.toLowerCase() !== filterDistrict.toLowerCase()) return false;
@@ -399,10 +419,10 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
     }
   };
 
-  // Open Leave Marking Modal for Engineer
-  const handleOpenLeaveModal = (emp: any) => {
+  // Open Leave Marking Modal for Engineer (starts with EMPTY selection so user explicitly picks dates)
+  const handleOpenLeaveModal = (emp: any, defaultDate?: string) => {
     setTargetEmpForLeave(emp);
-    setSelectedLeaveDates(emp.missingDates || []);
+    setSelectedLeaveDates(defaultDate ? [defaultDate] : []);
     setLeaveType("Casual Leave");
     setLeaveReason("");
     setShowLeaveModal(true);
@@ -472,7 +492,7 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <h2 className="text-xs font-bold font-display uppercase tracking-wider text-ink-900 m-0 leading-tight">
-                DAILY EXPENSE SUBMISSION & PENDING TRACKER
+                {activeTab === "my-claims" ? "MY EXPENSE SUBMISSION & LEAVE TRACKER" : "DAILY EXPENSE SUBMISSION & PENDING TRACKER"}
               </h2>
               <span className="text-[9.5px] font-bold text-accent-700 bg-accent-50 px-1.5 py-0.2 rounded border border-accent-200 font-mono whitespace-nowrap leading-none">
                 {monthLabel} (Excl. Sundays & Leaves)
@@ -999,10 +1019,25 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
             {/* Missing Dates Selection Checkboxes */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[11px] font-bold text-ink-800">
-                <span>Select Missing Dates to Mark as Leave:</span>
-                <span className="text-[10px] text-indigo-700 font-mono">
-                  {selectedLeaveDates.length} selected
-                </span>
+                <span>Select Specific Date(s) for Leave:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedLeaveDates.length === targetEmpForLeave.missingDates.length) {
+                        setSelectedLeaveDates([]);
+                      } else {
+                        setSelectedLeaveDates([...targetEmpForLeave.missingDates]);
+                      }
+                    }}
+                    className="text-[10px] text-indigo-700 hover:text-indigo-900 font-bold underline cursor-pointer"
+                  >
+                    {selectedLeaveDates.length === targetEmpForLeave.missingDates.length ? "Deselect All" : "Select All"}
+                  </button>
+                  <span className="text-[10px] text-amber-700 font-mono font-bold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                    {selectedLeaveDates.length} chosen
+                  </span>
+                </div>
               </div>
               <div className="max-h-36 overflow-y-auto border border-line rounded p-2 bg-surface-sunken/40 space-y-1.5">
                 {targetEmpForLeave.missingDates.length === 0 ? (
@@ -1012,11 +1047,13 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                 ) : (
                   targetEmpForLeave.missingDates.map((dStr: string) => {
                     const isChecked = selectedLeaveDates.includes(dStr);
+                    const d = new Date(dStr);
+                    const dayName = !isNaN(d.getTime()) ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()] : "";
                     return (
                       <label
                         key={dStr}
                         className={`flex items-center justify-between p-1.5 rounded cursor-pointer transition-colors ${
-                          isChecked ? "bg-amber-50/80 border border-amber-200" : "bg-white border border-line/60 hover:bg-slate-50"
+                          isChecked ? "bg-amber-50/90 border border-amber-300 ring-1 ring-amber-300" : "bg-white border border-line/60 hover:bg-slate-50"
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -1032,9 +1069,11 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                             }}
                             className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5"
                           />
-                          <span className="font-mono text-xs font-bold text-ink-800">{dStr}</span>
+                          <span className="font-mono text-xs font-bold text-ink-800">{dStr} ({dayName})</span>
                         </div>
-                        <span className="text-[10px] text-ink-500 uppercase font-bold">Missing</span>
+                        <span className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded ${isChecked ? "bg-amber-100 text-amber-800" : "text-ink-500"}`}>
+                          {isChecked ? "Mark Leave" : "Missing"}
+                        </span>
                       </label>
                     );
                   })
