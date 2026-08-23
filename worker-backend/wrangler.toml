@@ -21,8 +21,6 @@ id = "7a00b8d26638473384d2d99f92417fee"
 preview_id = "7a00b8d26638473384d2d99f92417fee"
 
 # ─── Cloudflare Email Workers (Native email sending) ───────────────────────
-# Docs: https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
-# Enable: Cloudflare Dashboard → Email → Email Routing → Enable
 [[send_email]]
 name = "EMAIL_SENDER"
 
@@ -36,12 +34,6 @@ binding = "CYRIXAPP_BUCKET"
 bucket_name = "fieldops-uploads"
 
 # ─── Cloudflare Queues (Async Job Processing — Pro Plan) ──────────────
-# Run once to create queues:
-#   wrangler queues create fieldops-uploads-queue
-#   wrangler queues create fieldops-email-queue
-#   wrangler queues create fieldops-analytics-queue
-#   wrangler queues create fieldops-dlq
-
 [[queues.producers]]
 binding = "UPLOADS_QUEUE"
 queue = "fieldops-uploads-queue"
@@ -86,12 +78,10 @@ APP_ENV = "production"
 CF_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
 
 # Email — Cloudflare Email Workers
-# From address must be verified in Cloudflare Email Routing
 EMAIL_FROM_ADDRESS = "noreply@indrae.in"
 EMAIL_FROM_NAME = "Cyrix Field Connect"
 
-# Google Drive — ONLY used by NewDashboard page (legacy data source)
-# All other GAS calls removed
+# Google Drive
 GAS_DASHBOARD_URL = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"
 
 # Storage
@@ -109,33 +99,6 @@ RATE_LIMIT_IP_GLOBAL = "60"
 RATE_LIMIT_LOGIN = "5"
 RATE_LIMIT_OTP = "3"
 RATE_LIMIT_EMAIL = "10"
-
-# ─── SECRETS (set with: wrangler secret put NAME) ─────────────────────
-#
-#  wrangler secret put API_SECRET
-#  → Your JWT signing key (strong, 32+ chars)
-#
-#  wrangler secret put CF_EMAIL_API_TOKEN
-#  → YOUR_CLOUDFLARE_API_TOKEN_HERE
-#  → Used ONLY for Cloudflare Email Workers API sends
-#
-#  wrangler secret put APPROVAL_SECRET
-#  → For signing one-click email approval tokens
-
-# ─── Cron Triggers ────────────────────────────────────────────────────────────
-# NOTE: If deploying via GitHub Actions API Token without schedule permissions,
-# configure triggers directly in Cloudflare Dashboard → Workers → fieldops-api → Triggers
-[triggers]
-crons = [
-  "30 20 * * *",    # 02:00 AM IST (20:30 UTC) — Daily diagnostic check & SLA alerts (/api/cron/daily-check)
-  "0 0 * * *",      # 05:30 AM IST (00:00 UTC) — Auto-approval expiry check (handleAutoApprovalExpiry)
-  "30 4 * * *",     # 10:00 AM IST (04:30 UTC) — Manager daily digest emails (handleManagerDigest)
-  "0 18 * * *",     # 11:30 PM IST (18:00 UTC) — Daily cleanup & system metrics (handleDailyCleanup)
-  "0 18 * * 0",     # Sunday 11:30 PM IST — Weekly report generation
-  "30 18 1 * *",    # 1st of month midnight IST — Monthly report generation
-]
-
-
 
 # ─── Cloudflare Workers AI Binding ──────────────────────────────────────────
 [ai]

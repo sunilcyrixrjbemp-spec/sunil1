@@ -347,6 +347,8 @@ export default function AdminPage() {
   const [noTaDaHospitals, setNoTaDaHospitals] = useState<any[]>([]);
   const [facilityLoading, setFacilityLoading] = useState(false);
   const [facilitySearch, setFacilitySearch] = useState("");
+  const [facilityPage, setFacilityPage] = useState(1);
+  const [facilityPageSize, setFacilityPageSize] = useState(50);
   const [facilitySubTab, setFacilitySubTab] = useState<"expense" | "notada">("expense");
   const [isAddFacilityModalOpen, setIsAddFacilityModalOpen] = useState(false);
   const [newFacilityName, setNewFacilityName] = useState("");
@@ -1526,6 +1528,43 @@ export default function AdminPage() {
     return Array.from(zones).sort();
   }, [standardFacilities]);
 
+  
+  // High-performance memoized filter pipelines (0ms latency, zero DOM jank)
+  const filteredStandardFacilities = useMemo(() => {
+    const q = facilitySearch.trim().toLowerCase();
+    const zoneFilter = facilityZoneFilter !== "all" ? normalizeZoneName(facilityZoneFilter).toLowerCase() : null;
+    const distFilter = facilityDistrictFilter !== "all" ? facilityDistrictFilter.toLowerCase() : null;
+
+    return standardFacilities.filter(f => {
+      if (zoneFilter && normalizeZoneName(f.zone_name).toLowerCase() !== zoneFilter) return false;
+      if (distFilter && (f.district_name || "").toLowerCase() !== distFilter) return false;
+      if (!q) return true;
+      return (
+        (f.facility_name || "").toLowerCase().includes(q) ||
+        (f.district_name || "").toLowerCase().includes(q) ||
+        (f.facility_incharge || "").toLowerCase().includes(q) ||
+        (f.dm_name || "").toLowerCase().includes(q) ||
+        (f.coordinator_name || "").toLowerCase().includes(q) ||
+        (f.facility_type || "").toLowerCase().includes(q) ||
+        (f.zone_name || "").toLowerCase().includes(q)
+      );
+    });
+  }, [standardFacilities, facilityZoneFilter, facilityDistrictFilter, facilitySearch]);
+
+  const filteredNoTaDaHospitals = useMemo(() => {
+    const q = facilitySearch.trim().toLowerCase();
+    const distFilter = facilityDistrictFilter !== "all" ? facilityDistrictFilter.toLowerCase() : null;
+
+    return noTaDaHospitals.filter(f => {
+      if (distFilter && (f.district_name || "").toLowerCase() !== distFilter) return false;
+      if (!q) return true;
+      return (
+        (f.hospital_name || f.facility_name || "").toLowerCase().includes(q) ||
+        (f.district_name || "").toLowerCase().includes(q)
+      );
+    });
+  }, [noTaDaHospitals, facilityDistrictFilter, facilitySearch]);
+
   const availableFacilityDistricts = useMemo(() => {
     const districts = new Set<string>();
     const list = facilitySubTab === "expense" ? standardFacilities : noTaDaHospitals;
@@ -1620,124 +1659,35 @@ export default function AdminPage() {
     setBulkFacilityProgress({ current: 0, total: bulkFacilityPreview.length, percent: 0 });
 
     try {
-      // Step 1: Try Bulk API Endpoint first
-      try {
-        const testRes = await adminService.bulkImportFacilities(bulkFacilityPreview.slice(0, 50));
-        if (testRes && testRes.success) {
-          let totalInserted = testRes.insertedCount || 0;
-          let totalUpdated = testRes.updatedCount || 0;
+      const CHUNK_SIZE = 500;
+      let totalInserted = 0;
+      let totalUpdated = 0;
 
-          for (let i = 50; i < bulkFacilityPreview.length; i += 100) {
-            const chunk = bulkFacilityPreview.slice(i, i + 100);
-            const currentCount = Math.min(i + 100, bulkFacilityPreview.length);
-            setBulkFacilityProgress({
-              current: currentCount,
-              total: bulkFacilityPreview.length,
-              percent: Math.round((currentCount / bulkFacilityPreview.length) * 100)
-            });
-            const chunkRes = await adminService.bulkImportFacilities(chunk);
-            if (chunkRes && chunkRes.success) {
-              totalInserted += chunkRes.insertedCount || 0;
-              totalUpdated += chunkRes.updatedCount || 0;
-            }
-          }
-
-          toast.success(`Bulk import completed: ${totalInserted} new added, ${totalUpdated} updated!`);
-          setIsBulkFacilityModalOpen(false);
-          setBulkFacilityPreview([]);
-          setBulkFacilityFileName("");
-          setBulkFacilityProgress(null);
-          fetchInitialData();
-          return;
-        }
-      } catch (bulkErr) {
-        // Bulk endpoint returned 404 or network issue — seamlessly switch to concurrent upsert
-        console.log("Bulk endpoint unavailable, switching to concurrent upsert fallback...");
-      }
-
-      // Step 2: High-Speed Concurrent Upsert Fallback (100% Reliable across all environments)
-      const existingMap = new Map<string, any>();
-      for (const fac of standardFacilities) {
-        if (fac.facility_name) {
-          existingMap.set(fac.facility_name.trim().toLowerCase(), fac);
-        }
-      }
-
-      let insertedCount = 0;
-      let updatedCount = 0;
-      const CONCURRENCY = 8;
-
-      for (let i = 0; i < bulkFacilityPreview.length; i += CONCURRENCY) {
-        const batch = bulkFacilityPreview.slice(i, i + CONCURRENCY);
-
-        await Promise.all(
-          batch.map(async (f: any) => {
-            const facilityName = (
-              f["Facility Name"] || f.facility_name || f.Facility || f.facility ||
-              f["Hospital Name"] || f.hospital_name || f.hospital || f.name || ""
-            ).trim();
-            const districtName = (f["District"] || f.district_name || f.district || "").trim() || "General";
-            const facilityIncharge = (f["Facility Incharge"] || f.facility_incharge || f.incharge || f.Incharge || "").trim() || "N/A";
-            const dmName = (f["Divisional Manager"] || f["DM Name"] || f.dm_name || f.dm || f.manager || "").trim() || "N/A";
-            const coordinatorName = (f["Coordinator"] || f.coordinator_name || f.coordinator || "").trim() || "N/A";
-            const facilityType = (f["Facility Type"] || f.facility_type || f.type || "").trim() || "Hospital";
-            const zoneName = (f["Zone"] || f.zone_name || f.zone || "").trim() || "Rajasthan";
-
-            if (!facilityName) return;
-
-            const key = facilityName.toLowerCase();
-            const existing = existingMap.get(key);
-
-            if (existing && (existing.id || existing.ROWID)) {
-              // UPDATE existing record
-              try {
-                await adminService.updateFacility(existing.id || existing.ROWID, {
-                  facility_name: facilityName,
-                  district_name: districtName,
-                  target_table: "standard",
-                  facility_incharge: facilityIncharge,
-                  dm_name: dmName,
-                  coordinator_name: coordinatorName,
-                  facility_type: facilityType,
-                  zone_name: zoneName
-                });
-                updatedCount++;
-              } catch (_) {}
-            } else {
-              // INSERT new record
-              try {
-                await adminService.saveFacility({
-                  facility_name: facilityName,
-                  district_name: districtName,
-                  target_table: "standard",
-                  facility_incharge: facilityIncharge,
-                  dm_name: dmName,
-                  coordinator_name: coordinatorName,
-                  facility_type: facilityType,
-                  zone_name: zoneName
-                });
-                insertedCount++;
-                existingMap.set(key, { facility_name: facilityName });
-              } catch (_) {}
-            }
-          })
-        );
-
-        const currentCount = Math.min(i + CONCURRENCY, bulkFacilityPreview.length);
+      for (let i = 0; i < bulkFacilityPreview.length; i += CHUNK_SIZE) {
+        const chunk = bulkFacilityPreview.slice(i, i + CHUNK_SIZE);
+        const currentCount = Math.min(i + CHUNK_SIZE, bulkFacilityPreview.length);
         setBulkFacilityProgress({
           current: currentCount,
           total: bulkFacilityPreview.length,
           percent: Math.round((currentCount / bulkFacilityPreview.length) * 100)
         });
+
+        const res = await adminService.bulkImportFacilities(chunk);
+        if (res && res.success) {
+          totalInserted += res.insertedCount || 0;
+          totalUpdated += res.updatedCount || 0;
+        } else {
+          throw new Error(res?.error || `Failed at chunk ${Math.floor(i / CHUNK_SIZE) + 1}`);
+        }
       }
 
-      toast.success(`Bulk import completed: ${insertedCount} new added, ${updatedCount} updated!`);
+      toast.success(`Turbo import completed: ${totalInserted} new added, ${totalUpdated} updated!`);
       setIsBulkFacilityModalOpen(false);
       setBulkFacilityPreview([]);
       setBulkFacilityFileName("");
       setBulkFacilityProgress(null);
       fetchInitialData();
-
+      fetchFacilities();
     } catch (err: any) {
       console.error("Bulk facility import error:", err);
       toast.error("Bulk import error: " + (err.response?.data?.error || err.message));
@@ -3265,7 +3215,7 @@ export default function AdminPage() {
                         type="text"
                         placeholder="Search facility, incharge, manager..."
                         value={facilitySearch}
-                        onChange={(e) => setFacilitySearch(e.target.value)}
+                        onChange={(e) => { setFacilitySearch(e.target.value); setFacilityPage(1); }}
                         className="input-lte pl-8 h-8 text-xs w-full rounded-xl bg-white border border-line focus:border-accent-400"
                       />
                       {facilitySearch && (
@@ -3282,7 +3232,7 @@ export default function AdminPage() {
                     {/* Zone Dropdown */}
                     <select
                       value={facilityZoneFilter}
-                      onChange={(e) => setFacilityZoneFilter(e.target.value)}
+                      onChange={(e) => { setFacilityZoneFilter(e.target.value); setFacilityPage(1); }}
                       className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-28 sm:w-32 bg-white shrink-0 border border-line"
                     >
                       <option value="all">All Zones ({availableFacilityZones.length})</option>
@@ -3294,7 +3244,7 @@ export default function AdminPage() {
                     {/* District Dropdown */}
                     <select
                       value={facilityDistrictFilter}
-                      onChange={(e) => setFacilityDistrictFilter(e.target.value)}
+                      onChange={(e) => { setFacilityDistrictFilter(e.target.value); setFacilityPage(1); }}
                       className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-32 sm:w-36 bg-white shrink-0 border border-line"
                     >
                       <option value="all">All Districts ({availableFacilityDistricts.length})</option>
@@ -3328,95 +3278,141 @@ export default function AdminPage() {
                     {facilityLoading ? (
                       <div className="p-12 text-center text-ink-500 font-bold text-xs flex flex-col items-center justify-center gap-3">
                         <LteSpinner />
-                        <span>Loading Facilities...</span>
+                        <span>Loading Facilities Master Database...</span>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse text-xs">
-                          <thead>
-                            <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
-                              <th className="py-2.5 px-3"># ID</th>
-                              <th className="py-2.5 px-4">Facility Name</th>
-                              <th className="py-2.5 px-3">District</th>
-                              <th className="py-2.5 px-3">Facility Type</th>
-                              <th className="py-2.5 px-3">Zone</th>
-                              <th className="py-2.5 px-3">Facility Incharge</th>
-                              <th className="py-2.5 px-3">Divisional Manager</th>
-                              <th className="py-2.5 px-3">Coordinator</th>
-                              <th className="py-2.5 px-3 text-right min-w-[90px]">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-line text-ink-900 font-medium">
-                            {standardFacilities
-                              .filter((f) => {
-                                if (facilityZoneFilter !== "all" && normalizeZoneName(f.zone_name).toLowerCase() !== normalizeZoneName(facilityZoneFilter).toLowerCase()) return false;
-                                if (facilityDistrictFilter !== "all" && (f.district_name || "").toLowerCase() !== facilityDistrictFilter.toLowerCase()) return false;
-                                if (!facilitySearch.trim()) return true;
-                                const q = facilitySearch.toLowerCase();
-                                return (
-                                  (f.facility_name || "").toLowerCase().includes(q) ||
-                                  (f.district_name || "").toLowerCase().includes(q) ||
-                                  (f.facility_incharge || "").toLowerCase().includes(q) ||
-                                  (f.dm_name || "").toLowerCase().includes(q) ||
-                                  (f.coordinator_name || "").toLowerCase().includes(q) ||
-                                  (f.facility_type || "").toLowerCase().includes(q) ||
-                                  (f.zone_name || "").toLowerCase().includes(q)
-                                );
-                              })
-                              .map((f, idx) => (
-                                <tr key={f.id || idx} className="hover:bg-accent-50/20 transition-colors">
-                                  <td className="py-2 px-3 font-mono text-ink-500 font-semibold">#{f.id}</td>
-                                  <td className="py-2 px-4 font-bold text-ink-900">{f.facility_name}</td>
-                                  <td className="py-2 px-3 font-bold text-accent-700">{f.district_name}</td>
-                                  <td className="py-2 px-3">
-                                    <span className="px-2 py-0.5 bg-surface-sunken text-ink-700 rounded border border-line text-2xs font-semibold">
-                                      {f.facility_type || "Hospital"}
-                                    </span>
-                                  </td>
-                                  <td className="py-2 px-3 text-ink-600">{f.zone_name || "Rajasthan"}</td>
-                                  <td className="py-2 px-3 text-ink-700">{f.facility_incharge || "—"}</td>
-                                  <td className="py-2 px-3 text-ink-700 font-medium">{f.dm_name || "—"}</td>
-                                  <td className="py-2 px-3 text-ink-700">{f.coordinator_name || "—"}</td>
-                                  <td className="py-2 px-3 text-right">
-                                    <div className="flex items-center justify-end gap-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={() => openEditFacilityModal(f, "standard")}
-                                        className="p-1.5 bg-surface hover:bg-accent-50 text-ink-600 hover:text-accent-700 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
-                                        title="Edit Facility"
-                                      >
-                                        <Pencil className="w-3.5 h-3.5" />
-                                      </button>
-                                      <Popconfirm
-                                        title="Delete Facility?"
-                                        description="Are you sure you want to remove this facility?"
-                                        onConfirm={() => handleDeleteFacility(f.id || f.facility_name, "standard")}
-                                        okText="Delete"
-                                        cancelText="Cancel"
-                                        okButtonProps={{ danger: true, size: "small" }}
-                                      >
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse text-xs">
+                            <thead>
+                              <tr className="bg-surface-sunken text-ink-700 border-b border-line font-bold text-2xs uppercase tracking-wider">
+                                <th className="py-2.5 px-3"># ID</th>
+                                <th className="py-2.5 px-4">Facility Name</th>
+                                <th className="py-2.5 px-3">District</th>
+                                <th className="py-2.5 px-3">Facility Type</th>
+                                <th className="py-2.5 px-3">Zone</th>
+                                <th className="py-2.5 px-3">Facility Incharge</th>
+                                <th className="py-2.5 px-3">Divisional Manager</th>
+                                <th className="py-2.5 px-3">Coordinator</th>
+                                <th className="py-2.5 px-3 text-right min-w-[90px]">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-line text-ink-900 font-medium">
+                              {filteredStandardFacilities
+                                .slice((facilityPage - 1) * facilityPageSize, facilityPage * facilityPageSize)
+                                .map((f, idx) => (
+                                  <tr key={f.id || idx} className="hover:bg-accent-50/20 transition-colors">
+                                    <td className="py-2 px-3 font-mono text-ink-500 font-semibold">#{f.id || ((facilityPage - 1) * facilityPageSize + idx + 1)}</td>
+                                    <td className="py-2 px-4 font-bold text-ink-900">{f.facility_name}</td>
+                                    <td className="py-2 px-3 font-bold text-accent-700">{f.district_name}</td>
+                                    <td className="py-2 px-3">
+                                      <span className="px-2 py-0.5 bg-surface-sunken text-ink-700 rounded border border-line text-2xs font-semibold">
+                                        {f.facility_type || "Hospital"}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3 text-ink-600">{f.zone_name || "Rajasthan"}</td>
+                                    <td className="py-2 px-3 text-ink-700">{f.facility_incharge || "—"}</td>
+                                    <td className="py-2 px-3 text-ink-700 font-medium">{f.dm_name || "—"}</td>
+                                    <td className="py-2 px-3 text-ink-700">{f.coordinator_name || "—"}</td>
+                                    <td className="py-2 px-3 text-right">
+                                      <div className="flex items-center justify-end gap-1.5">
                                         <button
                                           type="button"
-                                          className="p-1.5 bg-surface hover:bg-rose-50 text-ink-400 hover:text-rose-600 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
-                                          title="Delete Facility"
+                                          onClick={() => openEditFacilityModal(f, "standard")}
+                                          className="p-1.5 bg-surface hover:bg-accent-50 text-ink-600 hover:text-accent-700 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                          title="Edit Facility"
                                         >
-                                          <Trash2 className="w-3.5 h-3.5" />
+                                          <Pencil className="w-3.5 h-3.5" />
                                         </button>
-                                      </Popconfirm>
-                                    </div>
+                                        <Popconfirm
+                                          title="Delete Facility?"
+                                          description="Are you sure you want to remove this facility?"
+                                          onConfirm={() => handleDeleteFacility(f.id || f.facility_name, "standard")}
+                                          okText="Delete"
+                                          cancelText="Cancel"
+                                          okButtonProps={{ danger: true, size: "small" }}
+                                        >
+                                          <button
+                                            type="button"
+                                            className="p-1.5 bg-surface hover:bg-rose-50 text-ink-400 hover:text-rose-600 rounded-lg border border-line text-2xs font-bold cursor-pointer transition-all shadow-2xs"
+                                            title="Delete Facility"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </Popconfirm>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              {filteredStandardFacilities.length === 0 && (
+                                <tr>
+                                  <td colSpan={9} className="py-8 text-center text-ink-400 font-medium">
+                                    No facilities found matching the filters.
                                   </td>
                                 </tr>
-                              ))}
-                            {standardFacilities.length === 0 && (
-                              <tr>
-                                <td colSpan={9} className="py-8 text-center text-ink-400 font-medium">
-                                  No Expense Facilities found.
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* High-Performance Pagination Footer */}
+                        {filteredStandardFacilities.length > 0 && (
+                          <div className="p-3 bg-surface-sunken/40 border-t border-line flex flex-wrap items-center justify-between gap-3 text-xs">
+                            <div className="flex items-center gap-2 text-ink-600 font-medium">
+                              <span>Showing</span>
+                              <span className="font-bold text-ink-900">
+                                {Math.min((facilityPage - 1) * facilityPageSize + 1, filteredStandardFacilities.length)} - {Math.min(facilityPage * facilityPageSize, filteredStandardFacilities.length)}
+                              </span>
+                              <span>of</span>
+                              <span className="font-bold text-ink-900 font-mono">{filteredStandardFacilities.length.toLocaleString()}</span>
+                              <span>facilities</span>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-ink-500 text-2xs uppercase font-bold">Per page:</span>
+                                <select
+                                  value={facilityPageSize}
+                                  onChange={(e) => {
+                                    setFacilityPageSize(Number(e.target.value));
+                                    setFacilityPage(1);
+                                  }}
+                                  className="px-2 py-1 bg-surface border border-line rounded-lg text-xs font-semibold text-ink-800 outline-none"
+                                >
+                                  <option value={25}>25</option>
+                                  <option value={50}>50</option>
+                                  <option value={100}>100</option>
+                                  <option value={250}>250</option>
+                                  <option value={500}>500</option>
+                                  <option value={1000}>1,000</option>
+                                </select>
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={facilityPage <= 1}
+                                  onClick={() => setFacilityPage(p => Math.max(1, p - 1))}
+                                  className="px-2.5 py-1 bg-surface hover:bg-surface-sunken disabled:opacity-40 disabled:cursor-not-allowed border border-line rounded-lg font-bold text-ink-700 transition-all text-xs"
+                                >
+                                  Prev
+                                </button>
+                                <span className="px-3 py-1 font-mono font-bold text-ink-800 text-xs">
+                                  {facilityPage} / {Math.ceil(filteredStandardFacilities.length / facilityPageSize) || 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  disabled={facilityPage >= Math.ceil(filteredStandardFacilities.length / facilityPageSize)}
+                                  onClick={() => setFacilityPage(p => Math.min(Math.ceil(filteredStandardFacilities.length / facilityPageSize), p + 1))}
+                                  className="px-2.5 py-1 bg-surface hover:bg-surface-sunken disabled:opacity-40 disabled:cursor-not-allowed border border-line rounded-lg font-bold text-ink-700 transition-all text-xs"
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -3442,16 +3438,8 @@ export default function AdminPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-line text-ink-900 font-medium">
-                            {noTaDaHospitals
-                              .filter((f) => {
-                                if (facilityDistrictFilter !== "all" && (f.district_name || "").toLowerCase() !== facilityDistrictFilter.toLowerCase()) return false;
-                                if (!facilitySearch.trim()) return true;
-                                const q = facilitySearch.toLowerCase();
-                                return (
-                                  (f.hospital_name || f.facility_name || "").toLowerCase().includes(q) ||
-                                  (f.district_name || "").toLowerCase().includes(q)
-                                );
-                              })
+                            {filteredNoTaDaHospitals
+                              .slice((facilityPage - 1) * facilityPageSize, facilityPage * facilityPageSize)
                               .map((f, idx) => (
                                 <tr key={f.id || idx} className="hover:bg-rose-50/20 transition-colors">
                                   <td className="py-2 px-3 font-mono text-ink-500 font-semibold">#{f.id || idx + 1}</td>

@@ -73,6 +73,7 @@ import {
   handleCloseTicket, handleReopenTicket, handleToggleFollowup,
   handleGetTicketStats, handleAssignTicket, handleUpdateTicketStatus, handleTicketWebSocket
 } from "./routes/ticket.js";
+import { handleAiAskHelp } from "./routes/aiHelp.js";
 
 // Upload handlers
 import {

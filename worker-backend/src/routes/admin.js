@@ -2089,14 +2089,14 @@ export async function handleUpdateFacility(request, env, params, query, user) {
     if (targetTable === "standard") {
       await runWrite(
         env,
-        "UPDATE facility_details SET facility_name = ?, district_name = ?, facility_incharge = ?, dm_name = ?, coordinator_name = ?, facility_type = ?, zone_name = ? WHERE ROWID = ? OR id = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))",
-        [facilityName, districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName, facilityId, facilityId, facilityId]
+        "UPDATE facility_details SET facility_name = ?, district_name = ?, facility_incharge = ?, dm_name = ?, coordinator_name = ?, facility_type = ?, zone_name = ? WHERE ROWID = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))",
+        [facilityName, districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName, facilityId, facilityName]
       );
     } else {
       await runWrite(
         env,
-        "UPDATE no_ta_da_hospitals SET hospital_name = ?, district_name = ? WHERE ROWID = ? OR id = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))",
-        [facilityName, districtName, facilityId, facilityId, facilityId]
+        "UPDATE no_ta_da_hospitals SET hospital_name = ?, district_name = ? WHERE ROWID = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))",
+        [facilityName, districtName, facilityId, facilityName]
       );
     }
 
@@ -2129,12 +2129,12 @@ export async function handleDeleteFacility(request, env, params, query) {
     if (!facilityId) return jsonResponse({ success: false, error: "Facility ID required" }, 400);
 
     if (targetTable === "standard") {
-      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ? OR id = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
+      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [facilityId, facilityId]);
     } else if (targetTable === "no_ta_da") {
-      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR id = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
+      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))", [facilityId, facilityId]);
     } else {
-      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR id = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
-      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ? OR id = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [facilityId, facilityId, facilityId]);
+      await runWrite(env, "DELETE FROM no_ta_da_hospitals WHERE ROWID = ? OR LOWER(TRIM(hospital_name)) = LOWER(TRIM(?))", [facilityId, facilityId]);
+      await runWrite(env, "DELETE FROM facility_details WHERE ROWID = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))", [facilityId, facilityId]);
     }
 
     if (env.OTPS_KV) {
