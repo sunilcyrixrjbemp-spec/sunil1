@@ -81,22 +81,84 @@ function calcTotalScore(jobScore, esmsScore, coreScore, jobWeight, esmsWeight, c
 }
 
 /**
- * Check if user is a manager of the target user.
+ * Check if a user has administrative privileges.
  */
-async function isManagerOf(db, managerId, userId) {
-  const row = await db.prepare(
-    `SELECT user_id FROM users WHERE user_id = ? AND manager = ?`
-  ).bind(userId, managerId).first();
-  return !!row;
+function checkIsAdmin(user) {
+  if (!user) return false;
+  const r = String(user.role || "").trim().toLowerCase();
+  const d = String(user.designation || "").trim().toLowerCase();
+  return (
+    r === "admin" ||
+    r === "superadmin" ||
+    r === "super_admin" ||
+    r.includes("admin") ||
+    d === "admin" ||
+    d === "superadmin" ||
+    user.is_admin === true ||
+    user.isAdmin === true ||
+    user.is_admin === 1
+  );
 }
 
 /**
- * Get list of direct reports for a manager.
+ * Check if user is a manager/coordinator/admin of the target employee.
  */
-async function getDirectReports(db, managerId) {
-  const { results } = await db.prepare(
-    `SELECT user_id, name, role, district FROM users WHERE manager = ? AND user_status = 'active' ORDER BY name`
-  ).bind(managerId).all();
+async function isManagerOf(db, user, targetUserId) {
+  if (checkIsAdmin(user)) return true;
+  if (!user || !targetUserId) return false;
+  if (user.user_id === targetUserId) return true;
+
+  const target = await db.prepare(
+    `SELECT user_id, manager, zonal_manager, coordinator FROM users WHERE user_id = ?`
+  ).bind(targetUserId).first();
+
+  if (!target) return false;
+
+  const uId = String(user.user_id || "").trim().toLowerCase();
+  const uName = String(user.name || "").trim().toLowerCase();
+  const uEmail = String(user.email || "").trim().toLowerCase();
+  const uCode = String(user.employee_code || "").trim().toLowerCase();
+
+  const mgrVals = [target.manager, target.zonal_manager, target.coordinator]
+    .filter(Boolean)
+    .map(v => String(v).trim().toLowerCase());
+
+  return mgrVals.some(v => v === uId || v === uName || v === uEmail || v === uCode);
+}
+
+/**
+ * Get list of direct reports for a manager/admin.
+ */
+async function getDirectReports(db, user) {
+  if (!user) return [];
+  if (checkIsAdmin(user)) {
+    const { results } = await db.prepare(
+      `SELECT user_id, name, role, district, employee_code, email FROM users WHERE user_status = 'active' ORDER BY name`
+    ).all();
+    return results || [];
+  }
+
+  const uId = String(user.user_id || "").trim();
+  const uName = String(user.name || "").trim();
+  const uEmail = String(user.email || "").trim();
+  const uCode = String(user.employee_code || "").trim();
+
+  const { results } = await db.prepare(`
+    SELECT user_id, name, role, district, employee_code, email 
+    FROM users 
+    WHERE user_status = 'active'
+      AND (
+        manager = ? OR manager = ? OR manager = ? OR manager = ?
+        OR zonal_manager = ? OR zonal_manager = ? OR zonal_manager = ? OR zonal_manager = ?
+        OR coordinator = ? OR coordinator = ? OR coordinator = ? OR coordinator = ?
+      )
+    ORDER BY name
+  `).bind(
+    uId, uName, uEmail, uCode,
+    uId, uName, uEmail, uCode,
+    uId, uName, uEmail, uCode
+  ).all();
+
   return results || [];
 }
 
@@ -220,14 +282,15 @@ export async function handleApproveKpiAssignment(req, env, params, query, user) 
     if (!assignment) return errorResponse("Assignment not found", 404);
     if (assignment.status !== "pending_approval") return errorResponse("Not pending approval", 400);
 
-    // Only the assigned manager or Admin can approve
-    if (user.role !== "Admin" && assignment.manager !== user.user_id) {
-      return forbiddenResponse("Not this employee's manager");
+    // Check manager/admin authorization
+    const isAuthorized = await isManagerOf(env.DB, user, assignment.user_id);
+    if (!isAuthorized) {
+      return forbiddenResponse("Not authorized to approve this employee's KPI");
     }
 
     await env.DB.prepare(
       `UPDATE kpi_assignments SET status = 'active', approved_by = ?, approved_at = ?, updated_at = ? WHERE id = ?`
-    ).bind(user.user_id, nowIST(), nowIST(), id).run();
+    ).bind(user.user_id || user.name, nowIST(), nowIST(), id).run();
 
     return jsonResponse({ message: "KPI assignment approved" });
   } catch (e) {
@@ -256,8 +319,10 @@ export async function handleRejectKpiAssignment(req, env, params, query, user) {
 
     if (!assignment) return errorResponse("Assignment not found", 404);
     if (assignment.status !== "pending_approval") return errorResponse("Not pending approval", 400);
-    if (user.role !== "Admin" && assignment.manager !== user.user_id) {
-      return forbiddenResponse("Not this employee's manager");
+    
+    const isAuthorized = await isManagerOf(env.DB, user, assignment.user_id);
+    if (!isAuthorized) {
+      return forbiddenResponse("Not authorized to return this employee's KPI");
     }
 
     await env.DB.prepare(
@@ -448,7 +513,8 @@ export async function handleScoreKpiSubmission(req, env, params, query, user) {
 
     if (!submission) return errorResponse("Submission not found", 404);
     if (submission.status === "finalized") return errorResponse("Already finalized", 400);
-    if (user.role !== "Admin" && submission.manager !== user.user_id) {
+    const isAuth = await isManagerOf(env.DB, user, submission.user_id);
+    if (!isAuth) {
       return forbiddenResponse("Not this employee's manager");
     }
 
@@ -490,7 +556,8 @@ export async function handleFinalizeKpiSubmission(req, env, params, query, user)
 
     if (!submission) return errorResponse("Submission not found", 404);
     if (submission.status === "finalized") return errorResponse("Already finalized", 400);
-    if (user.role !== "Admin" && submission.manager !== user.user_id) {
+    const isAuth = await isManagerOf(env.DB, user, submission.user_id);
+    if (!isAuth) {
       return forbiddenResponse("Not this employee's manager");
     }
 
@@ -554,7 +621,8 @@ export async function handleReturnKpiSubmission(req, env, params, query, user) {
     ).bind(id).first();
 
     if (!submission) return errorResponse("Submission not found", 404);
-    if (user.role !== "Admin" && submission.manager !== user.user_id) {
+    const isAuth = await isManagerOf(env.DB, user, submission.user_id);
+    if (!isAuth) {
       return forbiddenResponse("Not this employee's manager");
     }
 
@@ -810,8 +878,8 @@ export async function handleGetPendingApprovals(req, env, params, query, user) {
   try {
     const fy = query.get("fy") || getFY();
 
-    let pending;
-    if (user.role === "Admin") {
+    let pending = [];
+    if (checkIsAdmin(user)) {
       const { results } = await env.DB.prepare(
         `SELECT ka.*, u.name, u.role, u.district
          FROM kpi_assignments ka
@@ -821,15 +889,20 @@ export async function handleGetPendingApprovals(req, env, params, query, user) {
       ).bind(fy).all();
       pending = results || [];
     } else {
-      const { results } = await env.DB.prepare(
-        `SELECT ka.*, u.name, u.role, u.district
-         FROM kpi_assignments ka
-         JOIN users u ON u.user_id = ka.user_id
-         WHERE ka.status = 'pending_approval' AND ka.financial_year = ?
-           AND u.manager = ?
-         ORDER BY ka.submitted_at ASC`
-      ).bind(fy, user.user_id).all();
-      pending = results || [];
+      const reports = await getDirectReports(env.DB, user);
+      if (reports.length > 0) {
+        const teamIds = reports.map(r => r.user_id);
+        const placeholders = teamIds.map(() => "?").join(",");
+        const { results } = await env.DB.prepare(
+          `SELECT ka.*, u.name, u.role, u.district
+           FROM kpi_assignments ka
+           JOIN users u ON u.user_id = ka.user_id
+           WHERE ka.status = 'pending_approval' AND ka.financial_year = ?
+             AND ka.user_id IN (${placeholders})
+           ORDER BY ka.submitted_at ASC`
+        ).bind(fy, ...teamIds).all();
+        pending = results || [];
+      }
     }
 
     return jsonResponse({ pending, count: pending.length });
