@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Activity, Mail, AlertTriangle, Clock,
+  Activity, Mail, Clock,
   RefreshCw, Zap, IndianRupee, Users, Database, HardDrive,
   ShieldCheck, CreditCard, Globe, Wifi, Cpu, Search, CheckCircle2,
-  XCircle, Filter, ChevronRight, Eye, X, Send, Inbox
+  XCircle, Eye, X, Send, Inbox
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -328,7 +328,6 @@ export default function AdminAnalyticsDashboard() {
   }, [analytics?.recentEmailLogs, emailSearch, emailFilter]);
 
   const totalEmailsCount = analytics?.recentEmailLogs?.length || (analytics?.emailStats || []).reduce((acc: number, curr: any) => acc + (curr.cnt || 0), 0);
-  const deliveredCount = (analytics?.emailStats || []).find((s: any) => s.status === "sent" || s.status === "delivered")?.cnt || 0;
 
   return (
     <div className="min-h-screen bg-[var(--canvas,#FAFAF9)] p-4 sm:p-6 text-ink-900 font-sans">
