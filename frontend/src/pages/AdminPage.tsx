@@ -2252,19 +2252,19 @@ export default function AdminPage() {
             {/* ================= SECTION 1: USERS DIRECTORY ================= */}
             {activeTab === "users" && (
               <div className="space-y-3 animate-fadeIn">
-                {/* Search & 5-Dropdown Filter Bar */}
-                <div className="bg-surface border border-line rounded-2xl p-3.5 sm:p-4 space-y-3 shadow-xs">
-                  {/* Clean Horizontal Filter Row */}
+                {/* Search & 5-Dropdown Filter Bar (Max 2 lines) */}
+                <div className="bg-white border border-line rounded-xl p-3 shadow-xs space-y-2.5">
+                  {/* Line 1: Search & Inline Filter Dropdowns */}
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Search Input */}
-                    <div className="relative min-w-[200px] flex-1">
+                    <div className="relative flex-1 min-w-[200px] max-w-sm">
                       <Search className="w-3.5 h-3.5 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
                         placeholder="Search name, emp code, mobile, email..."
                         value={userSearchTerm}
                         onChange={(e) => setUserSearchTerm(e.target.value)}
-                        className="input-lte pl-8.5 h-8.5 text-xs w-full rounded-xl bg-white"
+                        className="pl-8.5 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
                       />
                       {userSearchTerm && (
                         <button
@@ -2284,7 +2284,7 @@ export default function AdminPage() {
                         setUserZoneFilter(e.target.value);
                         setUserDistrictFilter("all");
                       }}
-                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[125px] bg-white"
+                      className="h-8 text-xs font-semibold py-1 px-2.5 rounded-lg border border-line bg-white text-ink-800 focus:outline-none focus:border-accent-600 cursor-pointer shadow-2xs w-auto min-w-[110px]"
                     >
                       <option value="all">All Zones ({availableUserZones.length})</option>
                       {availableUserZones.map((z: string) => (
@@ -2296,7 +2296,7 @@ export default function AdminPage() {
                     <select
                       value={userDistrictFilter}
                       onChange={(e) => setUserDistrictFilter(e.target.value)}
-                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[125px] bg-white"
+                      className="h-8 text-xs font-semibold py-1 px-2.5 rounded-lg border border-line bg-white text-ink-800 focus:outline-none focus:border-accent-600 cursor-pointer shadow-2xs w-auto min-w-[115px]"
                     >
                       <option value="all">All Districts ({availableUserDistricts.length})</option>
                       {availableUserDistricts.map((d: string) => (
@@ -2308,7 +2308,7 @@ export default function AdminPage() {
                     <select
                       value={userManagerFilter}
                       onChange={(e) => setUserManagerFilter(e.target.value)}
-                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[130px] bg-white"
+                      className="h-8 text-xs font-semibold py-1 px-2.5 rounded-lg border border-line bg-white text-ink-800 focus:outline-none focus:border-accent-600 cursor-pointer shadow-2xs w-auto min-w-[120px]"
                     >
                       <option value="all">All Managers ({availableUserManagers.length})</option>
                       {availableUserManagers.map((m: string) => (
@@ -2320,7 +2320,7 @@ export default function AdminPage() {
                     <select
                       value={userRoleFilter}
                       onChange={(e) => setUserRoleFilter(e.target.value)}
-                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[115px] bg-white"
+                      className="h-8 text-xs font-semibold py-1 px-2.5 rounded-lg border border-line bg-white text-ink-800 focus:outline-none focus:border-accent-600 cursor-pointer shadow-2xs w-auto min-w-[105px]"
                     >
                       <option value="all">All Roles ({availableUserRoles.length})</option>
                       {availableUserRoles.map((r: string) => (
@@ -2332,7 +2332,7 @@ export default function AdminPage() {
                     <select
                       value={userStatusFilter}
                       onChange={(e) => setUserStatusFilter(e.target.value)}
-                      className="input-lte h-8.5 text-xs font-semibold py-1 px-3 rounded-xl cursor-pointer min-w-[110px] bg-white"
+                      className="h-8 text-xs font-semibold py-1 px-2.5 rounded-lg border border-line bg-white text-ink-800 focus:outline-none focus:border-accent-600 cursor-pointer shadow-2xs w-auto min-w-[95px]"
                     >
                       <option value="all">All Status</option>
                       {availableUserStatuses.map((st: string) => (
@@ -2352,7 +2352,7 @@ export default function AdminPage() {
                           setUserRoleFilter("all");
                           setUserStatusFilter("all");
                         }}
-                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8.5 px-3 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0"
                         title="Clear all filters"
                       >
                         <RefreshCw className="w-3 h-3" />
@@ -2361,11 +2361,11 @@ export default function AdminPage() {
                     )}
                   </div>
 
-                  {/* Summary Count & Action Buttons */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-line">
-                    <span className="text-xs font-mono text-ink-500 font-semibold flex items-center gap-1.5">
+                  {/* Line 2: Summary Count & Action Buttons */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-line text-xs">
+                    <span className="font-mono text-ink-500 font-semibold flex items-center gap-1.5">
                       <span>Showing</span>
-                      <span className="bg-accent-50 text-accent-700 px-2 py-0.5 rounded-full font-bold border border-accent-200">
+                      <span className="bg-accent-50 text-accent-700 px-2 py-0.5 rounded-full font-bold border border-accent-200 text-2xs">
                         {filteredUsers.length}
                       </span>
                       <span>of {safeUsers.length} Employees</span>
@@ -2375,7 +2375,7 @@ export default function AdminPage() {
                       <button
                         type="button"
                         onClick={handleExportUsersExcel}
-                        className="bg-white hover:bg-surface-sunken text-ink-700 hover:text-ink-900 border border-line text-xs font-semibold px-3 h-8 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                        className="bg-white hover:bg-surface-sunken text-ink-800 border border-line text-xs font-bold px-3 h-8 rounded-lg shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
                       >
                         <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Export Excel</span>
@@ -2390,7 +2390,7 @@ export default function AdminPage() {
                       >
                         <button
                           type="button"
-                          className="bg-white hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-rose-200 text-xs font-semibold px-3 h-8 rounded-xl shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                          className="bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold px-3 h-8 rounded-lg shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98]"
                         >
                           <LogOut className="w-3.5 h-3.5" />
                           <span>Force Logout All</span>
@@ -2599,16 +2599,16 @@ export default function AdminPage() {
             {activeTab === "approvals" && (
               <div className="space-y-3 animate-fadeIn">
                 {/* Search & Filter Toolbar */}
-                <div className="bg-surface border border-line rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                <div className="bg-white border border-line rounded-xl p-3 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
                   <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[240px]">
-                    <div className="relative flex-1 min-w-[200px]">
+                    <div className="relative flex-1 min-w-[200px] max-w-sm">
                       <Search className="w-3.5 h-3.5 text-ink-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
                         placeholder="Search HQ team, employee name, or approver..."
                         value={hierarchySearch}
                         onChange={(e) => setHierarchySearch(e.target.value)}
-                        className="input-lte pl-8.5 h-8.5 text-xs w-full rounded-xl bg-white"
+                        className="pl-8.5 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
                       />
                       {hierarchySearch && (
                         <button
@@ -2624,7 +2624,7 @@ export default function AdminPage() {
                     <button
                       type="button"
                       onClick={() => setHierarchyUnmappedOnly(!hierarchyUnmappedOnly)}
-                      className={`h-8.5 px-3 text-xs font-semibold rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
+                      className={`h-8 px-3 text-xs font-semibold rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs ${
                         hierarchyUnmappedOnly
                           ? "bg-amber-50 text-amber-800 border-amber-300 font-bold"
                           : "bg-white text-ink-600 border-line hover:bg-surface-sunken"
@@ -2641,7 +2641,7 @@ export default function AdminPage() {
                           setHierarchySearch("");
                           setHierarchyUnmappedOnly(false);
                         }}
-                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8.5 px-3 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0"
                       >
                         <RefreshCw className="w-3 h-3" />
                         <span>Reset</span>
@@ -2651,7 +2651,7 @@ export default function AdminPage() {
 
                   <span className="text-xs font-mono text-ink-500 font-semibold flex items-center gap-1">
                     <span>Showing</span>
-                    <strong className="text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200">
+                    <strong className="text-accent-700 bg-accent-50 px-2 py-0.5 rounded-full border border-accent-200 text-2xs">
                       {filteredHierarchies.length}
                     </strong>
                     <span>of {safeHierarchies.length} HQ Teams</span>
@@ -3575,7 +3575,7 @@ export default function AdminPage() {
                   </div>
 
                   {/* Right: Search & Filters with proper flex layout */}
-                  <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 flex-1 justify-end min-w-0">
                     {/* Flexible Search Box */}
                     <div className="relative flex-1 min-w-[150px] max-w-[280px]">
                       <Search className="w-3.5 h-3.5 text-ink-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -3584,7 +3584,7 @@ export default function AdminPage() {
                         placeholder="Search facility, incharge, manager..."
                         value={facilitySearch}
                         onChange={(e) => { setFacilitySearch(e.target.value); setFacilityPage(1); }}
-                        className="input-lte pl-8 h-8 text-xs w-full rounded-xl bg-white border border-line focus:border-accent-400"
+                        className="pl-8 pr-8 h-8 text-xs font-medium w-full rounded-lg bg-white border border-line text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-accent-600 shadow-2xs"
                       />
                       {facilitySearch && (
                         <button
@@ -3601,7 +3601,7 @@ export default function AdminPage() {
                     <select
                       value={facilityZoneFilter}
                       onChange={(e) => { setFacilityZoneFilter(e.target.value); setFacilityPage(1); }}
-                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-28 sm:w-32 bg-white shrink-0 border border-line"
+                      className="h-8 text-xs font-semibold py-0.5 px-2.5 rounded-lg cursor-pointer w-auto min-w-[110px] bg-white border border-line shadow-2xs"
                     >
                       <option value="all">All Zones ({availableFacilityZones.length})</option>
                       {availableFacilityZones.map((z: string) => (
@@ -3613,7 +3613,7 @@ export default function AdminPage() {
                     <select
                       value={facilityDistrictFilter}
                       onChange={(e) => { setFacilityDistrictFilter(e.target.value); setFacilityPage(1); }}
-                      className="input-lte h-8 text-xs font-semibold py-0.5 px-2.5 rounded-xl cursor-pointer w-32 sm:w-36 bg-white shrink-0 border border-line"
+                      className="h-8 text-xs font-semibold py-0.5 px-2.5 rounded-lg cursor-pointer w-auto min-w-[115px] bg-white border border-line shadow-2xs"
                     >
                       <option value="all">All Districts ({availableFacilityDistricts.length})</option>
                       {availableFacilityDistricts.map((d: string) => (
@@ -3630,7 +3630,7 @@ export default function AdminPage() {
                           setFacilityZoneFilter("all");
                           setFacilityDistrictFilter("all");
                         }}
-                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8 px-2.5 rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0"
+                        className="bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 h-8 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-all shrink-0"
                         title="Clear all filters"
                       >
                         <RefreshCw className="w-3 h-3" />
