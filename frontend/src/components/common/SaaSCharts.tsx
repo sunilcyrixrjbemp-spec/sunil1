@@ -908,8 +908,8 @@ export const SaaSHorizontalBarChart: React.FC<SaaSHorizontalBarChartProps> = ({
   ];
 
   return (
-    <div className="w-full flex flex-col justify-start space-y-2.5 select-none overflow-y-auto pr-1" style={{ height }}>
-      {data.slice(0, 6).map((item, i) => {
+    <div className="w-full flex flex-col justify-start space-y-2.5 select-none overflow-y-auto pr-1.5 custom-scrollbar" style={{ height }}>
+      {data.map((item, i) => {
         const val = Number(item[valueKey] || item.amount || item.count || item.value || 0);
         const name = String(item[nameKey] || item.name || `Item #${i + 1}`);
         const pct = maxVal > 0 ? (val / maxVal) * 100 : 0;
