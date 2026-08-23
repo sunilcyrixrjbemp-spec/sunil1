@@ -130,6 +130,13 @@ import {
   handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies, handleSendSubmissionReminder, handleGetSentReminders, handleGetEngineerLeaves, handleMarkEngineerLeave, handleDeleteEngineerLeave
 } from "./routes/attendance.js";
 
+// Analysis & Reporting Analytics handlers
+import {
+  handleGetAnalysisSummary,
+  handleGetAnalysisFilterOptions,
+  handleGetAnalysisClaims
+} from "./routes/analysisAnalytics.js";
+
 // ─── Enterprise Route Handlers (Direct Imports) ───────────────────────────────
 import {
   handleMigrateGdrive, handleMigrationStatus,
@@ -549,6 +556,11 @@ router.get("/api/attendance/leaves", handleGetEngineerLeaves, true);
 router.post("/api/attendance/mark-leave", handleMarkEngineerLeave, true);
 router.delete("/api/attendance/leaves/:id", handleDeleteEngineerLeave, true);
 
+// ─── Analysis & Reporting Analytics Endpoints ───────────────────────────────
+router.get("/api/analysis/summary", handleGetAnalysisSummary, true);
+router.get("/api/analysis/filter-options", handleGetAnalysisFilterOptions, true);
+router.get("/api/analysis/claims", handleGetAnalysisClaims, true);
+
 // ─── Expense Endpoints ────────────────────────────────────────────────────────
 router.get("/api/expense/init", handleExpenseInit, true);
 router.post("/api/expense/limit-request", handleCreateLimitRequest, true);
@@ -932,6 +944,14 @@ export default {
     ctx.waitUntil(handleAutoApprovalExpiry(env).catch(e =>
       staticLog.error("Auto-approval expiry failed", { error: e.message })
     ));
+
+    // Analytics Pre-computation cache warming (runs on all crons / every 20m)
+    const { precomputeAnalyticsCache } = await import("./cron/precomputeAnalysis.js").catch(() => ({ precomputeAnalyticsCache: null }));
+    if (precomputeAnalyticsCache) {
+      ctx.waitUntil(precomputeAnalyticsCache(env).catch(e =>
+        staticLog.error("Precompute analytics failed", { error: e.message })
+      ));
+    }
 
     // Daily diagnostic health check & SLA alerts (02:00 AM IST = 20:30 UTC)
     if (event.cron === "30 20 * * *") {

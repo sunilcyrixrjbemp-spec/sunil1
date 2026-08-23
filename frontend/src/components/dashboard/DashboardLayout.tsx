@@ -8,6 +8,7 @@ import Sidebar, { NAV_SECTIONS, NavSection, NavItem } from "../common/Sidebar";
 import Navbar from "../common/Navbar";
 import MobileBottomNav from "../common/MobileBottomNav";
 import MobileNavDrawer from "../common/MobileNavDrawer";
+import { AppSkeletonTheme } from "../common/AppSkeleton";
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
@@ -160,7 +161,8 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas flex text-ink-900 font-sans antialiased">
+    <AppSkeletonTheme>
+      <div className="min-h-screen bg-canvas flex text-ink-900 font-sans antialiased">
       {/* 2px Fixed Top Route Progress Bar */}
       <div
         className={`fixed top-0 left-0 right-0 h-[2px] z-50 bg-accent-600 transition-all duration-300 pointer-events-none ${
@@ -241,14 +243,15 @@ export default function DashboardLayout() {
           )}
         </main>
 
-        {/* Mobile Fixed Bottom Tab Bar (< 1024px) */}
-        <MobileBottomNav
-          unreadCount={unreadCount}
-          allowedWindows={allowedWindows}
-          isAdmin={isAdmin}
-          onOpenMoreMenu={() => setIsMobileMenuOpen(true)}
-        />
+          {/* Mobile Fixed Bottom Tab Bar (< 1024px) */}
+          <MobileBottomNav
+            unreadCount={unreadCount}
+            allowedWindows={allowedWindows}
+            isAdmin={isAdmin}
+            onOpenMoreMenu={() => setIsMobileMenuOpen(true)}
+          />
+        </div>
       </div>
-    </div>
+    </AppSkeletonTheme>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { SaaSBarChart, SaaSHorizontalBarChart, SaaSDonutChart, SaaS3DHybridTrendChart } from "../components/common/SaaSCharts";
 import { expenseService } from "../services/expenseService";
+import { analysisService, AnalysisSummaryResponse, AnalysisFilterOptionsResponse } from "../services/analysisService";
 import { authService } from "../services/authService";
 import { adminService } from "../services/adminService";
 import AnalysisSkeleton from "../components/common/AnalysisSkeleton";
@@ -120,6 +121,8 @@ export default function AnalysisPage() {
   const [_districtChartType, _setDistrictChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
   const [_employeeChartType, _setEmployeeChartType] = useState<"bar3d" | "horizontal" | "pie">("bar3d");
   const [engineerSearchQuery, _setEngineerSearchQuery] = useState<string>("");
+  const [analysisSummary, setAnalysisSummary] = useState<AnalysisSummaryResponse | null>(null);
+  const [distinctFilters, setDistinctFilters] = useState<AnalysisFilterOptionsResponse | null>(null);
   const [selectedZone, setSelectedZone] = useState<string>(() => {
     return localStorage.getItem("analysis_selectedZone") || "all";
   });
@@ -228,23 +231,42 @@ export default function AnalysisPage() {
       const cacheKeyTeam = `cache_v4_team_expenses_${uId}_${monthQueryParam}`;
       setLoading(true);
       try {
+        // Fast Parallel Fetch: KV Pre-computed Summary + Filter Options + Background Raw
+        const [summaryRes, filtersRes] = await Promise.allSettled([
+          analysisService.getSummary({
+            month: monthQueryParam,
+            year: selectedYear,
+            viewMode,
+            district: selectedDistrict,
+            engineer: selectedEngineer,
+            zone: selectedZone,
+            status: selectedStatus
+          }),
+          analysisService.getFilterOptions({
+            month: monthQueryParam,
+            year: selectedYear
+          })
+        ]);
+
+        if (summaryRes.status === "fulfilled" && summaryRes.value) {
+          setAnalysisSummary(summaryRes.value);
+        }
+        if (filtersRes.status === "fulfilled" && filtersRes.value) {
+          setDistinctFilters(filtersRes.value);
+        }
+
+        // Secondary background load for raw arrays (graceful)
         if (isReviewer) {
-          const [own, team] = await Promise.all([
-            expenseService.getExpenses(monthQueryParam),
-            expenseService.getTeamExpenses(monthQueryParam)
-          ]);
-          setMyExpenses(own || []);
-          setTeamExpenses(team || []);
-          if (uId) {
-            localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
-            localStorage.setItem(cacheKeyTeam, JSON.stringify(team || []));
-          }
+          expenseService.getExpenses(monthQueryParam).then(own => setMyExpenses(own || [])).catch(() => {});
+          expenseService.getTeamExpenses(monthQueryParam).then(team => {
+            setTeamExpenses(team || []);
+            if (uId) localStorage.setItem(cacheKeyTeam, JSON.stringify(team || []));
+          }).catch(() => {});
         } else {
-          const own = await expenseService.getExpenses(monthQueryParam);
-          setMyExpenses(own || []);
-          if (uId) {
-            localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
-          }
+          expenseService.getExpenses(monthQueryParam).then(own => {
+            setMyExpenses(own || []);
+            if (uId) localStorage.setItem(cacheKeyMy, JSON.stringify(own || []));
+          }).catch(() => {});
         }
       } catch (err) {
         console.error("Error fetching analysis data:", err);
@@ -267,6 +289,22 @@ export default function AnalysisPage() {
 
   // Build filter list dropdowns options
   const filterOptions = useMemo(() => {
+    if (distinctFilters && Array.isArray(distinctFilters.districts) && Array.isArray(distinctFilters.engineers)) {
+      let dList = [...distinctFilters.districts];
+      let eList = distinctFilters.engineers.map(e => e.name);
+
+      if (selectedDistrict !== "all") {
+        eList = distinctFilters.engineers.filter(e => (e.district || "").toLowerCase() === selectedDistrict.toLowerCase()).map(e => e.name);
+      }
+      if (selectedZone !== "all") {
+        eList = distinctFilters.engineers.filter(e => cleanZone(e.zone) === cleanZone(selectedZone)).map(e => e.name);
+      }
+      return {
+        districts: dList.sort((a, b) => a.localeCompare(b)),
+        engineers: eList.sort((a, b) => a.localeCompare(b))
+      };
+    }
+
     const rawSource = viewMode === "team" && isReviewer ? teamExpenses : myExpenses;
     const source = rawSource.filter(e => e && e.category !== "Limit Request" && e.request_type !== "limit");
     const monthlyList = filterByMonth(source);
@@ -465,6 +503,19 @@ export default function AnalysisPage() {
 
   // Activity aggregates
   const activityStats = useMemo(() => {
+    if (analysisSummary && analysisSummary.totals) {
+      const t = analysisSummary.totals;
+      return {
+        callsAssigned: t.totalCalls || 0,
+        callsCompleted: t.totalCalls || 0,
+        pmsCount: t.totalPms || 0,
+        calibrationCount: t.totalCalibration || 0,
+        assetTaggingCount: t.totalTagging || 0,
+        assetTaggingValue: (t.totalTagging || 0) * 500,
+        mobiliseCount: t.totalMobilised || 0
+      };
+    }
+
     let callsAssigned = 0;
     let callsCompleted = 0;
     let pmsCount = 0;
@@ -495,7 +546,7 @@ export default function AnalysisPage() {
       assetTaggingValue,
       mobiliseCount
     };
-  }, [activeExpenses]);
+  }, [analysisSummary, activeExpenses]);
 
   const activityChartData = useMemo(() => {
     return [
@@ -510,10 +561,15 @@ export default function AnalysisPage() {
 
   // ============= DATA GROUPINGS =============
 
-  const totalAmount = activeExpenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const count = activeExpenses.length;
+  const totalAmount = (analysisSummary && analysisSummary.totals) ? analysisSummary.totals.totalAmount : activeExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const count = (analysisSummary && analysisSummary.totals) ? analysisSummary.totals.totalClaims : activeExpenses.length;
+  
   // A. User-wise (All submitting engineers sorted Highest to Lowest)
   const userWiseData = useMemo(() => {
+    if (analysisSummary && Array.isArray(analysisSummary.engineerExpenses) && analysisSummary.engineerExpenses.length > 0) {
+      return analysisSummary.engineerExpenses.map(e => ({ name: e.name, amount: e.amount }));
+    }
+
     const map: Record<string, number> = {};
     activeExpenses.forEach(e => {
       const name = (e.submitter_name || user?.name || "Self").trim();
@@ -524,7 +580,7 @@ export default function AnalysisPage() {
     return Object.entries(map)
       .map(([name, amount]) => ({ name, amount }))
       .sort((a, b) => b.amount - a.amount);
-  }, [activeExpenses, user?.name]);
+  }, [analysisSummary, activeExpenses, user?.name]);
 
   // Status-wise Stats (Approved, Pending, Rejected amounts & counts)
   const statusStats = useMemo(() => {

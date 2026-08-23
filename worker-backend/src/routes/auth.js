@@ -347,6 +347,11 @@ export async function handleLogin(request, env) {
 
   await resolveUserHierarchyNames(env, profile);
 
+  // Background cache warming (fire-and-forget)
+  import("../services/cacheWarming.js").then(({ warmUserCache }) => {
+    if (warmUserCache) warmUserCache(env, profile).catch(() => {});
+  }).catch(() => {});
+
   return jsonResponse({ access_token: accessToken, refresh_token: refreshToken, token_type: "bearer", user: profile });
 }
 

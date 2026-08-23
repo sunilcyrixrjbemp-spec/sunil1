@@ -87,6 +87,10 @@ max_batch_timeout = 30
 max_retries = 2
 dead_letter_queue = "fieldops-dlq"
 
+# ─── Scheduled Triggers (Cron) ───────────────────────────────────────────
+[triggers]
+crons = ["*/20 * * * *", "30 20 * * *", "30 4 * * *", "0 18 * * *"]
+
 # ─── Environment Variables ─────────────────────────────────────────────
 [vars]
 CF_AI_API_TOKEN = "Y6wwgwz7m5eajll1cOCjUXoogC8hm9RXcw6RzizWaGMbrBMuihoS5DkPF57pnJog"
