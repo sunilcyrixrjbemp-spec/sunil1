@@ -1718,7 +1718,7 @@ export default function MonthSummaryPage() {
       </div>
 
       {/* Filter Month Report Card */}
-      <div className="bg-white border border-slate-300 rounded-none shadow-2xs p-3">
+      <div className="bg-white border border-[#4f4f4f]/30 rounded-[4px] shadow-2xs p-3">
         <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-200">
           <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
             <Filter className="w-4 h-4 text-[#4A6A8A]" />
@@ -1801,7 +1801,7 @@ export default function MonthSummaryPage() {
       </div>
 
       {/* Summary Data Table Section */}
-      <div className="border border-slate-300 rounded-none shadow-2xs bg-white overflow-hidden">
+      <div className="border border-[#4f4f4f]/30 rounded-[4px] shadow-2xs bg-white overflow-hidden">
         {/* Table Header Banner */}
         <div className="bg-[#4A6A8A] text-white px-3 py-2 text-xs font-extrabold uppercase tracking-wider flex items-center justify-between rounded-none flex-wrap gap-2">
           <div className="flex items-center gap-2">

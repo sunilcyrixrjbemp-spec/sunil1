@@ -9,6 +9,11 @@ import {
   BookOpen,
   ChevronDown,
   ChevronUp,
+  Users,
+  Wallet,
+  CheckCircle2,
+  TrendingDown,
+  ArrowUpRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import ExcelJS from "exceljs";
@@ -312,168 +317,223 @@ export default function ConsolidatedReportPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] pb-24 text-ink-900 font-sans">
-      {/* ── Page Header Banner ── */}
-      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-600 text-white shadow-sm">
-                <FileSpreadsheet className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-base sm:text-lg font-bold text-ink-900 tracking-tight font-display">
-                    Consolidated Expense MIS Report
-                  </h1>
-                  <span className="rounded-md bg-accent-50 border border-accent-200 px-2 py-0.5 text-[11px] font-mono font-bold text-accent-700">
-                    {month} {year}
-                  </span>
-                </div>
-                <p className="text-xs text-ink-500 hidden sm:block">
-                  Company-wide audited expense ledger, GL code breakdown & net payables
-                </p>
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4 space-y-3.5">
+        
+        {/* ══════════════════════════════════════════════════════════════════
+            DITTO HOME PAGE ZOHO KPI ROW (EXACT 100% SAME CARD SPECIFICATIONS)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          
+          {/* 1. Total Headcount */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-accent-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-ink-500 font-sans group-hover:text-ink-700 transition-colors">
+                TOTAL HEADCOUNT
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200 group-hover:bg-accent-100 transition-colors">
+                <Users className="w-3 h-3" />
               </div>
             </div>
-
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={downloadExcel}
-                disabled={data.length === 0}
-                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 text-xs font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Export Excel (.xlsx)
-              </button>
-
-              <button
-                onClick={fetchReport}
-                disabled={loading}
-                title="Refresh Report Data"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-white text-ink-700 hover:bg-surface-sunken hover:text-ink-900 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin text-accent-600" : ""}`} />
-              </button>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-ink-900 leading-tight flex items-baseline justify-between">
+                <span>{data.length} <span className="text-xs font-sans text-ink-500 font-normal">Engineers</span></span>
+                <ArrowUpRight className="w-3 h-3 text-ink-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-ink-500 font-medium leading-none mt-0.5 block">
+                100% Processed
+              </span>
             </div>
           </div>
+
+          {/* 2. Total Approved */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-emerald-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-emerald-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-emerald-800 font-sans">
+                TOTAL APPROVED
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 group-hover:bg-emerald-100 transition-colors">
+                <CheckCircle2 className="w-3 h-3" />
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-emerald-700 leading-tight flex items-baseline justify-between">
+                <span>₹{fmt(totalApprovedSum)}</span>
+                <ArrowUpRight className="w-3 h-3 text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-emerald-600/80 font-medium leading-none mt-0.5 block">
+                Audited Claims
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Advances Deducted */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-rose-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-rose-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-rose-800 font-sans">
+                ADVANCES DEDUCTED
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-200 group-hover:bg-rose-100 transition-colors">
+                <TrendingDown className="w-3 h-3" />
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-rose-700 leading-tight flex items-baseline justify-between">
+                <span>₹{fmt(totalAdvances)}</span>
+                <ArrowUpRight className="w-3 h-3 text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-rose-600/80 font-medium leading-none mt-0.5 block">
+                Pre-paid amounts
+              </span>
+            </div>
+          </div>
+
+          {/* 4. Net Payable */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-accent-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-600" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-accent-800 font-sans">
+                NET PAYABLE (DISBURSEMENT)
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-accent-50 text-accent-700 flex items-center justify-center border border-accent-200 group-hover:bg-accent-100 transition-colors">
+                <Wallet className="w-3 h-3" />
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-accent-900 leading-tight flex items-baseline justify-between">
+                <span>₹{fmt(totalNet)}</span>
+                <ArrowUpRight className="w-3 h-3 text-accent-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-accent-700 font-medium leading-none mt-0.5 block">
+                Final Bank Transfer
+              </span>
+            </div>
+          </div>
+
+          {/* 5. Claimed Difference */}
+          <div className="group bg-white rounded-[4px] border border-[#4f4f4f]/30 hover:border-amber-600 p-3 transition-all duration-200 cursor-pointer flex flex-col justify-between h-[82px] relative overflow-hidden col-span-2 sm:col-span-1 shadow-2xs hover:shadow-sm">
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-amber-500" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9.5px] font-bold uppercase tracking-wider text-amber-800 font-sans">
+                CLAIMED DIFFERENCE
+              </span>
+              <div className="w-5.5 h-5.5 rounded-[3px] bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200 group-hover:bg-amber-100 transition-colors">
+                <TrendingDown className="w-3 h-3" />
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-bold font-mono text-rose-700 leading-tight flex items-baseline justify-between">
+                <span>₹{fmt(totalClaimed - totalApprovedSum)}</span>
+                <ArrowUpRight className="w-3 h-3 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <span className="text-[10px] text-ink-500 font-medium leading-none mt-0.5 block">
+                Policy Deductions
+              </span>
+            </div>
+          </div>
+
         </div>
-      </header>
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
-        {/* ── KPI Financial Stat Cards (Zoho Style) ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          <div className="rounded-xl border border-line bg-white p-4 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] space-y-1">
-            <span className="text-[11px] font-mono font-bold text-ink-500 uppercase tracking-wider block">
-              Total Headcount
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black font-mono text-ink-900">{data.length}</span>
-              <span className="text-xs text-ink-400 font-mono">Engineers</span>
+        {/* ══════════════════════════════════════════════════════════════════
+            DITTO HOME PAGE CRISP GEOMETRIC TOOLBAR ROW (CLEAR VISIBILITY)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar py-0.5 w-full flex-nowrap">
+          {/* Left: Month, Year & Fetch Buttons */}
+          <div className="flex items-center gap-2 shrink-0 flex-nowrap">
+            {/* 1. Month Dropdown */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 shrink-0 transition-all focus-within:ring-1 focus-within:ring-accent-600 focus-within:border-accent-600">
+              <Calendar className="w-3.5 h-3.5 text-accent-600 mr-1.5 shrink-0" />
+              <select
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="h-full pr-5 text-xs font-semibold text-ink-900 bg-transparent border-0 focus:outline-none cursor-pointer appearance-none leading-none"
+                title="Select Month"
+              >
+                {MONTHS.slice(1).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-ink-500 absolute right-2 pointer-events-none" />
             </div>
-            <p className="text-[11px] text-accent-700 font-mono">100% Processed</p>
-          </div>
 
-          <div className="rounded-xl border border-line bg-white p-4 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] space-y-1">
-            <span className="text-[11px] font-mono font-bold text-ink-500 uppercase tracking-wider block">
-              Total Approved
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black font-mono text-emerald-700">₹{fmt(totalApprovedSum)}</span>
+            {/* 2. Year Dropdown */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 shrink-0 transition-all focus-within:ring-1 focus-within:ring-accent-600 focus-within:border-accent-600">
+              <select
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value))}
+                className="h-full pr-5 text-xs font-semibold text-ink-900 bg-transparent border-0 focus:outline-none cursor-pointer appearance-none leading-none"
+                title="Select Year"
+              >
+                {[2024, 2025, 2026, 2027].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-ink-500 absolute right-2 pointer-events-none" />
             </div>
-            <p className="text-[11px] text-ink-400 font-mono">Audited Claims</p>
-          </div>
 
-          <div className="rounded-xl border border-line bg-white p-4 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] space-y-1">
-            <span className="text-[11px] font-mono font-bold text-ink-500 uppercase tracking-wider block">
-              Advances Deducted
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black font-mono text-rose-700">₹{fmt(totalAdvances)}</span>
-            </div>
-            <p className="text-[11px] text-rose-500 font-mono">Pre-paid amounts</p>
-          </div>
-
-          <div className="rounded-xl border border-accent-200 bg-accent-50/40 p-4 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] space-y-1">
-            <span className="text-[11px] font-mono font-bold text-accent-800 uppercase tracking-wider block">
-              Net Payable (Disbursement)
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black font-mono text-accent-900">₹{fmt(totalNet)}</span>
-            </div>
-            <p className="text-[11px] text-accent-700 font-mono font-bold">Final Bank Transfer</p>
-          </div>
-
-          <div className="rounded-xl border border-line bg-white p-4 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] space-y-1 col-span-2 lg:col-span-1">
-            <span className="text-[11px] font-mono font-bold text-ink-500 uppercase tracking-wider block">
-              Claimed Difference
-            </span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black font-mono text-rose-700">₹{fmt(totalClaimed - totalApprovedSum)}</span>
-            </div>
-            <p className="text-[11px] text-ink-400 font-mono">Policy Deductions</p>
-          </div>
-        </div>
-
-        {/* ── Filter & Search Toolbar ── */}
-        <div className="rounded-xl border border-line bg-white p-4 shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-accent-600" />
-              <label className="text-xs font-mono font-bold text-ink-700 uppercase tracking-wider">Billing Period:</label>
-            </div>
-            <select
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="rounded-lg border border-line bg-surface-sunken px-3 py-1.5 text-xs font-mono font-bold text-ink-900 shadow-2xs focus:border-accent-600 focus:outline-none cursor-pointer"
-            >
-              {MONTHS.slice(1).map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-            <select
-              value={year}
-              onChange={(e) => setYear(parseInt(e.target.value))}
-              className="rounded-lg border border-line bg-surface-sunken px-3 py-1.5 text-xs font-mono font-bold text-ink-900 shadow-2xs focus:border-accent-600 focus:outline-none cursor-pointer"
-            >
-              {[2024, 2025, 2026, 2027].map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+            {/* 3. Fetch Data Button (Clear High Contrast) */}
             <button
               onClick={fetchReport}
               disabled={loading}
-              className="flex items-center gap-1.5 rounded-lg bg-accent-600 hover:bg-accent-700 text-white px-3.5 py-1.5 text-xs font-bold shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+              className="h-9 rounded-[4px] bg-[#4338CA] hover:bg-[#3730A3] text-white px-4 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer border border-[#3730A3] disabled:opacity-50"
             >
-              <Search className="h-3.5 w-3.5" />
-              Fetch Data
+              <Search className="w-3.5 h-3.5 text-white" />
+              <span className="text-white">Fetch Data</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-2.5 top-2 h-4 w-4 text-ink-400" />
+          {/* Right: Search, Policy Master & Export Buttons */}
+          <div className="flex items-center gap-2 shrink-0 flex-nowrap">
+            {/* Search Input */}
+            <div className="relative inline-flex items-center bg-white rounded-[4px] border border-[#4f4f4f] hover:border-accent-600 h-9 px-2.5 shrink-0 transition-all focus-within:ring-1 focus-within:ring-accent-600 focus-within:border-accent-600 w-52 sm:w-64">
+              <Search className="w-3.5 h-3.5 text-ink-400 mr-2 shrink-0" />
               <input
                 type="text"
                 placeholder="Search engineer, code, role..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-line bg-surface-sunken pl-8 pr-3 py-1.5 text-xs font-sans text-ink-900 placeholder:text-ink-300 focus:border-accent-600 focus:outline-none"
+                className="h-full w-full text-xs font-medium text-ink-900 placeholder:text-ink-400 bg-transparent border-0 focus:outline-none leading-none"
               />
             </div>
+
+            {/* Policy Master Button */}
             <button
               onClick={() => setShowPolicyPanel(!showPolicyPanel)}
-              className="flex items-center gap-1.5 rounded-lg border border-line bg-white hover:bg-surface-sunken px-3 py-1.5 text-xs font-bold text-ink-700 shadow-2xs transition-all cursor-pointer"
+              className="h-9 rounded-[4px] bg-white hover:bg-surface-sunken text-ink-900 px-3.5 text-xs font-bold flex items-center gap-1.5 shadow-2xs border border-[#4f4f4f] hover:border-accent-600 transition-colors cursor-pointer"
             >
-              <BookOpen className="h-3.5 w-3.5 text-accent-600" />
-              Policy Master
-              {showPolicyPanel ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              <BookOpen className="w-3.5 h-3.5 text-accent-600" />
+              <span>Policy Master</span>
+              {showPolicyPanel ? <ChevronUp className="w-3.5 h-3.5 text-ink-500" /> : <ChevronDown className="w-3.5 h-3.5 text-ink-500" />}
+            </button>
+
+            {/* Excel Export Button (Clear High Contrast) */}
+            <button
+              onClick={downloadExcel}
+              disabled={data.length === 0}
+              className="h-9 rounded-[4px] bg-emerald-600 hover:bg-emerald-700 text-white px-4 text-xs font-bold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer border border-emerald-700 disabled:opacity-50"
+            >
+              <Download className="w-3.5 h-3.5 text-white" />
+              <span className="text-white">Export Excel</span>
+            </button>
+
+            {/* Sync Refresh Button */}
+            <button
+              onClick={fetchReport}
+              disabled={loading}
+              title="Refresh Report Data"
+              className="w-9 h-9 rounded-[4px] border border-[#4f4f4f] bg-white flex items-center justify-center text-ink-700 hover:text-accent-600 hover:border-accent-600 shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-accent-600" : ""}`} />
             </button>
           </div>
         </div>
 
         {/* ── Policy Rules Collapsible Panel ── */}
         {showPolicyPanel && (
-          <div className="rounded-xl border border-accent-200 bg-white p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-line pb-3">
+          <div className="rounded-[4px] border border-accent-200 bg-white p-4 space-y-3 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-line pb-2.5">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4 text-accent-600" />
                 <h3 className="font-bold text-xs uppercase tracking-wider text-ink-900 font-mono">
@@ -485,7 +545,7 @@ export default function ConsolidatedReportPage() {
                 <select
                   value={selectedPolicyGrade}
                   onChange={(e) => setSelectedPolicyGrade(e.target.value)}
-                  className="rounded-lg border border-line bg-surface-sunken px-2.5 py-1 text-xs font-mono font-bold text-ink-900 focus:border-accent-600 focus:outline-none"
+                  className="rounded-[4px] border border-line bg-surface-sunken px-2.5 py-1 text-xs font-mono font-bold text-ink-900 focus:border-accent-600 focus:outline-none"
                 >
                   {availableGrades.map((g) => (
                     <option key={g} value={g}>{g}</option>
@@ -495,42 +555,44 @@ export default function ConsolidatedReportPage() {
             </div>
 
             {selectedPolicy && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-                <div className="p-3 rounded-lg border border-line bg-surface-sunken">
-                  <span className="text-[10px] text-ink-400 block uppercase font-bold">DA (HQ / Normal)</span>
-                  <span className="text-sm font-black text-ink-900">₹{(selectedPolicy.daily_hq || 0).toFixed(2)}</span>
-                  <p className="text-[10px] text-ink-500 font-sans mt-0.5">Normal daily working allowance</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+                <div className="p-2.5 rounded-[4px] border border-line bg-surface-sunken">
+                  <span className="text-[9.5px] text-ink-400 block uppercase font-bold">DA (HQ / Normal)</span>
+                  <span className="text-sm font-bold text-ink-900">₹{(selectedPolicy.daily_hq || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-ink-500 font-sans mt-0.5">Normal daily allowance</p>
                 </div>
-                <div className="p-3 rounded-lg border border-line bg-surface-sunken">
-                  <span className="text-[10px] text-ink-400 block uppercase font-bold">DA (Hotel Stay)</span>
-                  <span className="text-sm font-black text-ink-900">₹{(selectedPolicy.daily_hotel || 0).toFixed(2)}</span>
-                  <p className="text-[10px] text-ink-500 font-sans mt-0.5">When hotel stay is claimed</p>
+                <div className="p-2.5 rounded-[4px] border border-line bg-surface-sunken">
+                  <span className="text-[9.5px] text-ink-400 block uppercase font-bold">DA (Hotel Stay)</span>
+                  <span className="text-sm font-bold text-ink-900">₹{(selectedPolicy.daily_hotel || 0).toFixed(2)}</span>
+                  <p className="text-[9.5px] text-ink-500 font-sans mt-0.5">When hotel is claimed</p>
                 </div>
-                <div className="p-3 rounded-lg border border-line bg-surface-sunken">
-                  <span className="text-[10px] text-ink-400 block uppercase font-bold">Bike Travel Rate</span>
-                  <span className="text-sm font-black text-ink-900">₹{(selectedPolicy.rate_bike || 4.5).toFixed(2)} / KM</span>
-                  <p className="text-[10px] text-ink-500 font-sans mt-0.5">Two-wheeler reimbursement</p>
+                <div className="p-2.5 rounded-[4px] border border-line bg-surface-sunken">
+                  <span className="text-[9.5px] text-ink-400 block uppercase font-bold">Bike Travel Rate</span>
+                  <span className="text-sm font-bold text-ink-900">₹{(selectedPolicy.rate_bike || 4.5).toFixed(2)} / KM</span>
+                  <p className="text-[9.5px] text-ink-500 font-sans mt-0.5">Two-wheeler rate</p>
                 </div>
-                <div className="p-3 rounded-lg border border-line bg-surface-sunken">
-                  <span className="text-[10px] text-ink-400 block uppercase font-bold">Car Travel Rate</span>
-                  <span className="text-sm font-black text-ink-900">₹{(selectedPolicy.rate_car || 9.0).toFixed(2)} / KM</span>
-                  <p className="text-[10px] text-ink-500 font-sans mt-0.5">Four-wheeler reimbursement</p>
+                <div className="p-2.5 rounded-[4px] border border-line bg-surface-sunken">
+                  <span className="text-[9.5px] text-ink-400 block uppercase font-bold">Car Travel Rate</span>
+                  <span className="text-sm font-bold text-ink-900">₹{(selectedPolicy.rate_car || 9.0).toFixed(2)} / KM</span>
+                  <p className="text-[9.5px] text-ink-500 font-sans mt-0.5">Four-wheeler rate</p>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* ── High-Density Zoho Consolidated Data Grid ── */}
-        <div className="rounded-xl border border-line bg-white shadow-[0_10px_30px_-5px_rgba(30,27,75,0.03)] overflow-hidden">
-          <div className="border-b border-line bg-[#1E1B4B] px-5 py-3.5 flex items-center justify-between text-white font-mono">
+        {/* ══════════════════════════════════════════════════════════════════
+            DITTO HIGH-DENSITY ZOHO TABLE (CLEAR READABLE HEADER & CONTRAST)
+        ══════════════════════════════════════════════════════════════════ */}
+        <div className="rounded-[4px] border border-[#4f4f4f]/30 bg-white shadow-2xs overflow-hidden">
+          <div className="border-b border-line bg-[#1E1B4B] px-4 py-2.5 flex items-center justify-between text-white font-mono">
             <div className="flex items-center gap-2">
               <FileSpreadsheet className="h-4 w-4 text-accent-300" />
-              <h2 className="text-xs font-bold uppercase tracking-wider">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-white">
                 {month} {year} Consolidated Audit Ledger ({filteredData.length} Staff)
               </h2>
             </div>
-            <span className="text-xs font-bold text-accent-200 font-mono">
+            <span className="text-xs font-bold text-emerald-300 font-mono">
               Net Disbursement: ₹{fmt(totalNet)}
             </span>
           </div>
@@ -548,36 +610,36 @@ export default function ConsolidatedReportPage() {
             ) : (
               <table className="w-full text-left text-xs border-collapse min-w-[2200px]">
                 <thead>
-                  <tr className="border-b border-line bg-[#1E1B4B] text-white text-[11px] font-mono">
-                    <th className="py-3 px-2 border-r border-white/10 text-center">#</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">Submitted Date</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">Copy Mode</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">EE Code</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">Grade</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-left">Designation</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">CC</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-left">Employee Name</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314101 Private Tr.</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314101 Public Tr.</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314102 DA</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314108 Spares</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314103 Courier</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314104 Hotel/Board</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314105 Print/Stat</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314106 Misc</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">5314107 Fuel</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right bg-accent-950 text-emerald-300 font-bold">Total Approved</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right bg-rose-950 text-rose-300 font-bold">Advances</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right bg-emerald-950 text-emerald-300 font-bold">Net Payable</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">Status</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-left min-w-[150px]">Reason for Deduction</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">Month</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">Hold</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-left">Remarks</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-left">Manager</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-center">State</th>
-                    <th className="py-3 px-2 border-r border-white/10 text-right">Total Claimed</th>
-                    <th className="py-3 px-2 text-right">Difference</th>
+                  <tr className="border-b border-line bg-[#F4F3F1] text-ink-800 text-[10.5px] font-mono uppercase font-bold">
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">#</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">Submitted Date</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">Copy Mode</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-accent-700">EE Code</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">Grade</th>
+                    <th className="py-2.5 px-2 border-r border-line text-left bg-[#F4F3F1] text-ink-700">Designation</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">CC</th>
+                    <th className="py-2.5 px-2 border-r border-line text-left bg-[#F4F3F1] text-ink-900">Employee Name</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314101 Private Tr.</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314101 Public Tr.</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314102 DA</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314108 Spares</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314103 Courier</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314104 Hotel/Board</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314105 Print/Stat</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314106 Misc</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">5314107 Fuel</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-emerald-50 text-emerald-800 font-bold">Total Approved</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-rose-50 text-rose-800 font-bold">Advances</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-accent-50 text-accent-800 font-bold">Net Payable</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">Status</th>
+                    <th className="py-2.5 px-2 border-r border-line text-left min-w-[150px] bg-[#F4F3F1] text-ink-700">Reason for Deduction</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">Month</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">Hold</th>
+                    <th className="py-2.5 px-2 border-r border-line text-left bg-[#F4F3F1] text-ink-700">Remarks</th>
+                    <th className="py-2.5 px-2 border-r border-line text-left bg-[#F4F3F1] text-ink-700">Manager</th>
+                    <th className="py-2.5 px-2 border-r border-line text-center bg-[#F4F3F1] text-ink-700">State</th>
+                    <th className="py-2.5 px-2 border-r border-line text-right bg-[#F4F3F1] text-ink-700">Total Claimed</th>
+                    <th className="py-2.5 px-2 text-right bg-[#F4F3F1] text-ink-700">Difference</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line font-mono text-[11px]">
@@ -597,64 +659,64 @@ export default function ConsolidatedReportPage() {
                     const rowDiff = (r.claimed_amount || 0) - rowTotal;
 
                     return (
-                      <tr key={idx} className="hover:bg-surface-sunken/40 transition-colors">
-                        <td className="py-2.5 px-2 text-center text-ink-400 border-r border-line">{idx + 1}</td>
-                        <td className="py-2.5 px-2 text-center border-r border-line">{r.submitted_date || "—"}</td>
-                        <td className="py-2.5 px-2 text-center border-r border-line text-ink-600 font-sans">{r.mail_hard_copy || "Soft Copy"}</td>
-                        <td className="py-2.5 px-2 text-center font-bold text-accent-700 bg-accent-50/30 border-r border-line">{r.ee_code}</td>
-                        <td className="py-2.5 px-2 text-center border-r border-line">{r.grade || "—"}</td>
-                        <td className="py-2.5 px-2 border-r border-line font-sans truncate max-w-[150px]" title={r.designation}>{r.designation || "—"}</td>
-                        <td className="py-2.5 px-2 text-center border-r border-line">{r.cc || "—"}</td>
-                        <td className="py-2.5 px-2 font-bold font-sans text-ink-900 border-r border-line">{r.ee_name || "—"}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line">{fmt(privateTravel)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line">{fmt(publicTravel)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line">{fmt(r.da_allowance)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line">{fmt(r.spare_purchase)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line">{fmt(r.courier_charges)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line">{fmt(r.boarding_lodging)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line">{fmt(r.printing_stationery)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line">{fmt(r.misc_expenses)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line text-ink-400">0.00</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line font-black bg-surface-sunken text-ink-900">{fmt(rowTotal)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line font-black text-rose-700 bg-rose-50/40">{fmt(r.advance)}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line font-black text-emerald-700 bg-emerald-50/40">{fmt(rowNet)}</td>
-                        <td className="py-2.5 px-2 text-center border-r border-line">
-                          <span className="rounded-md bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase">
+                      <tr key={idx} className="hover:bg-accent-50/30 transition-colors">
+                        <td className="py-2 px-2 text-center text-ink-400 border-r border-line">{idx + 1}</td>
+                        <td className="py-2 px-2 text-center border-r border-line text-ink-700">{r.submitted_date || "—"}</td>
+                        <td className="py-2 px-2 text-center border-r border-line text-ink-600 font-sans">{r.mail_hard_copy || "Soft Copy"}</td>
+                        <td className="py-2 px-2 text-center font-bold text-accent-700 bg-accent-50/40 border-r border-line">{r.ee_code}</td>
+                        <td className="py-2 px-2 text-center border-r border-line text-ink-700">{r.grade || "—"}</td>
+                        <td className="py-2 px-2 border-r border-line font-sans truncate max-w-[150px] text-ink-700" title={r.designation}>{r.designation || "—"}</td>
+                        <td className="py-2 px-2 text-center border-r border-line text-ink-700">{r.cc || "—"}</td>
+                        <td className="py-2 px-2 font-bold font-sans text-ink-900 border-r border-line">{r.ee_name || "—"}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">{fmt(privateTravel)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">{fmt(publicTravel)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">{fmt(r.da_allowance)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">{fmt(r.spare_purchase)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">{fmt(r.courier_charges)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">{fmt(r.boarding_lodging)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">{fmt(r.printing_stationery)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-800">{fmt(r.misc_expenses)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line text-ink-400">0.00</td>
+                        <td className="py-2 px-2 text-right border-r border-line font-bold bg-emerald-50/40 text-emerald-800">{fmt(rowTotal)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line font-bold text-rose-700 bg-rose-50/40">{fmt(r.advance)}</td>
+                        <td className="py-2 px-2 text-right border-r border-line font-bold text-accent-800 bg-accent-50/40">{fmt(rowNet)}</td>
+                        <td className="py-2 px-2 text-center border-r border-line">
+                          <span className="rounded-[3px] bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[9.5px] font-bold text-emerald-700 uppercase">
                             Approved
                           </span>
                         </td>
-                        <td className="py-2.5 px-2 border-r border-line font-sans text-ink-600 min-w-[150px] truncate" title={r.deduction_reason}>{r.deduction_reason || "—"}</td>
-                        <td className="py-2.5 px-2 text-center border-r border-line font-bold text-accent-700">{r.month || "—"}</td>
-                        <td className="py-2.5 px-2 text-center border-r border-line text-ink-500">{r.hold_reason || "No"}</td>
-                        <td className="py-2.5 px-2 border-r border-line font-sans text-ink-600 truncate max-w-[150px]" title={r.remarks}>{r.remarks || "—"}</td>
-                        <td className="py-2.5 px-2 border-r border-line font-sans font-bold text-ink-800 truncate max-w-[120px]" title={r.manager}>{r.manager || "—"}</td>
-                        <td className="py-2.5 px-2 text-center border-r border-line font-sans">{r.state || "Rajasthan"}</td>
-                        <td className="py-2.5 px-2 text-right border-r border-line font-bold">{fmt(r.claimed_amount)}</td>
-                        <td className="py-2.5 px-2 text-right font-black text-rose-700 bg-rose-50/20">{fmt(rowDiff)}</td>
+                        <td className="py-2 px-2 border-r border-line font-sans text-ink-600 min-w-[150px] truncate" title={r.deduction_reason}>{r.deduction_reason || "—"}</td>
+                        <td className="py-2 px-2 text-center border-r border-line font-bold text-accent-700">{r.month || "—"}</td>
+                        <td className="py-2 px-2 text-center border-r border-line text-ink-500">{r.hold_reason || "No"}</td>
+                        <td className="py-2 px-2 border-r border-line font-sans text-ink-600 truncate max-w-[150px]" title={r.remarks}>{r.remarks || "—"}</td>
+                        <td className="py-2 px-2 border-r border-line font-sans font-bold text-ink-800 truncate max-w-[120px]" title={r.manager}>{r.manager || "—"}</td>
+                        <td className="py-2 px-2 text-center border-r border-line font-sans text-ink-700">{r.state || "Rajasthan"}</td>
+                        <td className="py-2 px-2 text-right border-r border-line font-bold text-ink-800">{fmt(r.claimed_amount)}</td>
+                        <td className="py-2 px-2 text-right font-bold text-rose-700 bg-rose-50/20">{fmt(rowDiff)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-surface-sunken border-t-2 border-line text-xs font-black font-mono text-ink-900">
-                    <td colSpan={8} className="py-3 px-2 border-r border-line text-center uppercase tracking-wider text-accent-900 font-sans">
+                  <tr className="bg-surface-sunken border-t-2 border-line text-xs font-bold font-mono text-ink-900">
+                    <td colSpan={8} className="py-2.5 px-2 border-r border-line text-center uppercase tracking-wider text-accent-900 font-sans">
                       Grand Total Summary
                     </td>
-                    <td className="py-3 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + ((r.bike_km || 0) * 4.5 + (r.car_km || 0) * 9.0), 0))}</td>
-                    <td className="py-3 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + ((r.auto_amount || 0) + (r.train_bus_amount || 0)), 0))}</td>
-                    <td className="py-3 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.da_allowance || 0), 0))}</td>
-                    <td className="py-3 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.spare_purchase || 0), 0))}</td>
-                    <td className="py-3 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.courier_charges || 0), 0))}</td>
-                    <td className="py-3 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.boarding_lodging || 0), 0))}</td>
-                    <td className="py-3 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.printing_stationery || 0), 0))}</td>
-                    <td className="py-3 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.misc_expenses || 0), 0))}</td>
-                    <td className="py-3 px-2 text-right border-r border-line">0.00</td>
-                    <td className="py-3 px-2 text-right border-r border-line font-black text-ink-900 bg-surface-sunken">{fmt(totalApprovedSum)}</td>
-                    <td className="py-3 px-2 text-right border-r border-line font-black text-rose-700 bg-rose-50/60">{fmt(totalAdvances)}</td>
-                    <td className="py-3 px-2 text-right border-r border-line font-black text-emerald-700 bg-emerald-50/80">{fmt(totalNet)}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + ((r.bike_km || 0) * 4.5 + (r.car_km || 0) * 9.0), 0))}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + ((r.auto_amount || 0) + (r.train_bus_amount || 0)), 0))}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.da_allowance || 0), 0))}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.spare_purchase || 0), 0))}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.courier_charges || 0), 0))}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.boarding_lodging || 0), 0))}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.printing_stationery || 0), 0))}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">{fmt(data.reduce((s, r) => s + (r.misc_expenses || 0), 0))}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line">0.00</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line font-bold text-emerald-800 bg-emerald-50/60">{fmt(totalApprovedSum)}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line font-bold text-rose-700 bg-rose-50/60">{fmt(totalAdvances)}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line font-bold text-accent-800 bg-accent-50/80">{fmt(totalNet)}</td>
                     <td colSpan={7} className="border-r border-line text-center text-ink-500 font-sans font-bold">{data.length} Staff Members</td>
-                    <td className="py-3 px-2 text-right border-r border-line font-bold">{fmt(totalClaimed)}</td>
-                    <td className="py-3 px-2 text-right font-black text-rose-700 bg-rose-50/60">{fmt(totalClaimed - totalApprovedSum)}</td>
+                    <td className="py-2.5 px-2 text-right border-r border-line font-bold">{fmt(totalClaimed)}</td>
+                    <td className="py-2.5 px-2 text-right font-bold text-rose-700 bg-rose-50/60">{fmt(totalClaimed - totalApprovedSum)}</td>
                   </tr>
                 </tfoot>
               </table>
