@@ -579,6 +579,12 @@ router.post("/api/expense/:id/reverse", handleReverseExpense, true);
 router.post("/api/expense/log-client-glitch", handleLogClientGlitch, true);
 router.get("/api/expense/kv-diagnostic-logs", handleGetKvDiagnosticLogs, true);
 
+// ─── Server-Side PDF Generation & Bulk Export Endpoints ──────────────────────
+router.get("/api/pdf/single", handleGenerateSinglePdf, true);
+router.post("/api/pdf/bulk-trigger", handleTriggerBulkPdf, true);
+router.get("/api/pdf/batch-status/:batchId", handleGetPdfBatchStatus, true);
+router.get("/api/pdf/batch-status", handleGetPdfBatchStatus, true);
+
 // ─── KPI Module Endpoints ───────────────────────────────────────────────────────────────────
 // KPI Assignments (setup, approval workflow)
 router.get("/api/kpi/assignment", handleGetKpiAssignment, true);

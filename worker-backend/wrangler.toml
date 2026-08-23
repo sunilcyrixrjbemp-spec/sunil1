@@ -20,6 +20,15 @@ binding = "OTPS_KV"
 id = "7a00b8d26638473384d2d99f92417fee"
 preview_id = "7a00b8d26638473384d2d99f92417fee"
 
+[[kv_namespaces]]
+binding = "PDF_PROGRESS_KV"
+id = "7a00b8d26638473384d2d99f92417fee"
+preview_id = "7a00b8d26638473384d2d99f92417fee"
+
+# ─── Cloudflare Browser Rendering ─────────────────────────────────────────
+[browser]
+binding = "BROWSER"
+
 # ─── Cloudflare Email Workers (Native email sending) ───────────────────────
 [[send_email]]
 name = "EMAIL_SENDER"
@@ -35,6 +44,10 @@ bucket_name = "fieldops-uploads"
 
 # ─── Cloudflare Queues (Async Job Processing — Pro Plan) ──────────────
 [[queues.producers]]
+binding = "PDF_QUEUE"
+queue = "fieldops-pdf-queue"
+
+[[queues.producers]]
 binding = "UPLOADS_QUEUE"
 queue = "fieldops-uploads-queue"
 
@@ -45,6 +58,13 @@ queue = "fieldops-email-queue"
 [[queues.producers]]
 binding = "ANALYTICS_QUEUE"
 queue = "fieldops-analytics-queue"
+
+[[queues.consumers]]
+queue = "fieldops-pdf-queue"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+max_concurrency = 15
 
 [[queues.consumers]]
 queue = "fieldops-uploads-queue"
