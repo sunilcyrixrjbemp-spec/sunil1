@@ -1546,6 +1546,7 @@ export default function AdminPage() {
   const [bulkFacilityLoading, setBulkFacilityLoading] = useState(false);
   const [bulkFacilityPreview, setBulkFacilityPreview] = useState<any[]>([]);
   const [bulkFacilityFileName, setBulkFacilityFileName] = useState("");
+  const [bulkFacilityProgress, setBulkFacilityProgress] = useState<{ current: number; total: number; percent: number } | null>(null);
 
   const handleDownloadFacilityTemplate = () => {
     const templateData = [
@@ -1592,11 +1593,11 @@ export default function AdminPage() {
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: "binary" });
+        const arrayBuffer = evt.target?.result;
+        const wb = XLSX.read(arrayBuffer, { type: "array" });
         const wsName = wb.SheetNames[0];
         const ws = wb.Sheets[wsName];
-        const data: any[] = XLSX.utils.sheet_to_json(ws);
+        const data: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
         if (data.length === 0) {
           toast.error("File is empty or contains no rows!");
           return;
@@ -1607,7 +1608,7 @@ export default function AdminPage() {
         toast.error("Failed to parse file: " + err.message);
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const handleBulkFacilitySubmit = async () => {
@@ -1616,21 +1617,46 @@ export default function AdminPage() {
       return;
     }
     setBulkFacilityLoading(true);
+    setBulkFacilityProgress({ current: 0, total: bulkFacilityPreview.length, percent: 0 });
+
     try {
-      const res = await adminService.bulkImportFacilities(bulkFacilityPreview);
-      if (res.success) {
-        toast.success(res.message || "Facilities bulk import completed successfully!");
-        setIsBulkFacilityModalOpen(false);
-        setBulkFacilityPreview([]);
-        setBulkFacilityFileName("");
-        fetchInitialData();
-      } else {
-        toast.error(res.error || "Bulk import failed");
+      const CHUNK_SIZE = 100;
+      let totalInserted = 0;
+      let totalUpdated = 0;
+      const allErrors: string[] = [];
+
+      for (let i = 0; i < bulkFacilityPreview.length; i += CHUNK_SIZE) {
+        const chunk = bulkFacilityPreview.slice(i, i + CHUNK_SIZE);
+        const currentCount = Math.min(i + CHUNK_SIZE, bulkFacilityPreview.length);
+        setBulkFacilityProgress({
+          current: currentCount,
+          total: bulkFacilityPreview.length,
+          percent: Math.round((currentCount / bulkFacilityPreview.length) * 100)
+        });
+
+        const res = await adminService.bulkImportFacilities(chunk);
+        if (!res.success) {
+          throw new Error(res.error || `Failed at batch ${Math.floor(i / CHUNK_SIZE) + 1}`);
+        }
+        totalInserted += res.insertedCount || 0;
+        totalUpdated += res.updatedCount || 0;
+        if (res.errors && res.errors.length > 0) {
+          allErrors.push(...res.errors);
+        }
       }
+
+      toast.success(`Import complete! ${totalInserted} new added, ${totalUpdated} updated.`);
+      setIsBulkFacilityModalOpen(false);
+      setBulkFacilityPreview([]);
+      setBulkFacilityFileName("");
+      setBulkFacilityProgress(null);
+      fetchInitialData();
     } catch (err: any) {
-      toast.error("Bulk import failed: " + (err.response?.data?.error || err.message));
+      console.error("Bulk facility import error:", err);
+      toast.error("Bulk import error: " + (err.response?.data?.error || err.message));
     } finally {
       setBulkFacilityLoading(false);
+      setBulkFacilityProgress(null);
     }
   };
 
@@ -3887,6 +3913,21 @@ export default function AdminPage() {
                   <span>Download Format</span>
                 </button>
               </div>
+
+              {bulkFacilityProgress && (
+                <div className="bg-[#EEF0FF] border border-[#DEE1FF] rounded-xl p-3 space-y-1.5 animate-fadeIn">
+                  <div className="flex items-center justify-between text-xs font-bold text-[#1E1B4B]">
+                    <span>Processing facilities...</span>
+                    <span className="font-mono">{bulkFacilityProgress.current} / {bulkFacilityProgress.total} ({bulkFacilityProgress.percent}%)</span>
+                  </div>
+                  <div className="w-full bg-white rounded-full h-2 overflow-hidden border border-[#DEE1FF]">
+                    <div 
+                      className="bg-gradient-to-r from-[#1E1B4B] to-[#4338CA] h-full rounded-full transition-all duration-300"
+                      style={{ width: `${bulkFacilityProgress.percent}%` }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Upload Dropzone */}
               <div className="border-2 border-dashed border-line hover:border-accent-400 rounded-xl p-6 text-center bg-surface transition-colors cursor-pointer relative">

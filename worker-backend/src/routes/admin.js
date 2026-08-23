@@ -1,4 +1,4 @@
-import { runWrite, runBatchWrite } from "../utils/db.js";
+import { runWrite, runBatchWrite, clearCache } from "../utils/db.js";
 import { getPasswordHash, verifyPassword } from "../utils/security.js";
 import { computeBaseLocPolicy, checkIsCommuteLeg, buildPolicyComment } from "./expense.js";
 import { jsonResponse } from "../utils/http.js";
@@ -2531,40 +2531,62 @@ export async function handleBulkImportFacilities(request, env, params, query, ad
     let updatedCount = 0;
     const errors = [];
 
-    // Fetch existing facilities in facility_details
-    const existingRes = await env.DB.prepare("SELECT ROWID as id, facility_name FROM facility_details").all().catch(() => ({ results: [] }));
-    const existingMap = new Map();
-    for (const row of (existingRes.results || [])) {
-      if (row.facility_name) {
-        existingMap.set(row.facility_name.trim().toLowerCase(), row.id);
+    // Helper for flexible field extraction
+    function extractField(row, keys) {
+      if (!row || typeof row !== "object") return "";
+      for (const k of keys) {
+        if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+          return String(row[k]).trim();
+        }
       }
+      const rowKeys = Object.keys(row);
+      for (const targetKey of keys) {
+        const normTarget = targetKey.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const matchedKey = rowKeys.find(rk => rk.toLowerCase().replace(/[^a-z0-9]/g, "") === normTarget);
+        if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null && String(row[matchedKey]).trim() !== "") {
+          return String(row[matchedKey]).trim();
+        }
+      }
+      return "";
+    }
+
+    // Fetch existing facility names to check existing records
+    let existingNamesSet = new Set();
+    try {
+      const existingRes = await env.DB.prepare("SELECT facility_name FROM facility_details").all();
+      for (const row of (existingRes.results || [])) {
+        if (row.facility_name) {
+          existingNamesSet.add(row.facility_name.trim().toLowerCase());
+        }
+      }
+    } catch (dbReadErr) {
+      console.warn("Could not read existing facilities:", dbReadErr);
     }
 
     const statements = [];
 
     for (let i = 0; i < facilities.length; i++) {
       const f = facilities[i];
-      const facilityName = (f.facility_name || f["Facility Name"] || f.name || "").trim();
-      const districtName = (f.district_name || f["District"] || f.district || "").trim() || "General";
-      const facilityIncharge = (f.facility_incharge || f["Facility Incharge"] || f.incharge || "").trim() || "";
-      const dmName = (f.dm_name || f["Divisional Manager"] || f["DM Name"] || f.manager || "").trim() || "";
-      const coordinatorName = (f.coordinator_name || f["Coordinator"] || "").trim() || "";
-      const facilityType = (f.facility_type || f["Facility Type"] || f.type || "").trim() || "Hospital";
-      const zoneName = (f.zone_name || f["Zone"] || f.zone || "").trim() || "Rajasthan";
+      const facilityName = extractField(f, ["Facility Name", "facility_name", "facility", "hospital_name", "hospital", "name"]);
+      const districtName = extractField(f, ["District", "district_name", "district", "district_type"]) || "General";
+      const facilityIncharge = extractField(f, ["Facility Incharge", "facility_incharge", "incharge", "doctor_incharge", "moic", "in_charge"]);
+      const dmName = extractField(f, ["Divisional Manager", "dm_name", "DM Name", "dm", "manager", "divisional_manager"]);
+      const coordinatorName = extractField(f, ["Coordinator", "coordinator_name", "coordinator"]);
+      const facilityType = extractField(f, ["Facility Type", "facility_type", "type", "category"]) || "Hospital";
+      const zoneName = extractField(f, ["Zone", "zone_name", "zone", "region"]) || "Rajasthan";
 
       if (!facilityName) {
-        errors.push(`Row ${i + 1}: Facility Name is required`);
+        errors.push(`Row ${i + 1}: Facility Name is missing`);
         continue;
       }
 
       const key = facilityName.toLowerCase();
-      if (existingMap.has(key)) {
-        // UPDATE existing facility (Keep facility name unique, update other fields)
-        const existingId = existingMap.get(key);
+      if (existingNamesSet.has(key)) {
+        // UPDATE existing facility by name
         statements.push(
           env.DB.prepare(
-            "UPDATE facility_details SET district_name = ?, facility_incharge = ?, dm_name = ?, coordinator_name = ?, facility_type = ?, zone_name = ? WHERE ROWID = ? OR LOWER(TRIM(facility_name)) = LOWER(TRIM(?))"
-          ).bind(districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName, existingId, facilityName)
+            "UPDATE facility_details SET district_name = ?, facility_incharge = ?, dm_name = ?, coordinator_name = ?, facility_type = ?, zone_name = ? WHERE LOWER(TRIM(facility_name)) = LOWER(TRIM(?))"
+          ).bind(districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName, facilityName)
         );
         updatedCount++;
       } else {
@@ -2575,8 +2597,7 @@ export async function handleBulkImportFacilities(request, env, params, query, ad
           ).bind(facilityName, districtName, facilityIncharge, dmName, coordinatorName, facilityType, zoneName)
         );
         insertedCount++;
-        // Update local map to avoid duplicate inserts within same batch
-        existingMap.set(key, true);
+        existingNamesSet.add(key);
       }
     }
 
@@ -2584,10 +2605,16 @@ export async function handleBulkImportFacilities(request, env, params, query, ad
     const BATCH_SIZE = 50;
     for (let i = 0; i < statements.length; i += BATCH_SIZE) {
       const batch = statements.slice(i, i + BATCH_SIZE);
-      await env.DB.batch(batch);
+      if (batch.length > 0) {
+        await env.DB.batch(batch);
+      }
     }
 
-    // Invalidate KV caches for Expense & Auth dropdowns
+    // Clear DB query cache & Invalidate KV caches
+    try {
+      clearCache();
+    } catch (_) {}
+
     try {
       if (env.OTPS_KV) {
         await env.OTPS_KV.delete("cache:ref:facilities_dict:v1");
@@ -2620,6 +2647,6 @@ export async function handleBulkImportFacilities(request, env, params, query, ad
     });
   } catch (error) {
     console.error("handleBulkImportFacilities error:", error);
-    return jsonResponse({ success: false, error: "Failed to process bulk facilities import: " + error.message }, 500);
+    return jsonResponse({ success: false, error: "Failed to process bulk facilities import: " + (error.message || String(error)) }, 500);
   }
 }
