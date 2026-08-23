@@ -1659,7 +1659,7 @@ export default function AdminPage() {
     setBulkFacilityProgress({ current: 0, total: bulkFacilityPreview.length, percent: 0 });
 
     try {
-      const CHUNK_SIZE = 500;
+      const CHUNK_SIZE = 100;
       let totalInserted = 0;
       let totalUpdated = 0;
 
@@ -1672,16 +1672,28 @@ export default function AdminPage() {
           percent: Math.round((currentCount / bulkFacilityPreview.length) * 100)
         });
 
-        const res = await adminService.bulkImportFacilities(chunk);
+        let res: any = null;
+        let attempts = 0;
+        while (attempts < 2) {
+          try {
+            res = await adminService.bulkImportFacilities(chunk);
+            if (res && res.success) break;
+          } catch (e) {
+            attempts++;
+            if (attempts >= 2) throw e;
+            await new Promise(r => setTimeout(r, 400));
+          }
+        }
+
         if (res && res.success) {
           totalInserted += res.insertedCount || 0;
           totalUpdated += res.updatedCount || 0;
         } else {
-          throw new Error(res?.error || `Failed at chunk ${Math.floor(i / CHUNK_SIZE) + 1}`);
+          throw new Error(res?.error || `Failed at batch ${Math.floor(i / CHUNK_SIZE) + 1}`);
         }
       }
 
-      toast.success(`Turbo import completed: ${totalInserted} new added, ${totalUpdated} updated!`);
+      toast.success(`Bulk import completed: ${totalInserted} new added, ${totalUpdated} updated!`);
       setIsBulkFacilityModalOpen(false);
       setBulkFacilityPreview([]);
       setBulkFacilityFileName("");

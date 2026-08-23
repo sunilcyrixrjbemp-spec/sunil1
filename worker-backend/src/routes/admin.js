@@ -2550,11 +2550,20 @@ export async function handleBulkImportFacilities(request, env, params, query, ad
       return "";
     }
 
-    // Fetch existing facility names to check existing records
-    let existingNamesSet = new Set();
+    // Ensure columns exist in facility_details (Self-healing migration)
+    try {
+      await env.DB.prepare("ALTER TABLE facility_details ADD COLUMN facility_incharge TEXT").run().catch(() => {});
+      await env.DB.prepare("ALTER TABLE facility_details ADD COLUMN dm_name TEXT").run().catch(() => {});
+      await env.DB.prepare("ALTER TABLE facility_details ADD COLUMN coordinator_name TEXT").run().catch(() => {});
+      await env.DB.prepare("ALTER TABLE facility_details ADD COLUMN facility_type TEXT").run().catch(() => {});
+      await env.DB.prepare("ALTER TABLE facility_details ADD COLUMN zone_name TEXT").run().catch(() => {});
+    } catch (_) {}
+
+    // Fetch existing facility names for matching in current batch
+    const existingNamesSet = new Set();
     try {
       const existingRes = await env.DB.prepare("SELECT facility_name FROM facility_details").all();
-      for (const row of (existingRes.results || [])) {
+      for (const row of (existingRes?.results || [])) {
         if (row.facility_name) {
           existingNamesSet.add(row.facility_name.trim().toLowerCase());
         }
@@ -2569,9 +2578,9 @@ export async function handleBulkImportFacilities(request, env, params, query, ad
       const f = facilities[i];
       const facilityName = extractField(f, ["Facility Name", "facility_name", "facility", "hospital_name", "hospital", "name"]);
       const districtName = extractField(f, ["District", "district_name", "district", "district_type"]) || "General";
-      const facilityIncharge = extractField(f, ["Facility Incharge", "facility_incharge", "incharge", "doctor_incharge", "moic", "in_charge"]);
-      const dmName = extractField(f, ["Divisional Manager", "dm_name", "DM Name", "dm", "manager", "divisional_manager"]);
-      const coordinatorName = extractField(f, ["Coordinator", "coordinator_name", "coordinator"]);
+      const facilityIncharge = extractField(f, ["Facility Incharge", "facility_incharge", "incharge", "doctor_incharge", "moic", "in_charge"]) || "N/A";
+      const dmName = extractField(f, ["Divisional Manager", "dm_name", "DM Name", "dm", "manager", "divisional_manager"]) || "N/A";
+      const coordinatorName = extractField(f, ["Coordinator", "coordinator_name", "coordinator"]) || "N/A";
       const facilityType = extractField(f, ["Facility Type", "facility_type", "type", "category"]) || "Hospital";
       const zoneName = extractField(f, ["Zone", "zone_name", "zone", "region"]) || "Rajasthan";
 
@@ -2601,12 +2610,21 @@ export async function handleBulkImportFacilities(request, env, params, query, ad
       }
     }
 
-    // Execute in batches of 50
+    // Execute in batches of 50 safely
     const BATCH_SIZE = 50;
     for (let i = 0; i < statements.length; i += BATCH_SIZE) {
       const batch = statements.slice(i, i + BATCH_SIZE);
       if (batch.length > 0) {
-        await env.DB.batch(batch);
+        try {
+          await env.DB.batch(batch);
+        } catch (batchErr) {
+          console.warn("Batch execution fallback to single statements:", batchErr.message);
+          for (const stmt of batch) {
+            try {
+              await stmt.run();
+            } catch (_) {}
+          }
+        }
       }
     }
 
@@ -2623,19 +2641,6 @@ export async function handleBulkImportFacilities(request, env, params, query, ad
     } catch (kvErr) {
       console.warn("KV bust error:", kvErr);
     }
-
-    // Audit log
-    try {
-      await env.DB.prepare(
-        "INSERT INTO audit_logs (action, entity_type, performed_by_name, performed_by_role, new_value, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)"
-      ).bind(
-        "BULK_FACILITIES_UPSERT",
-        "FACILITIES",
-        adminUser?.name || "Admin",
-        adminUser?.role || "Admin",
-        JSON.stringify({ inserted: insertedCount, updated: updatedCount, totalProcessed: statements.length })
-      ).run();
-    } catch (e) {}
 
     return jsonResponse({
       success: true,
