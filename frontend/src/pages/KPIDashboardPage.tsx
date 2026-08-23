@@ -1355,7 +1355,7 @@ function SetupTab({ assignment, fy: _fy, fyMonths, onRefresh }: any) {
       setKras(parseJSON(assignment.kras, []));
       setStartsFrom(assignment.starts_from || "");
     } else {
-      setKras([{ name: "", target: "", weight: 10, section: "job_role" }]);
+      setKras(KRA_TEMPLATES.coordinator.kras);
       setStartsFrom("");
     }
   }, [assignment]);

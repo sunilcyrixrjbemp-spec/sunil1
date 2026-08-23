@@ -29,23 +29,29 @@ export const DEFAULT_WEIGHTS = {
   core_values: 20,
 };
 
+export const CORE_VALUES_PILLARS = [
+  { key: "continuous_learning", label: "Continuous Learning", description: "Demonstrates a strong learning attitude and actively participates in training programs." },
+  { key: "building_relationships", label: "Building Relationships", description: "Maintains a positive attitude toward managers, users, and client requests." },
+  { key: "trust", label: "Trust", description: "Exhibits punctuality, takes ownership and accountability, and ensures error-free documentation." },
+  { key: "care", label: "Care", description: "Responds effectively to negative feedback, supports team members, and appreciates team contributions." },
+  { key: "speed_of_response", label: "Speed of Response", description: "Ensures timely responses to emails, calls, and all customer communications." },
+];
+
 export const CORE_VALUES_OPTIONS = [
-  "Customer Focus",
-  "Integrity",
-  "Accountability",
-  "Teamwork",
-  "Innovation",
-  "Quality",
-  "Leadership",
-  "Communication",
+  "Continuous Learning",
+  "Building Relationships",
+  "Trust",
+  "Care",
+  "Speed of Response",
 ];
 
 export const CORE_VALUE_RATINGS = [
-  { value: 5, label: "Exceptional" },
-  { value: 4, label: "Exceeds Expectations" },
-  { value: 3, label: "Meets Expectations" },
-  { value: 2, label: "Needs Improvement" },
-  { value: 1, label: "Unsatisfactory" },
+  { value: 100, label: "Excellent" },
+  { value: 80, label: "Very Good" },
+  { value: 60, label: "Good" },
+  { value: 40, label: "Satisfactory" },
+  { value: 20, label: "Poor" },
+  { value: 0, label: "Bad" },
 ];
 
 /** Get all months for a financial year (Apr–Mar) */
