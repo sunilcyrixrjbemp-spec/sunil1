@@ -150,13 +150,12 @@ export async function generateCyrixVectorPdf(
   });
 
   const pageWidth = 297;
-  const pageHeight = 210;
   const margin = 5;
   const tableWidth = pageWidth - margin * 2; // Exact 287mm
 
   const userDistrict = user.district || "";
-  const managerName = user.manager || user.manager_name || "Manager";
-  const coordinatorName = user.coordinator || user.coordinator_name || "Coordinator";
+  const managerName = user.manager || user.manager_name || "Nilanjan Dey";
+  const coordinatorName = user.coordinator || user.coordinator_name || "Gopal Tiwari";
 
   const allLegs: { date: string; expCode: string; leg: any }[] = [];
   for (const claim of claims) {
@@ -220,253 +219,240 @@ export async function generateCyrixVectorPdf(
   const gAssetQty = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_qty || 0), 0);
   const gAssetVal = allLegs.reduce((s, r) => s + (r.leg.asset_tagging_val || 0), 0);
 
-  // Dynamic Balanced Page Splitting
-  const totalLegCount = allLegs.length;
-  let ROWS_PER_PAGE = 15;
-  if (totalLegCount <= 15) {
-    ROWS_PER_PAGE = 15;
-  } else if (totalLegCount <= 30) {
-    ROWS_PER_PAGE = Math.ceil(totalLegCount / 2);
-  } else if (totalLegCount <= 45) {
-    ROWS_PER_PAGE = Math.ceil(totalLegCount / 3);
-  } else {
-    ROWS_PER_PAGE = 15;
-  }
+  // 3. Table Rows Data
+  const tableBody = allLegs.map((r) => {
+    const l = r.leg || {};
+    const taCol = l.ta_amount || 0;
+    const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
+    const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
+                   + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
+    const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
+    const ticketNo = getCleanTicketNumber(l);
+    const otherDescClean = cleanReturnText(l.other_desc || "", (userDistrict.trim().toLowerCase() === (l.worked_district || "").trim().toLowerCase()));
 
-  const numPages = Math.max(1, Math.ceil(totalLegCount / ROWS_PER_PAGE));
+    return [
+      fmtDate(r.date),
+      l.from_location || "",
+      l.to_location || "",
+      l.worked_district || "",
+      modeAbbr(l.travel_mode),
+      l.distance_km > 0 ? l.distance_km.toFixed(1) : "",
+      taCol > 0 ? taCol.toFixed(2) : "",
+      l.auto_amount > 0 ? l.auto_amount.toFixed(2) : "",
+      l.da_amount > 0 ? l.da_amount.toFixed(2) : "",
+      l.local_purchase > 0 ? l.local_purchase.toFixed(2) : "",
+      l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : "",
+      otherDescClean || "",
+      l.other_amount > 0 ? l.other_amount.toFixed(2) : "",
+      rowTotal > 0 ? rowTotal.toFixed(2) : "",
+      getFormattedPurpose(l, userDistrict) || "",
+      ticketNo || "",
+      pmsCalibCount > 0 ? String(pmsCalibCount) : "",
+      (l.calls_completed > 0 || l.calls_assigned > 0) ? `${l.calls_completed}/${l.calls_assigned}` : ""
+    ];
+  });
 
-  for (let pageIdx = 0; pageIdx < numPages; pageIdx++) {
-    if (pageIdx > 0) {
-      doc.addPage("a4", "landscape");
-    }
+  // Footer summary table rows
+  const footRows: any[] = [
+    [
+      { content: "TOTAL EXPENSE CLAIMED", colSpan: 5, styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gKM > 0 ? gKM.toFixed(1) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gTA > 0 ? gTA.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gAuto > 0 ? gAuto.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gDA > 0 ? gDA.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gLocal > 0 ? gLocal.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gHotel > 0 ? gHotel.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: "Total", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gOther > 0 ? gOther.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gTotal.toFixed(2), styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: "", styles: { fillColor: [254, 243, 199] } },
+      { content: gAssetQty > 0 ? `Qty: ${gAssetQty} | ${gAssetVal.toLocaleString("en-IN")}` : "", styles: { halign: "center", fontSize: 5.5, fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: gPMSCalib > 0 ? String(gPMSCalib) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
+      { content: (gCallsC > 0 || gCallsA > 0) ? `${gCallsC}/${gCallsA}` : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } }
+    ],
+    [
+      { content: "LESS: MONTHLY ADVANCE DEDUCTION", colSpan: 13, styles: { halign: "center", fontStyle: "bold" } },
+      { content: advance > 0 ? Math.round(advance).toFixed(2) : "0.00", styles: { halign: "center", fontStyle: "bold", textColor: [185, 28, 28] } },
+      { content: "", colSpan: 4 }
+    ],
+    [
+      { content: "NET PAYABLE AMOUNT", colSpan: 13, styles: { halign: "center", fontStyle: "bold", fillColor: [241, 245, 249] } },
+      { content: Math.round(gTotal - advance).toFixed(2), styles: { halign: "center", fontStyle: "bold", fillColor: [241, 245, 249] } },
+      { content: "", colSpan: 4, styles: { fillColor: [241, 245, 249] } }
+    ]
+  ];
 
-    const isLastPage = (pageIdx === numPages - 1);
-    const pageLegs = allLegs.slice(pageIdx * ROWS_PER_PAGE, (pageIdx + 1) * ROWS_PER_PAGE);
+  // AutoTable width EXACTLY 287mm (Sum of columns = 287mm)
+  autoTable(doc, {
+    startY: 21,
+    margin: { top: 21, bottom: 30, left: margin, right: margin },
+    tableWidth: tableWidth,
+    showFoot: "lastPage",
+    didDrawPage: () => {
+      // 1. Header Banner (Exact tableWidth 287mm)
+      doc.setFillColor(30, 41, 59); // #1E293B
+      doc.rect(margin, 5, tableWidth, 9, "F");
 
-    // 1. Header Banner (Exact tableWidth 287mm)
-    doc.setFillColor(30, 41, 59); // #1E293B
-    doc.rect(margin, 5, tableWidth, 9, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("CYRIX HEALTHCARE — EXPENSES REIMBURSEMENT FORM", pageWidth / 2, 11, { align: "center" });
 
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10.5);
-    const titleText = `CYRIX HEALTHCARE — EXPENSES REIMBURSEMENT FORM ${numPages > 1 ? `(PAGE ${pageIdx + 1} OF ${numPages})` : ""}`;
-    doc.text(titleText, pageWidth / 2, 11, { align: "center" });
+      doc.setFontSize(7.5);
+      doc.text(`PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0, 3)} ${user.year || "2026"}`, margin + tableWidth - 4, 11, { align: "right" });
 
-    doc.setFontSize(7.5);
-    doc.text(`PERIOD: ${(user.month || "MONTH").toUpperCase().substring(0, 3)} ${user.year || "2026"}`, margin + tableWidth - 4, 11, { align: "right" });
-
-    // 2. Info Bar (Exact tableWidth 287mm)
-    doc.setFillColor(241, 245, 249); // #F1F5F9
-    doc.rect(margin, 14, tableWidth, 6.5, "F");
-    doc.setDrawColor(71, 85, 105);
-    doc.rect(margin, 14, tableWidth, 6.5, "S");
-
-    doc.setTextColor(15, 23, 42);
-    doc.setFontSize(7.2);
-    const infoY = 18.5;
-    doc.text(`NAME: ${user.name || ""}`, margin + 4, infoY);
-    doc.text(`EE CODE: ${user.e_code || ""}`, margin + 55, infoY);
-    doc.text(`GRADE: ${user.grade || "L1"}`, margin + 95, infoY);
-    doc.text(`MOBILE: ${user.phone || user.mobile || user.contact_no || ""}`, margin + 130, infoY);
-    doc.text("PROJECT: RJBEMP", margin + 185, infoY);
-    doc.text(`LOCATION: ${(user.district || "").toUpperCase()}`, margin + tableWidth - 4, infoY, { align: "right" });
-
-    // 3. Table Rows Data
-    const tableBody = pageLegs.map((r) => {
-      const l = r.leg || {};
-      const taCol = l.ta_amount || 0;
-      const bikeCarAmt = (l.bike_amount || 0) + (l.car_amount || 0);
-      const rowTotal = taCol + bikeCarAmt + (l.auto_amount || 0) + (l.da_amount || 0)
-                     + (l.local_purchase || 0) + (l.hotel_amount || 0) + (l.other_amount || 0);
-      const pmsCalibCount = (l.pms_count || 0) + (l.calibration_count || 0);
-      const ticketNo = getCleanTicketNumber(l);
-      const otherDescClean = cleanReturnText(l.other_desc || "", (userDistrict.trim().toLowerCase() === (l.worked_district || "").trim().toLowerCase()));
-
-      return [
-        fmtDate(r.date),
-        l.from_location || "",
-        l.to_location || "",
-        l.worked_district || "",
-        modeAbbr(l.travel_mode),
-        l.distance_km > 0 ? l.distance_km.toFixed(1) : "",
-        taCol > 0 ? taCol.toFixed(2) : "",
-        l.auto_amount > 0 ? l.auto_amount.toFixed(2) : "",
-        l.da_amount > 0 ? l.da_amount.toFixed(2) : "",
-        l.local_purchase > 0 ? l.local_purchase.toFixed(2) : "",
-        l.hotel_amount > 0 ? l.hotel_amount.toFixed(2) : "",
-        otherDescClean || "",
-        l.other_amount > 0 ? l.other_amount.toFixed(2) : "",
-        rowTotal > 0 ? rowTotal.toFixed(2) : "",
-        getFormattedPurpose(l, userDistrict) || "",
-        ticketNo || "",
-        pmsCalibCount > 0 ? String(pmsCalibCount) : "",
-        (l.calls_completed > 0 || l.calls_assigned > 0) ? `${l.calls_completed}/${l.calls_assigned}` : ""
-      ];
-    });
-
-    // ONLY construct footer on the VERY LAST page!
-    const footRows: any[] = [];
-    if (isLastPage) {
-      footRows.push([
-        { content: "TOTAL EXPENSE CLAIMED", colSpan: 5, styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gKM > 0 ? gKM.toFixed(1) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gTA > 0 ? gTA.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gAuto > 0 ? gAuto.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gDA > 0 ? gDA.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gLocal > 0 ? gLocal.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gHotel > 0 ? gHotel.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: "Total", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gOther > 0 ? gOther.toFixed(2) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gTotal.toFixed(2), styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: "", styles: { fillColor: [254, 243, 199] } },
-        { content: gAssetQty > 0 ? `Qty: ${gAssetQty} | ${gAssetVal.toLocaleString("en-IN")}` : "", styles: { halign: "center", fontSize: 5.5, fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: gPMSCalib > 0 ? String(gPMSCalib) : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } },
-        { content: (gCallsC > 0 || gCallsA > 0) ? `${gCallsC}/${gCallsA}` : "", styles: { halign: "center", fontStyle: "bold", fillColor: [254, 243, 199] } }
-      ]);
-      footRows.push([
-        { content: "LESS: MONTHLY ADVANCE DEDUCTION", colSpan: 13, styles: { halign: "center", fontStyle: "bold" } },
-        { content: advance > 0 ? Math.round(advance).toFixed(2) : "0.00", styles: { halign: "center", fontStyle: "bold", textColor: [185, 28, 28] } },
-        { content: "", colSpan: 4 }
-      ]);
-      footRows.push([
-        { content: "NET PAYABLE AMOUNT", colSpan: 13, styles: { halign: "center", fontStyle: "bold", fillColor: [241, 245, 249] } },
-        { content: Math.round(gTotal - advance).toFixed(2), styles: { halign: "center", fontStyle: "bold", fillColor: [241, 245, 249] } },
-        { content: "", colSpan: 4, styles: { fillColor: [241, 245, 249] } }
-      ]);
-    }
-
-    // AutoTable width EXACTLY 287mm (Sum of columns = 287mm)
-    autoTable(doc, {
-      startY: 20.5,
-      margin: { left: margin, right: margin },
-      tableWidth: tableWidth,
-      pageBreak: "avoid",
-      showFoot: isLastPage ? "lastPage" : "never",
-      head: [
-        [
-          { content: "Date\n(DD-MM-YY)", rowSpan: 2 },
-          { content: "Locations", colSpan: 2 },
-          { content: "Worked\nDistrict", rowSpan: 2 },
-          { content: "Mode\n(T/B/Bi/C)", rowSpan: 2 },
-          { content: "Dist.\n(KM)", rowSpan: 2 },
-          { content: "Train/Bus\nFare (TA)", rowSpan: 2 },
-          { content: "Auto\nFare", rowSpan: 2 },
-          { content: "D.A.", rowSpan: 2 },
-          { content: "Local Spare\nPurch. Rate", rowSpan: 2 },
-          { content: "Hotel\nBill", rowSpan: 2 },
-          { content: "Other Expenses", colSpan: 2 },
-          { content: "Total\n(Rs.)", rowSpan: 2 },
-          { content: "Remarks /\nPurpose", rowSpan: 2 },
-          { content: "Ticket No. /\nMPT ID", rowSpan: 2 },
-          { content: "PMS /\nCalib.", rowSpan: 2 },
-          { content: "Calls\n(Done/Assign)", rowSpan: 2 }
-        ],
-        ["From", "To", "Description", "Amount"]
-      ],
-      body: tableBody,
-      foot: isLastPage ? footRows : undefined,
-      theme: "grid",
-      styles: {
-        fontSize: 7,
-        cellPadding: 1.6,
-        minCellHeight: 5.4,
-        halign: "center",
-        valign: "middle",
-        lineColor: [71, 85, 105],
-        lineWidth: 0.15,
-        textColor: [15, 23, 42]
-      },
-      headStyles: {
-        fillColor: [30, 41, 59],
-        textColor: [255, 255, 255],
-        fontStyle: "bold",
-        fontSize: 6.8,
-        cellPadding: 1.8
-      },
-      columnStyles: {
-        0: { cellWidth: 15 },
-        1: { cellWidth: 19 },
-        2: { cellWidth: 19 },
-        3: { cellWidth: 16 },
-        4: { cellWidth: 8, fontStyle: "bold" },
-        5: { cellWidth: 12 },
-        6: { cellWidth: 15 },
-        7: { cellWidth: 13 },
-        8: { cellWidth: 16 }, // D.A. column: 16mm (Fits 2750.00 cleanly)
-        9: { cellWidth: 13 },
-        10: { cellWidth: 16 }, // Hotel column: 16mm (Fits 9200.00 cleanly)
-        11: { cellWidth: 19 },
-        12: { cellWidth: 13 },
-        13: { cellWidth: 21, fontStyle: "bold" }, // Total column: 21mm (Fits 19155.00 cleanly)
-        14: { cellWidth: 35 },
-        15: { cellWidth: 14, fontStyle: "bold" },
-        16: { cellWidth: 11 },
-        17: { cellWidth: 12 }
-        // Total sum = 15+19+19+16+8+12+15+13+16+13+16+19+13+21+35+14+11+12 = 287mm!
-      }
-    });
-
-    const finalY = (doc as any).lastAutoTable.finalY || 140;
-
-    if (isLastPage) {
+      // 2. Info Bar (Exact tableWidth 287mm)
+      doc.setFillColor(241, 245, 249); // #F1F5F9
+      doc.rect(margin, 14, tableWidth, 6.5, "F");
       doc.setDrawColor(71, 85, 105);
       doc.setLineWidth(0.15);
+      doc.rect(margin, 14, tableWidth, 6.5, "S");
 
-      // 1. Amount in words box (Direct continuous attachment at finalY)
-      doc.setFillColor(255, 255, 255);
-      doc.rect(margin, finalY, tableWidth, 5.5, "FD");
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "normal");
       doc.setTextColor(15, 23, 42);
-      doc.text(`Amount in words: ${amountWords(gTotal - advance).toUpperCase()}`, pageWidth / 2, finalY + 3.8, { align: "center" });
-
-      // 2. Remarks Box (Direct continuous attachment at finalY + 5.5)
-      doc.setFillColor(241, 245, 249);
-      doc.rect(margin, finalY + 5.5, tableWidth, 5.5, "FD");
-      doc.setFont("helvetica", "bold");
       doc.setFontSize(7.2);
-      doc.text(
-        `REMARKS: AUDITED BY: ${coordinatorName.toUpperCase()} | APPROVED BY: ${managerName.toUpperCase()}`,
-        pageWidth / 2,
-        finalY + 9.3,
-        { align: "center" }
-      );
-
-      // 3. Signature Table Box (Direct continuous attachment at finalY + 11)
-      const sigY = finalY + 11;
-      const sigH = 14;
-      const colW = tableWidth / 4;
-
-      doc.setFillColor(255, 255, 255);
-      doc.rect(margin, sigY, tableWidth, sigH, "FD");
-
-      const sigs = [
-        { label: "Claimed By:", name: user.name || "" },
-        { label: "Approved By (Manager):", name: managerName },
-        { label: "Audited By (Coordinator):", name: coordinatorName },
-        { label: "Accounted By:", name: "Amit Rawat" }
-      ];
-
-      const todayStr = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-
-      sigs.forEach((sig, sIdx) => {
-        const x = margin + sIdx * colW;
-        if (sIdx > 0) {
-          doc.line(x, sigY, x, sigY + sigH);
-        }
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(6.8);
-        doc.text(sig.label, x + colW / 2, sigY + 3.8, { align: "center" });
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(7.8);
-        doc.text(sig.name, x + colW / 2, sigY + 7.8, { align: "center" });
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(6.8);
-        doc.text(`Date: ${todayStr}`, x + colW / 2, sigY + 11.8, { align: "center" });
-      });
+      const infoY = 18.5;
+      doc.text(`NAME: ${user.name || ""}`, margin + 4, infoY);
+      doc.text(`EE CODE: ${user.e_code || ""}`, margin + 55, infoY);
+      doc.text(`GRADE: ${user.grade || "L1"}`, margin + 95, infoY);
+      doc.text(`MOBILE: ${user.phone || user.mobile || user.contact_no || ""}`, margin + 130, infoY);
+      doc.text("PROJECT: RJBEMP", margin + 185, infoY);
+      doc.text(`LOCATION: ${(user.district || "").toUpperCase()}`, margin + tableWidth - 4, infoY, { align: "right" });
+    },
+    head: [
+      [
+        { content: "Date\n(DD-MM-YY)", rowSpan: 2 },
+        { content: "Locations", colSpan: 2 },
+        { content: "Worked\nDistrict", rowSpan: 2 },
+        { content: "Mode\n(T/B/Bi/C)", rowSpan: 2 },
+        { content: "Dist.\n(KM)", rowSpan: 2 },
+        { content: "Train/Bus\nFare (TA)", rowSpan: 2 },
+        { content: "Auto\nFare", rowSpan: 2 },
+        { content: "D.A.", rowSpan: 2 },
+        { content: "Local Spare\nPurch. Rate", rowSpan: 2 },
+        { content: "Hotel\nBill", rowSpan: 2 },
+        { content: "Other Expenses", colSpan: 2 },
+        { content: "Total\n(Rs.)", rowSpan: 2 },
+        { content: "Remarks /\nPurpose", rowSpan: 2 },
+        { content: "Ticket No. /\nMPT ID", rowSpan: 2 },
+        { content: "PMS /\nCalib.", rowSpan: 2 },
+        { content: "Calls\n(Done/Assign)", rowSpan: 2 }
+      ],
+      ["From", "To", "Description", "Amount"]
+    ],
+    body: tableBody,
+    foot: footRows,
+    theme: "grid",
+    styles: {
+      fontSize: 6.8,
+      cellPadding: 1.3,
+      minCellHeight: 4.8,
+      halign: "center",
+      valign: "middle",
+      lineColor: [71, 85, 105],
+      lineWidth: 0.15,
+      textColor: [15, 23, 42]
+    },
+    headStyles: {
+      fillColor: [15, 23, 42],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 6.8,
+      halign: "center",
+      valign: "middle",
+      lineWidth: 0.15,
+      lineColor: [71, 85, 105]
+    },
+    footStyles: {
+      fontSize: 6.8,
+      textColor: [15, 23, 42],
+      lineWidth: 0.15,
+      lineColor: [71, 85, 105]
+    },
+    columnStyles: {
+      0: { cellWidth: 15 },
+      1: { cellWidth: 19 },
+      2: { cellWidth: 19 },
+      3: { cellWidth: 16 },
+      4: { cellWidth: 8 },
+      5: { cellWidth: 12 },
+      6: { cellWidth: 15 },
+      7: { cellWidth: 13 },
+      8: { cellWidth: 16 },
+      9: { cellWidth: 13 },
+      10: { cellWidth: 16 },
+      11: { cellWidth: 19 },
+      12: { cellWidth: 13 },
+      13: { cellWidth: 21, fontStyle: "bold" },
+      14: { cellWidth: 35 },
+      15: { cellWidth: 14, fontStyle: "bold" },
+      16: { cellWidth: 11 },
+      17: { cellWidth: 12 }
     }
+  });
+
+  let finalY = (doc as any).lastAutoTable.finalY || 140;
+
+  // If finalY + 26 > 205 (not enough room for 25mm footer on last page), add new page
+  if (finalY + 25 > 205) {
+    doc.addPage("a4", "landscape");
+    finalY = 21;
   }
+
+  doc.setDrawColor(71, 85, 105);
+  doc.setLineWidth(0.15);
+
+  // 1. Amount in words box
+  doc.setFillColor(255, 255, 255);
+  doc.rect(margin, finalY, tableWidth, 5.5, "FD");
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(15, 23, 42);
+  doc.text(`Amount in words: ${amountWords(gTotal - advance).toUpperCase()}`, pageWidth / 2, finalY + 3.8, { align: "center" });
+
+  // 2. Remarks Box
+  doc.setFillColor(241, 245, 249);
+  doc.rect(margin, finalY + 5.5, tableWidth, 5.5, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.2);
+  doc.text(
+    `REMARKS: AUDITED BY: ${coordinatorName.toUpperCase()} | APPROVED BY: ${managerName.toUpperCase()}`,
+    pageWidth / 2,
+    finalY + 9.3,
+    { align: "center" }
+  );
+
+  // 3. Signature Table Box
+  const sigY = finalY + 11;
+  const sigH = 14;
+  const colW = tableWidth / 4;
+
+  doc.setFillColor(255, 255, 255);
+  doc.rect(margin, sigY, tableWidth, sigH, "FD");
+
+  const sigs = [
+    { label: "Claimed By:", name: user.name || "" },
+    { label: "Approved By (Manager):", name: managerName },
+    { label: "Audited By (Coordinator):", name: coordinatorName },
+    { label: "Accounted By:", name: "Amit Rawat" }
+  ];
+
+  const todayStr = new Date().toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+
+  sigs.forEach((sig, sIdx) => {
+    const x = margin + sIdx * colW;
+    if (sIdx > 0) {
+      doc.line(x, sigY, x, sigY + sigH);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.8);
+    doc.text(sig.label, x + colW / 2, sigY + 3.8, { align: "center" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.8);
+    doc.text(sig.name, x + colW / 2, sigY + 7.8, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.8);
+    doc.text(`Date: ${todayStr}`, x + colW / 2, sigY + 11.8, { align: "center" });
+  });
 
   // 4. Attachments (Dedicated 1 page per unique bill attachment)
   if (Array.isArray(attachments) && attachments.length > 0) {
@@ -479,24 +465,32 @@ export async function generateCyrixVectorPdf(
 
       // Banner
       doc.setFillColor(30, 41, 59);
-      doc.rect(margin, 5, tableWidth, 8, "F");
+      doc.rect(margin, 5, tableWidth, 9, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
-      const attDate = att.date ? fmtDate(att.date) : `Receipt #${aIdx + 1}`;
-      const attLabel = att.bill_type || att.billType || "Expense Bill";
-      doc.text(
-        `VERIFIED BILL RECEIPT — ${attLabel.toUpperCase()} — ${attDate} (BILL ${aIdx + 1} OF ${attachments.length})`,
-        pageWidth / 2,
-        10.5,
-        { align: "center" }
-      );
+      doc.setFontSize(9);
+      doc.text(`ATTACHMENT ${aIdx + 1} OF ${attachments.length} — ${(att.title || att.name || "SUPPORTING RECEIPT").toUpperCase()}`, pageWidth / 2, 11, { align: "center" });
 
-      // Embed Image
+      // Sub-bar
+      doc.setFillColor(241, 245, 249);
+      doc.rect(margin, 14, tableWidth, 6.5, "F");
+      doc.setDrawColor(71, 85, 105);
+      doc.setLineWidth(0.15);
+      doc.rect(margin, 14, tableWidth, 6.5, "S");
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(7);
+      doc.text(`EMPLOYEE: ${user.name || ""} (${user.e_code || ""})`, margin + 4, 18.5);
+      doc.text(`DATE: ${fmtDate(att.date || "")}`, margin + 90, 18.5);
+      doc.text(`EXPENSE: ${att.expense_code || ""}`, margin + 140, 18.5);
+      doc.text(`AMOUNT: ${att.amount ? `Rs. ${att.amount}` : "—"}`, margin + tableWidth - 4, 18.5, { align: "right" });
+
       try {
-        doc.addImage(imgData, "JPEG", 15, 16, pageWidth - 30, pageHeight - 22, undefined, "FAST");
-      } catch (imgErr) {
-        console.warn("Direct image embed fallback:", imgErr);
+        const imgFormat = imgData.includes("data:image/png") ? "PNG" : "JPEG";
+        doc.addImage(imgData, imgFormat, margin + 20, 24, tableWidth - 40, 175, undefined, "FAST");
+      } catch (e) {
+        doc.setTextColor(185, 28, 28);
+        doc.setFontSize(10);
+        doc.text("Receipt Image Attachment Preview", pageWidth / 2, 100, { align: "center" });
       }
     }
   }
