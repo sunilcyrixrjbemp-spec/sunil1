@@ -2,7 +2,6 @@ const routePreloaders: Record<string, () => Promise<any>> = {
   "/home": () => import("../pages/HomePage"),
   "/approval": () => import("../pages/ApprovalPage"),
   "/submit-expense": () => import("../pages/ExpensePage"),
-  "/mis-report": () => import("../pages/MISReportPage"),
   "/kpi-dashboard": () => import("../pages/KPIDashboardPage"),
   "/upload-data": () => import("../pages/UploadDataPage"),
   "/asset-upload": () => import("../pages/AssetUploadPage"),

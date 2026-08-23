@@ -15,7 +15,6 @@ import HomePage from "./pages/HomePage";
 import ClaimsHistoryPage from "./pages/ClaimsHistoryPage";
 import ApprovalPage from "./pages/ApprovalPage";
 import ExpensePage from "./pages/ExpensePage";
-import MISReportPage from "./pages/MISReportPage";
 import KPIDashboardPage from "./pages/KPIDashboardPage";
 import UploadDataPage from "./pages/UploadDataPage";
 import AssetUploadPage from "./pages/AssetUploadPage";
@@ -300,7 +299,6 @@ function App() {
                 <Route path="/claims-history" element={<ClaimsHistoryPage />} />
                 <Route path="/approval-center" element={<ApprovalPage />} />
                 <Route path="/submit-expense" element={<ExpensePage />} />
-                <Route path="/mis-report" element={<MISReportPage />} />
                 <Route path="/kpi-dashboard" element={<KPIDashboardPage />} />
                 <Route path="/upload-data" element={<UploadDataPage />} />
                 <Route path="/asset-upload" element={<AssetUploadPage />} />

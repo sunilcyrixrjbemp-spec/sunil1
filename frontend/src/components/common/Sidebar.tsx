@@ -9,7 +9,6 @@ import {
   HelpCircle,
   User,
   Settings,
-  FileSpreadsheet,
   Gauge,
   ShieldAlert,
   Package,
@@ -60,7 +59,6 @@ export const NAV_STRUCTURE: {
     icon: BarChart3,
     items: [
       { id: "report", name: "Month Summary", path: "/month-report", icon: Calendar },
-      { id: "mis_report", name: "MIS Reports", path: "/mis-report", icon: FileSpreadsheet },
       { id: "consolidated_report", name: "Consolidated Reports", path: "/consolidated-report", icon: ClipboardList },
       { id: "kpi", name: "KPI Metrics", path: "/kpi-dashboard", icon: Gauge },
       { id: "analysis", name: "Deep Analytics", path: "/analysis", icon: BarChart3 },

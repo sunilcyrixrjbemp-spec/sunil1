@@ -32,7 +32,6 @@ const ROUTE_TITLES: Record<string, string> = {
   "/receive-machine": "TRC Receive Machine",
   "/submit-expense": "Expense Claims (₹)",
   "/approval-center": "Approval Center",
-  "/mis-report": "MIS Reports",
   "/kpi-dashboard": "KPI Metrics",
   "/analysis": "Deep Analytics",
   "/month-report": "Month Summary",

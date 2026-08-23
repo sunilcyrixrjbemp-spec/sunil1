@@ -31,7 +31,6 @@ const COMMANDS: CommandItem[] = [
   { id: "home", name: "Overview Dashboard", category: "Navigation", path: "/home", icon: Home },
   { id: "expense", name: "Submit New Claim", category: "Actions", path: "/submit-expense", icon: FilePlus },
   { id: "approval", name: "Approval Center", category: "Actions", path: "/approval-center", icon: CheckSquare },
-  { id: "mis_report", name: "MIS Reports", category: "Reports", path: "/mis-report", icon: FileSpreadsheet },
   { id: "kpi", name: "KPI Metrics", category: "Reports", path: "/kpi-dashboard", icon: Gauge },
   { id: "analysis", name: "Deep Analytics", category: "Reports", path: "/analysis", icon: BarChart3 },
   { id: "report", name: "Month Summary", category: "Reports", path: "/month-report", icon: Calendar },

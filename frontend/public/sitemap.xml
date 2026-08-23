@@ -42,12 +42,6 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://indrae.in/mis-report</loc>
-    <lastmod>2026-08-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://indrae.in/kpi-dashboard</loc>
     <lastmod>2026-08-04</lastmod>
     <changefreq>weekly</changefreq>
