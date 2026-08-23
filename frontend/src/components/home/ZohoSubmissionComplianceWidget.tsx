@@ -1011,29 +1011,31 @@ export const ZohoSubmissionComplianceWidget: React.FC<ZohoSubmissionComplianceWi
                         <td className="py-1.5 px-2.5 text-right whitespace-nowrap">
                           {r.pendingDays > 0 ? (
                             <div className="inline-flex items-center gap-1 justify-end">
-                              {isReminderSent(r.code) ? (
-                                <span
-                                  className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-[3px] bg-slate-100 text-slate-500 border border-slate-200 text-3xs font-bold whitespace-nowrap cursor-default"
-                                  title="Reminder email already sent today"
-                                >
-                                  <CheckCircle2 className="w-2.5 h-2.5 text-slate-500" />
-                                  <span>Sent</span>
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={sendingEmailCode === r.code}
-                                  onClick={() => handleSendEmailReminder(r)}
-                                  className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-[3px] bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 whitespace-nowrap"
-                                  title="Send official reminder email (CC Manager & DM)"
-                                >
-                                  {sendingEmailCode === r.code ? (
-                                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                                  ) : (
-                                    <Mail className="w-2.5 h-2.5 text-accent-600 shrink-0" />
-                                  )}
-                                  <span>Remind</span>
-                                </button>
+                              {isAdmin && (
+                                isReminderSent(r.code) ? (
+                                  <span
+                                    className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-[3px] bg-slate-100 text-slate-500 border border-slate-200 text-3xs font-bold whitespace-nowrap cursor-default"
+                                    title="Reminder email already sent today"
+                                  >
+                                    <CheckCircle2 className="w-2.5 h-2.5 text-slate-500" />
+                                    <span>Sent</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={sendingEmailCode === r.code}
+                                    onClick={() => handleSendEmailReminder(r)}
+                                    className="inline-flex items-center justify-center gap-1 px-2 py-1 rounded-[3px] bg-accent-50 hover:bg-accent-100 text-accent-700 border border-accent-200 text-3xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50 whitespace-nowrap"
+                                    title="Send official reminder email (CC Manager & DM)"
+                                  >
+                                    {sendingEmailCode === r.code ? (
+                                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                    ) : (
+                                      <Mail className="w-2.5 h-2.5 text-accent-600 shrink-0" />
+                                    )}
+                                    <span>Remind</span>
+                                  </button>
+                                )
                               )}
 
                               <button
