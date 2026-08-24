@@ -18,7 +18,7 @@ import { ZohoPendingTasks } from "../components/home/ZohoPendingTasks";
 import { ZohoRecentExpenses } from "../components/home/ZohoRecentExpenses";
 import { ZohoExecutiveComparison } from "../components/home/ZohoExecutiveComparison";
 import { ZohoSubmissionComplianceWidget } from "../components/home/ZohoSubmissionComplianceWidget";
-import { getStatusBadgeClass, getStatusLabel, renderAntdStatusTag } from "../components/home/claimsColumns";
+import { getStatusBadgeClass, getStatusLabel, renderAntdStatusTag, getCardStatusClass, formatDateDDMMMYY } from "../components/home/claimsColumns";
 
 const ClaimDetailsModal = React.lazy(() => import("../components/common/ClaimDetailsModal"));
 
@@ -252,83 +252,169 @@ export default function HomePage() {
           onOpenModal={handleOpenStatsModal}
         />
 
-        {/* ── 2.5 Executive Comparative Analytics (Last Month vs Current Month) ── */}
-        {isComparativeExpenseAllowed && (
-          <ZohoExecutiveComparison
-            currentClaims={activeClaims}
-            user={user}
-            isReviewerRole={isReviewerRole}
-            activeTab={activeTab}
-            selectMonth={selectMonth}
-            filterZone={filterZone}
-            filterDistrict={filterDistrict}
-            filterEmployee={filterEmployee}
-          />
-        )}
+        {/* ── MOBILE VIEW: High-Density Claim Cards Register (replaces charts on mobile) ── */}
+        <div className="block lg:hidden space-y-2.5 pt-1">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs font-bold font-display text-ink-900 uppercase tracking-wider flex items-center gap-1.5 m-0">
+              <FileText className="w-3.5 h-3.5 text-accent-600" />
+              {activeTab === "team-claims" ? "Team Claims Register" : "My Claims Register"} ({activeClaims.length})
+            </h2>
+            <Link
+              to="/claims-history"
+              className="text-[11px] font-semibold text-accent-700 hover:text-accent-900 flex items-center gap-0.5"
+            >
+              <span>Full Ledger</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
 
-        {/* ── 3 & 4. Analytics Widgets (Spend Trend + Category Donut) ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          <div className="lg:col-span-7 min-h-[280px]">
-            <ZohoSpendChart expenses={activeClaims} selectMonth={selectMonth} />
-          </div>
-          <div className="lg:col-span-5 min-h-[280px]">
-            <ZohoCategoryChart expenses={activeClaims} />
-          </div>
+          {activeClaims.length === 0 ? (
+            <div className="py-8 px-4 text-center bg-white border border-line rounded-xl shadow-2xs">
+              <FileText className="w-8 h-8 mx-auto mb-2 text-ink-300" />
+              <p className="text-xs font-semibold text-ink-700 m-0">
+                {activeTab === "team-claims" ? "No team claims found for this period." : "No expense claims found for this period."}
+              </p>
+              <p className="text-[11px] text-ink-400 mt-1 m-0">
+                Try selecting a different month or filter scope above.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {activeClaims.map((exp: any) => (
+                <div
+                  key={exp.id}
+                  onClick={() => handleOpenClaimDetails(exp.id)}
+                  className={`p-3 space-y-2 transition-all cursor-pointer text-xs rounded-xl bg-white border border-line shadow-2xs hover:shadow-xs active:scale-[0.99] ${getCardStatusClass(exp.status)}`}
+                >
+                  <div className="flex justify-between items-center border-b border-slate-150 pb-1.5 flex-wrap gap-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-extrabold font-mono text-indigo-600 text-xs uppercase">
+                        {exp.expense_code || exp.claim_id || `#${exp.id}`}
+                      </span>
+                      {activeTab === "team-claims" && exp.submitter_name && (
+                        <span className="text-[11px] font-bold text-slate-800">
+                          • {exp.submitter_name}
+                        </span>
+                      )}
+                    </div>
+                    {renderAntdStatusTag(exp.status)}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-slate-400 font-bold uppercase text-[9px] block">Date</span>
+                      <span className="text-slate-700 font-semibold">{formatDateDDMMMYY(exp.date || exp.itinerary)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-bold uppercase text-[9px] block">
+                        {activeTab === "team-claims" ? "District" : "Travel Mode"}
+                      </span>
+                      <span className="text-slate-700 font-semibold">
+                        {activeTab === "team-claims"
+                          ? (exp.district || exp.submitter_district || exp.zone || "—")
+                          : (exp.travel_mode || exp.category || "Bike")}
+                      </span>
+                    </div>
+                    <div className="col-span-2 pt-1 border-t border-slate-150 flex items-center justify-between">
+                      <span className="text-slate-400 font-bold uppercase text-[9px]">Total Amount</span>
+                      <span className="text-blue-700 font-black font-mono text-sm">
+                        ₹{Number(exp.amount || exp.total_amount || 0).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {exp.description && (
+                    <div className="border-t border-slate-150 pt-1 text-[10.5px]">
+                      <span className="text-slate-400 font-bold uppercase text-[8px] block">Purpose</span>
+                      <p className="text-slate-700 font-medium truncate m-0">{exp.description}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* ── 5 & 6. Actionable & Activity Widgets ─────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          <div className="lg:col-span-5 min-h-[260px]">
-            <ZohoPendingTasks
-              myClaims={safeMyExpenses}
-              teamClaims={safeTeamExpenses}
-              isReviewer={isReviewerRole}
-              onOpenClaim={handleOpenClaimDetails}
-            />
-          </div>
-          <div className="lg:col-span-7 min-h-[260px]">
-            <ZohoRecentExpenses
-              claims={activeClaims}
-              onOpenClaim={handleOpenClaimDetails}
+        {/* ── DESKTOP VIEW: Charts, Analytics, Comparisons & Actionable Widgets ── */}
+        <div className="hidden lg:block space-y-3">
+          {/* ── 2.5 Executive Comparative Analytics (Last Month vs Current Month) ── */}
+          {isComparativeExpenseAllowed && (
+            <ZohoExecutiveComparison
+              currentClaims={activeClaims}
+              user={user}
+              isReviewerRole={isReviewerRole}
               activeTab={activeTab}
+              selectMonth={selectMonth}
+              filterZone={filterZone}
+              filterDistrict={filterDistrict}
+              filterEmployee={filterEmployee}
             />
-          </div>
-        </div>
+          )}
 
-        {/* ── 6.5 Engineer Daily Submission Compliance & Defaulter Tracker ── */}
-        {isComparativeExpenseAllowed && (
-          <ZohoSubmissionComplianceWidget
-            user={user}
-            activeTab={activeTab}
-            expenses={activeTab === "team-claims" ? safeTeamExpenses : safeMyExpenses}
-            selectMonth={selectMonth}
-            filterZone={filterZone}
-            filterDistrict={filterDistrict}
-            filterEmployee={filterEmployee}
-            uniqueEmployees={uniqueEmployees}
-          />
-        )}
-
-        {/* ── 7. Compact Ledger Banner ────────────────────────────────── */}
-        <div
-          className="px-4 py-3 bg-white border border-line rounded-xl flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs"
-          style={{
-            boxShadow: "0 10px 30px -5px rgba(30, 27, 75, 0.04), 0 4px 12px -2px rgba(30, 27, 75, 0.02)",
-          }}
-        >
-          <div className="flex items-center gap-2.5">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="font-semibold text-ink-700">
-              Need to search older historical records, filter by district, or export Excel reports?
-            </span>
+          {/* ── 3 & 4. Analytics Widgets (Spend Trend + Category Donut) ─── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div className="lg:col-span-7 min-h-[280px]">
+              <ZohoSpendChart expenses={activeClaims} selectMonth={selectMonth} />
+            </div>
+            <div className="lg:col-span-5 min-h-[280px]">
+              <ZohoCategoryChart expenses={activeClaims} />
+            </div>
           </div>
-          <Link
-            to="/claims-history"
-            className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-slate-200/70 text-accent-700 font-semibold border border-line transition-colors flex items-center gap-1.5 shrink-0 text-xs"
+
+          {/* ── 5 & 6. Actionable & Activity Widgets ─────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div className="lg:col-span-5 min-h-[260px]">
+              <ZohoPendingTasks
+                myClaims={safeMyExpenses}
+                teamClaims={safeTeamExpenses}
+                isReviewer={isReviewerRole}
+                onOpenClaim={handleOpenClaimDetails}
+              />
+            </div>
+            <div className="lg:col-span-7 min-h-[260px]">
+              <ZohoRecentExpenses
+                claims={activeClaims}
+                onOpenClaim={handleOpenClaimDetails}
+                activeTab={activeTab}
+              />
+            </div>
+          </div>
+
+          {/* ── 6.5 Engineer Daily Submission Compliance & Defaulter Tracker ── */}
+          {isComparativeExpenseAllowed && (
+            <ZohoSubmissionComplianceWidget
+              user={user}
+              activeTab={activeTab}
+              expenses={activeTab === "team-claims" ? safeTeamExpenses : safeMyExpenses}
+              selectMonth={selectMonth}
+              filterZone={filterZone}
+              filterDistrict={filterDistrict}
+              filterEmployee={filterEmployee}
+              uniqueEmployees={uniqueEmployees}
+            />
+          )}
+
+          {/* ── 7. Compact Ledger Banner ────────────────────────────────── */}
+          <div
+            className="px-4 py-3 bg-white border border-line rounded-xl flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs"
+            style={{
+              boxShadow: "0 10px 30px -5px rgba(30, 27, 75, 0.04), 0 4px 12px -2px rgba(30, 27, 75, 0.02)",
+            }}
           >
-            <span>Open Complete Claims Register</span>
-            <ArrowRight className="w-3 h-3" />
-          </Link>
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="font-semibold text-ink-700">
+                Need to search older historical records, filter by district, or export Excel reports?
+              </span>
+            </div>
+            <Link
+              to="/claims-history"
+              className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-slate-200/70 text-accent-700 font-semibold border border-line transition-colors flex items-center gap-1.5 shrink-0 text-xs"
+            >
+              <span>Open Complete Claims Register</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
       </div>
 
