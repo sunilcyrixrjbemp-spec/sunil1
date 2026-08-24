@@ -923,7 +923,9 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
       } catch (_) {}
     }
 
-    const facilitiesPromise = cachedFacilities
+    const isCachedFacilitiesValid = Boolean(cachedFacilities && typeof cachedFacilities === "object" && Object.keys(cachedFacilities).length > 0);
+
+    const facilitiesPromise = isCachedFacilitiesValid
       ? Promise.resolve(null)
       : env.DB.prepare(`SELECT DISTINCT district_name, facility_name FROM facility_details`).all().catch(() => ({ results: [] }));
 
@@ -979,12 +981,14 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     ]);
 
     // Build facilities map (or use cached dictionary)
-    let facilities = cachedFacilities;
-    if (!facilities) {
+    let facilities = isCachedFacilitiesValid ? cachedFacilities : {};
+    if (!isCachedFacilitiesValid) {
       facilities = {};
       for (const f of (facilitiesRows?.results || [])) {
-        if (!facilities[f.district_name]) facilities[f.district_name] = [];
-        facilities[f.district_name].push(f.facility_name);
+        if (f.district_name && f.facility_name) {
+          if (!facilities[f.district_name]) facilities[f.district_name] = [];
+          facilities[f.district_name].push(f.facility_name);
+        }
       }
       if (env.OTPS_KV && Object.keys(facilities).length > 0) {
         env.OTPS_KV.put(FACILITIES_KV_KEY, JSON.stringify(facilities), { expirationTtl: 86400 }).catch(() => {});
