@@ -14,6 +14,9 @@ import { checkIsPdf } from "../utils/pdf";
 import { getISTDate, getISTMonth } from "../utils/dateUtils";
 import { ALL_INDIAN_STATES, getDistrictsForState } from "../utils/indianStatesDistricts";
 import ClaimDetailsModal, { formatImageUrl } from "../components/common/ClaimDetailsModal";
+import DB_FACILITIES_RAW from "../data/dbFacilities.json";
+
+const DB_FACILITIES: Record<string, string[]> = DB_FACILITIES_RAW as Record<string, string[]>;
 import { 
   Sparkles, Trash2, Plus, Calendar, 
   AlertTriangle, Check, Loader2,
@@ -632,106 +635,6 @@ export default function ExpensePage() {
   const [loadedMonth, setLoadedMonth] = useState<string>("");
 
 
-  const DEFAULT_DISTRICT_FACILITIES: Record<string, string[]> = {
-    jodhpur: [
-      "AIIMS Jodhpur", "MDM Hospital Jodhpur", "MG Hospital Jodhpur", "Umaid Hospital Jodhpur", "Kamla Nehru Chest Hospital",
-      "Satellite Hospital Pratapnagar", "Satellite Hospital Mandore", "CHC Baori", "CHC Balesar", "CHC Bilara", "CHC Bhopalgarh",
-      "CHC Luni", "CHC Mandore", "CHC Osian", "CHC Piparcity", "CHC Shergarh", "CHC Tiwari", "CHC Chamu", "CHC Bap",
-      "PHC Balarwa", "PHC Dechu", "PHC Khedapa", "PHC Mathania", "PHC Salawas", "PHC Setrawa", "PHC Tinwari"
-    ],
-    jaipur: [
-      "SMS Hospital Jaipur", "JK Lon Hospital Jaipur", "Mahila Chikitsalaya Jaipur", "Zenana Hospital Jaipur",
-      "Satellite Hospital Sethi Nagar", "Satellite Hospital Bani Park", "Kanwatia Hospital Jaipur", "Gangori Hospital Jaipur",
-      "CHC Bassi", "CHC Chamu", "CHC Chaksu", "CHC Dudu", "CHC Jamwa Ramgarh", "CHC Kotputli", "CHC Phagi", "CHC Sambhar Lake", "CHC Shahpura", "CHC Viratnagar"
-    ],
-    ajmer: [
-      "JLN Medical College & Hospital Ajmer", "A K Hospital Beawar Ajmer DH", "Ajmer MCDW", "Ajmer DDW", "Satellite Hospital Adarsh Nagar",
-      "Arain Chc Ajmer", "Bandanwara Chc Ajmer", "Bhandun Chc Ajmer", "Bhinay Chc Ajmer", "Borada Chc Ajmer",
-      "Kekri District Hospital Ajmer", "Kishangarh Y N Hospital DH", "Masuda CHC Ajmer", "Nasirabad CHC Ajmer", "Pisangan CHC Ajmer", "Pushkar CHC Ajmer"
-    ],
-    bikaner: [
-      "PBM Hospital Bikaner", "Haldiram Moolchand Heart Hospital", "Prince Bijay Singh Memorial Hospital", "Acharya Tulsi Regional Cancer Institute",
-      "Satellite Hospital Ganga Shahar", "CHC Deshnok", "CHC Dungargarh", "CHC Khajuwala", "CHC Kolayat", "CHC Lunkaransar", "CHC Nokha", "CHC Poogal", "CHC Napasar"
-    ],
-    udaipur: [
-      "Maharana Bhopal Govt Hospital Medical Collage", "Pannadhay Hospital Udaipur", "R N T Medical Collage Udaipur",
-      "Satellite Hospital Hiran Magri Udaipur", "Sunder Singh Bhandari Hospital Chandpole DH", "Salumber District Hospital Udaipur",
-      "Vallabhunagar Satellite Hospital Udaipur", "Badgaon CHC Udaipur", "Bhinder CHC Udaipur", "Dhariawad CHC Udaipur",
-      "Gogunda CHC Udaipur", "Jhadol CHC Udaipur", "Kherwara CHC Udaipur", "Kotra CHC Udaipur", "Mavli SDH Udaipur", "Phalasiya Chc Udaipur", "Rishabhdev Chc Udaipur"
-    ],
-    pali: [
-      "Bangur District Hospital Pali", "Sumerpur Sub District Hospital", "Bali Sub District Hospital", "CHC Desuri",
-      "CHC Jaitaran", "CHC Marwar Junction", "CHC Rani", "CHC Rohat", "CHC Sadri", "CHC Sojat City", "CHC Sumerpur", "CHC Takhatgarh"
-    ],
-    barmer: [
-      "Govt District Hospital Barmer", "Govt Medical College Hospital Barmer", "Balotra District Hospital", "Sub District Hospital Baytu",
-      "Sub District Hospital Gudamalani", "Sub District Hospital Siwana", "CHC Balotra", "CHC Chauhtan", "CHC Dhorimanna", "CHC Gida", "CHC Kalyanpur", "CHC Samdari", "CHC Sheo", "CHC Sindhari"
-    ],
-    nagaur: [
-      "JLN District Hospital Nagaur", "Govt Hospital Kuchaman City", "Sub District Hospital Didwana", "Sub District Hospital Ladnun",
-      "Sub District Hospital Makrana", "Sub District Hospital Merta City", "Sub District Hospital Parbatsar", "CHC Degana", "CHC Jayal", "CHC Khinvsar", "CHC Mundwa", "CHC Nawa"
-    ],
-    kota: [
-      "MBS Hospital Kota", "JK Lon Mother & Child Hospital Kota", "New Medical College Hospital Kota", "Rampura District Hospital Kota",
-      "Sub District Hospital Ramganj Mandi", "CHC Chechat", "CHC Digod", "CHC Etawah", "CHC Kaithoon", "CHC Sangod", "CHC Sultanpur"
-    ],
-    sikar: [
-      "SK District Hospital Sikar", "Kalyan Hospital Sikar", "Sub District Hospital Fatehpur", "Sub District Hospital Laxmangarh",
-      "Sub District Hospital Neem Ka Thana", "Sub District Hospital Reengus", "Sub District Hospital Sri Madhopur", "CHC Danta", "CHC Dhod", "CHC Khandela", "CHC Piprali"
-    ],
-    bhilwara: [
-      "Mahatma Gandhi Hospital Bhilwara", "Sub District Hospital Shahpura", "Sub District Hospital Gangapur", "Sub District Hospital Gulabpura",
-      "CHC Asind", "CHC Banera", "CHC Bijolia", "CHC Jahazpur", "CHC Kotri", "CHC Mandal", "CHC Mandalgarh", "CHC Raipur", "CHC Sahara"
-    ],
-    churu: [
-      "DB General Hospital Churu", "Sub District Hospital Ratangarh", "Sub District Hospital Sardarshahar", "Sub District Hospital Sujangarh",
-      "Sub District Hospital Rajgarh", "Sub District Hospital Taranagar", "CHC Bidasar", "CHC Chhapar", "CHC Dudhwakhara", "CHC Salasar", "CHC Sandwa"
-    ],
-    ganganagar: [
-      "Govt District Hospital Sri Ganganagar", "Sub District Hospital Suratgarh", "Sub District Hospital Anupgarh", "Sub District Hospital Raisinghnagar",
-      "Sub District Hospital Sadulshahar", "CHC Gajsinghpur", "CHC Gharsana", "CHC Jaitsar", "CHC Karanpur", "CHC Padampur", "CHC Rawla", "CHC Sri Vijaynagar"
-    ],
-    hanumangarh: [
-      "Govt District Hospital Hanumangarh", "Sub District Hospital Nohar", "Sub District Hospital Bhadra", "Sub District Hospital Rawatsar",
-      "Sub District Hospital Sangaria", "CHC Goluwala", "CHC Pilibanga", "CHC Tibbi", "CHC Talwara Lake"
-    ],
-    jalore: [
-      "Govt District Hospital Jalore", "Sub District Hospital Bhinmal", "Sub District Hospital Sanchore", "CHC Ahore", "CHC Bagra",
-      "CHC Chitalwana", "CHC Jaswantpura", "CHC Raniwara", "CHC Sayla"
-    ],
-    jaisalmer: [
-      "Govt Jawahar Hospital Jaisalmer", "Sub District Hospital Pokaran", "CHC Fatehgarh", "CHC Mohangarh", "CHC Nachna", "CHC Ramgarh", "CHC Sam", "CHC Sankra"
-    ],
-    sirohi: [
-      "Govt District Hospital Sirohi", "Global Hospital Mount Abu", "Sub District Hospital Abu Road", "Sub District Hospital Pindwara", "Sub District Hospital Sheoganj", "CHC Reodar"
-    ],
-    chittorgarh: [
-      "Shri Sanwaliyaji Govt Hospital Chittorgarh", "Sub District Hospital Nimbahera", "Sub District Hospital Rawatbhata", "CHC Badi Sadri",
-      "CHC Begun", "CHC Bhadesar", "CHC Bopalsagar", "CHC Chanderiya", "CHC Dungla", "CHC Gangrar", "CHC Kapasan", "CHC Rashmi"
-    ],
-    rajsamand: [
-      "R K Govt District Hospital Rajsamand", "Sub District Hospital Nathdwara", "Sub District Hospital Amet", "CHC Bhim", "CHC Deogarh", "CHC Kelwa", "CHC Khamnor", "CHC Kumbhalgarh", "CHC Railmagra"
-    ],
-    tonk: [
-      "Saadat District Hospital Tonk", "Sub District Hospital Deoli", "Sub District Hospital Malpura", "Sub District Hospital Niwai", "CHC Aligarh", "CHC Dooni", "CHC Todaraisingh", "CHC Uniara"
-    ],
-    banswara: [
-      "Mahatma Gandhi District Hospital Banswara", "Sub District Hospital Kushalgarh", "CHC Anandpuri", "CHC Arthuna", "CHC Bagidora", "CHC Chhoti Sarwan", "CHC Garhi", "CHC Ghatol", "CHC Sajjangarh", "CHC Talwara"
-    ],
-    dungarpur: [
-      "Shri Haridev Joshi Govt District Hospital Dungarpur", "Sub District Hospital Sagwara", "CHC Aspur", "CHC Bicchiwara", "CHC Chikhli", "CHC Dovra", "CHC Galiakot", "CHC Gamri Ahada", "CHC Jhotri", "CHC Sabla", "CHC Simalwara"
-    ],
-    pratapgarh: [
-      "Govt District Hospital Pratapgarh", "Sub District Hospital Chhoti Sadri", "CHC Arnod", "CHC Dalot", "CHC Dhariawad", "CHC Peepalkhoont"
-    ],
-    balotra: [
-      "Govt District Hospital Balotra", "Sub District Hospital Baytu", "Sub District Hospital Siwana", "CHC Asotra", "CHC Gida", "CHC Kalyanpur", "CHC Mokalsar", "CHC Patodi", "CHC Samdari", "CHC Sindhari"
-    ],
-    phalodi: [
-      "Govt District Hospital Phalodi", "Sub District Hospital Bap", "Sub District Hospital Luni", "CHC Aau", "CHC Baap", "CHC Bapini", "CHC Dechu", "CHC Ghantiyali", "CHC Lohawat", "CHC Phalodi", "CHC Setrawa"
-    ]
-  };
-
   const getFacilitiesForDistrict = (districtName: string): string[] => {
     if (!districtName) return [];
     let cleanName = districtName.trim().toLowerCase();
@@ -750,10 +653,11 @@ export default function ExpensePage() {
       }
     }
     
-    // Built-in fallback facilities for common Rajasthan districts
-    return DEFAULT_DISTRICT_FACILITIES[cleanName] || [
-      "District Hospital", "Medical College Hospital", "Sub District Hospital", "CHC Main", "PHC Center", "City Dispensary"
-    ];
+    // Exact database facilities from facility_details table
+    const dbKey = Object.keys(DB_FACILITIES).find(
+      k => k.trim().toLowerCase() === cleanName
+    );
+    return dbKey ? DB_FACILITIES[dbKey] : [];
   };
 
   // UI status flags
@@ -3854,13 +3758,13 @@ export default function ExpensePage() {
                 const currentFromDist = isFromLocked ? (prevLeg?.district || prevLeg?.district_from || leg.district_from) : leg.district_from;
                 const currentFrom = isFromLocked ? (prevLeg?.to || leg.from) : leg.from;
 
-                const rawDistOpts = Object.keys(facilities).length > 0 ? Object.keys(facilities) : [
-                  "Ajmer", "Beawer", "Bhilwara", "Nagaur", "Tonk", "Bikaner", "Churu", "Ganganagar", "Hanumangarh", 
-                  "Barmer", "Balotra", "Jaisalmer", "Jalore", "Jodhpur", "Pali", "Phalodi", "Sirohi", 
-                  "Banswara", "Chittorgarh", "Dungarpur", "Rajsamand", "Pratapgarh", "Udaipur"
-                ];
-                const hDist = user.district || user.home_district || "Jodhpur";
-                const distOpts = Array.from(new Set([...rawDistOpts, hDist, "Jaipur", "Kota"])).filter(Boolean).filter(d => d !== "All");
+                const dbDistricts = Object.keys(DB_FACILITIES).sort();
+                const rawDistOpts = (facilities && Object.keys(facilities).length > 0) ? Object.keys(facilities) : dbDistricts;
+                const hDist = (user.district || user.home_district || "").trim();
+                const distOpts = Array.from(new Set([...rawDistOpts, ...(hDist && hDist !== "All" ? [hDist] : [])]))
+                  .filter(Boolean)
+                  .filter(d => d !== "All")
+                  .sort();
 
                 return (
                   <div key={leg.leg} className="bg-white text-xs mb-4 border border-line rounded-xl shadow-2xs overflow-hidden">
