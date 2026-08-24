@@ -262,24 +262,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </kbd>
         </button>
 
-        {/* Right Section: Mobile (Clean f5dcac5 design) & Desktop (New rich navbar with Search, Bell, Menu) */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Mobile Right: Install App + Direct Profile Avatar (f5dcac5 design) */}
-          {!isStandalone && (
-            <button
-              type="button"
-              onClick={handleInstallApp}
-              className="lg:hidden flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-2xs hover:shadow transition-all cursor-pointer active:scale-95 shrink-0"
-              title="Install Cyrix Field Connect App"
-            >
-              <Download className="w-3 h-3 stroke-[2.5]" />
-              <span className="hidden xs:inline">Install App</span>
-            </button>
-          )}
+        {/* Right Section: Mobile (Notification Bell + Profile) & Desktop (Search, Bell, User Menu) */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Mobile Right: Notification Bell Icon (Replaces Download Button) */}
+          <Link
+            to="/notifications"
+            className="lg:hidden relative w-7 h-7 flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors"
+            title="Notifications"
+            aria-label="Notifications"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600 ring-1.5 ring-white animate-pulse" />
+            )}
+          </Link>
 
           <Link
             to="/profile"
-            className="lg:hidden flex items-center gap-2 border-l border-line pl-2 hover:opacity-80 transition-opacity shrink-0"
+            className="lg:hidden flex items-center border-l border-line pl-1.5 hover:opacity-80 transition-opacity shrink-0"
             title="My Profile"
           >
             <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center border border-blue-200 shadow-2xs">
