@@ -16,109 +16,75 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   isAdmin = false,
 }) => {
   const location = useLocation();
-  const currentPath = location.pathname;
-
-  const tabs = [
-    {
-      id: "home",
-      label: "Home",
-      path: "/home",
-      icon: Home,
-      isActive: currentPath === "/home" || currentPath === "/",
-      isAction: false,
-    },
-    {
-      id: "expense",
-      label: "Expenses",
-      path: "/submit-expense",
-      icon: FilePlus,
-      isActive: currentPath.startsWith("/submit-expense"),
-      isAction: false,
-    },
-    {
-      id: "approval",
-      label: "Approvals",
-      path: "/approval-center",
-      icon: CheckSquare,
-      isActive: currentPath.startsWith("/approval-center"),
-      isAction: false,
-    },
-    {
-      id: "profile",
-      label: "Profile",
-      path: "/profile",
-      icon: User,
-      isActive: currentPath.startsWith("/profile"),
-      isAction: false,
-    },
-    {
-      id: "menu",
-      label: "Menu",
-      path: "",
-      icon: LayoutGrid,
-      isActive: false,
-      isAction: true,
-    },
-  ];
-
-  const visibleTabs = tabs.filter((tab) => {
-    if (isAdmin) return true;
-    if (tab.id === "menu") return true;
-    const DEFAULT_UNIVERSAL_TABS = ["home", "expense", "profile", "notifications", "help"];
-    if (DEFAULT_UNIVERSAL_TABS.includes(tab.id.toLowerCase())) return true;
-    return allowedWindows.map((w) => w.toLowerCase()).includes(tab.id.toLowerCase());
-  });
 
   return (
-    <nav
-      className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-white/95 backdrop-blur-md border-t border-line px-3 pb-[env(safe-area-inset-bottom)] shadow-xs flex items-center justify-around h-14 select-none"
-      aria-label="Mobile Bottom Navigation"
-    >
-      {visibleTabs.map((tab) => {
-        const Icon = tab.icon;
+    <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 py-1 px-2 flex items-center justify-around lg:hidden shadow-lg select-none pb-[env(safe-area-inset-bottom)]">
+      {(isAdmin || allowedWindows.includes("home")) && (
+        <Link
+          to="/home"
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+            location.pathname === "/home" || location.pathname === "/"
+              ? "text-blue-600 bg-blue-50"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <Home className="w-4 h-4" />
+          <span>Home</span>
+        </Link>
+      )}
 
-        if (tab.isAction) {
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={onOpenMoreMenu}
-              className="flex flex-col items-center justify-center flex-1 h-full py-1 text-center group active:scale-90 transition-all cursor-pointer border-0 bg-transparent focus:outline-none"
-              title="All Menus & Modules"
-              aria-label="All Menus & Modules"
-            >
-              {/* Stylish Highlighted Menu Icon Pill */}
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-accent-600 to-accent-400 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-                <Icon className="w-4 h-4 stroke-[2.5]" />
-              </div>
-              <span className="text-[9px] font-bold mt-0.5 tracking-tight text-accent-700">
-                {tab.label}
-              </span>
-            </button>
-          );
-        }
+      {(isAdmin || allowedWindows.includes("expense")) && (
+        <Link
+          to="/submit-expense"
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+            location.pathname.startsWith("/submit-expense")
+              ? "text-emerald-600 bg-emerald-50"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <FilePlus className="w-4 h-4" />
+          <span>Expense</span>
+        </Link>
+      )}
 
-        return (
-          <Link
-            key={tab.id}
-            to={tab.path}
-            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-all relative focus:outline-none ${
-              tab.isActive
-                ? "text-accent-700 font-semibold scale-105"
-                : "text-ink-500 hover:text-ink-800 font-medium"
-            }`}
-          >
-            <Icon
-              className={`w-5 h-5 stroke-[2] ${
-                tab.isActive ? "text-accent-700" : "text-ink-500"
-              }`}
-            />
-            <span className="text-[10px] mt-0.5 tracking-tight leading-tight">
-              {tab.label}
-            </span>
-          </Link>
-        );
-      })}
+      {(isAdmin || allowedWindows.includes("approval")) && (
+        <Link
+          to="/approval-center"
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+            location.pathname.startsWith("/approval-center")
+              ? "text-amber-600 bg-amber-50"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <CheckSquare className="w-4 h-4" />
+          <span>Approval</span>
+        </Link>
+      )}
+
+      {(isAdmin || allowedWindows.includes("profile")) && (
+        <Link
+          to="/profile"
+          className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
+            location.pathname.startsWith("/profile")
+              ? "text-purple-600 bg-purple-50"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <User className="w-4 h-4" />
+          <span>Profile</span>
+        </Link>
+      )}
+
+      {/* 9-Dot Bento Grid "More" Button to Open All Menus */}
+      <button
+        type="button"
+        onClick={onOpenMoreMenu}
+        className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer text-slate-600 hover:text-slate-900 border-0 bg-transparent"
+        title="All Menus & Services"
+      >
+        <LayoutGrid className="w-4 h-4 stroke-[2.5]" />
+        <span>More</span>
+      </button>
     </nav>
   );
 };

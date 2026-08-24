@@ -274,25 +274,37 @@ export const Navbar: React.FC<NavbarProps> = ({
           </kbd>
         </button>
 
-        {/* Right Section: Mobile Search, PWA Install (Desktop only), Notifications, User Profile */}
+        {/* Right Section: Mobile (Clean f5dcac5 design) & Desktop (New rich navbar with Search, Bell, Menu) */}
         <div className="flex items-center gap-2 xs:gap-2.5 sm:gap-3 md:gap-3.5 shrink-0">
-          {/* Mobile Command Palette Search Trigger (36px tap target, 20px icon) */}
-          <button
-            type="button"
-            onClick={() => setIsCmdOpen(true)}
-            className="md:hidden w-9 h-9 flex items-center justify-center text-ink-500 hover:text-ink-900 hover:bg-surface-sunken rounded-full transition-colors cursor-pointer shrink-0"
-            title="Search"
-            aria-label="Search"
-          >
-            <Search className="w-5 h-5" />
-          </button>
-
-          {/* PWA Install Button (Desktop / Tablet Only - Hidden on Mobile) */}
+          {/* Mobile Right: Install App + Direct Profile Avatar (f5dcac5 design) */}
           {!isStandalone && (
             <button
               type="button"
               onClick={handleInstallApp}
-              className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-accent-700 bg-accent-50 hover:bg-accent-100 rounded-lg border border-accent-200 transition-all cursor-pointer shadow-none shrink-0"
+              className="lg:hidden flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-[10px] font-bold shadow-2xs hover:shadow transition-all cursor-pointer active:scale-95"
+              title="Install Cyrix Field Connect App"
+            >
+              <Download className="w-3 h-3 stroke-[2.5]" />
+              <span className="hidden xs:inline">Install</span>
+            </button>
+          )}
+
+          <Link
+            to="/profile"
+            className="lg:hidden flex items-center gap-2 border-l border-line pl-2 hover:opacity-80 transition-opacity"
+            title="My Profile"
+          >
+            <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center border border-blue-200 shadow-2xs">
+              {userName ? userName.charAt(0).toUpperCase() : <UserIcon className="w-3.5 h-3.5" />}
+            </div>
+          </Link>
+
+          {/* Desktop Right: PWA Install Button (Desktop / Tablet Only) */}
+          {!isStandalone && (
+            <button
+              type="button"
+              onClick={handleInstallApp}
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-accent-700 bg-accent-50 hover:bg-accent-100 rounded-lg border border-accent-200 transition-all cursor-pointer shadow-none shrink-0"
               title="Install Cyrix FieldOps App"
             >
               <Download className="w-4 h-4" />
@@ -300,8 +312,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Notification Bell with Dropdown Panel */}
-          <div className="relative shrink-0" ref={bellMenuRef}>
+          {/* Desktop Right: Notification Bell with Dropdown Panel (Desktop only) */}
+          <div className="hidden lg:block relative shrink-0" ref={bellMenuRef}>
             <button
               type="button"
               onClick={() => { setIsBellOpen((prev) => !prev); setIsUserMenuOpen(false); }}
@@ -320,7 +332,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Bell Dropdown Panel */}
             {isBellOpen && (
               <div
-                className="absolute right-0 top-full mt-1.5 w-72 sm:w-80 max-w-[calc(100vw-24px)] bg-white border border-line rounded-xl shadow-lg z-50 animate-in fade-in zoom-in-95 duration-150 select-none overflow-hidden"
+                className="absolute right-0 top-full mt-1.5 w-80 max-w-[calc(100vw-24px)] bg-white border border-line rounded-xl shadow-lg z-50 animate-in fade-in zoom-in-95 duration-150 select-none overflow-hidden"
                 role="menu"
               >
                 {/* Dropdown Header */}
@@ -418,8 +430,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* User Profile Avatar with Dropdown (32px Circle) */}
-          <div className="relative ml-1 sm:ml-2.5 shrink-0" ref={userMenuRef}>
+          {/* Desktop Right: User Profile Avatar with Dropdown (32px Circle) */}
+          <div className="hidden lg:block relative ml-1 sm:ml-2.5 shrink-0" ref={userMenuRef}>
             <button
               type="button"
               onClick={() => {

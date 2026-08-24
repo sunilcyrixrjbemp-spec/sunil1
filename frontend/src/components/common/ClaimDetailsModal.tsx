@@ -1026,12 +1026,11 @@ const LegDetailCard = ({
       {(() => {
         const hasExplicitAssetTagging = !!(
           (act.assetsList && act.assetsList.length > 0) ||
-          barcode ||
+          leg.asset_tagging > 0 ||
+          leg.ws_asset > 0 ||
           act.parsed?.asset_tagging_barcode ||
           leg.asset_tagging_barcode ||
           leg.asset_tagging_suffix ||
-          equipmentName ||
-          act.assetEquipment ||
           act.parsed?.asset_tagging_equipment ||
           leg.asset_tagging_equipment ||
           act.parsed?.asset_tagging_hospital ||
@@ -1045,26 +1044,28 @@ const LegDetailCard = ({
           act.parsed?.asset_tagging_barcode_photo ||
           leg.asset_tagging_barcode_photo ||
           act.parsed?.asset_tagging_serial_photo ||
-          leg.asset_tagging_serial_photo
+          leg.asset_tagging_serial_photo ||
+          act.parsed?.asset_tagging_model_photo ||
+          leg.asset_tagging_model_photo
         );
 
         const rawAssets = (act.assetsList && act.assetsList.length > 0) ? act.assetsList : (
           hasExplicitAssetTagging ? [{
-            equipment_name: equipmentName || act.assetEquipment || act.parsed?.asset_tagging_equipment || leg.asset_tagging_equipment || "",
-            barcode: barcode || act.parsed?.asset_tagging_barcode || leg.asset_tagging_barcode || (leg.asset_tagging_suffix ? `(8004890615671) ${leg.asset_tagging_suffix}` : "") || "",
-            hospital_name: act.parsed?.asset_tagging_hospital || leg.asset_tagging_hospital || ((barcode || leg.asset_tagging_barcode || equipmentName || act.assetEquipment) ? (hospitalName || "") : "") || "",
+            equipment_name: act.parsed?.asset_tagging_equipment || leg.asset_tagging_equipment || "",
+            barcode: act.parsed?.asset_tagging_barcode || leg.asset_tagging_barcode || (leg.asset_tagging_suffix ? `(8004890615671) ${leg.asset_tagging_suffix}` : "") || "",
+            hospital_name: act.parsed?.asset_tagging_hospital || leg.asset_tagging_hospital || "",
             make: act.parsed?.make || act.parsed?.asset_tagging_make || act.parsed?.brand || leg.asset_tagging_make || leg.make || leg.brand || "",
-            model: equipmentModel || act.parsed?.model || act.parsed?.asset_tagging_model || leg.asset_tagging_model || leg.model || "",
-            serial_number: act.parsed?.serial_no || act.parsed?.serial_number || act.parsed?.asset_tagging_serial || leg.asset_tagging_serial || leg.serial_number || leg.serial_no || "",
-            department: department || act.parsed?.department || act.parsed?.ward || leg.department || "",
+            model: act.parsed?.asset_tagging_model || leg.asset_tagging_model || act.parsed?.model || equipmentModel || "",
+            serial_number: act.parsed?.serial_no || act.parsed?.serial_number || act.parsed?.asset_tagging_serial || leg.asset_tagging_serial || "",
+            department: act.parsed?.department || act.parsed?.ward || department || "",
             schedule: schedule || act.pmsFrequency || leg.schedule || "",
             has_warranty: act.parsed?.has_warranty || act.parsed?.asset_tagging_has_warranty || leg.asset_tagging_has_warranty || leg.has_warranty || "No",
             warranty_start: act.parsed?.warranty_start || act.parsed?.asset_tagging_warranty_start || leg.asset_tagging_warranty_start || leg.warranty_start || "",
             warranty_end: act.parsed?.warranty_end || act.parsed?.asset_tagging_warranty_end || leg.asset_tagging_warranty_end || leg.warranty_end || "",
-            barcode_photo: act.parsed?.barcode_photo || act.parsed?.asset_tagging_barcode_photo || leg.asset_tagging_barcode_photo || leg.barcode_photo || "",
-            serial_photo: act.parsed?.serial_photo || act.parsed?.asset_tagging_serial_photo || leg.asset_tagging_serial_photo || leg.serial_photo || "",
-            model_photo: act.parsed?.model_photo || act.parsed?.asset_tagging_model_photo || leg.asset_tagging_model_photo || leg.model_photo || "",
-            attachment_url: act.attachmentUrl || leg.service_report_url || leg.photo_url || leg.asset_photo_url || travelTaBillUrl || "",
+            barcode_photo: act.parsed?.barcode_photo || act.parsed?.asset_tagging_barcode_photo || leg.asset_tagging_barcode_photo || "",
+            serial_photo: act.parsed?.serial_photo || act.parsed?.asset_tagging_serial_photo || leg.asset_tagging_serial_photo || "",
+            model_photo: act.parsed?.model_photo || act.parsed?.asset_tagging_model_photo || leg.asset_tagging_model_photo || "",
+            attachment_url: act.attachmentUrl || leg.service_report_url || leg.photo_url || leg.asset_photo_url || "",
           }] : []
         );
 
