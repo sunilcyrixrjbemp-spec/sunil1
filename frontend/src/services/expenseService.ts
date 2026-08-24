@@ -8,7 +8,10 @@ export const expenseService = {
   },
 
   getExpenseInit: async (userId: string, month: string): Promise<any> => {
-    const response = await api.get(`/expense/init?user_id=${userId}&month=${month}`);
+    const cleanUid = (userId || "").trim();
+    const qp = cleanUid && cleanUid !== "undefined" && cleanUid !== "null" ? `user_id=${encodeURIComponent(cleanUid)}&` : "";
+    const cleanMonth = (month || "").trim() || new Date().toISOString().slice(0, 7);
+    const response = await api.get(`/expense/init?${qp}month=${cleanMonth}`);
     return response.data;
   },
 
