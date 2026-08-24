@@ -627,7 +627,16 @@ export default function ExpensePage() {
   };
 
   // UI status flags
-  const [initLoading, setInitLoading] = useState(false);
+  const [initLoading, setInitLoading] = useState(() => {
+    try {
+      const c = localStorage.getItem(`cache_month_limits_${currentUserId}_${getISTMonth()}`);
+      if (c) {
+        const p = JSON.parse(c);
+        return !(p && p.allowance && !p.allowance.policy_missing && p.allowance.daily_in_district !== null && p.allowance.daily_in_district !== undefined);
+      }
+    } catch (_) {}
+    return true;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [claims, setClaims] = useState<any[]>(() => {
     const cached = localStorage.getItem(`cache_my_expenses_${currentUserId}`);
@@ -1149,32 +1158,39 @@ export default function ExpensePage() {
     if (cached) {
       try {
         const cachedData = JSON.parse(cached);
-        applyInitData(cachedData);
-        hasLoadedFromCache = true;
-        if (!isInitialLoad) return;
-      } catch (_) {}
+        if (cachedData && cachedData.allowance && !cachedData.allowance.policy_missing && cachedData.allowance.daily_in_district !== null && cachedData.allowance.daily_in_district !== undefined) {
+          applyInitData(cachedData);
+          hasLoadedFromCache = true;
+          setInitLoading(false);
+          if (!isInitialLoad) return;
+        } else {
+          localStorage.removeItem(cacheKey);
+        }
+      } catch (_) {
+        localStorage.removeItem(cacheKey);
+      }
     }
 
-    if (isInitialLoad && !hasLoadedFromCache) {
+    if (!hasLoadedFromCache) {
       setInitLoading(true);
     }
 
     try {
       const data = await expenseService.getExpenseInit(currentUserId, monthStr);
-      if (data.success) {
-        localStorage.setItem(cacheKey, JSON.stringify(data));
+      if (data && data.success) {
+        if (data.allowance && !data.allowance.policy_missing && data.allowance.daily_in_district !== null && data.allowance.daily_in_district !== undefined) {
+          localStorage.setItem(cacheKey, JSON.stringify(data));
+        }
         applyInitData(data);
       }
     } catch (err) {
       console.error("Failed to load month limits", err);
       setLoadedMonth(monthStr);
-      if (!cached) {
+      if (!hasLoadedFromCache) {
         toast.error("Failed to initialize expense rules.");
       }
     } finally {
-      if (isInitialLoad) {
-        setInitLoading(false);
-      }
+      setInitLoading(false);
     }
   };
 

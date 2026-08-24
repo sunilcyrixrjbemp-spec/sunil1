@@ -1003,23 +1003,34 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
   const resolvedBikeRate = gradeBikeRate?.rate_per_km ?? defaultBike?.rate_per_km ?? 5.0;
   const resolvedCarRate  = gradeCarRate?.rate_per_km  ?? defaultCar?.rate_per_km  ?? 11.0;
 
+  // Fallback: If allowance is not found for gradeToLookup, lookup by user grade or default JM1
+  let resolvedAllowance = allowance;
+  if (!resolvedAllowance) {
+    if (targetUser.grade) {
+      resolvedAllowance = await env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = ?`).bind(targetUser.grade).first();
+    }
+    if (!resolvedAllowance) {
+      resolvedAllowance = await env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = 'JM1' LIMIT 1`).first();
+    }
+  }
+
   const allowanceDict = {
-    policy_missing: !allowance,
-    daily_in_district: allowance ? allowance.daily_in_district : null,
-    daily_out_district: allowance ? allowance.daily_out_district : null,
-    daily_hotel: allowance ? allowance.daily_hotel : null,
-    daily_out_state: allowance ? allowance.daily_out_state : null,
-    hotel_in_state_s: allowance ? allowance.hotel_in_state_s : null,
-    hotel_in_state_d: allowance ? allowance.hotel_in_state_d : null,
-    hotel_out_state_s: allowance ? allowance.hotel_out_state_s : null,
-    hotel_out_state_d: allowance ? allowance.hotel_out_state_d : null,
-    max_km_per_month: allowance ? allowance.max_km_per_month : null,
+    policy_missing: !resolvedAllowance,
+    daily_in_district: resolvedAllowance ? resolvedAllowance.daily_in_district : null,
+    daily_out_district: resolvedAllowance ? resolvedAllowance.daily_out_district : null,
+    daily_hotel: resolvedAllowance ? resolvedAllowance.daily_hotel : null,
+    daily_out_state: resolvedAllowance ? resolvedAllowance.daily_out_state : null,
+    hotel_in_state_s: resolvedAllowance ? resolvedAllowance.hotel_in_state_s : null,
+    hotel_in_state_d: resolvedAllowance ? resolvedAllowance.hotel_in_state_d : null,
+    hotel_out_state_s: resolvedAllowance ? resolvedAllowance.hotel_out_state_s : null,
+    hotel_out_state_d: resolvedAllowance ? resolvedAllowance.hotel_out_state_d : null,
+    max_km_per_month: resolvedAllowance ? resolvedAllowance.max_km_per_month : null,
     rate_bike: resolvedBikeRate,
     rate_car: resolvedCarRate,
-    vehicle_type: allowance ? allowance.vehicle_type : null,
+    vehicle_type: resolvedAllowance ? resolvedAllowance.vehicle_type : null,
     current_month_km: statsRes?.total_km || 0.0,
     current_month_auto: statsRes?.total_auto || 0.0,
-    max_auto_per_month: allowance ? 1000 : null
+    max_auto_per_month: resolvedAllowance ? 1000 : null
   };
 
   const mm = String(monthInt).padStart(2, "0");
@@ -1055,7 +1066,7 @@ export async function handleExpenseInit(request, env, params, query, user) {
   const monthStr = query.get("month"); // Format: YYYY-MM
   if (!monthStr) return jsonResponse({ error: "month parameter is required" }, 400);
 
-  const targetUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(targetUserId).first();
+  const targetUser = await env.DB.prepare("SELECT * FROM users WHERE LOWER(TRIM(user_id)) = LOWER(TRIM(?)) OR LOWER(TRIM(e_code)) = LOWER(TRIM(?))").bind(targetUserId, targetUserId).first();
   if (!targetUser) return jsonResponse({ error: "User not found" }, 404);
 
   const data = await getExpenseInitData(env, targetUser, monthStr);
