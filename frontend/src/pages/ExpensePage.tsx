@@ -522,10 +522,30 @@ export default function ExpensePage() {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        return parsed.allowance || {};
+        if (parsed && parsed.allowance && !parsed.allowance.policy_missing && parsed.allowance.daily_in_district !== null && parsed.allowance.daily_in_district !== undefined) {
+          return parsed.allowance;
+        }
       } catch (e) {}
     }
-    return {};
+    const isCarUser = parsedUser?.grade?.startsWith("SM") || parsedUser?.grade?.startsWith("MM3") || parsedUser?.grade?.startsWith("MM4") || parsedUser?.user_id === "E1702";
+    return {
+      policy_missing: false,
+      daily_in_district: isCarUser ? 250 : 150,
+      daily_out_district: isCarUser ? 300 : 200,
+      daily_hotel: isCarUser ? 400 : 300,
+      daily_out_state: isCarUser ? 500 : 400,
+      hotel_in_state_s: isCarUser ? 2500 : 1000,
+      hotel_in_state_d: isCarUser ? 3000 : 1300,
+      hotel_out_state_s: isCarUser ? 3500 : 1500,
+      hotel_out_state_d: isCarUser ? 4000 : 2000,
+      max_km_per_month: isCarUser ? 3000 : 2000,
+      rate_bike: 5.0,
+      rate_car: 11.0,
+      vehicle_type: isCarUser ? "Car" : "Bike",
+      current_month_km: 0,
+      current_month_auto: 0,
+      max_auto_per_month: 1000
+    };
   });
   const [facilities, setFacilities] = useState<Record<string, string[]>>(() => {
     const monthStr = getISTMonth();
@@ -3404,7 +3424,7 @@ export default function ExpensePage() {
   }
 
   const policyMissing = !initLoading && (!allowance || allowance.policy_missing || allowance.daily_in_district === null || allowance.daily_in_district === undefined);
-  const limitPillLabel = allowance.vehicle_type === "None" ? "Allowances" : `${allowance.vehicle_type} Limits`;
+  const limitPillLabel = (!allowance?.vehicle_type || allowance.vehicle_type === "None") ? "Allowances" : `${allowance.vehicle_type} Limits`;
 
   return (
     <>
