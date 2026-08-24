@@ -879,7 +879,7 @@ export async function handleListExpenses(request, env, params, query, user) {
   if (month && month.toLowerCase() !== "all" && month.toLowerCase() !== "all_time") {
     if (month.includes("-") && month.length === 7) {
       const parts = month.split("-");
-      const yr = parseInt(parts[0], 10);
+          const yr = parseInt(parts[0], 10);
       const monNum = parseInt(parts[1], 10);
       const monName = MONTH_NAMES[monNum - 1];
 
@@ -910,8 +910,8 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
     const monthInt = parseInt(parts[1], 10) || (new Date().getMonth() + 1);
     const monthName = MONTH_NAMES[monthInt - 1] || "August";
 
-    const userGrade = targetUser?.grade || "JM1";
-    const gradeToLookup = (targetUser?.designation || "").toLowerCase().includes("specialist") ? "O1" : userGrade;
+    const dbGrade = (targetUser?.grade || "JM1").trim().toUpperCase();
+    const isSpecialist = (targetUser?.designation || "").toLowerCase().includes("specialist");
 
     // ── KV Cache Lookup for Facilities ────────────────────────────────────────
     const FACILITIES_KV_KEY = "cache:ref:facilities_dict:v1";
@@ -938,7 +938,8 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
       submittedRows,
       limits,
       limitReqs,
-      allowance,
+      allowanceSpecialist,
+      allowanceGeneral,
       gradeBikeRate,
       gradeCarRate,
       defaultBike,
@@ -959,11 +960,16 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
       `).bind(uCodeStr, String(uIdInt), cleanMonthStr).first().catch(() => null),
       env.DB.prepare(`SELECT * FROM limit_approval_requests WHERE (user_id = ? OR user_id = ?) AND for_month = ?`
       ).bind(uCodeStr, String(uIdInt), cleanMonthStr).all().catch(() => ({ results: [] })),
-      env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = ?`).bind(gradeToLookup).first().catch(() => null),
-      // Grade-specific Bike rate (most accurate)
-      env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE grade = ? AND LOWER(TRIM(vehicle_type)) = 'bike' LIMIT 1`).bind(gradeToLookup).first().catch(() => null),
-      // Grade-specific Car rate (most accurate)
-      env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE grade = ? AND LOWER(TRIM(vehicle_type)) = 'car' LIMIT 1`).bind(gradeToLookup).first().catch(() => null),
+      // Specialist-specific policy row
+      isSpecialist
+        ? env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = ? AND LOWER(category) LIKE '%specialist%' LIMIT 1`).bind(dbGrade).first().catch(() => null)
+        : Promise.resolve(null),
+      // General policy row
+      env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = ? LIMIT 1`).bind(dbGrade).first().catch(() => null),
+      // Grade-specific Bike rate
+      env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE grade = ? AND LOWER(TRIM(vehicle_type)) = 'bike' LIMIT 1`).bind(dbGrade).first().catch(() => null),
+      // Grade-specific Car rate
+      env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE grade = ? AND LOWER(TRIM(vehicle_type)) = 'car' LIMIT 1`).bind(dbGrade).first().catch(() => null),
       // Fallback: any-grade Bike rate
       env.DB.prepare(`SELECT rate_per_km FROM allowance_master WHERE LOWER(TRIM(vehicle_type)) = 'bike' LIMIT 1`).first().catch(() => null),
       // Fallback: any-grade Car rate
@@ -1000,46 +1006,33 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
       sysSettingsMap[s.key] = s.value;
     }
 
-    const submittedDates = (submittedRows?.results || []).map(r => r.itinerary).filter(Boolean);
+    const submittedDates = [];
+    for (const r of (submittedRows?.results || [])) {
+      if (r.itinerary) submittedDates.push(r.itinerary);
+    }
 
     const approvedKm = limits?.approved_km || 0.0;
     const approvedAuto = limits?.approved_auto || 0.0;
 
-    const kmReqs = (limitReqs?.results || []).filter(r => r.request_type === "KM").sort((a, b) => b.id - a.id);
-    const autoReqs = (limitReqs?.results || []).filter(r => r.request_type === "AUTO").sort((a, b) => b.id - a.id);
-    const existingKmReq = kmReqs.length > 0 ? { status: kmReqs[0].status, requested_value: kmReqs[0].requested_value } : null;
-    const existingAutoReq = autoReqs.length > 0 ? { status: autoReqs[0].status, requested_value: autoReqs[0].requested_value } : null;
-
-    // Use grade-specific rates first; fallback to any-grade only if missing
-    const resolvedBikeRate = gradeBikeRate?.rate_per_km ?? defaultBike?.rate_per_km ?? 5.0;
-    const resolvedCarRate  = gradeCarRate?.rate_per_km  ?? defaultCar?.rate_per_km  ?? 11.0;
-
-    // Fallback: If allowance is not found for gradeToLookup, lookup by user grade or default JM1
-    let resolvedAllowance = allowance;
-    if (!resolvedAllowance) {
-      if (targetUser?.grade) {
-        resolvedAllowance = await env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = ?`).bind(targetUser.grade).first().catch(() => null);
-      }
-      if (!resolvedAllowance) {
-        resolvedAllowance = await env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = 'JM1' LIMIT 1`).first().catch(() => null);
-      }
-      if (!resolvedAllowance) {
-        resolvedAllowance = {
-          grade: "JM1",
-          daily_in_district: 150,
-          daily_out_district: 200,
-          daily_hotel: 300,
-          daily_out_state: 400,
-          hotel_in_state_s: 1000,
-          hotel_in_state_d: 1300,
-          hotel_out_state_s: 1500,
-          hotel_out_state_d: 2000,
-          vehicle_type: "Bike",
-          rate_per_km: 5,
-          max_km_per_month: 2000
-        };
-      }
+    let existingKmReq = null;
+    let existingAutoReq = null;
+    for (const req of (limitReqs?.results || [])) {
+      if (req.request_type === "KM") existingKmReq = req;
+      if (req.request_type === "AUTO") existingAutoReq = req;
     }
+
+    // Resolve allowance policy object
+    let resolvedAllowance = allowanceSpecialist || allowanceGeneral;
+    if (!resolvedAllowance) {
+      resolvedAllowance = await env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = ? LIMIT 1`).bind(dbGrade).first().catch(() => null);
+    }
+    if (!resolvedAllowance) {
+      resolvedAllowance = await env.DB.prepare(`SELECT * FROM allowance_master WHERE grade = 'JM1' LIMIT 1`).first().catch(() => null);
+    }
+
+    // Resolve rates
+    const resolvedBikeRate = gradeBikeRate?.rate_per_km ?? defaultBike?.rate_per_km ?? 5.0;
+    const resolvedCarRate = gradeCarRate?.rate_per_km ?? defaultCar?.rate_per_km ?? 11.0;
 
     const allowanceDict = {
       policy_missing: false,
@@ -1054,7 +1047,7 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
       max_km_per_month: resolvedAllowance ? resolvedAllowance.max_km_per_month : 2000,
       rate_bike: resolvedBikeRate,
       rate_car: resolvedCarRate,
-      vehicle_type: resolvedAllowance?.vehicle_type || "Bike",
+      vehicle_type: resolvedAllowance?.vehicle_type || (dbGrade.startsWith("SM") || dbGrade.startsWith("MM3") || dbGrade.startsWith("MM4") ? "Car" : "Bike"),
       current_month_km: statsRes?.total_km || 0.0,
       current_month_auto: statsRes?.total_auto || 0.0,
       max_auto_per_month: 1000
@@ -1067,9 +1060,14 @@ export async function getExpenseInitData(env, targetUser, monthStr) {
       success: true,
       user: {
         full_name: targetUser?.name || "Sunil Vishnoi",
-        e_code: targetUser?.user_id || targetUser?.e_code || "E1704",
-        grade: targetUser?.grade || "JM2",
+        name: targetUser?.name || "Sunil Vishnoi",
+        user_id: targetUser?.user_id || targetUser?.e_code || "E1704",
+        e_code: targetUser?.e_code || targetUser?.user_id || "E1704",
+        grade: dbGrade,
+        designation: targetUser?.designation || "Biomedical Engineer",
+        role: targetUser?.role || "Engineer",
         home_district: targetUser?.district || "Jodhpur",
+        district: targetUser?.district || "Jodhpur",
         level_first_approver: targetUser?.manager || "Admin",
         level_second_approver: targetUser?.zonal_manager || "Admin"
       },
