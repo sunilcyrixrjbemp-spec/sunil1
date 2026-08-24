@@ -216,21 +216,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-14 md:h-16 bg-white border-b border-line px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2.5 sm:gap-4 shadow-none pt-[env(safe-area-inset-top)] select-none">
-        {/* Left Section: Mobile Logo / Desktop Sidebar Toggle + Dynamic Page Title */}
-        <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 flex-1 min-w-0">
-          {/* Mobile Logo Mark (Clean 28px/32px emblem, no embedded text) */}
-          <Link to="/home" className="lg:hidden flex items-center shrink-0">
-            <img
-              src="/apple-touch-icon.png"
-              alt="Cyrix"
-              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg object-contain shrink-0"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = "none";
-              }}
-            />
-          </Link>
-
+      <header className="sticky top-0 z-30 h-10 md:h-16 bg-white border-b border-line px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2.5 sm:gap-4 shadow-none select-none">
+        {/* Left Section: Mobile Title / Desktop Sidebar Toggle + Dynamic Page Title */}
+        <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3 min-w-0">
           {/* Desktop/Tablet Sidebar Collapse Toggle */}
           {onToggleSidebar && (
             <button
@@ -248,9 +236,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Dynamic Page Title in font-display (Inter Tight) with Ellipsis Truncation */}
-          <div className="flex items-center min-w-0 flex-1">
-            <h1 className="font-display text-sm sm:text-base md:text-lg font-bold text-ink-900 tracking-tight truncate min-w-0 leading-none">
+          {/* Dynamic Page Title */}
+          <div className="flex items-center min-w-0">
+            <h1 className="text-xs md:text-sm lg:text-base font-semibold text-gray-800 tracking-tight truncate min-w-0 leading-none">
               {pageTitle}
             </h1>
           </div>
@@ -275,26 +263,26 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         {/* Right Section: Mobile (Clean f5dcac5 design) & Desktop (New rich navbar with Search, Bell, Menu) */}
-        <div className="flex items-center gap-2 xs:gap-2.5 sm:gap-3 md:gap-3.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Mobile Right: Install App + Direct Profile Avatar (f5dcac5 design) */}
           {!isStandalone && (
             <button
               type="button"
               onClick={handleInstallApp}
-              className="lg:hidden flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-[10px] font-bold shadow-2xs hover:shadow transition-all cursor-pointer active:scale-95"
+              className="lg:hidden flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-[11px] font-bold shadow-2xs hover:shadow transition-all cursor-pointer active:scale-95 shrink-0"
               title="Install Cyrix Field Connect App"
             >
               <Download className="w-3 h-3 stroke-[2.5]" />
-              <span className="hidden xs:inline">Install</span>
+              <span className="hidden xs:inline">Install App</span>
             </button>
           )}
 
           <Link
             to="/profile"
-            className="lg:hidden flex items-center gap-2 border-l border-line pl-2 hover:opacity-80 transition-opacity"
+            className="lg:hidden flex items-center gap-2 border-l border-line pl-2 hover:opacity-80 transition-opacity shrink-0"
             title="My Profile"
           >
-            <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center border border-blue-200 shadow-2xs">
+            <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 font-bold text-xs flex items-center justify-center border border-blue-200 shadow-2xs">
               {userName ? userName.charAt(0).toUpperCase() : <UserIcon className="w-3.5 h-3.5" />}
             </div>
           </Link>
