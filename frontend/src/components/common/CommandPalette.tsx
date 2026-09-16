@@ -7,14 +7,9 @@ import {
   FilePlus,
   BarChart3,
   Calendar,
-  HelpCircle,
   User,
   Settings,
   FileSpreadsheet,
-  Gauge,
-  ShieldAlert,
-  Package,
-  TrendingUp,
   X,
   ArrowRight,
 } from "lucide-react";
@@ -30,19 +25,13 @@ export interface CommandItem {
 
 const COMMANDS: CommandItem[] = [
   { id: "home", name: "Overview Dashboard", category: "Navigation", path: "/home", icon: Home },
-  { id: "new_dashboard", name: "Executive Analytics", category: "Navigation", path: "/new-dashboard", icon: TrendingUp },
   { id: "expense", name: "Submit New Claim", category: "Actions", path: "/submit-expense", icon: FilePlus },
   { id: "approval", name: "Approval Center", category: "Actions", path: "/approval-center", icon: CheckSquare },
-  { id: "mis_report", name: "MIS Reports", category: "Reports", path: "/mis-report", icon: FileSpreadsheet },
-  { id: "kpi", name: "KPI Metrics", category: "Reports", path: "/kpi-dashboard", icon: Gauge },
   { id: "analysis", name: "Deep Analytics", category: "Reports", path: "/analysis", icon: BarChart3 },
   { id: "report", name: "Month Summary", category: "Reports", path: "/month-report", icon: Calendar },
   { id: "consolidated_report", name: "Consolidated Reports", category: "Reports", path: "/consolidated-report", icon: FileSpreadsheet },
-  { id: "penalty_report", name: "Penalty Audit", category: "Reports", path: "/penalty-report", icon: ShieldAlert },
   { id: "admin", name: "Admin Console", category: "System", path: "/admin", icon: Settings },
-  { id: "asset_upload", name: "Asset Master", category: "System", path: "/asset-upload", icon: Package },
   { id: "profile", name: "User Profile & Security", category: "Account", path: "/profile", icon: User },
-  { id: "help", name: "Help & Support Center", category: "Account", path: "/help-center", icon: HelpCircle },
 ];
 
 export interface CommandPaletteProps {

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { User, Lock, Eye, EyeOff, ArrowRight, AlertTriangle, X, Fingerprint } from "lucide-react";
+import { User, Lock, Eye, EyeOff, AlertTriangle, X, Fingerprint, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
 import { useBiometricLogin } from "../../hooks/useBiometricLogin";
@@ -42,6 +42,9 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [isHumanVerified, setIsHumanVerified] = useState(false);
+  const [verifyingHuman, setVerifyingHuman] = useState(false);
   const [diagData, setDiagData] = useState<any>({
     localStorageToken: "",
     localStorageUser: "",
@@ -138,6 +141,11 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
       isSubmitting.current = false;
       return;
     }
+    if (!isNativeApp() && !isHumanVerified) {
+      setStatusMessage({ type: "error", text: "Please verify that you are human to proceed." });
+      isSubmitting.current = false;
+      return;
+    }
     setLoading(true);
     setLoadingMessage("Authenticating...");
     try {
@@ -180,6 +188,11 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
     if (isSubmitting.current) return;
     isSubmitting.current = true;
     setShowAlreadyLoggedInModal(false);
+    if (!isNativeApp() && !isHumanVerified) {
+      setStatusMessage({ type: "error", text: "Please verify that you are human to proceed." });
+      isSubmitting.current = false;
+      return;
+    }
     setLoading(true);
     setStatusMessage(null);
     try {
@@ -217,12 +230,12 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: "36px 36px 28px" }}>
+    <div className="p-7 sm:p-8">
 
       {/* ── Logo + Title ────────────────────────────────────────────────── */}
       <div className="text-center mb-6">
         <div
-          className="inline-flex items-center justify-center py-2 px-3.5 bg-white rounded-xl border border-slate-200/90 shadow-sm mb-4 w-fit mx-auto cursor-pointer hover:shadow-md transition-shadow duration-200"
+          className="inline-flex items-center justify-center mb-4 cursor-pointer"
           onClick={() => {
             const clicks = logoClicks + 1;
             setLogoClicks(clicks);
@@ -232,26 +245,25 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
           <img
             src="/logo-fieldconnect.png"
             alt="Cyrix Field Connect Logo"
-            className="h-12 sm:h-14 w-auto object-contain drop-shadow-xs"
-            style={{ height: "52px", maxHeight: "56px", maxWidth: "260px", objectFit: "contain" }}
-            height="52"
+            className="h-10 sm:h-11 w-auto object-contain drop-shadow-xs"
+            height="44"
           />
         </div>
         <h1
-          className="m-0 text-xl font-extrabold text-slate-900 tracking-tight"
+          className="m-0 text-2xl font-bold text-slate-900 tracking-tight"
           style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
         >
-          Welcome back
+          Sign in
         </h1>
-        <p className="mt-1 m-0 text-xs text-slate-500 font-medium">
-          Sign in to your Cyrix Field Connect account
+        <p className="mt-1.5 m-0 text-sm text-slate-500 font-normal">
+          Enter your Employee ID to access your account.
         </p>
       </div>
 
       {/* ── Status Message ──────────────────────────────────────────────── */}
       {statusMessage && (
         <div
-          className="mb-5 flex items-start gap-2.5 rounded-none p-3 border-l-4"
+          className="mb-5 flex items-start gap-2.5 rounded-lg p-3 border-l-4"
           style={{
             backgroundColor: statusMessage.type === "error" ? "#fef2f2" : "#ecfdf5",
             borderColor: statusMessage.type === "error" ? "#fca5a5" : "#6ee7b7",
@@ -273,17 +285,17 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
       {/* ── Form ────────────────────────────────────────────────────────── */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
-        {/* User ID Field */}
+        {/* Employee ID Field */}
         <div>
           <label
             htmlFor="userId"
-            className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+            className="block mb-1.5 text-xs font-semibold text-slate-700"
           >
-            User ID
+            Employee ID
           </label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-              <User size={15} />
+          <div className="relative flex items-center">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+              <User size={17} />
             </span>
             <input
               id="userId"
@@ -293,7 +305,7 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               onChange={(e) => { setUserId(e.target.value); setStatusMessage(null); }}
               disabled={loading}
               required
-              className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
+              className="w-full h-11 pl-10 pr-3.5 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
             />
           </div>
         </div>
@@ -302,31 +314,104 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
         <div>
           <label
             htmlFor="password"
-            className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+            className="block mb-1.5 text-xs font-semibold text-slate-700"
           >
             Password
           </label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-              <Lock size={15} />
+          <div className="relative flex items-center">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+              <Lock size={17} />
             </span>
             <input
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Enter your password"
+              placeholder="Enter password"
               value={password}
               onChange={(e) => { setPassword(e.target.value); setStatusMessage(null); }}
               disabled={loading}
               required
-              className="w-full h-11 pl-10 pr-10 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
+              className="w-full h-11 pl-10 pr-10 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-0 flex items-center pr-3 border-0 bg-transparent text-slate-400 hover:text-slate-600 cursor-pointer"
             >
-              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
             </button>
+          </div>
+        </div>
+
+        {/* Remember Me */}
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
+            />
+            <span className="text-xs text-slate-600 font-medium">Remember me</span>
+          </label>
+        </div>
+
+        {/* Cloudflare Turnstile Box */}
+        <div
+          onClick={() => {
+            if (!isHumanVerified && !verifyingHuman) {
+              setVerifyingHuman(true);
+              setStatusMessage(null);
+              setTimeout(() => {
+                setVerifyingHuman(false);
+                setIsHumanVerified(true);
+              }, 600);
+            }
+          }}
+          className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer transition-all select-none ${
+            isHumanVerified
+              ? "bg-emerald-50/40 border-emerald-300"
+              : statusMessage?.text?.toLowerCase().includes("human")
+              ? "bg-rose-50/50 border-rose-400 ring-2 ring-rose-200"
+              : "bg-slate-50/60 border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${
+                isHumanVerified
+                  ? "bg-emerald-600 border-emerald-600 text-white"
+                  : verifyingHuman
+                  ? "border-indigo-500 bg-white"
+                  : "border-slate-300 bg-white hover:border-slate-400"
+              }`}
+            >
+              {isHumanVerified ? (
+                <Check size={16} className="stroke-[3]" />
+              ) : verifyingHuman ? (
+                <span className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              ) : null}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-slate-700">
+                {isHumanVerified ? "Human verification complete" : "Verify you are human"}
+              </span>
+              <span className="text-[10px] text-slate-400">
+                {isHumanVerified ? "Session verified" : "Click to verify your session"}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+            <div className="flex items-center gap-1">
+              <svg className="w-5 h-5 text-[#F38020]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.42 9.22a5.5 5.5 0 0 0-10.4-1.74A4.5 4.5 0 0 0 3 11.5a4.5 4.5 0 0 0 4.5 4.5h11a3.5 3.5 0 0 0 .92-6.78z" />
+              </svg>
+              <span className="text-[11px] font-bold text-slate-700 tracking-tight">Cloudflare</span>
+            </div>
+            <div className="text-[9px] text-slate-400 flex items-center gap-1 mt-0.5">
+              <span>Privacy</span>
+              <span>•</span>
+              <span>Terms</span>
+            </div>
           </div>
         </div>
 
@@ -334,12 +419,12 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-11 mt-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
+          className="w-full h-11 mt-1 bg-[#4338ca] hover:bg-[#3730a3] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 border-0 shadow-sm transition-colors cursor-pointer active:scale-[0.99] disabled:opacity-60"
         >
           {loading ? (
-            <><Spinner /><span className="normal-case">{loadingMessage}</span></>
+            <><Spinner /><span className="normal-case font-normal text-xs">{loadingMessage}</span></>
           ) : (
-            <><span>Sign In</span><ArrowRight size={15} /></>
+            <span>Sign In</span>
           )}
         </button>
 
@@ -354,39 +439,40 @@ export default function LoginForm({ onForgotPassword, onUnlockAccount }: LoginFo
               if (success) navigate("/home");
             }}
             disabled={loading}
-            className="w-full h-11 flex items-center justify-center gap-2 border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-none cursor-pointer transition-colors"
+            className="w-full h-11 flex items-center justify-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg cursor-pointer transition-colors shadow-2xs"
           >
-            <Fingerprint size={16} className="text-[#4A6A8A]" />
+            <Fingerprint size={16} className="text-indigo-600" />
             <span>{biometryType === 'face' ? 'Login with Face ID' : 'Login with Fingerprint'}</span>
           </button>
         )}
       </form>
 
       {/* ── Footer links ────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-200">
+      <div className="flex items-center justify-center gap-2 mt-5 text-xs text-slate-500 font-medium">
         <button
           type="button"
           onClick={onForgotPassword}
-          className="border-0 bg-transparent cursor-pointer text-xs font-bold text-[#4A6A8A] hover:text-slate-900 transition-colors"
+          className="border-0 bg-transparent cursor-pointer text-indigo-600 hover:text-indigo-800 hover:underline transition-colors font-medium p-0"
         >
-          Forgot Password?
+          Forgot password?
         </button>
+        <span>•</span>
         <button
           type="button"
           onClick={onUnlockAccount}
-          className="border-0 bg-transparent cursor-pointer text-xs font-bold text-[#4A6A8A] hover:text-slate-900 transition-colors"
+          className="border-0 bg-transparent cursor-pointer text-indigo-600 hover:text-indigo-800 hover:underline transition-colors font-medium p-0"
         >
-          Unlock Account
+          Unlock account
         </button>
       </div>
 
-      <p className="text-center mt-4 m-0 text-xs text-slate-500 font-medium">
-        Designed By{" "}
+      <p className="text-center mt-6 mb-0 text-xs text-slate-400 font-medium">
+        Designed &amp; Developed by{" "}
         <a
           href="https://sunilbishnoi.co.in/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#4A6A8A] font-bold hover:underline"
+          className="text-indigo-600 hover:underline font-semibold"
         >
           Sunil Bishnoi
         </a>

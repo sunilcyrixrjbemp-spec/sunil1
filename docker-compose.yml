@@ -12,7 +12,7 @@ services:
       - ./frontend:/app
       - node_modules:/app/node_modules
     environment:
-      VITE_API_BASE_URL: https://fieldops-secondary-api.sunilbishnoi.workers.dev/api
+      VITE_API_BASE_URL: https://fieldops-api.sunilbishnoi.workers.dev/api
     restart: unless-stopped
 
 volumes:

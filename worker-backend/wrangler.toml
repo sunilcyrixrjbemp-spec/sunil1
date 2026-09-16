@@ -20,6 +20,10 @@ binding = "OTPS_KV"
 id = "7a00b8d26638473384d2d99f92417fee"
 preview_id = "7a00b8d26638473384d2d99f92417fee"
 
+# ─── Cloudflare Browser Rendering (Pro Plan) ──────────────────────────────────
+[browser]
+binding = "BROWSER"
+
 # ─── Cloudflare Email Workers (Native email sending) ───────────────────────
 # Docs: https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/
 # Enable: Cloudflare Dashboard → Email → Email Routing → Enable

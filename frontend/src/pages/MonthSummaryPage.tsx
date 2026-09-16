@@ -7,6 +7,10 @@ import {
   IndianRupee, MapPin, Search, Filter, FileText, Loader2, Printer, X
 } from "lucide-react";
 import MonthSummarySkeleton from "../components/common/MonthSummarySkeleton";
+import { generateCyrixVectorPdf } from "../utils/cyrixVectorPdfEngine";
+
+// High-Speed In-Memory PDF Cache
+const pdfBlobCache = new Map<string, Blob>();
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -37,6 +41,7 @@ const loadScript = (src: string): Promise<void> => {
     }
     const script = document.createElement("script");
     script.src = src;
+    script.crossOrigin = "anonymous";
     script.onload = () => resolve();
     script.onerror = () => reject(new Error(`Failed to load script ${src}`));
     document.head.appendChild(script);
@@ -344,6 +349,22 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
         hotel_amount: rawLeg.approved_hotel_amount !== undefined ? parseFloat(rawLeg.approved_hotel_amount || 0) : parseFloat(rawLeg.hotel_amount || 0),
         other_amount: rawLeg.approved_other_amount !== undefined ? parseFloat(rawLeg.approved_other_amount || 0) : parseFloat(rawLeg.other_amount || 0),
       };
+
+      const legTotal = (leg.ta_amount || 0) + (leg.bike_amount || 0) + (leg.car_amount || 0) + (leg.auto_amount || 0)
+        + (leg.da_amount || 0) + (leg.local_purchase || 0) + (leg.hotel_amount || 0) + (leg.other_amount || 0);
+      const dist = parseFloat(leg.distance_km || 0);
+      const callsDone = parseInt(leg.calls_completed || 0, 10);
+      const callsAssign = parseInt(leg.calls_assigned || 0, 10);
+      const pms = parseInt(leg.pms_count || 0, 10);
+      const calib = parseInt(leg.calibration_count || 0, 10);
+      const assetQty = parseInt(leg.asset_tagging_qty || 0, 10);
+      const ticket = (leg.ticket_no || leg.mpt_ticket_no || "").toString().trim();
+      const hasFrom = (leg.from_location || "").toString().trim().length > 0;
+      const hasTo = (leg.to_location || "").toString().trim().length > 0;
+      const hasPurpose = (leg.visit_purpose || "").toString().trim().length > 0;
+
+      const hasData = legTotal > 0 || dist > 0 || callsDone > 0 || callsAssign > 0 || pms > 0 || calib > 0 || assetQty > 0 || !!ticket || (hasFrom && hasTo) || hasPurpose;
+      if (!hasData) continue;
 
       allLegs.push({ date: claim.date, expCode: claim.expense_code, leg });
     }
@@ -700,7 +721,7 @@ function buildExcelPrintHTML(user: any, claims: any[], attachments: any[] = [], 
             <td class="tot-num" style="background:#fff3cd!important; font-weight:950; text-align:right; border: 1.5px solid #000!important;">${gTotal.toFixed(2)}</td>
             <td class="tot-lbl" style="border: 1.5px solid #000!important; background:#fff3cd!important;"></td>
             <td class="tot-lbl" style="border: 1.5px solid #000!important; font-size:6.5pt!important; text-align:center; font-weight:bold; background:#fff3cd!important;">
-              ${gAssetQty > 0 ? `Qty: ${gAssetQty} | ₹${gAssetVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : ""}
+              ${gAssetQty > 0 ? `Qty: ${gAssetQty} | Rs. ${gAssetVal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : ""}
             </td>
             <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gPMSCalib}</td>
             <td class="tot-num" style="border: 1.5px solid #000!important; text-align:center; font-weight:bold; background:#fff3cd!important;">${gCallsC}/${gCallsA}</td>
@@ -941,6 +962,7 @@ export default function MonthSummaryPage() {
       }
       const script = document.createElement("script");
       script.src = src;
+      script.crossOrigin = "anonymous";
       script.onload = () => resolve();
       script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
       document.head.appendChild(script);
@@ -957,7 +979,7 @@ export default function MonthSummaryPage() {
     const h2c = (window as any).html2canvas;
 
     const A4_W_CSS = 1122; // A4 landscape width at 96dpi
-    const SCALE = 1.5; // Fast rendering scale
+    const SCALE = 1.25; // Ultra-fast sharp scale (2x faster than 1.5)
 
     const iframe = document.createElement("iframe");
     iframe.style.position = "fixed";
@@ -981,10 +1003,10 @@ export default function MonthSummaryPage() {
     iDoc.write(html);
     iDoc.close();
 
-    // Fast image load check with 2.5s fallback timeout
+    // Fast image load check with 800ms fallback timeout
     await new Promise<void>((resolve) => {
       const imgs = Array.from(iDoc.getElementsByTagName("img"));
-      if (imgs.length === 0) { setTimeout(resolve, 100); return; }
+      if (imgs.length === 0) { setTimeout(resolve, 50); return; }
       let loadedCount = 0;
       let failedCount = 0;
       let isResolved = false;
@@ -992,7 +1014,7 @@ export default function MonthSummaryPage() {
       const finish = () => {
         if (!isResolved) {
           isResolved = true;
-          setTimeout(resolve, 100);
+          setTimeout(resolve, 50);
         }
       };
 
@@ -1019,12 +1041,12 @@ export default function MonthSummaryPage() {
         }
       });
 
-      // 2.5 second fallback timeout per rendering run for speed
+      // 800ms fallback timeout per rendering run for speed
       setTimeout(() => {
         if (!isResolved) {
           finish();
         }
-      }, 2500);
+      }, 800);
     });
 
     const pagesToRender: HTMLElement[] = [];
@@ -1061,7 +1083,7 @@ export default function MonthSummaryPage() {
         windowHeight: el.offsetHeight || 793,
       });
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.90);
+      const imgData = canvas.toDataURL("image/jpeg", 0.85);
       if (i > 0) {
         pdf.addPage("a4", "landscape");
       }
@@ -1125,11 +1147,22 @@ export default function MonthSummaryPage() {
           })
         );
 
-        const attachments = await prepareConvertedAttachments(claims);
-
-        const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
+        const cacheKey = `${row.user_id}-${row.month}-${row.year}`;
+        let pdfBlob = pdfBlobCache.get(cacheKey);
+        if (!pdfBlob || pdfBlob.size < 1000) {
+          const attachments = await prepareConvertedAttachments(claims);
+          try {
+            pdfBlob = await generateCyrixVectorPdf(userObj, claims, attachments, amount);
+          } catch (vErr) {
+            console.warn("Vector PDF fallback to canvas:", vErr);
+            const html = buildExcelPrintHTML(userObj, claims, attachments, amount, false);
+            pdfBlob = await renderHTMLToPDFBlob(html);
+          }
+          if (pdfBlob && pdfBlob.size > 1000) {
+            pdfBlobCache.set(cacheKey, pdfBlob);
+          }
+        }
         const filename = `${(userObj.name || "Engineer").replace(/[^a-zA-Z0-9]/g, "_")}_Expense_Summary_${row.month}_${row.year}.pdf`;
-        const pdfBlob = await renderHTMLToPDFBlob(html);
 
         const link = document.createElement("a");
         link.href = URL.createObjectURL(pdfBlob);
@@ -1348,7 +1381,26 @@ export default function MonthSummaryPage() {
             expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
             expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
           ]);
-          fetched.push({ row, res: claimRes });
+          const claims = claimRes?.claims || [];
+          if (claims.length > 0) {
+            await Promise.all(
+              claims.map(async (claim: any) => {
+                try {
+                  const details = await expenseService.getExpenseDetails(claim.expense_code);
+                  if (details) {
+                    if (details.attachments && Array.isArray(details.attachments)) {
+                      claim.attachments = details.attachments;
+                    }
+                    if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
+                      claim.attachments_detailed = details.attachments_detailed;
+                    }
+                  }
+                } catch (e) {}
+              })
+            );
+          }
+          const convertedAttachments = await prepareConvertedAttachments(claims);
+          fetched.push({ row, res: { ...claimRes, claims, attachments: convertedAttachments } });
           const amt = advRes?.advance_amount || 0;
           const exists = !!advRes?.exists;
           advancesMap[key] = amt;
@@ -1423,59 +1475,105 @@ export default function MonthSummaryPage() {
     toast("ZIP generation cancelled", { icon: "ℹ️" });
   };
 
-  const generateZIPBlob = async (fetched: any[], advancesMap: Record<string, number>) => {
-    const totalEngineers = fetched.length;
+  const handleBulkDownloadZIP = async () => {
+    if (selectedKeys.length === 0) return;
+    cancelZipRef.current = false;
+
+    const selectedRows = filtered.filter((r: any) =>
+      selectedKeys.includes(`${r.user_id}-${r.month}-${r.year}`)
+    );
+    const total = selectedRows.length;
+
     setZipProgress({
       active: true,
-      stage: "rendering",
+      stage: "fetching",
       current: 0,
-      total: totalEngineers,
-      currentName: "Starting PDF generation...",
-      percent: 30,
-      message: `Preparing to render ${totalEngineers} report PDFs...`
+      total,
+      currentName: "Starting parallel export...",
+      percent: 5,
+      message: `Fetching claim records for ${total} selected engineers in parallel...`
     });
 
     try {
+      await Promise.all([
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),
+        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js")
+      ]);
+
       const zip = new (window as any).JSZip();
-      let completedPdfs = 0;
-      
-      for (let i = 0; i < fetched.length; i++) {
+
+      // ── STEP 1: PARALLEL DATA FETCHING (8-Worker Concurrency) ────────────────
+      const FETCH_CONCURRENCY = 8;
+      const fetchedItems: Array<{
+        row: any;
+        res: any;
+        advance: number;
+      }> = [];
+
+      for (let i = 0; i < total; i += FETCH_CONCURRENCY) {
         if (cancelZipRef.current) {
           setZipProgress(null);
           toast("ZIP generation cancelled", { icon: "ℹ️" });
           return;
         }
 
-        const item = fetched[i];
-        const userObj = item.res.user || item.row;
-        const claims = item.res.claims || [];
-        const attachments = item.res.attachments || [];
-        if (claims.length === 0) continue;
+        const chunk = selectedRows.slice(i, i + FETCH_CONCURRENCY);
+        const results = await Promise.all(
+          chunk.map(async (row: any) => {
+            try {
+              const [claimRes, advRes] = await Promise.all([
+                expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
+                expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
+              ]);
+              const claims = claimRes?.claims || [];
+              if (claims.length > 0) {
+                await Promise.all(
+                  claims.map(async (claim: any) => {
+                    try {
+                      const details = await expenseService.getExpenseDetails(claim.expense_code);
+                      if (details) {
+                        if (details.attachments && Array.isArray(details.attachments)) {
+                          claim.attachments = details.attachments;
+                        }
+                        if (details.attachments_detailed && Array.isArray(details.attachments_detailed)) {
+                          claim.attachments_detailed = details.attachments_detailed;
+                        }
+                      }
+                    } catch (e) {}
+                  })
+                );
+              }
+              const convertedAttachments = await prepareConvertedAttachments(claims);
+              return {
+                row,
+                res: { ...claimRes, claims, attachments: convertedAttachments },
+                advance: advRes?.advance_amount || 0
+              };
+            } catch (err) {
+              console.error(`Failed to load claims for ${row.name || row.user_id}:`, err);
+              return null;
+            }
+          })
+        );
 
-        const engName = userObj.name || "Engineer";
-        const engCode = userObj.e_code || userObj.user_id || "";
-        const renderPct = 30 + Math.round(((i + 1) / totalEngineers) * 55);
+        for (const item of results) {
+          if (item && item.res?.claims?.length > 0) {
+            fetchedItems.push(item);
+          }
+        }
 
+        const fetchDone = Math.min(i + chunk.length, total);
+        const fetchPct = 5 + Math.round((fetchDone / total) * 20); // 5% -> 25%
         setZipProgress({
           active: true,
-          stage: "rendering",
-          current: i + 1,
-          total: totalEngineers,
-          currentName: `${engName} (${engCode})`,
-          percent: renderPct,
-          message: `Rendering PDF ${i + 1} of ${totalEngineers}: ${engName}`
+          stage: "fetching",
+          current: fetchDone,
+          total,
+          currentName: `Fetched data for ${fetchDone} of ${total} engineers`,
+          percent: fetchPct,
+          message: `Loaded claims for ${fetchDone} of ${total} engineers...`
         });
-
-        const key = `${item.row.user_id}-${item.row.month}-${item.row.year}`;
-        const advance = advancesMap[key] || 0;
-
-        const html = buildExcelPrintHTML(userObj, claims, attachments, advance, false);
-        const safeName = engName.replace(/[^a-zA-Z0-9]/g, "_");
-        const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
-        const fileName = `${safeName}_${engCode}_${safeMonth}_${userObj.year}.pdf`;
-        const pdfBlob = await renderHTMLToPDFBlob(html);
-        zip.file(fileName, pdfBlob);
-        completedPdfs++;
       }
 
       if (cancelZipRef.current) {
@@ -1484,29 +1582,112 @@ export default function MonthSummaryPage() {
         return;
       }
 
+      if (fetchedItems.length === 0) {
+        setZipProgress(null);
+        toast.error("No approved claim data found for selected engineers");
+        return;
+      }
+
+      // ── STEP 2: ULTRA-FAST VECTOR PDF GENERATION (8-Worker Concurrency) ───────
+      const totalToRender = fetchedItems.length;
+      let completedPdfs = 0;
+      const PDF_CONCURRENCY = 8;
+
+      setZipProgress({
+        active: true,
+        stage: "rendering",
+        current: 0,
+        total: totalToRender,
+        currentName: "Starting fast vector PDF export...",
+        percent: 25,
+        message: `Generating vector PDFs for ${totalToRender} engineers (8 parallel workers)...`
+      });
+
+      for (let i = 0; i < totalToRender; i += PDF_CONCURRENCY) {
+        if (cancelZipRef.current) {
+          setZipProgress(null);
+          toast("ZIP generation cancelled", { icon: "ℹ️" });
+          return;
+        }
+
+        const chunk = fetchedItems.slice(i, i + PDF_CONCURRENCY);
+        await Promise.all(
+          chunk.map(async (item) => {
+            if (cancelZipRef.current) return;
+
+            const userObj = item.res.user || item.row;
+            const claims = item.res.claims || [];
+            const attachments = item.res.attachments || [];
+            const engName = userObj.name || "Engineer";
+            const engCode = userObj.e_code || userObj.user_id || "";
+            const cacheKey = `${item.row.user_id}-${item.row.month}-${item.row.year}`;
+
+            try {
+              let pdfBlob = pdfBlobCache.get(cacheKey);
+              if (!pdfBlob) {
+                try {
+                  pdfBlob = await generateCyrixVectorPdf(userObj, claims, attachments, item.advance);
+                } catch (vErr) {
+                  console.warn("Vector PDF fallback to canvas:", vErr);
+                  const html = buildExcelPrintHTML(userObj, claims, attachments, item.advance, false);
+                  pdfBlob = await renderHTMLToPDFBlob(html);
+                }
+                pdfBlobCache.set(cacheKey, pdfBlob);
+              }
+
+              const safeName = engName.replace(/[^a-zA-Z0-9]/g, "_");
+              const safeMonth = (userObj.month || "Month").replace(/[^a-zA-Z0-9]/g, "_");
+              const fileName = `${safeName}_${engCode}_${safeMonth}_${userObj.year}.pdf`;
+              zip.file(fileName, pdfBlob);
+            } catch (err) {
+              console.error(`Error rendering vector PDF for ${engName}:`, err);
+            } finally {
+              completedPdfs++;
+              const renderPct = 25 + Math.round((completedPdfs / totalToRender) * 60); // 25% -> 85%
+              setZipProgress({
+                active: true,
+                stage: "rendering",
+                current: completedPdfs,
+                total: totalToRender,
+                currentName: `${engName} (${engCode})`,
+                percent: Math.min(renderPct, 85),
+                message: `Generated Vector PDF ${completedPdfs} of ${totalToRender}: ${engName}`
+              });
+            }
+          })
+        );
+      }
+
+      if (cancelZipRef.current) {
+        setZipProgress(null);
+        toast("ZIP generation cancelled", { icon: "ℹ️" });
+        return;
+      }
+
+      // ── STEP 3: TURBO ZIP PACKAGING (level: 2) ────────────────────────────────
       setZipProgress({
         active: true,
         stage: "compressing",
-        current: totalEngineers,
-        total: totalEngineers,
+        current: totalToRender,
+        total: totalToRender,
         currentName: "Packaging ZIP archive...",
-        percent: 85,
-        message: "Compressing PDFs into ZIP package..."
+        percent: 88,
+        message: "Finalizing ZIP package with fast compression..."
       });
 
       const zipBlob = await zip.generateAsync(
-        { type: "blob" },
+        { type: "blob", compression: "DEFLATE", compressionOptions: { level: 2 } },
         (metadata: any) => {
           if (cancelZipRef.current) return;
-          const compPercent = 85 + Math.round((metadata.percent / 100) * 15);
+          const compPercent = 88 + Math.round((metadata.percent / 100) * 11);
           setZipProgress({
             active: true,
             stage: "compressing",
-            current: totalEngineers,
-            total: totalEngineers,
-            currentName: metadata.currentFile ? `Compressing ${metadata.currentFile}` : "Finalizing ZIP file...",
+            current: totalToRender,
+            total: totalToRender,
+            currentName: metadata.currentFile ? `Compressing ${metadata.currentFile}` : "Finalizing ZIP archive...",
             percent: Math.min(compPercent, 99),
-            message: `Compressing ZIP file (${Math.round(metadata.percent)}%)...`
+            message: `Packaging ZIP file (${Math.round(metadata.percent)}%)...`
           });
         }
       );
@@ -1527,8 +1708,8 @@ export default function MonthSummaryPage() {
       setZipProgress({
         active: true,
         stage: "complete",
-        current: totalEngineers,
-        total: totalEngineers,
+        current: totalToRender,
+        total: totalToRender,
         currentName: "Download Ready",
         percent: 100,
         message: `ZIP folder containing ${completedPdfs} reports downloaded successfully!`
@@ -1540,7 +1721,7 @@ export default function MonthSummaryPage() {
         setZipProgress(null);
       }, 2500);
 
-    } catch (e) {
+    } catch (e: any) {
       if (cancelZipRef.current) {
         setZipProgress(null);
         toast("ZIP generation cancelled", { icon: "ℹ️" });
@@ -1550,7 +1731,7 @@ export default function MonthSummaryPage() {
         active: true,
         stage: "error",
         current: 0,
-        total: totalEngineers,
+        total,
         currentName: "Failed",
         percent: 0,
         message: "Failed to generate ZIP package."
@@ -1558,85 +1739,6 @@ export default function MonthSummaryPage() {
       toast.error("Failed to generate ZIP");
       console.error(e);
       setTimeout(() => setZipProgress(null), 3000);
-    }
-  };
-
-  const handleBulkDownloadZIP = async () => {
-    if (selectedKeys.length === 0) return;
-    cancelZipRef.current = false;
-
-    setZipProgress({
-      active: true,
-      stage: "fetching",
-      current: 0,
-      total: selectedKeys.length,
-      currentName: "Starting data fetch...",
-      percent: 5,
-      message: `Fetching claim records for ${selectedKeys.length} selected engineers...`
-    });
-
-    try {
-      await Promise.all([
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),
-        loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js")
-      ]);
-
-      const fetched: any[] = [];
-      const advancesMap: Record<string, number> = {};
-
-      let completedFetch = 0;
-      for (const key of selectedKeys) {
-        if (cancelZipRef.current) {
-          setZipProgress(null);
-          toast("ZIP generation cancelled", { icon: "ℹ️" });
-          return;
-        }
-
-        const row = data.find(r => `${r.user_id}-${r.month}-${r.year}` === key);
-        if (row) {
-          completedFetch++;
-          const fetchPercent = Math.round((completedFetch / selectedKeys.length) * 25);
-          const engName = row.name || row.user_id || "Engineer";
-
-          setZipProgress({
-            active: true,
-            stage: "fetching",
-            current: completedFetch,
-            total: selectedKeys.length,
-            currentName: engName,
-            percent: fetchPercent,
-            message: `Fetched data for ${engName} (${completedFetch}/${selectedKeys.length})`
-          });
-
-          try {
-            const [claimRes, advRes] = await Promise.all([
-              expenseService.getEngineerMonthClaims(row.user_id, row.month, row.year),
-              expenseService.getEngineerAdvance(row.user_id, row.month, row.year)
-            ]);
-            fetched.push({ row, res: claimRes });
-            advancesMap[key] = advRes?.advance_amount || 0;
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      }
-
-      if (cancelZipRef.current) {
-        setZipProgress(null);
-        toast("ZIP generation cancelled", { icon: "ℹ️" });
-        return;
-      }
-
-      if (fetched.length === 0) {
-        setZipProgress(null);
-        toast.error("Failed to load claims for selected engineers");
-        return;
-      }
-
-      generateZIPBlob(fetched, advancesMap);
-    } catch (err) {
-      setZipProgress(null);
-      toast.error("Bulk ZIP generation failed");
     }
   };
 
@@ -1817,21 +1919,21 @@ export default function MonthSummaryPage() {
 
           <div className="flex items-center gap-3">
             {selectedKeys.length > 0 && (
-              <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1 rounded-none border border-white/20">
-                <span className="text-[10px] font-bold text-white uppercase tracking-wider">
+              <div className="flex items-center gap-2 bg-white/15 backdrop-blur-xs px-3 py-1 rounded-lg border border-white/20 shadow-xs">
+                <span className="text-[11px] font-bold text-white uppercase tracking-wider font-mono">
                   {selectedKeys.length} Selected
                 </span>
                 <button 
                   onClick={handleBulkPrintCombined}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-none bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold border-0 cursor-pointer transition-all"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500 hover:bg-indigo-600 text-white text-[11px] font-semibold border-0 cursor-pointer shadow-2xs transition-all active:scale-[0.98]"
                 >
-                  <Printer className="w-3 h-3" /> Print Combined
+                  <Printer className="w-3.5 h-3.5" /> Print Combined
                 </button>
                 <button 
                   onClick={handleBulkDownloadZIP}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-none bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold border-0 cursor-pointer transition-all"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold border-0 cursor-pointer shadow-2xs transition-all active:scale-[0.98]"
                 >
-                  <Download className="w-3 h-3" /> Download ZIP
+                  <Download className="w-3.5 h-3.5" /> Download ZIP
                 </button>
               </div>
             )}
@@ -2121,25 +2223,38 @@ export default function MonthSummaryPage() {
       {/* ================= LIVE ZIP GENERATION PROGRESS MODAL ================= */}
       {zipProgress && zipProgress.active && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn font-sans">
-          <div className="bg-white border border-slate-400 rounded-none shadow-2xl w-full max-w-md overflow-hidden text-left">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden text-left transform transition-all">
             {/* Modal Header */}
-            <div className="bg-[#1565C0] text-white px-4 py-3 flex justify-between items-center rounded-none">
-              <h3 className="text-xs font-extrabold tracking-wider uppercase m-0 flex items-center gap-2 text-white">
-                <FileText className="w-4 h-4 text-sky-200" />
-                <span>ZIP Download Progress</span>
-              </h3>
-              <div className="flex items-center gap-2">
-                <div className="text-[11px] font-mono font-bold bg-white/20 px-2 py-0.5 rounded text-white">
-                  {zipProgress.percent}%
+            <div className="bg-[#4338ca] text-white px-5 py-3.5 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-white" />
                 </div>
+                <div>
+                  <h3 className="text-sm font-bold tracking-tight text-white m-0">
+                    ZIP Download Progress
+                  </h3>
+                  <p className="text-[11px] text-indigo-100/80 m-0">
+                    {zipProgress.stage === "fetching" && "Fetching claim data..."}
+                    {zipProgress.stage === "rendering" && "Rendering vector PDFs..."}
+                    {zipProgress.stage === "compressing" && "Compressing archive..."}
+                    {zipProgress.stage === "complete" && "Download completed!"}
+                    {zipProgress.stage === "error" && "Process encountered an error"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-white/20 px-2.5 py-0.5 rounded-full text-white">
+                  {zipProgress.percent}%
+                </span>
                 {zipProgress.stage !== "complete" && (
                   <button
                     type="button"
                     onClick={handleCancelZIP}
-                    className="text-[10px] font-black uppercase tracking-wider bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded-none border-0 cursor-pointer transition-colors flex items-center gap-1 shadow-2xs"
+                    className="text-xs font-semibold bg-white/10 hover:bg-rose-500 text-white px-2.5 py-1 rounded-lg border border-white/20 cursor-pointer transition-all flex items-center gap-1"
                     title="Cancel Download"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3.5 h-3.5" />
                     <span>Cancel</span>
                   </button>
                 )}
@@ -2147,38 +2262,38 @@ export default function MonthSummaryPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-4 space-y-3.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-slate-700 truncate max-w-[260px]">
-                  {zipProgress.stage === "fetching" && "📥 Step 1/3: Fetching Data"}
-                  {zipProgress.stage === "rendering" && "📄 Step 2/3: Generating PDFs"}
-                  {zipProgress.stage === "compressing" && "📦 Step 3/3: Packing ZIP Archive"}
-                  {zipProgress.stage === "complete" && "✅ Step 3/3: Download Ready"}
-                  {zipProgress.stage === "error" && "❌ Error"}
+            <div className="p-5 space-y-4">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-slate-700 truncate max-w-[260px] flex items-center gap-1.5">
+                  {zipProgress.stage === "fetching" && <><Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" /> Step 1/3: Fetching Data</>}
+                  {zipProgress.stage === "rendering" && <><Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" /> Step 2/3: Parallel PDF Generation</>}
+                  {zipProgress.stage === "compressing" && <><Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" /> Step 3/3: Packing ZIP Archive</>}
+                  {zipProgress.stage === "complete" && <><CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Complete: Ready</>}
+                  {zipProgress.stage === "error" && "Error occurred"}
                 </span>
-                <span className="font-extrabold text-[#1565C0] font-mono">
+                <span className="font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
                   {zipProgress.current} / {zipProgress.total} Ready
                 </span>
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full bg-slate-100 h-4 border border-slate-300 rounded-none p-0.5 overflow-hidden">
+              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200">
                 <div
-                  className="bg-gradient-to-r from-[#1565C0] to-[#1E88E5] h-full transition-all duration-300 ease-out"
+                  className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-300 ease-out"
                   style={{ width: `${zipProgress.percent}%` }}
                 />
               </div>
 
               {/* Current Status Log */}
-              <div className="bg-slate-50 border border-slate-200 p-3 rounded-none space-y-1">
-                <div className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">Current Activity</div>
-                <div className="font-semibold text-slate-800 break-words font-mono text-[11px]">
+              <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl space-y-1.5">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Activity</div>
+                <div className="font-medium text-slate-800 break-words font-mono text-xs">
                   {zipProgress.message}
                 </div>
                 {zipProgress.stage === "rendering" && zipProgress.total > 0 && (
-                  <div className="text-[10.5px] text-slate-500 font-sans pt-1 border-t border-slate-200 mt-1 flex justify-between">
-                    <span>Remaining: <strong className="text-slate-800">{zipProgress.total - zipProgress.current} PDFs</strong></span>
-                    <span className="font-mono text-[#1565C0] font-bold">{Math.round((zipProgress.current / zipProgress.total) * 100)}% PDFs Done</span>
+                  <div className="text-[11px] text-slate-500 font-sans pt-2 border-t border-slate-200/80 mt-1 flex justify-between items-center">
+                    <span>Remaining: <strong className="text-slate-800 font-semibold">{zipProgress.total - zipProgress.current} PDFs</strong></span>
+                    <span className="font-mono text-indigo-600 font-bold">{Math.round((zipProgress.current / zipProgress.total) * 100)}% PDFs Done</span>
                   </div>
                 )}
               </div>
@@ -2186,9 +2301,9 @@ export default function MonthSummaryPage() {
 
             {/* Modal Footer / Completion Notification */}
             {zipProgress.stage === "complete" && (
-              <div className="bg-emerald-50 px-4 py-2.5 border-t border-emerald-200 text-center">
-                <span className="text-xs font-extrabold text-emerald-800 flex items-center justify-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" /> ZIP Folder Downloaded Successfully!
+              <div className="bg-emerald-50 px-5 py-3 border-t border-emerald-100 text-center">
+                <span className="text-xs font-bold text-emerald-700 flex items-center justify-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" /> ZIP Package Downloaded Successfully!
                 </span>
               </div>
             )}

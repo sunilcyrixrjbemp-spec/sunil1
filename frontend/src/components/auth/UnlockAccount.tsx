@@ -173,18 +173,18 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
   };
 
   return (
-    <div style={{ padding: "36px 36px 28px" }}>
+    <div className="p-7 sm:p-8">
       {/* Top Header */}
-      <div className="flex items-center justify-between pb-3.5 mb-5 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-3.5 mb-5 border-b border-slate-100">
         <button
           type="button"
           onClick={onBackToLogin}
-          className="border-0 bg-transparent cursor-pointer text-xs font-bold text-[#4A6A8A] hover:text-slate-900 transition-colors flex items-center gap-1.5 p-0"
+          className="border-0 bg-transparent cursor-pointer text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5 p-0"
         >
           <ArrowLeft size={14} />
           <span>Back to Sign In</span>
         </button>
-        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+        <span className="text-[11px] font-semibold text-slate-400">
           Unlock Account
         </span>
       </div>
@@ -192,7 +192,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
       {/* Status Alert Banner */}
       {statusMessage && (
         <div
-          className="mb-5 flex items-start gap-2.5 rounded-none p-3 border-l-4"
+          className="mb-5 flex items-start gap-2.5 rounded-lg p-3 border-l-4"
           style={{
             backgroundColor: statusMessage.type === "error" ? "#fef2f2" : "#ecfdf5",
             borderColor: statusMessage.type === "error" ? "#fca5a5" : "#6ee7b7",
@@ -215,23 +215,22 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
       {step === 1 && (
         <div className="flex flex-col gap-5">
           <div className="text-center mb-1">
-            <div className="inline-flex items-center justify-center py-2 px-3.5 bg-white rounded-xl border border-slate-200/90 shadow-sm mb-4 w-fit mx-auto">
+            <div className="inline-flex items-center justify-center mb-4">
               <img
                 src="/logo-fieldconnect.png"
                 alt="Cyrix Field Connect Logo"
-                className="h-12 sm:h-14 w-auto object-contain drop-shadow-xs"
-                style={{ height: "52px", maxHeight: "56px", maxWidth: "260px", objectFit: "contain" }}
-                height="52"
+                className="h-10 sm:h-11 w-auto object-contain drop-shadow-xs"
+                height="44"
               />
             </div>
             <h1
-              className="m-0 text-2xl font-extrabold text-slate-900 tracking-tight"
+              className="m-0 text-2xl font-bold text-slate-900 tracking-tight"
               style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
             >
               Unlock Account
             </h1>
-            <p className="mt-1 m-0 text-xs text-slate-500 font-medium">
-              Provide your employee details to unlock your account
+            <p className="mt-1.5 m-0 text-sm text-slate-500 font-normal">
+              Provide your employee details to unlock your account.
             </p>
           </div>
 
@@ -239,18 +238,18 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
             <div>
               <label
                 htmlFor="unlockUserId"
-                className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+                className="block mb-1.5 text-xs font-semibold text-slate-700"
               >
-                User ID
+                Employee ID
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                  <User size={15} />
+              <div className="relative flex items-center">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <User size={17} />
                 </span>
                 <input
                   id="unlockUserId"
                   type="text"
-                  placeholder="Enter User ID (e.g. E1704)"
+                  placeholder="e.g. E1704"
                   value={userId}
                   onChange={(e) => {
                     setUserId(e.target.value);
@@ -258,7 +257,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   }}
                   disabled={loading}
                   required
-                  className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
+                  className="w-full h-11 pl-10 pr-3.5 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -266,13 +265,13 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
             <div>
               <label
                 htmlFor="doj"
-                className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+                className="block mb-1.5 text-xs font-semibold text-slate-700"
               >
                 Date of Joining
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                  <Calendar size={15} />
+              <div className="relative flex items-center">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <Calendar size={17} />
                 </span>
                 <input
                   id="doj"
@@ -284,7 +283,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   }}
                   disabled={loading}
                   required
-                  className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all [color-scheme:light]"
+                  className="w-full h-11 pl-10 pr-3.5 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all [color-scheme:light]"
                 />
               </div>
             </div>
@@ -292,13 +291,13 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
             <div>
               <label
                 htmlFor="dob"
-                className="block mb-1.5 text-[11px] font-bold text-slate-600 uppercase tracking-wider"
+                className="block mb-1.5 text-xs font-semibold text-slate-700"
               >
                 Date of Birth
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
-                  <Calendar size={15} />
+              <div className="relative flex items-center">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <Calendar size={17} />
                 </span>
                 <input
                   id="dob"
@@ -310,7 +309,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   }}
                   disabled={loading}
                   required
-                  className="w-full h-11 pl-10 pr-3 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-none focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all [color-scheme:light]"
+                  className="w-full h-11 pl-10 pr-3.5 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all [color-scheme:light]"
                 />
               </div>
             </div>
@@ -318,10 +317,10 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 mt-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
+              className="w-full h-11 mt-1 bg-[#4338ca] hover:bg-[#3730a3] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 border-0 shadow-sm transition-colors cursor-pointer active:scale-[0.99] disabled:opacity-60"
             >
               {loading ? (
-                <><Spinner /><span className="normal-case">Verifying identity...</span></>
+                <><Spinner /><span className="normal-case font-normal text-xs">Verifying identity...</span></>
               ) : (
                 <><span>Verify & Send OTP</span><ArrowRight size={15} /></>
               )}
@@ -334,19 +333,19 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
       {step === 2 && (
         <div className="flex flex-col gap-5">
           <div className="text-center">
-            <div className="w-12 h-12 rounded-none bg-[#4A6A8A]/10 border border-[#4A6A8A]/20 text-[#4A6A8A] flex items-center justify-center mx-auto mb-2.5">
-              <ShieldCheck size={20} />
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-2.5">
+              <ShieldCheck size={22} />
             </div>
             <h1
-              className="m-0 text-lg font-extrabold text-slate-900 tracking-tight"
+              className="m-0 text-xl font-bold text-slate-900 tracking-tight"
               style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
             >
               Enter Verification Code
             </h1>
-            <p className="mt-1 m-0 text-xs text-slate-500 font-medium leading-relaxed">
-              We sent a 6-digit OTP code to your registered email <strong className="text-slate-800 font-bold">{maskedEmail}</strong>
+            <p className="mt-1 m-0 text-xs text-slate-500 font-normal leading-relaxed">
+              We sent a 6-digit OTP code to your registered email <strong className="text-slate-800 font-semibold">{maskedEmail}</strong>
             </p>
-            <div className="mt-2.5 p-2 bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-semibold text-center leading-tight">
+            <div className="mt-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs font-medium text-center leading-tight">
               💡 <strong>Note:</strong> If you don't see the email in your Inbox, please check your <strong>Junk / Spam folder</strong>.
             </div>
           </div>
@@ -363,23 +362,23 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   onChange={(e) => handleOtpChange(e.target, idx)}
                   onKeyDown={(e) => handleOtpKeyDown(e, idx)}
                   disabled={loading}
-                  className="w-10 h-11 bg-white border border-slate-300 rounded-none text-center text-lg font-black text-slate-900 focus:outline-none focus:border-[#4A6A8A] focus:ring-1 focus:ring-[#4A6A8A] transition-all"
+                  className="w-10 h-11 bg-white border border-slate-200 rounded-lg text-center text-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                 />
               ))}
             </div>
 
-            <div className="text-center space-y-1.5 bg-slate-50 p-3 border border-slate-200 text-xs">
-              <p className="m-0 text-[11px] text-slate-600 font-bold">
-                OTP Validity: <span className="font-mono font-black text-rose-600">{formatTime(timeLeft)}</span>
+            <div className="text-center space-y-1.5 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
+              <p className="m-0 text-xs text-slate-600 font-semibold">
+                OTP Validity: <span className="font-mono font-bold text-rose-600">{formatTime(timeLeft)}</span>
               </p>
               
-              <div className="text-[11px]">
+              <div className="text-xs">
                 {resendCooldown === 0 ? (
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={loading}
-                    className="border-0 bg-transparent cursor-pointer font-bold text-[#4A6A8A] hover:underline"
+                    className="border-0 bg-transparent cursor-pointer font-semibold text-indigo-600 hover:underline"
                   >
                     Resend OTP Code
                   </button>
@@ -394,10 +393,10 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-11 mt-1 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
+              className="w-full h-11 mt-1 bg-[#4338ca] hover:bg-[#3730a3] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 border-0 shadow-sm transition-colors cursor-pointer active:scale-[0.99] disabled:opacity-60"
             >
               {loading ? (
-                <><Spinner /><span className="normal-case">Unlocking Account...</span></>
+                <><Spinner /><span className="normal-case font-normal text-xs">Unlocking Account...</span></>
               ) : (
                 <><span>Verify & Unlock Account</span><ArrowRight size={15} /></>
               )}
@@ -409,17 +408,17 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
       {/* STEP 3 - SUCCESS */}
       {step === 3 && (
         <div className="flex flex-col gap-4 text-center py-4">
-          <div className="w-12 h-12 rounded-none bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
             {isAlreadyActive ? (
-              <Unlock size={24} className="animate-pulse text-[#4A6A8A]" />
+              <Unlock size={26} className="animate-pulse text-indigo-600" />
             ) : (
-              <CheckCircle2 size={24} className="animate-pulse text-emerald-700" />
+              <CheckCircle2 size={26} className="animate-pulse text-emerald-600" />
             )}
           </div>
 
           <div className="space-y-1">
             <h1
-              className="m-0 text-lg font-extrabold text-slate-900 tracking-tight"
+              className="m-0 text-xl font-bold text-slate-900 tracking-tight"
               style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
             >
               {isAlreadyActive ? "Account Already Active" : "Account Unlocked Successfully"}
@@ -434,7 +433,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
           <button
             type="button"
             onClick={onBackToLogin}
-            className="w-full h-11 mt-2 bg-[#4A6A8A] hover:bg-[#3b5570] text-white font-bold text-xs uppercase tracking-wider rounded-none flex items-center justify-center gap-2 border border-[#4A6A8A] transition-colors shadow-2xs cursor-pointer"
+            className="w-full h-11 mt-2 bg-[#4338ca] hover:bg-[#3730a3] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 border-0 shadow-sm transition-colors cursor-pointer"
           >
             {isAlreadyActive ? "Go to Sign In" : "Back to Sign In"}
           </button>
@@ -442,13 +441,13 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
       )}
 
       {/* Attribution */}
-      <p className="text-center mt-5 m-0 text-xs text-slate-500 font-medium pt-3 border-t border-slate-200">
-        Designed By{" "}
+      <p className="text-center mt-6 mb-0 text-xs text-slate-400 font-medium pt-4 border-t border-slate-100">
+        Designed &amp; Developed by{" "}
         <a
           href="https://sunilbishnoi.co.in/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#4A6A8A] font-bold hover:underline"
+          className="text-indigo-600 hover:underline font-semibold"
         >
           Sunil Bishnoi
         </a>
