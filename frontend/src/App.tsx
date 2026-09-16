@@ -25,7 +25,6 @@ import DBMonitoringPage from "./pages/DBMonitoringPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
 import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
-import AdminEnterprisePage from "./pages/AdminEnterprisePage";
 import ClaimLevelResetPage from "./pages/ClaimLevelResetPage";
 
 import ProgressLoader from "./components/common/ProgressLoader";
@@ -299,7 +298,6 @@ function App() {
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/admin/claim-level-reset" element={<ClaimLevelResetPage />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
-                <Route path="/admin/enterprise" element={<AdminEnterprisePage />} />
                 <Route path="/db-monitor" element={<DBMonitoringPage />} />
                 <Route path="/design-system" element={<DesignSystemPage />} />
                 <Route path="/not-found" element={<NotFoundPage />} />
