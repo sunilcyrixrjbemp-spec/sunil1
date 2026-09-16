@@ -12,15 +12,17 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    // Proxy all /api and /uploads calls to Cloudflare Worker dev server
+    // Proxy all /api and /uploads calls to Cloudflare Worker
     proxy: {
       '/api': {
-        target: 'http://localhost:8787',
+        target: 'https://fieldops-api.sunilbishnoi.workers.dev',
         changeOrigin: true,
+        secure: true,
       },
       '/uploads': {
-        target: 'http://localhost:8787',
+        target: 'https://fieldops-api.sunilbishnoi.workers.dev',
         changeOrigin: true,
+        secure: true,
       },
     },
   },

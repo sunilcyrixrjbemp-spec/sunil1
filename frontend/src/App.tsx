@@ -12,29 +12,21 @@ import { antdTheme } from "./styles/themeConfig";
 
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
-import ClaimsHistoryPage from "./pages/ClaimsHistoryPage";
 import ApprovalPage from "./pages/ApprovalPage";
 import ExpensePage from "./pages/ExpensePage";
-import KPIDashboardPage from "./pages/KPIDashboardPage";
 import UploadDataPage from "./pages/UploadDataPage";
-import AssetUploadPage from "./pages/AssetUploadPage";
-import PenaltyModulePage from "./pages/PenaltyModulePage";
 import AnalysisPage from "./pages/AnalysisPage";
 import MonthSummaryPage from "./pages/MonthSummaryPage";
 import ConsolidatedReportPage from "./pages/ConsolidatedReportPage";
-import AttendancePage from "./pages/AttendancePage";
 import NotificationsPage from "./pages/NotificationsPage";
-import HelpPage from "./pages/HelpPage";
 import ProfilePage from "./pages/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import DBMonitoringPage from "./pages/DBMonitoringPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import DesignSystemPage from "./pages/DesignSystemPage";
 import AdminAnalyticsDashboard from "./pages/AdminAnalyticsDashboard";
-import ComplaintUploadPage from "./pages/ComplaintUploadPage";
-import ComplaintUploadAccessAdmin from "./pages/ComplaintUploadAccessAdmin";
+import AdminEnterprisePage from "./pages/AdminEnterprisePage";
 import ClaimLevelResetPage from "./pages/ClaimLevelResetPage";
-import TRCModulePage from "./pages/TRCModulePage";
 
 import ProgressLoader from "./components/common/ProgressLoader";
 import InstallAppPrompt from "./components/common/InstallAppPrompt";
@@ -296,29 +288,18 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<DashboardLayout />}>
                 <Route path="/home" element={<HomePage />} />
-                <Route path="/claims-history" element={<ClaimsHistoryPage />} />
                 <Route path="/approval-center" element={<ApprovalPage />} />
                 <Route path="/submit-expense" element={<ExpensePage />} />
-                <Route path="/kpi-dashboard" element={<KPIDashboardPage />} />
                 <Route path="/upload-data" element={<UploadDataPage />} />
-                <Route path="/asset-upload" element={<AssetUploadPage />} />
-                <Route path="/penalty-report" element={<PenaltyModulePage />} />
-                <Route path="/penalty-module" element={<PenaltyModulePage />} />
                 <Route path="/analysis" element={<AnalysisPage />} />
                 <Route path="/month-report" element={<MonthSummaryPage />} />
                 <Route path="/consolidated-report" element={<ConsolidatedReportPage />} />
-                <Route path="/attendance" element={<AttendancePage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/help-center" element={<HelpPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/admin" element={<AdminPage />} />
-                <Route path="/complaint-upload" element={<ComplaintUploadPage />} />
-                <Route path="/admin/complaint-upload-access" element={<ComplaintUploadAccessAdmin />} />
                 <Route path="/admin/claim-level-reset" element={<ClaimLevelResetPage />} />
-                <Route path="/trc-repair" element={<TRCModulePage />} />
-                <Route path="/trc-module" element={<TRCModulePage />} />
-                <Route path="/receive-machine" element={<TRCModulePage />} />
                 <Route path="/admin/analytics" element={<AdminAnalyticsDashboard />} />
+                <Route path="/admin/enterprise" element={<AdminEnterprisePage />} />
                 <Route path="/db-monitor" element={<DBMonitoringPage />} />
                 <Route path="/design-system" element={<DesignSystemPage />} />
                 <Route path="/not-found" element={<NotFoundPage />} />

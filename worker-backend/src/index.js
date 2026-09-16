@@ -25,8 +25,6 @@ import {
 } from "./utils/http.js";
 import { globalIPRateLimit, loginRateLimit, getClientIP } from "./utils/rateLimit.js";
 import { Logger, generateRequestId } from "./utils/logger.js";
-import { withTurnstileVerification } from "./utils/turnstile.js";
-
 
 // ─── Route Handler Imports ────────────────────────────────────────────────────
 
@@ -63,21 +61,19 @@ import {
   handleGetExpenseHierarchyLevels, handleResetExpenseApprovalLevel,
   handleOneTimeAdjust, handleGetAllowanceRates, handleSaveAllowanceRates,
   handleTestTime, handleRevertClaimDeductions, handleBulkToggleBulkApproval,
-  handleGetFacilities, handleSaveFacility, handleUpdateFacility, handleBulkImportFacilities, handleDeleteFacility,
-  handleGetAdminAuditLogs
+  handleGetFacilities, handleSaveFacility, handleDeleteFacility
 } from "./routes/admin.js";
 
 // Ticket handlers
 import {
-  handleGetTickets, handleGetTicketById, handleCreateTicket, handleAddComment,
+  handleGetTickets, handleCreateTicket, handleAddComment,
   handleCloseTicket, handleReopenTicket, handleToggleFollowup,
-  handleGetTicketStats, handleAssignTicket, handleUpdateTicketStatus, handleTicketWebSocket
+  handleGetTicketStats, handleAssignTicket, handleUpdateTicketStatus
 } from "./routes/ticket.js";
-import { handleAiAskHelp } from "./routes/aiHelp.js";
 
 // Upload handlers
 import {
-  handleUploadImage, handleUploadDocument, handleServeFile, handleGDriveProxy
+  handleUploadImage, handleUploadDocument, handleServeFile
 } from "./routes/upload.js";
 
 // Reports handlers
@@ -127,31 +123,15 @@ import {
 
 // Attendance handlers
 import {
-  handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies, handleSendSubmissionReminder, handleGetSentReminders, handleGetEngineerLeaves, handleMarkEngineerLeave, handleDeleteEngineerLeave
+  handleGetAttendance, handleGetAttendanceSummary, handleGetAttendanceDiscrepancies
 } from "./routes/attendance.js";
-
-// Analysis & Reporting Analytics handlers
-import {
-  handleGetAnalysisSummary,
-  handleGetAnalysisFilterOptions,
-  handleGetAnalysisClaims
-} from "./routes/analysisAnalytics.js";
-
-// Server-Side PDF Export handlers
-import {
-  handleGenerateSinglePdf,
-  handleTriggerBulkPdf,
-  handleGetPdfBatchStatus
-} from "./routes/pdfExport.js";
 
 // ─── Enterprise Route Handlers (Direct Imports) ───────────────────────────────
 import {
   handleMigrateGdrive, handleMigrationStatus,
   handleAnalyticsDashboard, handleAnalyticsBilling,
   handleFileHealth, handleStorageReport, handleRunMigrationsV2,
-  handleCfInfraAnalytics, handleGetEmailLogs,
 } from "./routes/adminEnterprise.js";
-
 
 import { handleEmailAction } from "./routes/emailAction.js";
 
@@ -183,33 +163,6 @@ import {
 
 // KPI DB Migration
 import { runMigrationsKpi, checkKpiTableStatus } from "./utils/db-migrate-kpi.js";
-
-// TRC Module handlers (TRC ERP v3.0)
-import {
-  handleTrcVerifyBarcode,
-  handleTrcReceiveMachine,
-  handleTrcListMachines,
-  handleTrcGetMachineDetails,
-  handleTrcAssignMachine,
-  handleTrcSaveDiagnosis,
-  handleTrcCreateSpareRequest,
-  handleTrcUpdateSpareStatus,
-  handleTrcSaveRepair,
-  handleTrcSaveQC,
-  handleTrcDispatchMachine,
-  handleTrcCloseMachine,
-  handleTrcGetEngineers,
-  handleTrcGetStats,
-  handleTrcUploadMedia,
-  handleTrcGetDistricts,
-} from "./routes/trc.js";
-
-// TRC DB Migration
-import { runMigrationsTrc, checkTrcTableStatus } from "./utils/db-migrate-trc.js";
-
-// Cron Handlers
-import { handleDailyCheck } from "./routes/cron.js";
-
 
 // ─── Router — O(1) Method-Grouped Hash Map Router ────────────────────────────
 class Router {
@@ -292,7 +245,7 @@ router.get("/api/health", async (req, env) => {
 });
 
 // ─── Auth Endpoints ───────────────────────────────────────────────────────────
-router.post("/api/auth/login", withTurnstileVerification(handleLogin));
+router.post("/api/auth/login", handleLogin);
 router.post("/api/auth/refresh", handleRefresh);
 router.get("/api/auth/bootstrap", handleBootstrap, true);
 router.post("/api/auth/logout", handleLogout, true);
@@ -350,10 +303,7 @@ router.post("/api/admin/logout-all", handleLogoutAllUsers, true, ["Admin"]);
 router.post("/api/admin/logout-user/:user_code", handleLogoutSingleUser, true, ["Admin"]);
 router.get("/api/admin/facilities", handleGetFacilities, true, ["Admin"]);
 router.post("/api/admin/facilities", handleSaveFacility, true, ["Admin"]);
-router.post("/api/admin/facilities/bulk", handleBulkImportFacilities, true, ["Admin"]);
-router.put("/api/admin/facilities/:id", handleUpdateFacility, true, ["Admin"]);
 router.delete("/api/admin/facilities/:id", handleDeleteFacility, true, ["Admin"]);
-router.get("/api/admin/audit-logs", handleGetAdminAuditLogs, true, ["Admin"]);
 
 // Penalty Module Routes
 router.post("/api/penalty/verify-barcode", handleVerifyPenaltyBarcode, true);
@@ -391,15 +341,6 @@ router.get("/api/admin/analytics/billing", async (req, env, params, query, user)
   if (!handleAnalyticsBilling) return errorResponse("Billing analytics not yet available", 503);
   return handleAnalyticsBilling(req, env, params, query, user);
 }, true, ["Admin"]);
-
-router.get("/api/admin/analytics/cf-infra", async (req, env, params, query, user) => {
-  return handleCfInfraAnalytics(req, env, params, query, user);
-}, true, ["Admin"]);
-
-router.get("/api/admin/analytics/email-logs", async (req, env, params, query, user) => {
-  return handleGetEmailLogs(req, env, params, query, user);
-}, true, ["Admin"]);
-
 
 router.get("/api/admin/files/health", async (req, env, params, query, user) => {
   if (!handleFileHealth) return errorResponse("File management not yet available", 503);
@@ -465,17 +406,12 @@ router.post("/api/whatsapp/config", async (req, env) => handleSaveWhatsappConfig
 router.post("/api/whatsapp/pairing-code", async (req, env) => handleGenerateWhatsappPairingCode(req, env), true);
 router.post("/api/whatsapp/test-alert", async (req, env) => handleTestWhatsappDispatch(req, env), true);
 
-// ─── Cron & Scheduled Job Diagnostic Endpoints ──────────────────────────────
-router.get("/api/cron/daily-check", handleDailyCheck, false);
-router.post("/api/cron/daily-check", handleDailyCheck, false);
-
 // ─── Test/Dev Endpoints ───────────────────────────────────────────────────────
 router.get("/api/test/time", handleTestTime, false);
 router.get("/api/admin/test/time", handleTestTime, true);
 
 // ─── Ticket Endpoints — Two path aliases ─────────────────────────────────────
 router.get("/api/ticket/stats", handleGetTicketStats, true);
-router.get("/api/ticket/:ticket_id", handleGetTicketById, true);
 router.get("/api/ticket", handleGetTickets, true);
 router.post("/api/ticket", handleCreateTicket, true);
 router.post("/api/ticket/:ticket_id/assign", handleAssignTicket, true);
@@ -485,10 +421,6 @@ router.post("/api/ticket/:ticket_id/close", handleCloseTicket, true);
 router.post("/api/ticket/:ticket_id/reopen", handleReopenTicket, true);
 router.post("/api/ticket/:ticket_id/followup", handleToggleFollowup, true);
 router.get("/api/tickets/stats", handleGetTicketStats, true);
-router.post("/api/ai/ask-help", handleAiAskHelp, true);
-router.get("/api/ticket/ws/:ticket_id", handleTicketWebSocket, false);
-router.get("/api/tickets/ws/:ticket_id", handleTicketWebSocket, false);
-router.get("/api/tickets/:ticket_id", handleGetTicketById, true);
 router.get("/api/tickets", handleGetTickets, true);
 router.post("/api/tickets", handleCreateTicket, true);
 router.post("/api/tickets/:ticket_id/assign", handleAssignTicket, true);
@@ -499,7 +431,6 @@ router.post("/api/tickets/:ticket_id/reopen", handleReopenTicket, true);
 router.post("/api/tickets/:ticket_id/followup", handleToggleFollowup, true);
 
 // ─── Upload Endpoints ─────────────────────────────────────────────────────────
-router.get("/api/r2/gdrive-proxy", handleGDriveProxy, false);
 router.post("/api/upload/image", handleUploadImage, true);
 router.post("/api/upload/document", handleUploadDocument, true);
 // R2 file serving (primary path & aliases)
@@ -557,16 +488,6 @@ router.post("/api/reports/assets/manual", handleManualAddAsset, true);
 router.get("/api/attendance/summary", handleGetAttendanceSummary, true);
 router.get("/api/attendance/discrepancies", handleGetAttendanceDiscrepancies, true);
 router.get("/api/attendance", handleGetAttendance, true);
-router.post("/api/attendance/send-reminder", handleSendSubmissionReminder, true);
-router.get("/api/attendance/reminder-status", handleGetSentReminders, true);
-router.get("/api/attendance/leaves", handleGetEngineerLeaves, true);
-router.post("/api/attendance/mark-leave", handleMarkEngineerLeave, true);
-router.delete("/api/attendance/leaves/:id", handleDeleteEngineerLeave, true);
-
-// ─── Analysis & Reporting Analytics Endpoints ───────────────────────────────
-router.get("/api/analysis/summary", handleGetAnalysisSummary, true);
-router.get("/api/analysis/filter-options", handleGetAnalysisFilterOptions, true);
-router.get("/api/analysis/claims", handleGetAnalysisClaims, true);
 
 // ─── Expense Endpoints ────────────────────────────────────────────────────────
 router.get("/api/expense/init", handleExpenseInit, true);
@@ -597,12 +518,6 @@ router.delete("/api/expense/:id", handleDeleteExpense, true);
 router.post("/api/expense/:id/reverse", handleReverseExpense, true);
 router.post("/api/expense/log-client-glitch", handleLogClientGlitch, true);
 router.get("/api/expense/kv-diagnostic-logs", handleGetKvDiagnosticLogs, true);
-
-// ─── Server-Side PDF Generation & Bulk Export Endpoints ──────────────────────
-router.get("/api/pdf/single", handleGenerateSinglePdf, true);
-router.post("/api/pdf/bulk-trigger", handleTriggerBulkPdf, true);
-router.get("/api/pdf/batch-status/:batchId", handleGetPdfBatchStatus, true);
-router.get("/api/pdf/batch-status", handleGetPdfBatchStatus, true);
 
 // ─── KPI Module Endpoints ───────────────────────────────────────────────────────────────────
 // KPI Assignments (setup, approval workflow)
@@ -658,49 +573,6 @@ router.get("/api/admin/migration-status-kpi", async (req, env, params, query, us
     return jsonResponse({ success: true, kpi_status: status });
   } catch (e) {
     return errorResponse("KPI status check error: " + e.message, 500);
-  }
-}, true, ["Admin"]);
-
-// ─── TRC ERP v3.0 Endpoints ──────────────────────────────────────────────────
-router.post("/api/trc/verify-barcode", handleTrcVerifyBarcode, true);
-router.post("/api/trc/receive", handleTrcReceiveMachine, true);
-router.get("/api/trc/machines", handleTrcListMachines, true);
-router.get("/api/trc/machines/:id", handleTrcGetMachineDetails, true);
-router.post("/api/trc/assign", handleTrcAssignMachine, true);
-router.post("/api/trc/diagnosis", handleTrcSaveDiagnosis, true);
-router.post("/api/trc/spare-request", handleTrcCreateSpareRequest, true);
-router.post("/api/trc/spare-status", handleTrcUpdateSpareStatus, true);
-router.post("/api/trc/repair", handleTrcSaveRepair, true);
-router.post("/api/trc/qc", handleTrcSaveQC, true);
-router.post("/api/trc/dispatch", handleTrcDispatchMachine, true);
-router.post("/api/trc/close", handleTrcCloseMachine, true);
-router.get("/api/trc/engineers", handleTrcGetEngineers, true);
-router.get("/api/trc/districts", handleTrcGetDistricts, true);
-router.get("/api/trc/stats", handleTrcGetStats, true);
-router.post("/api/trc/upload-media", handleTrcUploadMedia, true);
-
-// TRC DB Migration
-router.post("/api/admin/run-migrations-trc", async (req, env, params, query, user) => {
-  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
-  try {
-    const result = await runMigrationsTrc(env.DB);
-    return jsonResponse({
-      success: result.errors.length === 0,
-      message: `TRC Migrations complete — ${result.applied.length} applied, ${result.errors.length} errors`,
-      applied: result.applied,
-      errors: result.errors
-    });
-  } catch (e) {
-    return errorResponse("TRC Migration error: " + e.message, 500);
-  }
-}, true, ["Admin"]);
-router.get("/api/admin/migration-status-trc", async (req, env, params, query, user) => {
-  if (!user || user.role !== "Admin") return forbiddenResponse("Admin access required");
-  try {
-    const status = await checkTrcTableStatus(env.DB);
-    return jsonResponse({ success: true, trc_status: status });
-  } catch (e) {
-    return errorResponse("TRC status check error: " + e.message, 500);
   }
 }, true, ["Admin"]);
 
@@ -951,21 +823,6 @@ export default {
     ctx.waitUntil(handleAutoApprovalExpiry(env).catch(e =>
       staticLog.error("Auto-approval expiry failed", { error: e.message })
     ));
-
-    // Analytics Pre-computation cache warming (runs on all crons / every 20m)
-    const { precomputeAnalyticsCache } = await import("./cron/precomputeAnalysis.js").catch(() => ({ precomputeAnalyticsCache: null }));
-    if (precomputeAnalyticsCache) {
-      ctx.waitUntil(precomputeAnalyticsCache(env).catch(e =>
-        staticLog.error("Precompute analytics failed", { error: e.message })
-      ));
-    }
-
-    // Daily diagnostic health check & SLA alerts (02:00 AM IST = 20:30 UTC)
-    if (event.cron === "30 20 * * *") {
-      ctx.waitUntil(handleDailyCheck(null, env).catch(e =>
-        staticLog.error("Daily cron check failed", { error: e.message })
-      ));
-    }
 
     // Manager daily digest (10:00 AM IST = 04:30 UTC)
     if (event.cron === "30 4 * * *") {

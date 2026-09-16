@@ -19,58 +19,38 @@ export default function LoginPage() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center relative overflow-hidden bg-[#FAFAF9] px-4 py-8 selection:bg-accent-100 selection:text-accent-900">
-      {/* ══════════════════════════════════════════════════════════════════
-          CLEAN SUBTLE AMBIENT CANVAS (Minimalist, Distraction-Free)
-      ══════════════════════════════════════════════════════════════════ */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-25">
-        <div
-          className="absolute -top-[10%] -left-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-1"
-          style={{
-            background: "radial-gradient(circle, #4338CA 0%, rgba(67, 56, 202, 0) 70%)",
-            filter: "blur(120px)",
-          }}
-        />
-        <div
-          className="absolute -bottom-[10%] -right-[10%] w-[600px] h-[600px] rounded-full animate-mesh-blob-2"
-          style={{
-            background: "radial-gradient(circle, #6366F1 0%, rgba(99, 102, 241, 0) 70%)",
-            filter: "blur(130px)",
-          }}
-        />
-      </div>
-
-      {/* Delicate Architectural Grid */}
+    <div
+      className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 antialiased relative overflow-y-auto"
+      style={{
+        backgroundColor: "#f8f9fc",
+        backgroundImage: `
+          linear-gradient(to right, rgba(226, 232, 240, 0.7) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(226, 232, 240, 0.7) 1px, transparent 1px)
+        `,
+        backgroundSize: "28px 28px",
+      }}
+    >
+      {/* Subtle radial glow */}
       <div
-        className="absolute inset-0 pointer-events-none animate-grid-drift opacity-[0.03]"
+        className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage:
-            "linear-gradient(#12151A 1px, transparent 1px), linear-gradient(90deg, #12151A 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
+          background: "radial-gradient(circle at 50% 40%, rgba(99, 102, 241, 0.04) 0%, transparent 65%)",
         }}
       />
 
-      {/* ══════════════════════════════════════════════════════════════════
-          CENTERED AUTHENTICATION CARD (Clean, Professional, Focused)
-      ══════════════════════════════════════════════════════════════════ */}
+      {/* Main Auth Form Card Container */}
       <div
-        className="w-full max-w-[400px] bg-white rounded-2xl border border-line p-6 sm:p-7 relative z-10 animate-form-card"
-        style={{
-          boxShadow: "0 10px 30px -5px rgba(30, 27, 75, 0.06), 0 4px 12px -2px rgba(30, 27, 75, 0.03)",
-        }}
+        className="relative z-10 w-full max-w-[420px] bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden my-auto"
       >
-        {/* Form View (Login / Forgot / Unlock) */}
         {mode === "login" && (
           <LoginForm
             onForgotPassword={() => setMode("forgot")}
             onUnlockAccount={() => setMode("unlock")}
           />
         )}
-
         {mode === "forgot" && (
           <ForgotPassword onBackToLogin={() => setMode("login")} />
         )}
-
         {mode === "unlock" && (
           <UnlockAccount onBackToLogin={() => setMode("login")} />
         )}

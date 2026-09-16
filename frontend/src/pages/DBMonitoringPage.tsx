@@ -3,7 +3,7 @@ import { ResponsiveLine } from "@nivo/line";
 import { ResponsiveBar } from "@nivo/bar";
 import toast from "react-hot-toast";
 
-const BASE = "https://fieldops-secondary-api.sunilbishnoi.workers.dev";
+const BASE = (import.meta.env.VITE_API_URL as string) || "https://fieldops-api.sunilbishnoi.workers.dev";
 const getHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("access_token")}`,
   "Content-Type": "application/json",

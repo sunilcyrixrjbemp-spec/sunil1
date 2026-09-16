@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ArrowLeft, CheckCircle2, User, Calendar, ArrowRight, AlertTriangle, Clock, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Unlock, CheckCircle2, User, Calendar, ArrowRight, ShieldCheck, AlertTriangle } from "lucide-react";
 import { authService } from "../../services/authService";
 
 const Spinner = () => (
   <span
-    className="inline-block shrink-0 animate-spin"
+    className="inline-block shrink-0"
     style={{
-      width: 15,
-      height: 15,
-      border: "2px solid rgba(255,255,255,0.35)",
+      width: 14, height: 14,
+      border: "2px solid rgba(255,255,255,0.30)",
       borderTopColor: "#ffffff",
       borderRadius: "50%",
+      animation: "spin 0.6s linear infinite",
     }}
   />
 );
@@ -31,7 +31,6 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isAlreadyActive, setIsAlreadyActive] = useState(false);
-  const [redirectCountdown, setRedirectCountdown] = useState(3);
 
   const otpInputsRef = useRef<HTMLInputElement[]>([]);
 
@@ -46,24 +45,6 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
 
     return () => clearInterval(interval);
   }, [step]);
-
-  // Auto redirect countdown on success
-  useEffect(() => {
-    if (step !== 3) return;
-
-    const interval = setInterval(() => {
-      setRedirectCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          onBackToLogin();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [step, onBackToLogin]);
 
   // Format HTML date picker value (YYYY-MM-DD) to API expected (DD-MM-YYYY)
   const formatDateForApi = (dateStr: string): string => {
@@ -86,22 +67,17 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
 
     setLoading(true);
     try {
-      const data = await authService.unlockAccount(userId.trim(), apiDoj, apiDob);
+      const data = await authService.unlockAccount(userId, apiDoj, apiDob);
       setMaskedEmail(data.masked_email);
       setStep(2);
       setStatusMessage(null);
       setTimeLeft(600);
       setResendCooldown(30);
     } catch (err: any) {
-      const errMsg =
-        err.response?.data?.error ||
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        "Verification failed";
+      const errMsg = err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "Verification failed";
       if (errMsg.toLowerCase().includes("already active")) {
         setIsAlreadyActive(true);
         setStep(3);
-        setRedirectCountdown(3);
       } else {
         setStatusMessage({ type: "error", text: errMsg });
       }
@@ -122,18 +98,13 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
 
     setLoading(true);
     try {
-      await authService.unlockVerifyOtp(userId.trim(), otpString);
+      await authService.unlockVerifyOtp(userId, otpString);
       setStep(3);
       setStatusMessage(null);
-      setRedirectCountdown(3);
     } catch (err: any) {
       setStatusMessage({
         type: "error",
-        text:
-          err.response?.data?.error ||
-          err.response?.data?.detail ||
-          err.response?.data?.message ||
-          "OTP verification failed",
+        text: err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "OTP verification failed"
       });
     } finally {
       setLoading(false);
@@ -171,16 +142,16 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
     setStatusMessage(null);
-
+    
     const apiDoj = formatDateForApi(doj);
     const apiDob = formatDateForApi(dob);
 
     setLoading(true);
     try {
-      await authService.unlockAccount(userId.trim(), apiDoj, apiDob);
+      await authService.unlockAccount(userId, apiDoj, apiDob);
       setStatusMessage({
         type: "success",
-        text: "A new verification code has been sent successfully!",
+        text: "A new verification code has been sent successfully!"
       });
       setTimeLeft(600);
       setResendCooldown(30);
@@ -188,80 +159,92 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
     } catch (err: any) {
       setStatusMessage({
         type: "error",
-        text:
-          err.response?.data?.error ||
-          err.response?.data?.detail ||
-          err.response?.data?.message ||
-          "Failed to resend OTP",
+        text: err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || "Failed to resend OTP"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, "0");
+    const s = (secs % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   };
 
   return (
-    <div className="w-full">
-      {/* ── Top Navigation Bar (Hidden on Success Step 3) ───────────────── */}
-      {step < 3 && (
-        <div className="flex items-center justify-between pb-2.5 mb-3.5 border-b border-line">
-          <button
-            type="button"
-            onClick={onBackToLogin}
-            className="border-0 bg-transparent cursor-pointer text-xs font-semibold text-accent-600 hover:text-accent-700 transition-colors flex items-center gap-1.5 p-0"
-          >
-            <ArrowLeft size={14} />
-            <span>Back to Sign In</span>
-          </button>
-          <span className="text-[10px] font-mono font-bold text-accent-700 bg-accent-50 border border-accent-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
-            STEP {step} OF 2
+    <div className="p-7 sm:p-8">
+      {/* Top Header */}
+      <div className="flex items-center justify-between pb-3.5 mb-5 border-b border-slate-100">
+        <button
+          type="button"
+          onClick={onBackToLogin}
+          className="border-0 bg-transparent cursor-pointer text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5 p-0"
+        >
+          <ArrowLeft size={14} />
+          <span>Back to Sign In</span>
+        </button>
+        <span className="text-[11px] font-semibold text-slate-400">
+          Unlock Account
+        </span>
+      </div>
+
+      {/* Status Alert Banner */}
+      {statusMessage && (
+        <div
+          className="mb-5 flex items-start gap-2.5 rounded-lg p-3 border-l-4"
+          style={{
+            backgroundColor: statusMessage.type === "error" ? "#fef2f2" : "#ecfdf5",
+            borderColor: statusMessage.type === "error" ? "#fca5a5" : "#6ee7b7",
+            borderLeftColor: statusMessage.type === "error" ? "#dc2626" : "#059669",
+          }}
+        >
+          <AlertTriangle
+            style={{
+              width: 15, height: 15, marginTop: 1, flexShrink: 0,
+              color: statusMessage.type === "error" ? "#dc2626" : "#059669",
+            }}
+          />
+          <span style={{ fontSize: 12, color: statusMessage.type === "error" ? "#991b1b" : "#065f46", fontWeight: 600, lineHeight: "18px" }}>
+            {statusMessage.text}
           </span>
         </div>
       )}
 
-      {/* ── Status Alert Banner ─────────────────────────────────────────── */}
-      {statusMessage && (
-        <div
-          className={`mb-3 flex items-start gap-2 rounded-lg p-2.5 border text-xs font-medium ${
-            statusMessage.type === "error"
-              ? "bg-rejected-bg text-rejected-text border-rejected-border animate-shake"
-              : "bg-approved-bg text-approved-text border-approved-border"
-          }`}
-        >
-          <AlertTriangle
-            className={`w-4 h-4 shrink-0 mt-0.5 ${
-              statusMessage.type === "error" ? "text-rejected-text" : "text-approved-text"
-            }`}
-          />
-          <span className="leading-snug">{statusMessage.text}</span>
-        </div>
-      )}
-
-      {/* ── STEP 1: IDENTITY VERIFICATION ───────────────────────────────── */}
+      {/* STEP 1 - VERIFY IDENTITY */}
       {step === 1 && (
-        <div className="flex flex-col gap-3">
-          <div className="mb-0.5">
-            <h2 className="text-lg font-bold text-ink-900 font-display tracking-tight m-0 leading-tight">
+        <div className="flex flex-col gap-5">
+          <div className="text-center mb-1">
+            <div className="inline-flex items-center justify-center mb-4">
+              <img
+                src="/logo-fieldconnect.png"
+                alt="Cyrix Field Connect Logo"
+                className="h-10 sm:h-11 w-auto object-contain drop-shadow-xs"
+                height="44"
+              />
+            </div>
+            <h1
+              className="m-0 text-2xl font-bold text-slate-900 tracking-tight"
+              style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
+            >
               Unlock Account
-            </h2>
-            <p className="mt-0.5 text-xs text-ink-500 font-sans m-0">
-              Provide employee details to verify your identity.
+            </h1>
+            <p className="mt-1.5 m-0 text-sm text-slate-500 font-normal">
+              Provide your employee details to unlock your account.
             </p>
           </div>
 
-          <form onSubmit={handleVerifyIdentity} className="flex flex-col gap-3">
+          <form onSubmit={handleVerifyIdentity} className="flex flex-col gap-4">
             <div>
-              <label htmlFor="unlockUserId" className="block mb-1 text-xs font-medium text-ink-700 tracking-normal">
+              <label
+                htmlFor="unlockUserId"
+                className="block mb-1.5 text-xs font-semibold text-slate-700"
+              >
                 Employee ID
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-400">
-                  <User size={15} />
+              <div className="relative flex items-center">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <User size={17} />
                 </span>
                 <input
                   id="unlockUserId"
@@ -274,21 +257,24 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   }}
                   disabled={loading}
                   required
-                  className="w-full h-[40px] pl-9 pr-3 text-sm font-medium text-ink-900 bg-white border border-line rounded-lg focus:outline-none focus:ring-1 focus:ring-accent-600 focus:border-accent-600 transition-colors placeholder:text-ink-300 disabled:bg-surface-sunken"
+                  className="w-full h-11 pl-10 pr-3.5 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="unlockDoj" className="block mb-1 text-xs font-medium text-ink-700 tracking-normal">
+              <label
+                htmlFor="doj"
+                className="block mb-1.5 text-xs font-semibold text-slate-700"
+              >
                 Date of Joining
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-400">
-                  <Calendar size={15} />
+              <div className="relative flex items-center">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <Calendar size={17} />
                 </span>
                 <input
-                  id="unlockDoj"
+                  id="doj"
                   type="date"
                   value={doj}
                   onChange={(e) => {
@@ -297,21 +283,24 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   }}
                   disabled={loading}
                   required
-                  className="w-full h-[40px] pl-9 pr-3 text-sm font-medium text-ink-900 bg-white border border-line rounded-lg focus:outline-none focus:ring-1 focus:ring-accent-600 focus:border-accent-600 transition-colors [color-scheme:light] disabled:bg-surface-sunken"
+                  className="w-full h-11 pl-10 pr-3.5 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all [color-scheme:light]"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="unlockDob" className="block mb-1 text-xs font-medium text-ink-700 tracking-normal">
+              <label
+                htmlFor="dob"
+                className="block mb-1.5 text-xs font-semibold text-slate-700"
+              >
                 Date of Birth
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-ink-400">
-                  <Calendar size={15} />
+              <div className="relative flex items-center">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                  <Calendar size={17} />
                 </span>
                 <input
-                  id="unlockDob"
+                  id="dob"
                   type="date"
                   value={dob}
                   onChange={(e) => {
@@ -320,7 +309,7 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
                   }}
                   disabled={loading}
                   required
-                  className="w-full h-[40px] pl-9 pr-3 text-sm font-medium text-ink-900 bg-white border border-line rounded-lg focus:outline-none focus:ring-1 focus:ring-accent-600 focus:border-accent-600 transition-colors [color-scheme:light] disabled:bg-surface-sunken"
+                  className="w-full h-11 pl-10 pr-3.5 text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all [color-scheme:light]"
                 />
               </div>
             </div>
@@ -328,143 +317,141 @@ export default function UnlockAccount({ onBackToLogin }: UnlockAccountProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-[40px] max-sm:h-[44px] bg-accent-600 hover:bg-accent-700 active:scale-[0.98] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-none mt-0.5"
+              className="w-full h-11 mt-1 bg-[#4338ca] hover:bg-[#3730a3] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 border-0 shadow-sm transition-colors cursor-pointer active:scale-[0.99] disabled:opacity-60"
             >
               {loading ? (
-                <>
-                  <Spinner />
-                  <span>Verifying Details…</span>
-                </>
+                <><Spinner /><span className="normal-case font-normal text-xs">Verifying identity...</span></>
               ) : (
-                <>
-                  <span>Verify &amp; Send OTP</span>
-                  <ArrowRight size={15} />
-                </>
+                <><span>Verify & Send OTP</span><ArrowRight size={15} /></>
               )}
             </button>
           </form>
         </div>
       )}
 
-      {/* ── STEP 2: OTP VERIFICATION & UNLOCK ───────────────────────────── */}
+      {/* STEP 2 - ENTER OTP */}
       {step === 2 && (
-        <div className="flex flex-col gap-3">
-          <div className="mb-0.5">
-            <h2 className="text-lg font-bold text-ink-900 font-display tracking-tight m-0 leading-tight">
-              Verify OTP to Unlock
-            </h2>
-            <p className="mt-0.5 text-xs text-ink-500 font-sans m-0">
-              Sent to <span className="font-semibold text-ink-800">{maskedEmail || "your registered email"}</span>
+        <div className="flex flex-col gap-5">
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-2.5">
+              <ShieldCheck size={22} />
+            </div>
+            <h1
+              className="m-0 text-xl font-bold text-slate-900 tracking-tight"
+              style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
+            >
+              Enter Verification Code
+            </h1>
+            <p className="mt-1 m-0 text-xs text-slate-500 font-normal leading-relaxed">
+              We sent a 6-digit OTP code to your registered email <strong className="text-slate-800 font-semibold">{maskedEmail}</strong>
             </p>
+            <div className="mt-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs font-medium text-center leading-tight">
+              💡 <strong>Note:</strong> If you don't see the email in your Inbox, please check your <strong>Junk / Spam folder</strong>.
+            </div>
           </div>
 
-          <form onSubmit={handleVerifyOtpAndUnlock} className="flex flex-col gap-3.5">
-            {/* 6 OTP Input Boxes */}
-            <div className="flex justify-between gap-1.5 my-1">
-              {otp.map((digit, index) => (
+          <form onSubmit={handleVerifyOtpAndUnlock} className="flex flex-col gap-4">
+            <div className="flex justify-between gap-1.5 max-w-xs mx-auto w-full">
+              {otp.map((digit, idx) => (
                 <input
-                  key={index}
-                  ref={(el) => (otpInputsRef.current[index] = el!)}
+                  key={idx}
                   type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
                   maxLength={1}
                   value={digit}
-                  onChange={(e) => handleOtpChange(e.target, index)}
-                  onKeyDown={(e) => handleOtpKeyDown(e, index)}
-                  className="w-10 h-11 text-center font-mono font-bold text-lg text-ink-900 bg-white border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-600 focus:border-accent-600 transition-all"
-                  autoFocus={index === 0}
+                  ref={(el) => (otpInputsRef.current[idx] = el as HTMLInputElement)}
+                  onChange={(e) => handleOtpChange(e.target, idx)}
+                  onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                  disabled={loading}
+                  className="w-10 h-11 bg-white border border-slate-200 rounded-lg text-center text-lg font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                 />
               ))}
             </div>
 
-            {/* Timer & Resend */}
-            <div className="flex items-center justify-between text-xs text-ink-500">
-              <div className="flex items-center gap-1 font-mono">
-                <Clock size={13} className="text-ink-400" />
-                <span>Expires in: {formatTime(timeLeft)}</span>
+            <div className="text-center space-y-1.5 bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs">
+              <p className="m-0 text-xs text-slate-600 font-semibold">
+                OTP Validity: <span className="font-mono font-bold text-rose-600">{formatTime(timeLeft)}</span>
+              </p>
+              
+              <div className="text-xs">
+                {resendCooldown === 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={loading}
+                    className="border-0 bg-transparent cursor-pointer font-semibold text-indigo-600 hover:underline"
+                  >
+                    Resend OTP Code
+                  </button>
+                ) : (
+                  <span className="text-slate-500 font-medium">
+                    Resend in <span className="font-mono font-bold text-slate-700">{resendCooldown}s</span>
+                  </span>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={handleResendOtp}
-                disabled={resendCooldown > 0 || loading}
-                className="text-xs font-semibold text-accent-600 hover:text-accent-700 bg-transparent border-0 cursor-pointer disabled:text-ink-300 disabled:cursor-not-allowed"
-              >
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
-              </button>
             </div>
 
             <button
               type="submit"
-              disabled={loading || otp.join("").length < 6}
-              className="w-full h-[40px] max-sm:h-[44px] bg-accent-600 hover:bg-accent-700 active:scale-[0.98] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-none"
+              disabled={loading}
+              className="w-full h-11 mt-1 bg-[#4338ca] hover:bg-[#3730a3] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 border-0 shadow-sm transition-colors cursor-pointer active:scale-[0.99] disabled:opacity-60"
             >
               {loading ? (
-                <>
-                  <Spinner />
-                  <span>Unlocking Account…</span>
-                </>
+                <><Spinner /><span className="normal-case font-normal text-xs">Unlocking Account...</span></>
               ) : (
-                <>
-                  <span>Unlock Account</span>
-                  <ArrowRight size={15} />
-                </>
+                <><span>Verify & Unlock Account</span><ArrowRight size={15} /></>
               )}
             </button>
           </form>
         </div>
       )}
 
-      {/* ── STEP 3: GORGEOUS SUCCESS CELEBRATION ─────────────────────────── */}
+      {/* STEP 3 - SUCCESS */}
       {step === 3 && (
-        <div className="flex flex-col items-center text-center py-4 animate-fade-in-slide-up select-none">
-          {/* Multi-Layer Animated Emerald Halo */}
-          <div className="relative flex items-center justify-center mb-4">
-            <span className="w-16 h-16 rounded-full bg-emerald-100/70 absolute animate-ping opacity-60" />
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-md relative z-10">
-              <CheckCircle2 size={32} className="stroke-[2.5]" />
-            </div>
+        <div className="flex flex-col gap-4 text-center py-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
+            {isAlreadyActive ? (
+              <Unlock size={26} className="animate-pulse text-indigo-600" />
+            ) : (
+              <CheckCircle2 size={26} className="animate-pulse text-emerald-600" />
+            )}
           </div>
 
-          <h2 className="text-xl font-bold font-display text-ink-900 tracking-tight m-0 leading-tight">
-            {isAlreadyActive ? "Account is Active" : "Account Unlocked Successfully!"}
-          </h2>
-
-          <p className="mt-1 text-xs text-ink-600 font-sans leading-relaxed max-w-[280px] m-0">
-            {isAlreadyActive
-              ? "Your account is already active and ready to use. You can sign in directly."
-              : "Your identity has been verified and your account is now fully unlocked."}
-          </p>
-
-          {/* Security Verification Confirmation Pill */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-800 mt-4">
-            <ShieldCheck size={13} className="text-emerald-600" />
-            <span>Identity Verified</span>
+          <div className="space-y-1">
+            <h1
+              className="m-0 text-xl font-bold text-slate-900 tracking-tight"
+              style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif" }}
+            >
+              {isAlreadyActive ? "Account Already Active" : "Account Unlocked Successfully"}
+            </h1>
+            <p className="text-xs text-slate-600 font-medium px-2">
+              {isAlreadyActive 
+                ? "Your account is active and unlocked. You can sign in directly using your password."
+                : "Your Cyrix Field Connect account has been unlocked. You can now sign in using your credentials."}
+            </p>
           </div>
 
-          {/* Direct Action Button */}
           <button
             type="button"
             onClick={onBackToLogin}
-            className="w-full h-[42px] max-sm:h-[46px] bg-accent-600 hover:bg-accent-700 active:scale-[0.98] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm mt-5"
+            className="w-full h-11 mt-2 bg-[#4338ca] hover:bg-[#3730a3] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-2 border-0 shadow-sm transition-colors cursor-pointer"
           >
-            <span>Proceed to Sign In</span>
-            <ArrowRight size={15} />
+            {isAlreadyActive ? "Go to Sign In" : "Back to Sign In"}
           </button>
-
-          <p className="text-[11px] text-ink-400 font-mono mt-3 m-0">
-            Auto-redirecting in {redirectCountdown}s…
-          </p>
         </div>
       )}
 
-      {/* ── In-Card Sunil Bishnoi Attribution ────────────────────────────── */}
-      <div className="mt-3.5 pt-2.5 border-t border-line/60 text-center select-none">
-        <p className="text-[11px] text-ink-400 font-medium m-0 flex items-center justify-center gap-1">
-          <span>Designed &amp; Developed by</span>
-          <span className="text-accent-700 font-bold">Sunil Bishnoi</span>
-        </p>
-      </div>
+      {/* Attribution */}
+      <p className="text-center mt-6 mb-0 text-xs text-slate-400 font-medium pt-4 border-t border-slate-100">
+        Designed &amp; Developed by{" "}
+        <a
+          href="https://sunilbishnoi.co.in/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-indigo-600 hover:underline font-semibold"
+        >
+          Sunil Bishnoi
+        </a>
+      </p>
     </div>
   );
 }

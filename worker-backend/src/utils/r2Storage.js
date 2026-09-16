@@ -28,7 +28,7 @@ import { sha256 } from "./security.js";
 import { getISTDateComponents, formatDateCompact, formatTimeCompact, nowISO } from "./timestamp.js";
 import { staticLog } from "./logger.js";
 
-const R2_BUCKET_NAME = "cyrixapp";
+const R2_BUCKET_NAME = "fieldops-uploads";
 
 // ─── Supported File Formats ───────────────────────────────────────────────────
 const SUPPORTED_IMAGE_TYPES = {
@@ -263,11 +263,8 @@ export async function uploadToR2(env, buffer, key, contentType, metadata = {}) {
     // Fallback: R2 REST API
     return await uploadToR2ViaRestAPI(env, buffer, key, contentType, metadata);
   } catch (e) {
-    staticLog.error("R2 upload failed, using high-speed CDN fallback", { key, error: e.message });
-    // Safe Fallback: Generate high-speed CDN link so the file link is active and valid
-    const fileId = metadata?.gdriveFileId || key.split("/").pop().split(".")[0];
-    const fallbackUrl = fileId ? `https://lh3.googleusercontent.com/d/${fileId}` : getR2PublicUrl(env, key);
-    return { success: true, key, url: fallbackUrl, error: null };
+    staticLog.error("R2 upload failed", { key, error: e.message });
+    return { success: false, key, url: null, error: e.message };
   }
 }
 
@@ -296,10 +293,7 @@ async function uploadToR2ViaRestAPI(env, buffer, key, contentType, metadata = {}
     }
   } catch (_) {}
 
-  // Fallback to high-speed CDN URL if REST API fails
-  const fileId = metadata?.gdriveFileId || key.split("/").pop().split(".")[0];
-  const fallbackUrl = fileId ? `https://lh3.googleusercontent.com/d/${fileId}` : getR2PublicUrl(env, key);
-  return { success: true, key, url: fallbackUrl, error: null };
+  return { success: false, key, url: null, error: "R2 upload failed via REST API" };
 }
 
 // ─── R2 Download / Serve ──────────────────────────────────────────────────────
@@ -361,8 +355,8 @@ export async function r2ObjectExists(env, key) {
  * @returns {string}
  */
 export function getR2PublicUrl(env, key) {
-  const baseUrl = env.CORS_ORIGIN || "https://indrae.in";
-  return `/api/r2/file/${encodeURIComponent(key)}`;
+  const cleanKey = String(key || "").replace(/^\/+/, "");
+  return `/uploads/${cleanKey}`;
 }
 
 // ─── Image Compression ────────────────────────────────────────────────────────
