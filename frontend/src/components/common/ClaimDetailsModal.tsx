@@ -1015,11 +1015,13 @@ const LegDetailCard = ({
                   const cComplaintId = cItem.complaint_id || cItem.calls_complaint_id || cItem.call_id || "—";
                   const cCode = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no || barcode || "—";
                   
-                  const rawEquipment = cItem.equipment || cItem.equipment_name || cItem.asset_name || equipmentName || (cCode !== "—" ? barcodeMap[cCode]?.equipment : "");
-                  const cEquipment = isValidText(rawEquipment) ? rawEquipment : (cCode !== "—" && barcodeMap[cCode]?.equipment ? barcodeMap[cCode].equipment : "—");
+                  const itemEq = cItem.asset_details?.equipment_name || cItem.asset_details?.asset_name || cItem.equipment || cItem.equipment_name || cItem.asset_name;
+                  const rawEquipment = itemEq || (cCode !== "—" ? barcodeMap[cCode]?.equipment : "") || equipmentName;
+                  const cEquipment = isValidText(rawEquipment) ? rawEquipment : (cCode !== "—" && barcodeMap[cCode]?.equipment ? barcodeMap[cCode].equipment : (equipmentName || "—"));
                   
-                  const rawHospital = cItem.hospital || cItem.hospital_name || cItem.facility_name || hospitalName || (cCode !== "—" ? barcodeMap[cCode]?.hospital : "");
-                  const cHospital = isValidText(rawHospital) ? rawHospital : (cCode !== "—" && barcodeMap[cCode]?.hospital ? barcodeMap[cCode].hospital : "—");
+                  const itemHosp = cItem.asset_details?.hospital_name || cItem.hospital || cItem.hospital_name || cItem.facility_name;
+                  const rawHospital = itemHosp || (cCode !== "—" ? barcodeMap[cCode]?.hospital : "") || hospitalName;
+                  const cHospital = isValidText(rawHospital) ? rawHospital : (cCode !== "—" && barcodeMap[cCode]?.hospital ? barcodeMap[cCode].hospital : (hospitalName || "—"));
 
                   const cType = cItem.call_type || cItem.calls_type || cItem.type || act.callsType || "Service Call";
                   const cStatus = cItem.status || cItem.calls_status || act.callsStatus || "Attended & Closed";
@@ -1113,11 +1115,13 @@ const LegDetailCard = ({
                 {act.pmsList.map((pItem: any, pIdx: number) => {
                   const pCode = pItem.barcode || pItem.pms_barcode || pItem.code || pItem.serial_no || pItem.asset_barcode || "—";
                   
-                  const rawEquipment = pItem.equipment || pItem.equipment_name || pItem.asset_name || pItem.equipment_model || pItem.model || equipmentName || (pCode !== "—" ? barcodeMap[pCode]?.equipment : "");
-                  const pEquipment = isValidText(rawEquipment) ? rawEquipment : (pCode !== "—" && barcodeMap[pCode]?.equipment ? barcodeMap[pCode].equipment : "—");
+                  const itemEq = pItem.asset_details?.equipment_name || pItem.asset_details?.asset_name || pItem.equipment || pItem.equipment_name || pItem.asset_name || pItem.equipment_model || pItem.model;
+                  const rawEquipment = itemEq || (pCode !== "—" ? barcodeMap[pCode]?.equipment : "") || equipmentName;
+                  const pEquipment = isValidText(rawEquipment) ? rawEquipment : (pCode !== "—" && barcodeMap[pCode]?.equipment ? barcodeMap[pCode].equipment : (equipmentName || "—"));
                   
-                  const rawHospital = pItem.hospital || pItem.hospital_name || pItem.facility_name || hospitalName || (pCode !== "—" ? barcodeMap[pCode]?.hospital : "");
-                  const pHospital = isValidText(rawHospital) ? rawHospital : (pCode !== "—" && barcodeMap[pCode]?.hospital ? barcodeMap[pCode].hospital : "—");
+                  const itemHosp = pItem.asset_details?.hospital_name || pItem.hospital || pItem.hospital_name || pItem.facility_name;
+                  const rawHospital = itemHosp || (pCode !== "—" ? barcodeMap[pCode]?.hospital : "") || hospitalName;
+                  const pHospital = isValidText(rawHospital) ? rawHospital : (pCode !== "—" && barcodeMap[pCode]?.hospital ? barcodeMap[pCode].hospital : (hospitalName || "—"));
 
                   const pSched = pItem.schedule || pItem.pms_frequency || pItem.frequency || act.pmsFrequency || schedule || "—";
                   const pUrl = pItem.attachment_url || pItem.service_report_url || pItem.photo_url || pItem.image_url || pItem.url || pItem.file_url || pItem.photo || pItem.service_report_photo || pItem.pms_asset_details?.attachment_url || pItem.pms_asset_details?.photo_url || pItem.pms_asset_details?.url || "";
@@ -1702,8 +1706,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
       
       act.pmsList.forEach((pItem: any) => {
         const code = pItem.barcode || pItem.pms_barcode || pItem.code || pItem.serial_no || pItem.asset_barcode;
-        const eq = pItem.equipment || pItem.equipment_name || pItem.asset_name || act.equipmentName || leg.equipment_name;
-        const hosp = pItem.hospital || pItem.hospital_name || pItem.facility_name || act.hospitalName || leg.hospital_name;
+        const eq = pItem.asset_details?.equipment_name || pItem.asset_details?.asset_name || pItem.equipment || pItem.equipment_name || pItem.asset_name || pItem.equipment_model || pItem.model;
+        const hosp = pItem.asset_details?.hospital_name || pItem.hospital || pItem.hospital_name || pItem.facility_name;
         if (code && code !== "—" && (!isValidText(eq) || !isValidText(hosp)) && !barcodeMap[code]) {
           if (!barcodesToFetch.includes(code)) barcodesToFetch.push(code);
         }
@@ -1719,8 +1723,8 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
 
       effectiveCalls.forEach((cItem: any) => {
         const code = cItem.barcode || cItem.calls_barcode || cItem.code || cItem.serial_no;
-        const eq = cItem.equipment || cItem.equipment_name || cItem.asset_name || act.equipmentName || leg.equipment_name;
-        const hosp = cItem.hospital || cItem.hospital_name || cItem.facility_name || act.hospitalName || leg.hospital_name;
+        const eq = cItem.asset_details?.equipment_name || cItem.asset_details?.asset_name || cItem.equipment || cItem.equipment_name || cItem.asset_name;
+        const hosp = cItem.asset_details?.hospital_name || cItem.hospital || cItem.hospital_name || cItem.facility_name;
         if (code && code !== "—" && (!isValidText(eq) || !isValidText(hosp)) && !barcodeMap[code]) {
           if (!barcodesToFetch.includes(code)) barcodesToFetch.push(code);
         }

@@ -159,6 +159,7 @@ interface ItineraryLeg {
   pms_verified?: boolean;
   pms_asset_details?: any;
   pms_frequency?: string;
+  pms_hospital?: string;
   pms_photo_url?: string;
   pms_photo_name?: string;
   pms_photo_loading?: boolean;
@@ -212,6 +213,11 @@ interface ItineraryLeg {
     barcode: string;
     verified: boolean;
     frequency: string;
+    equipment_name?: string;
+    hospital_name?: string;
+    model_name?: string;
+    district_name?: string;
+    inventory_status?: string;
     asset_details: any;
     photo_url?: string;
   }>;
@@ -340,6 +346,11 @@ export default function ExpensePage() {
     if (window.location.search.includes("edit")) {
       window.history.pushState({}, '', window.location.pathname);
     }
+
+    try {
+      localStorage.removeItem(`expense_form_draft_${currentUserId}`);
+      setHasRestoredDraft(false);
+    } catch (_) {}
   };
 
   const validatedItinerariesRef = useRef<ItineraryLeg[] | null>(null);
@@ -663,6 +674,8 @@ export default function ExpensePage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [deletedAttachments, setDeletedAttachments] = useState<{leg: number; type: string}[]>([]);
+
+
   const [assetValueMaster, setAssetValueMaster] = useState<{equipment_name: string; rmsc_tender_cost: number; asset_value?: number}[]>([]);
 
   // Image Preview Lightbox
@@ -810,6 +823,66 @@ export default function ExpensePage() {
   const [minDate, setMinDate] = useState("");
   const [maxDate, setMaxDate] = useState("");
   const [originalExpenseDate, setOriginalExpenseDate] = useState<string | null>(null);
+
+  // ── Auto-Save Draft State & Recovery ──────────────────────────────────────
+  const DRAFT_KEY = `expense_form_draft_${currentUserId}`;
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+  const [restoredDraftStats, setRestoredDraftStats] = useState({ visits: 0, pms: 0, calls: 0 });
+
+  // On mount: check if unsaved draft exists and restore
+  useEffect(() => {
+    if (window.location.search.includes("edit")) return;
+    try {
+      const savedRaw = localStorage.getItem(DRAFT_KEY);
+      if (!savedRaw) return;
+      const parsed = JSON.parse(savedRaw);
+      if (parsed && Array.isArray(parsed.itineraries) && parsed.itineraries.length > 0) {
+        const totalPms = parsed.itineraries.reduce((sum: number, l: any) => sum + (l.pms_list || []).length, 0);
+        const totalCalls = parsed.itineraries.reduce((sum: number, l: any) => sum + (l.calls_list || []).length, 0);
+        const hasContent = totalPms > 0 || totalCalls > 0 || parsed.itineraries.some((l: any) => l.from || l.to);
+        if (hasContent) {
+          if (parsed.date) setDate(parsed.date);
+          setItineraries(parsed.itineraries);
+          setHasRestoredDraft(true);
+          setRestoredDraftStats({ visits: parsed.itineraries.length, pms: totalPms, calls: totalCalls });
+          toast.success(`Restored unsaved draft (${parsed.itineraries.length} visits, ${totalPms} PMS calls)`, {
+            icon: "📋",
+            duration: 5000
+          });
+        }
+      }
+    } catch (_) {}
+  }, [currentUserId, DRAFT_KEY]);
+
+  // Debounced auto-save effect
+  useEffect(() => {
+    if (editExpenseId) return;
+    const hasContent = itineraries.some(l => 
+      l.from || l.to || (l.pms_list && l.pms_list.length > 0) || (l.calls_list && l.calls_list.length > 0)
+    );
+    if (!hasContent) return;
+
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({
+          date,
+          itineraries,
+          timestamp: Date.now()
+        }));
+      } catch (_) {}
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [itineraries, date, editExpenseId, DRAFT_KEY]);
+
+  const clearAutoSaveDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      setHasRestoredDraft(false);
+      resetForm();
+      toast.success("Draft cleared. Starting fresh.");
+    } catch (_) {}
+  };
 
   // My Claims advanced search & filters
   const [claimsSearch, setClaimsSearch] = useState("");
@@ -1526,6 +1599,11 @@ export default function ExpensePage() {
           barcode: l.pms_barcode || "",
           verified: true,
           frequency: l.pms_frequency || "3 month",
+          equipment_name: l.pms_asset_details?.equipment_name || l.pms_asset_details?.equipment || "",
+          hospital_name: l.pms_asset_details?.hospital_name || l.pms_hospital || "",
+          model_name: l.pms_asset_details?.model_name || "",
+          district_name: l.pms_asset_details?.district_name || "",
+          inventory_status: l.pms_asset_details?.inventory_status || "Active",
           asset_details: l.pms_asset_details,
           photo_url: l.pms_photo_url || ""
         };
@@ -3174,13 +3252,14 @@ export default function ExpensePage() {
       toast.error("Please enter a valid extension amount.");
       return;
     }
+    const targetMonth = date ? date.slice(0, 7) : getISTMonth();
     setSendingRequest(true);
     try {
       const res = await expenseService.createLimitRequest(
         currentUserId,
         exceededType,
         parseFloat(reqAdditional),
-        date.slice(0, 7)
+        targetMonth
       );
       if (res.success || res.status === "success") {
         toast.success(res.message);
@@ -3192,7 +3271,7 @@ export default function ExpensePage() {
         }
         // Clear local cache to force a fresh fetch from server
         localStorage.removeItem(`cache_my_expenses_${currentUserId}`);
-        await fetchMonthLimits(date.slice(0, 7), false);
+        await fetchMonthLimits(targetMonth, false);
         await fetchClaims();
       }
     } catch (err: any) {
@@ -3582,8 +3661,35 @@ export default function ExpensePage() {
         </div>
       </div>
 
+      {/* Auto-Save Draft Recovery Banner */}
+      {hasRestoredDraft && (
+        <div className="bg-emerald-50 border border-emerald-300 text-emerald-950 p-2.5 rounded-xl shadow-xs flex items-center justify-between gap-3 text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <span className="text-base">📋</span>
+            <span>
+              Restored unsaved draft ({restoredDraftStats.visits} visits, {restoredDraftStats.pms} PMS calls). Auto-saving is active!
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={clearAutoSaveDraft}
+            className="text-[10px] font-extrabold uppercase px-2.5 py-1 bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors shrink-0"
+          >
+            Clear Draft
+          </button>
+        </div>
+      )}
+
       {/* Main Form container supporting dual layout */}
-      <form onSubmit={handleFormSubmit} className="space-y-6">
+      <form 
+        onSubmit={handleFormSubmit} 
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+            e.preventDefault();
+          }
+        }}
+        className="space-y-6"
+      >
         <div className="space-y-6">
           <div className="space-y-6">
             
@@ -4669,6 +4775,14 @@ export default function ExpensePage() {
                                         handleItineraryChange(leg.leg, "calls_verified", false);
                                         handleItineraryChange(leg.leg, "calls_asset_details", null);
                                       }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          if (String(leg.calls_barcode || '').replace(/\D/g, '').length === 8) {
+                                            verifyLegBarcode(leg.leg, "Calls");
+                                          }
+                                        }
+                                      }}
                                       className="input-lte font-mono h-8 py-1 text-xs border-blue-300 flex-1 min-w-0"
                                     />
                                     <div
@@ -4718,6 +4832,11 @@ export default function ExpensePage() {
                                       const val = e.target.value;
                                       handleItineraryChange(leg.leg, "calls_complaint_id", val);
                                       instantCheckComplaintId(leg.leg, val);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                      }
                                     }}
                                     onBlur={() => instantCheckComplaintId(leg.leg)}
                                     className="input-lte font-mono font-bold h-8 py-1 text-xs bg-white border-blue-300 w-full"
@@ -5052,6 +5171,14 @@ export default function ExpensePage() {
                                         handleItineraryChange(leg.leg, "pms_verified", false);
                                         handleItineraryChange(leg.leg, "pms_asset_details", null);
                                       }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          if (String(leg.pms_barcode || '').replace(/\D/g, '').length === 8) {
+                                            verifyLegBarcode(leg.leg, "PMS");
+                                          }
+                                        }
+                                      }}
                                       className="input-lte font-mono h-7 py-0.5 px-2 text-xs border-amber-200 w-full"
                                     />
                                     <button
@@ -5148,67 +5275,82 @@ export default function ExpensePage() {
                                 </div>
                               )}
 
-                              {/* Added PMS Barcodes Table */}
+                              {/* Added PMS Barcodes Table — Scalable up to 500 items */}
                               {(leg.pms_list || []).length > 0 && (
-                                <div className="border border-gray-200 rounded overflow-x-auto mt-2 bg-white w-full max-w-full block scrollbar-thin">
-                                  <table className="table-lte text-xs w-full text-left border-collapse">
-                                    <thead>
-                                      <tr className="bg-gray-100 border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
-                                        <th className="py-1.5 px-2 text-left">District Name</th>
-                                        <th className="py-1.5 px-2 text-left">Hospital Name</th>
-                                        <th className="py-1.5 px-2 text-left">Equipment Name</th>
-                                        <th className="py-1.5 px-2 text-left">Model</th>
-                                        <th className="py-1.5 px-2 text-left font-mono">Bar Code</th>
-                                        <th className="py-1.5 px-2 text-left">Inventory Status</th>
-                                        <th className="py-1.5 px-2 text-left">PMS Frequency Period</th>
-                                        <th className="py-1.5 px-2 text-center w-12">Photo</th>
-                                        <th className="py-1.5 px-2 text-center w-12">Action</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                      {(leg.pms_list || []).map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50">
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.district_name || "—"}</td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.hospital_name || "—"}</td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-700 font-bold">{item.asset_details?.equipment_name || "—"}</td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.asset_details?.model_name || "—"}</td>
-                                          <td className="py-1.5 px-2 font-mono font-bold text-gray-800">{item.barcode}</td>
-                                          <td className="py-1.5 px-2">
-                                            <span className="px-1.5 py-0.5 rounded font-bold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
-                                              {item.asset_details?.inventory_status || "Active"}
-                                            </span>
-                                          </td>
-                                          <td className="py-1.5 px-2 text-[10px] text-gray-600 font-semibold">{item.frequency}</td>
-                                          <td className="py-1.5 px-2 text-center">
-                                            {item.photo_url ? (
+                                <div className="mt-2 space-y-1.5">
+                                  <div className="flex items-center justify-between px-1">
+                                    <span className="text-[11px] font-extrabold text-slate-800 flex items-center gap-1.5">
+                                      <span>🛠️ Total PMS Added:</span>
+                                      <span className="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full font-mono text-[11px] font-black border border-emerald-300">
+                                        {(leg.pms_list || []).length} / 500
+                                      </span>
+                                    </span>
+                                    <span className="text-[9.5px] font-semibold text-slate-500">
+                                      Showing all {(leg.pms_list || []).length} entries
+                                    </span>
+                                  </div>
+                                  <div className="border border-gray-200 rounded max-h-80 overflow-y-auto overflow-x-auto bg-white w-full max-w-full block scrollbar-thin shadow-2xs">
+                                    <table className="table-lte text-xs w-full text-left border-collapse">
+                                      <thead className="sticky top-0 bg-gray-100 shadow-2xs z-10">
+                                        <tr className="border-b border-gray-200 text-gray-700 font-bold uppercase text-[9px] tracking-wider">
+                                          <th className="py-1.5 px-2 text-left w-8">#</th>
+                                          <th className="py-1.5 px-2 text-left">District</th>
+                                          <th className="py-1.5 px-2 text-left">Hospital Name</th>
+                                          <th className="py-1.5 px-2 text-left">Equipment Name</th>
+                                          <th className="py-1.5 px-2 text-left">Model</th>
+                                          <th className="py-1.5 px-2 text-left font-mono">Bar Code</th>
+                                          <th className="py-1.5 px-2 text-left">Status</th>
+                                          <th className="py-1.5 px-2 text-left">Period</th>
+                                          <th className="py-1.5 px-2 text-center w-12">Photo</th>
+                                          <th className="py-1.5 px-2 text-center w-12">Action</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-100">
+                                        {(leg.pms_list || []).map((item, idx) => (
+                                          <tr key={idx} className="hover:bg-gray-50">
+                                            <td className="py-1.5 px-2 text-[10px] font-bold text-slate-500">{idx + 1}</td>
+                                            <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.district_name || item.asset_details?.district_name || "—"}</td>
+                                            <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.hospital_name || item.asset_details?.hospital_name || "—"}</td>
+                                            <td className="py-1.5 px-2 text-[10px] text-gray-900 font-bold">{item.equipment_name || item.asset_details?.equipment_name || "—"}</td>
+                                            <td className="py-1.5 px-2 text-[10px] text-gray-700">{item.model_name || item.asset_details?.model_name || "—"}</td>
+                                            <td className="py-1.5 px-2 font-mono font-bold text-gray-800">{item.barcode}</td>
+                                            <td className="py-1.5 px-2">
+                                              <span className="px-1.5 py-0.5 rounded font-bold text-[8px] uppercase bg-green-50 text-green-700 border border-green-200">
+                                                {item.inventory_status || item.asset_details?.inventory_status || "Active"}
+                                              </span>
+                                            </td>
+                                            <td className="py-1.5 px-2 text-[10px] text-gray-600 font-semibold">{item.frequency}</td>
+                                            <td className="py-1.5 px-2 text-center">
+                                              {item.photo_url ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const fullUrl = formatImageUrl(item.photo_url);
+                                                    setLightboxImage(fullUrl);
+                                                  }}
+                                                  className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
+                                                >
+                                                  Preview
+                                                </button>
+                                              ) : (
+                                                <span className="text-[10px] text-gray-400">—</span>
+                                              )}
+                                            </td>
+                                            <td className="py-1.5 px-2 text-center">
                                               <button
                                                 type="button"
-                                                onClick={() => {
-                                                  const fullUrl = formatImageUrl(item.photo_url);
-                                                  setLightboxImage(fullUrl);
-                                                }}
-                                                className="text-xs text-blue-600 font-bold hover:underline border-0 bg-transparent cursor-pointer"
+                                                onClick={() => removeBarcode(leg.leg, "PMS", idx)}
+                                                className="p-1 text-rose-600 hover:bg-rose-50 rounded border-0 bg-transparent cursor-pointer"
+                                                title="Remove PMS entry"
                                               >
-                                                Preview
+                                                <Trash2 className="w-3.5 h-3.5" />
                                               </button>
-                                            ) : (
-                                              <span className="text-[10px] text-gray-400">—</span>
-                                            )}
-                                          </td>
-                                          <td className="py-1.5 px-2 text-center">
-                                            <button
-                                              type="button"
-                                              onClick={() => removeBarcode(leg.leg, "PMS", idx)}
-                                              className="p-1 text-rose-600 hover:bg-rose-50 rounded border-0 bg-transparent cursor-pointer"
-                                              title="Remove PMS entry"
-                                            >
-                                              <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
                                 </div>
                               )}
                             </div>

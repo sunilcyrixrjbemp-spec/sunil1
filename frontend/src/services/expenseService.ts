@@ -17,7 +17,8 @@ export const expenseService = {
       user_id: userId,
       type: type,
       amount: amount,
-      month: month
+      month: (month && String(month).trim()) || new Date().toISOString().slice(0, 7),
+      client_timestamp: new Date().toISOString()
     });
     return response.data;
   },

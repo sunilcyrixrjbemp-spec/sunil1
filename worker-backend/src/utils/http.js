@@ -26,6 +26,7 @@ const ALLOWED_ORIGINS = [
 const ALLOWED_ORIGIN_PATTERNS = [
   /^https:\/\/(.*\.)?cyrixhealth\.com$/,
   /^https:\/\/(.*\.)?indrae\.in$/,
+  /^https:\/\/(.*\.)?pages\.dev$/,
   /^https:\/\/cyrix-frontend\.pages\.dev$/,
   /^https:\/\/cyrixapp\.pages\.dev$/,
   /^https:\/\/fieldops(-secondary)?-api\.sunilbishnoi\.workers\.dev$/,

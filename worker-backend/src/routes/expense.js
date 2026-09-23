@@ -1157,92 +1157,109 @@ export async function handleExpenseInit(request, env, params, query, user) {
  * POST /api/expense/limit-request
  */
 export async function handleCreateLimitRequest(request, env, params, query, user) {
-  let body;
   try {
-    body = await request.json();
-  } catch (e) {
-    return jsonResponse({ error: "Invalid JSON body" }, 400);
-  }
-
-  const { user_id, type, amount, month, client_timestamp } = body;
-  const effectiveUserId = user_id || user?.user_id || user?.id;
-
-  if (!effectiveUserId || !type || amount === undefined || amount === null || !month) {
-    return jsonResponse({ error: "Missing required parameters: user_id, type, amount, month" }, 400);
-  }
-
-  const reqTypeUpper = (type || "").trim().toUpperCase();
-  const reqAmount = parseFloat(amount || 0);
-
-  if (isNaN(reqAmount) || reqAmount <= 0) {
-    return jsonResponse({ error: "Please enter a valid extension amount greater than 0." }, 400);
-  }
-
-  // 1. MAXIMUM EXTENSION AMOUNT CAPS:
-  // AUTO max extension allowed: ₹2,500
-  // KM (Bike) max extension allowed: 1,500
-  const maxAllowedExtension = reqTypeUpper === "AUTO" ? 2500 : 1500;
-  if (reqAmount > maxAllowedExtension) {
-    const typeLabel = reqTypeUpper === "AUTO" ? "Auto is ₹2,500" : "Bike (KM) is 1,500";
-    return jsonResponse({ error: `Maximum limit extension allowed for ${typeLabel}. You cannot request more than this.` }, 400);
-  }
-
-  // Find requester from user profile or fallback to authenticated user
-  const requester = await env.DB.prepare(
-    "SELECT * FROM users WHERE user_id = ? OR id = ? OR e_code = ?"
-  ).bind(String(effectiveUserId), String(effectiveUserId), String(effectiveUserId)).first();
-  
-  const finalRequester = requester || user;
-  if (!finalRequester) return jsonResponse({ error: "Requester not found" }, 404);
-
-  const targetUserId = finalRequester.user_id || String(finalRequester.id);
-
-  // 2. CHECK EXISTING PENDING REQUESTS
-  // Allow resubmission if previous request was Rejected or Cancelled
-  const existingReq = await env.DB.prepare(`
-    SELECT * FROM limit_approval_requests 
-    WHERE (user_id = ? OR user_id = ?) AND UPPER(request_type) = ? AND for_month = ? AND LOWER(status) = 'pending'
-  `).bind(targetUserId, String(finalRequester.id), reqTypeUpper, month).first();
-
-  if (existingReq) {
-    const typeLabel = reqTypeUpper === "AUTO" ? "Auto" : "Bike";
-    return jsonResponse({ 
-      error: `You already have a pending limit extension request for ${typeLabel} in ${month} (+${existingReq.requested_value}). Please wait for your manager to review it.` 
-    }, 400);
-  }
-
-  const timestamp = parseClientTimestamp(client_timestamp);
-
-  // We find their coordinator or zonal manager to assign
-  const managerName = finalRequester.manager || finalRequester.zonal_manager || finalRequester.coordinator;
-  let managerId = "Admin"; // Default fallback
-
-  if (managerName && managerName !== "None") {
-    // Look up manager's user_id or id by name
-    const mgrUser = await env.DB.prepare(
-      "SELECT user_id, id FROM users WHERE LOWER(TRIM(name)) = ? OR user_id = ?"
-    ).bind(managerName.trim().toLowerCase(), managerName.trim()).first();
-    if (mgrUser) {
-      managerId = mgrUser.user_id || String(mgrUser.id);
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return jsonResponse({ error: "Invalid JSON body" }, 400);
     }
+
+    const { user_id, type, amount, month, client_timestamp } = body || {};
+    const effectiveUserId = user_id || user?.user_id || user?.id;
+
+    if (!effectiveUserId || !type || amount === undefined || amount === null) {
+      return jsonResponse({ error: "Missing required parameters: user_id, type, amount" }, 400);
+    }
+
+    const reqTypeUpper = (type || "").trim().toUpperCase();
+    const reqAmount = parseFloat(amount || 0);
+
+    if (isNaN(reqAmount) || reqAmount <= 0) {
+      return jsonResponse({ error: "Please enter a valid extension amount greater than 0." }, 400);
+    }
+
+    // 1. MAXIMUM EXTENSION AMOUNT CAPS:
+    // AUTO max extension allowed: ₹2,500
+    // KM (Bike) max extension allowed: 1,500
+    const maxAllowedExtension = reqTypeUpper === "AUTO" ? 2500 : 1500;
+    if (reqAmount > maxAllowedExtension) {
+      const typeLabel = reqTypeUpper === "AUTO" ? "Auto is ₹2,500" : "Bike (KM) is 1,500";
+      return jsonResponse({ error: `Maximum limit extension allowed for ${typeLabel}. You cannot request more than this.` }, 400);
+    }
+
+    // Default to current month if not provided or empty
+    const targetMonth = (month && String(month).trim()) || new Date().toISOString().slice(0, 7);
+
+    // Find requester from user profile or fallback to authenticated user
+    let finalRequester = user;
+    try {
+      const requester = await env.DB.prepare(
+        "SELECT * FROM users WHERE user_id = ? OR id = ? OR e_code = ?"
+      ).bind(String(effectiveUserId), String(effectiveUserId), String(effectiveUserId)).first();
+      if (requester) finalRequester = requester;
+    } catch (_) {}
+
+    if (!finalRequester) return jsonResponse({ error: "Requester not found" }, 404);
+
+    const targetUserId = finalRequester.user_id || String(finalRequester.id || effectiveUserId);
+
+    // 2. CHECK EXISTING PENDING REQUESTS
+    try {
+      const existingReq = await env.DB.prepare(`
+        SELECT * FROM limit_approval_requests 
+        WHERE (user_id = ? OR user_id = ?) AND UPPER(request_type) = ? AND for_month = ? AND LOWER(status) = 'pending'
+      `).bind(targetUserId, String(finalRequester.id || targetUserId), reqTypeUpper, targetMonth).first();
+
+      if (existingReq) {
+        const typeLabel = reqTypeUpper === "AUTO" ? "Auto" : "Bike";
+        return jsonResponse({ 
+          error: `You already have a pending limit extension request for ${typeLabel} in ${targetMonth} (+${existingReq.requested_value}). Please wait for your manager to review it.` 
+        }, 400);
+      }
+    } catch (checkErr) {
+      console.warn("Could not check existing limit request:", checkErr.message);
+    }
+
+    const timestamp = parseClientTimestamp(client_timestamp);
+
+    // We find their coordinator or zonal manager to assign
+    const managerName = finalRequester.manager || finalRequester.zonal_manager || finalRequester.coordinator;
+    let managerId = "Admin"; // Default fallback
+
+    if (managerName && managerName !== "None") {
+      try {
+        const mgrUser = await env.DB.prepare(
+          "SELECT user_id, id FROM users WHERE LOWER(TRIM(name)) = ? OR user_id = ?"
+        ).bind(managerName.trim().toLowerCase(), managerName.trim()).first();
+        if (mgrUser) {
+          managerId = mgrUser.user_id || String(mgrUser.id);
+        }
+      } catch (_) {}
+    }
+
+    await runWrite(env, `
+      INSERT INTO limit_approval_requests (user_id, request_type, requested_value, status, for_month, manager_id, created_at, updated_at)
+      VALUES (?, ?, ?, 'Pending', ?, ?, ?, ?)
+    `, [targetUserId, reqTypeUpper, reqAmount, targetMonth, managerId, timestamp, timestamp]);
+
+    // Notify manager
+    try {
+      await runWrite(env, `
+        INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
+        VALUES (?, '📥 New Limit Request', ?, 'warning', 0, '/approval-center', ?)
+      `, [
+        managerId,
+        `${finalRequester.name || targetUserId} has requested extra ${reqAmount} ${reqTypeUpper} limit for ${targetMonth}.`,
+        timestamp
+      ]);
+    } catch (_) {}
+
+    return jsonResponse({ status: "success", success: true, message: "Limit request raised successfully." });
+  } catch (err) {
+    console.error("handleCreateLimitRequest error:", err);
+    return jsonResponse({ error: "Failed to raise limit request: " + (err.message || String(err)) }, 500);
   }
-
-  await runWrite(env, `
-    INSERT INTO limit_approval_requests (user_id, request_type, requested_value, status, for_month, manager_id, created_at, updated_at)
-    VALUES (?, ?, ?, 'Pending', ?, ?, ?, ?)
-  `, [targetUserId, reqTypeUpper, reqAmount, month, managerId, timestamp, timestamp]);
-
-  // Notify manager
-  await runWrite(env, `
-    INSERT INTO notifications (user_id, title, description, type, read, link, created_at)
-    VALUES (?, '📥 New Limit Request', ?, 'warning', 0, '/approval-center', ?)
-  `, [
-    managerId,
-    `${finalRequester.name || targetUserId} has requested extra ${reqAmount} ${reqTypeUpper} limit for ${month}.`,
-    timestamp
-  ]);
-
-  return jsonResponse({ status: "success", success: true, message: "Limit request raised successfully." });
 }
 
 /**
@@ -3665,8 +3682,15 @@ export async function handleSubmitExpense(request, env, params, query, user) {
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             params: [
-              itiId, pms.barcode || null, pms.frequency || null, asset.district_name || null, asset.hospital_name || null,
-              asset.equipment_name || null, asset.model_name || null, asset.inventory_status || null, pms.photo_url || ""
+              itiId, 
+              pms.barcode || null, 
+              pms.frequency || pms.pms_frequency || null, 
+              pms.district_name || asset.district_name || null, 
+              pms.hospital_name || asset.hospital_name || null,
+              pms.equipment_name || asset.equipment_name || pms.equipment || asset.asset_name || null, 
+              pms.model_name || asset.model_name || null, 
+              pms.inventory_status || asset.inventory_status || null, 
+              pms.photo_url || ""
             ]
           });
         }
@@ -4799,8 +4823,19 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
                 if (item.barcode) {
                   barcodes.push(item.barcode);
                   const dbCall = itiCallsMap[item.barcode];
-                  if (dbCall && dbCall.photo_url) {
-                    item.photo_url = dbCall.photo_url;
+                  if (dbCall) {
+                    if (dbCall.photo_url) item.photo_url = dbCall.photo_url;
+                    if (dbCall.equipment_name) item.equipment_name = dbCall.equipment_name;
+                    if (dbCall.hospital_name) item.hospital_name = dbCall.hospital_name;
+                    if (dbCall.model_name) item.model_name = dbCall.model_name;
+                    if (!item.asset_details) {
+                      item.asset_details = {
+                        equipment_name: dbCall.equipment_name,
+                        hospital_name: dbCall.hospital_name,
+                        model_name: dbCall.model_name,
+                        district_name: dbCall.district_name
+                      };
+                    }
                   }
                 }
               }
@@ -4809,8 +4844,22 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
                 if (item.barcode) {
                   if (!barcodes.includes(item.barcode)) barcodes.push(item.barcode);
                   const dbPms = itiPmsMap[item.barcode];
-                  if (dbPms && dbPms.photo_url) {
-                    item.photo_url = dbPms.photo_url;
+                  if (dbPms) {
+                    if (dbPms.photo_url) item.photo_url = dbPms.photo_url;
+                    if (dbPms.equipment_name) item.equipment_name = dbPms.equipment_name;
+                    if (dbPms.hospital_name) item.hospital_name = dbPms.hospital_name;
+                    if (dbPms.model_name) item.model_name = dbPms.model_name;
+                    if (dbPms.district_name) item.district_name = dbPms.district_name;
+                    if (dbPms.inventory_status) item.inventory_status = dbPms.inventory_status;
+                    if (!item.asset_details) {
+                      item.asset_details = {
+                        equipment_name: dbPms.equipment_name,
+                        hospital_name: dbPms.hospital_name,
+                        model_name: dbPms.model_name,
+                        district_name: dbPms.district_name,
+                        inventory_status: dbPms.inventory_status
+                      };
+                    }
                   }
                 }
               }

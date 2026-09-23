@@ -166,7 +166,14 @@ export async function runBatchWrite(env, statements) {
   });
 
   try {
-    const results = await db.batch(batch);
+    // Cloudflare D1 caps batch statements at 100. Chunk in slices of 50 to safely handle up to 500+ statements.
+    const CHUNK_SIZE = 50;
+    const results = [];
+    for (let i = 0; i < batch.length; i += CHUNK_SIZE) {
+      const slice = batch.slice(i, i + CHUNK_SIZE);
+      const res = await db.batch(slice);
+      results.push(...res);
+    }
     // Re-assemble to match original indices (accounting for filtered notifications stmts)
     let ri = 0;
     return statements.map(s => {
