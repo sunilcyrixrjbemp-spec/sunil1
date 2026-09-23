@@ -260,6 +260,8 @@ export async function queueEmail(env, opts) {
   return await sendEmailDirect(env, { to, toName, subject, html, emailLogId });
 }
 
+export const sendEmail = queueEmail;
+
 /**
  * Send immediately without queueing.
  * Called by the queue processor and as direct fallback.
