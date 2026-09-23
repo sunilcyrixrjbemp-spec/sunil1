@@ -23,36 +23,52 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8787",
 ];
 
+const ALLOWED_ORIGIN_PATTERNS = [
+  /^https:\/\/(.*\.)?cyrixhealth\.com$/,
+  /^https:\/\/(.*\.)?indrae\.in$/,
+  /^https:\/\/cyrix-frontend\.pages\.dev$/,
+  /^https:\/\/cyrixapp\.pages\.dev$/,
+  /^https:\/\/fieldops(-secondary)?-api\.sunilbishnoi\.workers\.dev$/,
+  /^capacitor:\/\/localhost$/,
+  /^http:\/\/localhost(:\d+)?$/,
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/,
+];
+
+/**
+ * Validate whether request origin is explicitly permitted.
+ */
+export function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  return ALLOWED_ORIGIN_PATTERNS.some((pattern) => pattern.test(origin));
+}
+
 /**
  * Compute safe CORS origin header value.
  * Returns the exact origin if allowed, or the primary production origin.
  */
 export function getAllowedOrigin(requestOrigin) {
-  if (!requestOrigin) return "*";
-  if (ALLOWED_ORIGINS.includes(requestOrigin)) return requestOrigin;
-  if (requestOrigin.includes("cyrixhealth.com") || 
-      requestOrigin.includes("pages.dev") || 
-      requestOrigin.includes("workers.dev") || 
-      requestOrigin.includes("indrae.in") ||
-      requestOrigin.startsWith("http://localhost:") || 
-      requestOrigin.startsWith("http://127.0.0.1:")) {
-    return requestOrigin;
-  }
-  return requestOrigin || "*";
+  if (!requestOrigin) return ALLOWED_ORIGINS[0];
+  if (isAllowedOrigin(requestOrigin)) return requestOrigin;
+  return ALLOWED_ORIGINS[0];
 }
 
 /**
  * Build CORS headers for a given request origin.
  */
 export function corsHeaders(requestOrigin) {
-  return {
-    "Access-Control-Allow-Origin": getAllowedOrigin(requestOrigin),
+  const allowed = isAllowedOrigin(requestOrigin);
+  const originHeader = allowed ? requestOrigin : ALLOWED_ORIGINS[0];
+  const headers = {
+    "Access-Control-Allow-Origin": originHeader,
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Request-ID, X-Read-DB",
     "Access-Control-Max-Age": "86400",
-    "Access-Control-Allow-Credentials": "true",
     "Vary": "Origin",
   };
+  if (allowed) {
+    headers["Access-Control-Allow-Credentials"] = "true";
+  }
+  return headers;
 }
 
 /**
@@ -68,7 +84,7 @@ export function securityHeaders() {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
     "Content-Security-Policy": [
       "default-src 'self'",
-      "connect-src 'self' https://indrae.in https://*.workers.dev https://script.google.com https://www.google-analytics.com https://analytics.google.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com",
+      "connect-src 'self' https://indrae.in https://*.workers.dev https://www.google-analytics.com https://analytics.google.com https://fcmregistrations.googleapis.com https://fcm.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",

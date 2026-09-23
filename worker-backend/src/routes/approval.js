@@ -1269,58 +1269,10 @@ export async function handleAutoApprovalExpiry(env) {
   return { success: true, processed: results };
 }
 
-async function processBulkApprovalInBackground(requestUrl, env, params, query, user, expense_ids, action_type, comments, clientTimestamp) {
-  let successCount = 0;
-  let failCount = 0;
-
-  for (const expId of expense_ids) {
-    try {
-      const bulkLabel = action_type === "reject" ? "Bulk Rejection" : "Bulk Approval";
-      const cleanUserComment = (comments || "").trim();
-      const formattedComment = cleanUserComment 
-        ? (cleanUserComment.startsWith("Bulk Approval") || cleanUserComment.startsWith("Bulk Rejection") 
-            ? cleanUserComment 
-            : `${bulkLabel} :- ${cleanUserComment}`)
-        : bulkLabel;
-
-      const mockParams = { expense_id: String(expId) };
-      const mockRequest = new Request(requestUrl, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          comments: formattedComment,
-          client_timestamp: parseClientTimestamp(clientTimestamp)
-        })
-      });
-
-      let res;
-      if (action_type === "reject") {
-        res = await handleReject(mockRequest, env, mockParams, query, user);
-      } else {
-        res = await handleApprove(mockRequest, env, mockParams, query, user);
-      }
-
-      if (res && res.status >= 200 && res.status < 300) {
-        await env.DB.prepare(`UPDATE expenses SET processing_status = NULL WHERE id = ?`).bind(expId).run().catch(() => {});
-        successCount++;
-      } else {
-        // If approval fails in background, reset processing_status so claim reappears in Approval Center for retry
-        await env.DB.prepare(`UPDATE expenses SET processing_status = NULL WHERE id = ?`).bind(expId).run().catch(() => {});
-        failCount++;
-      }
-    } catch (err) {
-      console.error(`Error processing background bulk claim ID ${expId}:`, err);
-      await env.DB.prepare(`UPDATE expenses SET processing_status = NULL WHERE id = ?`).bind(expId).run().catch(() => {});
-      failCount++;
-    }
-  }
-  console.log(`[Bulk Queue Job Finished] Action: ${action_type}, Processed ${successCount}/${expense_ids.length} successfully.`);
-}
-
 export async function handleBulkApprove(request, env, params, query, user) {
   const userRoleClean = (user.role || "").trim().toLowerCase();
-  const allowedBulkRoles = ["coordinator", "project head"];
-  const isDynamicAuthorized = Number(user.can_bulk_approve) === 1 || Number(user.canBulkApprove) === 1;
+  const allowedBulkRoles = ["coordinator", "project head", "admin"];
+  const isDynamicAuthorized = Number(user.can_bulk_approve) === 1 || Number(user.canBulkApprove) === 1 || userRoleClean === "admin";
   
   if (!isDynamicAuthorized && !allowedBulkRoles.includes(userRoleClean)) {
     return jsonResponse({
@@ -1335,38 +1287,196 @@ export async function handleBulkApprove(request, env, params, query, user) {
     body = {};
   }
 
-  const { expense_ids, action_type, comments } = body;
+  const { expense_ids, action_type = "approve", comments } = body;
   if (!Array.isArray(expense_ids) || expense_ids.length === 0) {
     return jsonResponse({ error: "Invalid or empty expense_ids array" }, 400);
   }
 
-  // Immediately tag all selected claims as QUEUED in database so they disappear from pending list instantly
-  try {
-    const placeholders = expense_ids.map(() => "?").join(",");
-    await env.DB.prepare(
-      `UPDATE expenses SET processing_status = 'QUEUED' WHERE id IN (${placeholders})`
-    ).bind(...expense_ids).run();
-  } catch (e) {
-    console.error("Failed to tag queued status for bulk claims:", e);
+  const timestamp = parseClientTimestamp(body.client_timestamp);
+  const bulkLabel = action_type === "reject" ? "Bulk Rejection" : "Bulk Approval";
+  const cleanUserComment = (comments || "").trim();
+  const formattedComment = cleanUserComment 
+    ? (cleanUserComment.startsWith("Bulk Approval") || cleanUserComment.startsWith("Bulk Rejection") 
+        ? cleanUserComment 
+        : `${bulkLabel} by ${user.name}: ${cleanUserComment}`)
+    : `${bulkLabel} by ${user.name}`;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const rawId of expense_ids) {
+    const expId = parseInt(rawId, 10);
+    if (isNaN(expId)) continue;
+
+    try {
+      if (expId < 0) {
+        // Limit Approval Request
+        const limitId = -expId;
+        const pl = await env.DB.prepare("SELECT * FROM limit_approval_requests WHERE id = ?").bind(limitId).first();
+        if (pl) {
+          if (action_type === "reject") {
+            await runWrite(env, "UPDATE limit_approval_requests SET status = 'Rejected', updated_at = ? WHERE id = ?", [timestamp, limitId]);
+            await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, ?, 0, ?, ?)", [
+              pl.user_id, `Limit Request ${pl.request_type} Rejected`, `Your request for extra ${pl.requested_value} ${pl.request_type} was rejected by ${user.name}.`, "danger", "/expense", timestamp
+            ]);
+          } else {
+            await runWrite(env, "UPDATE limit_approval_requests SET status = 'Approved', approved_value = ?, updated_at = ? WHERE id = ?", [pl.requested_value, timestamp, limitId]);
+            await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, ?, 0, ?, ?)", [
+              pl.user_id, `Limit Request ${pl.request_type} Approved`, `Your request for extra ${pl.requested_value} ${pl.request_type} has been approved by ${user.name}.`, "success", "/expense", timestamp
+            ]);
+          }
+          successCount++;
+        }
+        continue;
+      }
+
+      // Standard Expense Claim (expId > 0)
+      const expense = await env.DB.prepare("SELECT * FROM expenses WHERE id = ?").bind(expId).first();
+      if (!expense) {
+        failCount++;
+        continue;
+      }
+
+      const expStatus = String(expense.status || "").toLowerCase().trim();
+      if (["cancelled", "rejected", "returned_to_draft", "admin_cancelled"].includes(expStatus)) {
+        failCount++;
+        continue;
+      }
+
+      // Fetch pending approval for this claim
+      // As an authorized bulk approver, user is permitted to approve active pending step
+      const pendingApproval = await env.DB.prepare(
+        "SELECT * FROM approvals WHERE expense_id = ? AND status = 'pending' ORDER BY level_number ASC LIMIT 1"
+      ).bind(expId).first();
+
+      if (!pendingApproval) {
+        // Clear any stuck processing_status
+        await env.DB.prepare("UPDATE expenses SET processing_status = NULL WHERE id = ?").bind(expId).run().catch(() => {});
+        failCount++;
+        continue;
+      }
+
+      if (action_type === "reject") {
+        const statements = [
+          {
+            sql: "UPDATE approvals SET status = 'rejected', comments = ?, updated_at = ? WHERE id = ?",
+            params: [formattedComment, timestamp, pendingApproval.id]
+          },
+          {
+            sql: "UPDATE approvals SET status = 'cancelled', updated_at = ? WHERE expense_id = ? AND status = 'waiting'",
+            params: [timestamp, expId]
+          },
+          {
+            sql: "UPDATE expenses SET status = 'rejected', processing_status = NULL, updated_at = ? WHERE id = ?",
+            params: [timestamp, expId]
+          }
+        ];
+        await runBatchWrite(env, statements);
+
+        logFinancialAudit(env, {
+          expense_id: expense.id,
+          expense_code: expense.expense_code || String(expense.id),
+          user_id: expense.user_id || "",
+          actor_id: user.user_id || String(user.id),
+          actor_name: user.name || "Manager",
+          actor_role: user.role || "manager",
+          action_type: "REJECTED",
+          change_reason: formattedComment,
+          snapshot_json: { amount: expense.amount, status: "rejected" }
+        });
+
+        // Notify submitter
+        const submitter = await env.DB.prepare("SELECT user_id FROM users WHERE id = ?").bind(expense.user_id).first();
+        if (submitter) {
+          await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, ?, 0, ?, ?)", [
+            submitter.user_id, "❌ Expense Claim Rejected", `Your claim ${expense.expense_code} has been rejected by ${user.name}.`, "danger", "/home", timestamp
+          ]);
+        }
+        successCount++;
+
+      } else {
+        // Approve action
+        // Check if there is a next waiting approval step
+        const nextApproval = await env.DB.prepare(
+          "SELECT * FROM approvals WHERE expense_id = ? AND level_number > ? AND status = 'waiting' ORDER BY level_number ASC LIMIT 1"
+        ).bind(expId, pendingApproval.level_number).first();
+
+        let finalStatus = "approved";
+        const statements = [
+          {
+            sql: "UPDATE approvals SET status = 'approved', comments = ?, updated_at = ? WHERE id = ?",
+            params: [formattedComment, timestamp, pendingApproval.id]
+          }
+        ];
+
+        if (nextApproval) {
+          finalStatus = `submitted_l${nextApproval.level_number}`;
+          statements.push({
+            sql: "UPDATE approvals SET status = 'pending', updated_at = ? WHERE id = ?",
+            params: [timestamp, nextApproval.id]
+          });
+        }
+
+        statements.push({
+          sql: "UPDATE expenses SET status = ?, processing_status = NULL, updated_at = ? WHERE id = ?",
+          params: [finalStatus, timestamp, expId]
+        });
+
+        await runBatchWrite(env, statements);
+
+        logFinancialAudit(env, {
+          expense_id: expense.id,
+          expense_code: expense.expense_code || String(expense.id),
+          user_id: expense.user_id || "",
+          actor_id: user.user_id || String(user.id),
+          actor_name: user.name || "Manager",
+          actor_role: user.role || "manager",
+          action_type: finalStatus === "approved" ? "APPROVED" : "FORWARDED",
+          change_reason: formattedComment,
+          snapshot_json: { amount: expense.amount, status: finalStatus }
+        });
+
+        // Notifications
+        const submitter = await env.DB.prepare("SELECT user_id FROM users WHERE id = ?").bind(expense.user_id).first();
+        if (submitter) {
+          if (finalStatus === "approved") {
+            await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, ?, 0, ?, ?)", [
+              submitter.user_id, "✅ Expense Claim Approved!", `Your claim ${expense.expense_code} has been approved by ${user.name}.`, "success", "/home", timestamp
+            ]);
+          } else {
+            await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, ?, 0, ?, ?)", [
+              submitter.user_id, "🔄 Claim Forwarded", `Your claim ${expense.expense_code} has been approved by ${user.name} and forwarded to the next level.`, "info", "/home", timestamp
+            ]);
+          }
+        }
+
+        if (nextApproval) {
+          const nextApproverUser = await env.DB.prepare("SELECT user_id FROM users WHERE id = ?").bind(nextApproval.approver_id).first();
+          if (nextApproverUser) {
+            await runWrite(env, "INSERT INTO notifications (user_id, title, description, type, read, link, created_at) VALUES (?, ?, ?, ?, 0, ?, ?)", [
+              nextApproverUser.user_id, "📥 Pending Approval Forwarded", `Claim ${expense.expense_code} has been forwarded to you for review.`, "warning", "/approval-center", timestamp
+            ]);
+          }
+        }
+        successCount++;
+      }
+    } catch (err) {
+      console.error(`Error processing bulk claim ID ${expId}:`, err);
+      await env.DB.prepare("UPDATE expenses SET processing_status = NULL WHERE id = ?").bind(expId).run().catch(() => {});
+      failCount++;
+    }
   }
 
-  // Fire background queue execution instantly so user gets 0.01ms response
-  const bgPromise = processBulkApprovalInBackground(
-    request.url, env, params, query, user, expense_ids, action_type, comments, body.client_timestamp
-  );
-
-  if (env.ctx && typeof env.ctx.waitUntil === "function") {
-    env.ctx.waitUntil(bgPromise);
-  } else {
-    bgPromise.catch(err => console.error("Background bulk approval error:", err));
-  }
+  // Also clean up any lingering 'QUEUED' claims in database
+  await env.DB.prepare("UPDATE expenses SET processing_status = NULL WHERE processing_status = 'QUEUED'").run().catch(() => {});
 
   return jsonResponse({
     status: "success",
-    message: `Bulk ${action_type === "reject" ? "rejection" : "approval"} request for ${expense_ids.length} entries queued successfully. Processing in background.`,
-    successCount: expense_ids.length,
-    failCount: 0,
-    queued: true
+    success: true,
+    message: `Successfully ${action_type === "reject" ? "rejected" : "approved"} ${successCount} claims.` + (failCount > 0 ? ` (${failCount} failed)` : ""),
+    successCount,
+    failCount,
+    queued: false
   });
 }
 

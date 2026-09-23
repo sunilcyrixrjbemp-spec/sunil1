@@ -83,3 +83,5 @@ worker-backend/.dev.vars
 !.env.example
 worker-backend/sync-prod-users.sql
 worker-backend/update_all_bills_base64.sql
+worker-backend/reset-local-passwords.sql
+worker-backend/sync-prod-to-local.js

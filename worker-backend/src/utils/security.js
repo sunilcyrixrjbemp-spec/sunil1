@@ -131,13 +131,10 @@ export function generateOTP() {
  */
 function resolveJwtSecret(secret, env = null) {
   // Priority: explicit secret → env.API_SECRET → error
-  if (secret && String(secret).trim().length >= 32) return String(secret).trim();
-  if (env?.API_SECRET && String(env.API_SECRET).trim().length >= 32) return String(env.API_SECRET).trim();
-  // Development fallback — only allowed when wrangler dev is running locally
-  // NEVER acceptable in production
-  const devFallback = "cyrix-fieldconnect-dev-secret-DO-NOT-USE-IN-PRODUCTION-2026";
-  console.warn("[SECURITY] API_SECRET not set — using development fallback. Set env.API_SECRET before deploying.");
-  return devFallback;
+  if (secret && String(secret).trim().length >= 16) return String(secret).trim();
+  if (env?.API_SECRET && String(env.API_SECRET).trim().length >= 16) return String(env.API_SECRET).trim();
+  // Strictly prevent hardcoded fallback secret from being used
+  throw new Error("[SECURITY FATAL] JWT secret not set. Set env.API_SECRET with a cryptographically secure key before deploying.");
 }
 
 /**

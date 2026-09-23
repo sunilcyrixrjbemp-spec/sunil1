@@ -2467,7 +2467,9 @@ export default function ExpensePage() {
   useEffect(() => {
     if (isLimitExceeded && !hasShownExceededModal) {
       setExceededType(limitType!);
-      setReqAdditional(excess.toFixed(2));
+      const maxCap = limitType === "AUTO" ? 2500 : 1500;
+      const safeReq = Math.min(excess, maxCap);
+      setReqAdditional(safeReq.toFixed(2));
       setHasShownExceededModal(true);
       setShowApprovalModal(true);
     } else if (!isLimitExceeded) {
@@ -3194,7 +3196,8 @@ export default function ExpensePage() {
         await fetchClaims();
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || err.message || "Failed to send request.");
+      const errorMsg = err.response?.data?.error || err.response?.data?.detail || err.response?.data?.message || err.message || "Failed to send request.";
+      toast.error(errorMsg);
     } finally {
       setSendingRequest(false);
     }
@@ -6457,8 +6460,11 @@ export default function ExpensePage() {
       {/* ================= LIMIT APPROVAL DIALOG ================= */}
       {showApprovalModal && (() => {
         // Check if user already submitted a limit extension for this type this month
-        const hasExistingRequest = exceededType === "KM" ? !!existingKmReq : !!existingAutoReq;
         const existingReq = exceededType === "KM" ? existingKmReq : existingAutoReq;
+        const isPending = existingReq && existingReq.status === "Pending";
+        const isRejected = existingReq && existingReq.status === "Rejected";
+        const hasExistingRequest = isPending;
+        const maxCap = exceededType === "AUTO" ? 2500 : 1500;
         return (
           <div className="modal-lte-overlay z-[99999]">
             <div className="modal-lte-content max-w-md">
@@ -6476,41 +6482,56 @@ export default function ExpensePage() {
                   Exceeded Overflow: {excess.toFixed(1)} {exceededType === "KM" ? "KM" : "₹"}
                 </div>
 
+                {isRejected && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded text-rose-800 space-y-1">
+                    <p className="font-bold flex items-center gap-1">
+                      <span>❌ Previous Request Rejected:</span>
+                      <span className="font-semibold">+{existingReq.requested_value} {exceededType === "KM" ? "KM" : "₹"}</span>
+                    </p>
+                    <p className="text-[11px] text-rose-700">You may enter an adjusted amount within the policy limits and submit a revised request.</p>
+                  </div>
+                )}
+
                 {hasExistingRequest ? (
-                  /* Already submitted a request this month — show status, block re-submit */
+                  /* Pending request exists — show status, block duplicate */
                   <div className="p-3 bg-amber-50 border border-amber-300 rounded space-y-2">
                     <p className="font-bold text-amber-800 flex items-center gap-1.5">
                       <Info className="w-3.5 h-3.5 shrink-0" />
-                      Limit Extension Already Requested This Month
+                      Limit Extension Pending Approval
                     </p>
                     <p className="text-amber-700 font-medium leading-relaxed">
-                      You have already submitted a limit extension request for {exceededType} this month. You can only submit one request per month.
+                      You already have a pending limit extension request for {exceededType} awaiting manager review.
                     </p>
                     {existingReq && (
-                      <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${
-                        existingReq.status === "Approved" ? "bg-emerald-100 text-emerald-700" :
-                        existingReq.status === "Rejected" ? "bg-rose-100 text-rose-700" :
-                        "bg-blue-100 text-blue-700"
-                      }`}>
-                        Status: {existingReq.status === "Approved" ? "✓ Approved" :
-                                 existingReq.status === "Rejected" ? "❌ Rejected" :
-                                 "⏳ Pending"} — Requested: +{existingReq.requested_value} {exceededType === "KM" ? "KM" : "₹"}
+                      <div className="text-xs font-bold px-2 py-1 rounded inline-block bg-blue-100 text-blue-700">
+                        Status: ⏳ Pending — Requested: +{existingReq.requested_value} {exceededType === "KM" ? "KM" : "₹"}
                       </div>
                     )}
                     <p className="text-[10px] text-gray-500 font-medium italic">
-                      Your extension request will reset next month.
+                      Please check with your manager or await approval.
                     </p>
                   </div>
                 ) : (
                   /* Allow new request */
                   <div className="space-y-1.5">
-                    <label className="label-lte">Requested Additional {exceededType}</label>
+                    <div className="flex justify-between items-center">
+                      <label className="label-lte">Requested Additional {exceededType}</label>
+                      <span className="text-[10px] text-slate-500 font-normal">Max: {exceededType === "AUTO" ? "₹2,500" : "1,500 KM"}</span>
+                    </div>
                     <input
                       type="number"
-                      min="0.01"
+                      min="1"
+                      max={maxCap}
                       step="any"
                       value={reqAdditional}
-                      onChange={(e) => setReqAdditional(e.target.value)}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val) && val > maxCap) {
+                          setReqAdditional(String(maxCap));
+                        } else {
+                          setReqAdditional(e.target.value);
+                        }
+                      }}
                       className="input-lte font-bold"
                     />
                   </div>

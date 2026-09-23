@@ -7,7 +7,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/integration.test.js tests/security.test.js tests/security_error_leak.test.js tests/validation.test.js"
   },
   "dependencies": {
     "drizzle-orm": "^0.30.10",

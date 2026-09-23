@@ -63,28 +63,7 @@ export const formatImageUrl = (url: any): string => {
     str = str.replace(`${API_BASE}${API_BASE}`, API_BASE);
   }
 
-  // 3. Google Drive direct stream & R2 auto-transfer proxy
-  if (str.includes("drive.google.com") || str.includes("docs.google.com")) {
-    const matchD = str.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    const matchId = str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    const fileId = matchD ? matchD[1] : (matchId ? matchId[1] : null);
-    if (fileId) {
-      return `${API_BASE}/api/r2/gdrive-proxy?id=${fileId}`;
-    }
-  }
-
-  // 4. Raw Google Drive File ID (25-50 chars)
-  if (str.includes("/gdrive/")) {
-    const rawId = str.split("/gdrive/").pop()?.split("?")[0]?.replace(/\.(jpg|jpeg|png|webp)$/i, "") || "";
-    if (rawId && /^[a-zA-Z0-9_-]{20,}$/.test(rawId)) {
-      return `${API_BASE}/api/r2/gdrive-proxy?id=${rawId}`;
-    }
-  }
-  if (/^[a-zA-Z0-9_-]{25,50}$/.test(str) && !str.startsWith("http")) {
-    return `${API_BASE}/api/r2/gdrive-proxy?id=${str}`;
-  }
-
-  // 5. Absolute HTTP(S) or Data URI
+  // 3. Absolute HTTP(S) or Data URI
   if (str.startsWith("http://") || str.startsWith("https://") || str.startsWith("data:")) {
     return str;
   }
@@ -581,15 +560,22 @@ const LegDetailCard = ({
         if (!att) continue;
 
         const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
-        const attLegNum = typeof att === "object" ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg) : undefined;
+        const attLegNum = typeof att === "object"
+          ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg ?? (att.itinerary_id ? parseInt(String(att.itinerary_id).split("-").pop() || "", 10) : undefined))
+          : undefined;
         const attAmount = typeof att === "object" ? parseFloat(att.amount || att.travel_amount || att.leg_amount || 0) : 0;
         const attMode = typeof att === "object" ? String(att.mode || att.travel_mode || att.bill_type || "").toLowerCase() : "";
         const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
         if (!urlStr) continue;
         const lowerUrl = urlStr.toLowerCase();
 
-        if (attLegIdx !== undefined && attLegIdx !== null && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
+        // Skip non-travel bills
+        if (attMode.includes("hotel") || attMode.includes("stay") || attMode.includes("local") || attMode.includes("purchase") || attMode.includes("other") || attMode.includes("parcel")) {
+          continue;
+        }
+
         if (attLegNum !== undefined && attLegNum !== null && parseInt(attLegNum, 10) === legNum) return toFullUrl(urlStr);
+        if (attLegIdx !== undefined && attLegIdx !== null && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
 
         if (attAmount > 0 && (Math.abs(attAmount - taAmt) < 2 || Math.abs(attAmount - netLegAmt) < 2)) return toFullUrl(urlStr);
 
@@ -619,14 +605,16 @@ const LegDetailCard = ({
       for (const att of allAttachments) {
         if (!att) continue;
         const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
-        const attLegNum = typeof att === "object" ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg) : undefined;
+        const attLegNum = typeof att === "object"
+          ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg ?? (att.itinerary_id ? parseInt(String(att.itinerary_id).split("-").pop() || "", 10) : undefined))
+          : undefined;
         const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
         if (!urlStr) continue;
         const lowerUrl = urlStr.toLowerCase();
         const billType = typeof att === "object" ? String(att.bill_type || att.category || "").toLowerCase() : "";
 
-        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
-        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum) return toFullUrl(urlStr);
+        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum && (billType.includes("hotel") || billType.includes("stay") || lowerUrl.includes("hotel") || lowerUrl.includes("stay"))) return toFullUrl(urlStr);
+        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index && (billType.includes("hotel") || billType.includes("stay") || lowerUrl.includes("hotel") || lowerUrl.includes("stay"))) return toFullUrl(urlStr);
         if (billType.includes("hotel") || billType.includes("stay") || lowerUrl.includes("hotel") || lowerUrl.includes("stay")) return toFullUrl(urlStr);
       }
     }
@@ -644,14 +632,16 @@ const LegDetailCard = ({
       for (const att of allAttachments) {
         if (!att) continue;
         const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
-        const attLegNum = typeof att === "object" ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg) : undefined;
+        const attLegNum = typeof att === "object"
+          ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg ?? (att.itinerary_id ? parseInt(String(att.itinerary_id).split("-").pop() || "", 10) : undefined))
+          : undefined;
         const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
         if (!urlStr) continue;
         const lowerUrl = urlStr.toLowerCase();
         const billType = typeof att === "object" ? String(att.bill_type || att.category || "").toLowerCase() : "";
 
-        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
-        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum) return toFullUrl(urlStr);
+        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum && (billType.includes("local") || billType.includes("purchase") || lowerUrl.includes("local") || lowerUrl.includes("purchase"))) return toFullUrl(urlStr);
+        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index && (billType.includes("local") || billType.includes("purchase") || lowerUrl.includes("local") || lowerUrl.includes("purchase"))) return toFullUrl(urlStr);
         if (billType.includes("local") || billType.includes("purchase") || lowerUrl.includes("local") || lowerUrl.includes("purchase")) return toFullUrl(urlStr);
       }
     }
@@ -669,14 +659,16 @@ const LegDetailCard = ({
       for (const att of allAttachments) {
         if (!att) continue;
         const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
-        const attLegNum = typeof att === "object" ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg) : undefined;
+        const attLegNum = typeof att === "object"
+          ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg ?? (att.itinerary_id ? parseInt(String(att.itinerary_id).split("-").pop() || "", 10) : undefined))
+          : undefined;
         const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
         if (!urlStr) continue;
         const lowerUrl = urlStr.toLowerCase();
         const billType = typeof att === "object" ? String(att.bill_type || att.category || "").toLowerCase() : "";
 
-        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index) return toFullUrl(urlStr);
-        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum) return toFullUrl(urlStr);
+        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum && (billType.includes("other") || billType.includes("parcel") || lowerUrl.includes("other") || lowerUrl.includes("parcel"))) return toFullUrl(urlStr);
+        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index && (billType.includes("other") || billType.includes("parcel") || lowerUrl.includes("other") || lowerUrl.includes("parcel"))) return toFullUrl(urlStr);
         if (billType.includes("other") || billType.includes("parcel") || lowerUrl.includes("other") || lowerUrl.includes("parcel")) return toFullUrl(urlStr);
       }
     }

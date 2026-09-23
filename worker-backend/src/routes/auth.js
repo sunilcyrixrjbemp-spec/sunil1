@@ -539,7 +539,8 @@ export async function handleForgotPassword(request, env) {
 
     return jsonResponse({ success: true, message: "OTP sent successfully", otp_sent: true, masked_email: maskedEmail });
   } catch (err) {
-    return jsonResponse({ error: `Internal server error: ${err.message}` }, 500);
+    console.error("[ForgotPassword] Failed to process forgot password request:", err);
+    return jsonResponse({ status: "error", error: "Failed to process forgot password request" }, 500);
   }
 }
 

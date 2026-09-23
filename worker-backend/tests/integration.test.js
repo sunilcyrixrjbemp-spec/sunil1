@@ -42,6 +42,15 @@ test("Integration Test: handleSubmitExpense overrides client amount 5000 with ca
           return { meta: { last_row_id: 101, changes: 1 } };
         }
       };
+    },
+    async batch(stmts) {
+      const results = [];
+      for (const s of stmts) {
+        if (s && typeof s.run === "function") {
+          results.push(await s.run());
+        }
+      }
+      return results;
     }
   };
 
@@ -57,15 +66,26 @@ test("Integration Test: handleSubmitExpense overrides client amount 5000 with ca
     description: "Integration test claim",
     itineraries: [
       {
+        travel_type: "Outdoor",
         travel_mode: "BIKE",
-        distance_km: 100,
-        travel_amount: 1000,
-        da_amount: 500,
-        hotel_amount: 500,
+        distance_km: 75,
+        travel_amount: 750,
+        da_amount: 250,
+        hotel_amount: 0,
+        local_purchase: 0,
+        other_amount: 0
+      },
+      {
+        travel_type: "Outdoor",
+        travel_mode: "BIKE",
+        distance_km: 75,
+        travel_amount: 750,
+        da_amount: 250,
+        hotel_amount: 0,
         local_purchase: 0,
         other_amount: 0
       }
-    ] // Actual Leg Sum = 1000 + 500 + 500 = 2000
+    ] // Actual Leg Sum = (500 + 250 + 250) * 2 = 2000
   });
 
   formData.append("payload", payloadStr);

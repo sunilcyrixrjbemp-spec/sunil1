@@ -24,6 +24,44 @@ function hasFullAccess(roleString) {
   return FULL_ACCESS_ROLES.includes((roleString || "").trim().toLowerCase());
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔒 Validation Schemas for Expense Submission
+// ═══════════════════════════════════════════════════════════════════════════
+export const itineraryLegSchema = {
+  safeParse(data) {
+    if (!data || typeof data !== "object") {
+      return { success: false, error: { errors: [{ message: "Invalid itinerary leg object" }] } };
+    }
+    return { success: true, data };
+  }
+};
+
+export const submitExpenseSchema = {
+  safeParse(data) {
+    if (!data || typeof data !== "object") {
+      return { success: false, error: { errors: [{ message: "Invalid payload object" }] } };
+    }
+    if (data.date) {
+      const dateStr = String(data.date).trim();
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+      if (!match) {
+        return { success: false, data, error: { errors: [{ message: "Date must be in YYYY-MM-DD format" }] } };
+      }
+      const y = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const d = parseInt(match[3], 10);
+      if (m < 1 || m > 12 || d < 1 || d > 31) {
+        return { success: false, data, error: { errors: [{ message: "Invalid calendar date (YYYY-MM-DD)" }] } };
+      }
+      const dateObj = new Date(y, m - 1, d);
+      if (dateObj.getFullYear() !== y || dateObj.getMonth() !== m - 1 || dateObj.getDate() !== d) {
+        return { success: false, data, error: { errors: [{ message: "Invalid calendar date (YYYY-MM-DD)" }] } };
+      }
+    }
+    return { success: true, data };
+  }
+};
+
 function parseClientTimestamp(raw) {
   if (!raw) return new Date().toISOString();
   let str = String(raw).trim();
@@ -659,6 +697,22 @@ export async function serializeExpenses(env, expenses, submittersMap) {
     taggingsMap[t.itinerary_id].push(t);
   }
 
+  // Batch fetch attachments for all these expenses
+  let allAttachments = [];
+  if (expenseCodes.length > 0) {
+    try {
+      allAttachments = await queryInChunks(env.DB, "SELECT * FROM expense_attachments WHERE exp_id IN (?)", expenseCodes);
+    } catch (e) {
+      console.warn("Failed to fetch attachments in serializeExpenses:", e.message);
+    }
+  }
+
+  const attachmentsByCode = {};
+  for (const a of allAttachments) {
+    if (!attachmentsByCode[a.exp_id]) attachmentsByCode[a.exp_id] = [];
+    attachmentsByCode[a.exp_id].push(a);
+  }
+
   const assetCosts = await getAssetCostsMap(env);
 
   const result = [];
@@ -774,6 +828,9 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       }
     }
 
+    const expAtts = attachmentsByCode[exp.expense_code] || [];
+    const expAttUrls = expAtts.map(a => a.file_url).filter(Boolean);
+
     result.push({
       id: exp.id,
       expense_code: exp.expense_code,
@@ -787,7 +844,19 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       travel_mode: exp.travel_mode,
       itinerary: exp.itinerary,
       description: finalDesc,
-      attachments: exp.attachments || "",
+      attachments: expAttUrls.length > 0 ? expAttUrls : (exp.attachments ? [exp.attachments] : []),
+      attachments_detailed: expAtts.map(a => {
+        const legNumMatch = a.itinerary_id ? String(a.itinerary_id).split("-").pop() : null;
+        const legNum = legNumMatch ? parseInt(legNumMatch, 10) : null;
+        return {
+          file_url: a.file_url,
+          url: a.file_url,
+          itinerary_id: a.itinerary_id,
+          bill_type: a.bill_type,
+          leg_number: isNaN(legNum) ? null : legNum,
+          leg: isNaN(legNum) ? null : legNum
+        };
+      }),
       da_amount: parseFloat(exp.da_amount || 0.0),
       hotel_amount: parseFloat(exp.hotel_amount || 0.0),
       other_expense_amount: parseFloat(exp.other_expense_amount || 0.0),
@@ -815,29 +884,51 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       category: exp.category || exp.travel_mode || "Travel",
       date: exp.date || exp.itinerary || "",
       purpose: finalDesc,
-      itineraries: legs.map(l => ({
-        leg: l.leg_number,
-        from_district: l.from_district,
-        to_district: l.to_district,
-        from_state: l.from_state || l.state || "Rajasthan",
-        to_state: l.to_state || l.dest_state || "Rajasthan",
-        state: l.state || l.from_state || "Rajasthan",
-        dest_state: l.dest_state || l.to_state || "Rajasthan",
-        from: l.from_location || "",
-        to: l.to_location || "",
-        mode: l.travel_mode,
-        km: parseFloat(l.distance_km || 0),
-        amount: parseFloat(l.travel_amount || 0),
-        sub_mode: l.sub_mode,
-        sub_amount: parseFloat(l.sub_amount || 0),
-        da: parseFloat(l.da_amount || 0),
-        hotel: parseFloat(l.hotel_amount || 0),
-        local_purchase: parseFloat(l.local_purchase || 0),
-        oth_desc: l.other_desc || "",
-        oth_amount: parseFloat(l.other_amount || 0),
-        visit_purpose: l.visit_purpose || "",
-        activity_details: l.activity_details || ""
-      })),
+      itineraries: legs.map(l => {
+        const legNum = l.leg_number;
+        const legAtts = expAtts.filter(a => {
+          const matchNum = a.itinerary_id ? parseInt(String(a.itinerary_id).split("-").pop() || "", 10) : null;
+          return matchNum === legNum;
+        });
+        const travelBill = legAtts.find(a => {
+          const b = (a.bill_type || "").toLowerCase();
+          return !b.includes("hotel") && !b.includes("local_purchase") && !b.includes("other") && !b.includes("communication_mail");
+        })?.file_url || "";
+        const hotelBill = legAtts.find(a => (a.bill_type || "").toLowerCase().includes("hotel"))?.file_url || "";
+        const lpBill = legAtts.find(a => (a.bill_type || "").toLowerCase().includes("local_purchase"))?.file_url || "";
+        const othBill = legAtts.find(a => (a.bill_type || "").toLowerCase().includes("other"))?.file_url || "";
+
+        return {
+          leg: l.leg_number,
+          from_district: l.from_district,
+          to_district: l.to_district,
+          from_state: l.from_state || l.state || "Rajasthan",
+          to_state: l.to_state || l.dest_state || "Rajasthan",
+          state: l.state || l.from_state || "Rajasthan",
+          dest_state: l.dest_state || l.to_state || "Rajasthan",
+          from: l.from_location || "",
+          to: l.to_location || "",
+          travel_bill: travelBill,
+          ticket_url: travelBill,
+          bill_url: travelBill,
+          hotel_bill: hotelBill,
+          local_purchase_bill: lpBill,
+          other_bill: othBill,
+          attachments: legAtts.map(a => a.file_url),
+          mode: l.travel_mode,
+          km: parseFloat(l.distance_km || 0),
+          amount: parseFloat(l.travel_amount || 0),
+          sub_mode: l.sub_mode,
+          sub_amount: parseFloat(l.sub_amount || 0),
+          da: parseFloat(l.da_amount || 0),
+          hotel: parseFloat(l.hotel_amount || 0),
+          local_purchase: parseFloat(l.local_purchase || 0),
+          oth_desc: l.other_desc || "",
+          oth_amount: parseFloat(l.other_amount || 0),
+          visit_purpose: l.visit_purpose || "",
+          activity_details: l.activity_details || ""
+        };
+      }),
       legs: legs.map(l => ({
         leg: l.leg_number,
         from_district: l.from_district,
@@ -1074,12 +1165,18 @@ export async function handleCreateLimitRequest(request, env, params, query, user
   }
 
   const { user_id, type, amount, month, client_timestamp } = body;
-  if (!user_id || !type || !amount || !month) {
+  const effectiveUserId = user_id || user?.user_id || user?.id;
+
+  if (!effectiveUserId || !type || amount === undefined || amount === null || !month) {
     return jsonResponse({ error: "Missing required parameters: user_id, type, amount, month" }, 400);
   }
 
   const reqTypeUpper = (type || "").trim().toUpperCase();
   const reqAmount = parseFloat(amount || 0);
+
+  if (isNaN(reqAmount) || reqAmount <= 0) {
+    return jsonResponse({ error: "Please enter a valid extension amount greater than 0." }, 400);
+  }
 
   // 1. MAXIMUM EXTENSION AMOUNT CAPS:
   // AUTO max extension allowed: ₹2,500
@@ -1090,41 +1187,50 @@ export async function handleCreateLimitRequest(request, env, params, query, user
     return jsonResponse({ error: `Maximum limit extension allowed for ${typeLabel}. You cannot request more than this.` }, 400);
   }
 
-  // 2. STRICT 1 REQUEST PER MONTH PER MODE (ANY STATUS: Approved, Rejected, Pending, Waiting)
+  // Find requester from user profile or fallback to authenticated user
+  const requester = await env.DB.prepare(
+    "SELECT * FROM users WHERE user_id = ? OR id = ? OR e_code = ?"
+  ).bind(String(effectiveUserId), String(effectiveUserId), String(effectiveUserId)).first();
+  
+  const finalRequester = requester || user;
+  if (!finalRequester) return jsonResponse({ error: "Requester not found" }, 404);
+
+  const targetUserId = finalRequester.user_id || String(finalRequester.id);
+
+  // 2. CHECK EXISTING PENDING REQUESTS
+  // Allow resubmission if previous request was Rejected or Cancelled
   const existingReq = await env.DB.prepare(`
     SELECT * FROM limit_approval_requests 
-    WHERE user_id = ? AND UPPER(request_type) = ? AND for_month = ?
-  `).bind(user_id, reqTypeUpper, month).first();
+    WHERE (user_id = ? OR user_id = ?) AND UPPER(request_type) = ? AND for_month = ? AND LOWER(status) = 'pending'
+  `).bind(targetUserId, String(finalRequester.id), reqTypeUpper, month).first();
 
   if (existingReq) {
     const typeLabel = reqTypeUpper === "AUTO" ? "Auto" : "Bike";
     return jsonResponse({ 
-      error: `You have already submitted a limit extension request for ${typeLabel} in ${month} (Status: ${existingReq.status}). Only 1 request per month per travel mode is allowed.` 
+      error: `You already have a pending limit extension request for ${typeLabel} in ${month} (+${existingReq.requested_value}). Please wait for your manager to review it.` 
     }, 400);
   }
 
   const timestamp = parseClientTimestamp(client_timestamp);
-  
-  // Find manager from user profile
-  const requester = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(user_id).first();
-  if (!requester) return jsonResponse({ error: "Requester not found" }, 404);
 
   // We find their coordinator or zonal manager to assign
-  const managerName = requester.manager || requester.zonal_manager || requester.coordinator;
+  const managerName = finalRequester.manager || finalRequester.zonal_manager || finalRequester.coordinator;
   let managerId = "Admin"; // Default fallback
 
   if (managerName && managerName !== "None") {
-    // Look up manager's user_id by name
-    const mgrUser = await env.DB.prepare("SELECT user_id FROM users WHERE LOWER(TRIM(name)) = ?").bind(managerName.trim().toLowerCase()).first();
+    // Look up manager's user_id or id by name
+    const mgrUser = await env.DB.prepare(
+      "SELECT user_id, id FROM users WHERE LOWER(TRIM(name)) = ? OR user_id = ?"
+    ).bind(managerName.trim().toLowerCase(), managerName.trim()).first();
     if (mgrUser) {
-      managerId = mgrUser.user_id;
+      managerId = mgrUser.user_id || String(mgrUser.id);
     }
   }
 
   await runWrite(env, `
     INSERT INTO limit_approval_requests (user_id, request_type, requested_value, status, for_month, manager_id, created_at, updated_at)
     VALUES (?, ?, ?, 'Pending', ?, ?, ?, ?)
-  `, [user_id, reqTypeUpper, reqAmount, month, managerId, timestamp, timestamp]);
+  `, [targetUserId, reqTypeUpper, reqAmount, month, managerId, timestamp, timestamp]);
 
   // Notify manager
   await runWrite(env, `
@@ -1132,11 +1238,11 @@ export async function handleCreateLimitRequest(request, env, params, query, user
     VALUES (?, '📥 New Limit Request', ?, 'warning', 0, '/approval-center', ?)
   `, [
     managerId,
-    `${requester.name} has requested extra ${reqAmount} ${reqTypeUpper} limit for ${month}.`,
+    `${finalRequester.name || targetUserId} has requested extra ${reqAmount} ${reqTypeUpper} limit for ${month}.`,
     timestamp
   ]);
 
-  return jsonResponse({ status: "success", message: "Limit request raised successfully." });
+  return jsonResponse({ status: "success", success: true, message: "Limit request raised successfully." });
 }
 
 /**
@@ -2156,6 +2262,29 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
         const districtTypeLegacy = masterRow.district_type || distInfoLegacy.districtType;
         const hasMismatchLegacy = (districtTypeLegacy === "OUT_DISTRICT") && distInfoLegacy.allLegsBaseDistrict;
 
+        if (user) {
+          const roleLower = (user.role || "").toLowerCase().trim();
+          const isPrivileged = ["admin", "project head", "coordinator"].includes(roleLower);
+          const isOwner = user.id === submitter?.id || user.user_id === masterRow.user_id || user.e_code === masterRow.user_id;
+          const isApprover = (
+            user.user_id === masterRow.level_first_approver ||
+            user.user_id === masterRow.level_second_approver ||
+            user.id === l1User?.id ||
+            user.id === l2User?.id ||
+            user.user_id === l1App ||
+            user.user_id === l2App
+          );
+          const isManager = submitter && (
+            submitter.manager_id === user.user_id ||
+            submitter.manager_id === user.id ||
+            submitter.hod_id === user.user_id ||
+            submitter.hod_id === user.id
+          );
+          if (!isPrivileged && !isOwner && !isApprover && !isManager) {
+            return jsonResponse({ error: "Access denied to this expense claim" }, 403);
+          }
+        }
+
         return jsonResponse({
           id: val,
           expense_code: matchingExpId,
@@ -2225,6 +2354,22 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
 
     const monthlyStats = submitter ? await getUserMonthlyStatsHelper(env, submitter.id, pl.for_month, limitYear) : null;
     const managerUser = await env.DB.prepare("SELECT * FROM users WHERE user_id = ?").bind(pl.manager_id).first();
+
+    if (user) {
+      const roleLower = (user.role || "").toLowerCase().trim();
+      const isPrivileged = ["admin", "project head", "coordinator"].includes(roleLower);
+      const isOwner = user.id === submitter?.id || user.user_id === pl.user_id || user.e_code === pl.user_id;
+      const isApprover = user.user_id === pl.manager_id || user.id === managerUser?.id || user.e_code === pl.manager_id;
+      const isManager = submitter && (
+        submitter.manager_id === user.user_id ||
+        submitter.manager_id === user.id ||
+        submitter.hod_id === user.user_id ||
+        submitter.hod_id === user.id
+      );
+      if (!isPrivileged && !isOwner && !isApprover && !isManager) {
+        return jsonResponse({ error: "Access denied to this limit request" }, 403);
+      }
+    }
 
     return jsonResponse({
       id: -pl.id,
@@ -2302,6 +2447,31 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     env.DB.prepare("SELECT * FROM expense_edit_logs WHERE expense_id = ? ORDER BY created_at DESC").bind(expense.id).all().catch(() => ({ results: [] })),
     getUserMonthlyStatsHelper(env, expense.user_id, expense.month, expense.year, expense.itinerary).catch(() => ({ totalSubmitted: 0, totalApproved: 0 }))
   ]);
+
+  // IDOR Security Protection: verify requester has permission to view this expense
+  if (user) {
+    const roleLower = (user.role || "").toLowerCase().trim();
+    const isPrivileged = ["admin", "project head", "coordinator"].includes(roleLower);
+    const isOwner = user.id === expense.user_id || 
+                    (submitter && (user.id === submitter.id || user.user_id === submitter.user_id || user.e_code === submitter.e_code)) ||
+                    (expense.user_id && (String(user.user_id) === String(expense.user_id) || String(user.id) === String(expense.user_id)));
+    const isApprover = (approvalsRes.results || []).some(a => 
+      a.approver_id === user.id || 
+      String(a.approver_id) === String(user.user_id) || 
+      String(a.approver_id) === String(user.id)
+    );
+    const isManager = submitter && (
+      submitter.manager_id === user.user_id || 
+      submitter.manager_id === user.id || 
+      submitter.manager_id === user.e_code ||
+      submitter.hod_id === user.user_id ||
+      submitter.hod_id === user.id
+    );
+
+    if (!isPrivileged && !isOwner && !isApprover && !isManager) {
+      return jsonResponse({ error: "Access denied to this expense claim" }, 403);
+    }
+  }
 
   const approverIds = Array.from(new Set((approvalsRes.results || []).map(a => a.approver_id).filter(Boolean)));
   const editorIds = Array.from(new Set((editLogs.results || []).map(el => el.editor_id).filter(Boolean)));
@@ -2407,12 +2577,35 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     original_other_expense_amount: parseFloat(expense.original_other_expense_amount || expense.other_expense_amount || 0.0),
     original_local_purchase_amount: parseFloat(expense.original_local_purchase_amount || expense.local_purchase_amount || 0.0),
     attachments: (attachments.results || []).map(a => a.file_url),
-    attachments_detailed: (attachments.results || []).map(a => ({
-      file_url: a.file_url,
-      itinerary_id: a.itinerary_id,
-      bill_type: a.bill_type
-    })),
+    attachments_detailed: (attachments.results || []).map(a => {
+      const legNumMatch = a.itinerary_id ? String(a.itinerary_id).split("-").pop() : null;
+      const legNum = legNumMatch ? parseInt(legNumMatch, 10) : null;
+      return {
+        file_url: a.file_url,
+        url: a.file_url,
+        itinerary_id: a.itinerary_id,
+        bill_type: a.bill_type,
+        leg_number: isNaN(legNum) ? null : legNum,
+        leg: isNaN(legNum) ? null : legNum
+      };
+    }),
     itineraries: itineraryRows.map(i => {
+      const legNum = i.leg_number;
+      const legAttachments = (attachments.results || []).filter(a => {
+        if (!a) return false;
+        const matchNum = a.itinerary_id ? parseInt(String(a.itinerary_id).split("-").pop() || "", 10) : null;
+        return matchNum === legNum;
+      });
+
+      const travelBill = legAttachments.find(a => {
+        const b = (a.bill_type || "").toLowerCase();
+        return !b.includes("hotel") && !b.includes("local_purchase") && !b.includes("other") && !b.includes("communication_mail");
+      })?.file_url || "";
+
+      const hotelBill = legAttachments.find(a => (a.bill_type || "").toLowerCase().includes("hotel"))?.file_url || "";
+      const localPurchaseBill = legAttachments.find(a => (a.bill_type || "").toLowerCase().includes("local_purchase"))?.file_url || "";
+      const otherBill = legAttachments.find(a => (a.bill_type || "").toLowerCase().includes("other"))?.file_url || "";
+
       const userFromLoc = (i.from_location && i.from_location.trim() !== "" && i.from_location !== "N/A" && i.from_location !== "NA") ? i.from_location : null;
       const userToLoc = (i.to_location && i.to_location.trim() !== "" && i.to_location !== "N/A" && i.to_location !== "NA") ? i.to_location : null;
       const userFromDist = (i.from_district && i.from_district.trim() !== "" && i.from_district !== "N/A" && i.from_district !== "NA") ? i.from_district : null;
@@ -2435,6 +2628,16 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
         dest_state: i.dest_state || i.to_state || submitter?.state || "Rajasthan",
         from: finalFromLoc,
         to: finalToLoc,
+        travel_bill: travelBill,
+        ticket_url: travelBill,
+        bill_url: travelBill,
+        hotel_bill: hotelBill,
+        hotel_photo: hotelBill,
+        local_purchase_bill: localPurchaseBill,
+        local_purchase_photo: localPurchaseBill,
+        other_bill: otherBill,
+        other_photo: otherBill,
+        attachments: legAttachments.map(a => a.file_url),
       mode: i.travel_mode,
       km: parseFloat(i.distance_km || 0.0),
       amount: parseFloat(i.travel_amount || 0.0),
@@ -2898,15 +3101,15 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const iti = itineraries[idx];
     const legNum = idx + 1;
     const isCommute = !hasActualOutDistrictTravel && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
-    const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount || "0.0");
-    const subAmt    = isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0");
-    const daAmt     = isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0;
-    const hotelAmt = parseFloat(iti.hotel || "0.0");
-    const otherAmt = parseFloat(iti.oth_amount || "0.0");
-    const lpAmt = parseFloat(iti.local_purchase || "0.0");
+    const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount ?? iti.travel_amount ?? "0.0");
+    const subAmt    = isCommute ? 0.0 : parseFloat(iti.sub_amount ?? "0.0");
+    const daAmt     = isDaAllowed ? parseFloat(iti.da ?? iti.da_amount ?? "0.0") : 0.0;
+    const hotelAmt = parseFloat(iti.hotel ?? iti.hotel_amount ?? "0.0");
+    const otherAmt = parseFloat(iti.oth_amount ?? iti.other_amount ?? "0.0");
+    const lpAmt = parseFloat(iti.local_purchase ?? iti.local_purchase_amount ?? "0.0");
 
     // ── Server-side mandatory bill attachment validations ──
-    const modeLower = (iti.mode || "").trim().toLowerCase();
+    const modeLower = (iti.mode || iti.travel_mode || "").trim().toLowerCase();
     const mainBillFile = formData ? formData.get(`main_bill_${legNum}`) : null;
     const hasMainBillUpload = mainBillFile && typeof mainBillFile === "object" && mainBillFile.name;
     let hasMainAttachment = hasMainBillUpload;
@@ -3016,9 +3219,9 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
     calculatedTotal += travelAmt + subAmt + daAmt + hotelAmt + otherAmt + lpAmt;
 
-    const mode = (iti.mode || "").trim().toLowerCase();
+    const mode = (iti.mode || iti.travel_mode || "").trim().toLowerCase();
     if (["bike", "car"].includes(mode)) {
-      newKm += parseFloat(iti.km || "0.0");
+      newKm += parseFloat(iti.km ?? iti.distance_km ?? "0.0");
     } else if (mode === "auto") {
       newAuto += travelAmt;
     }
@@ -3279,7 +3482,14 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     
     let fileUrl = "";
     try {
-      fileUrl = await uploadFileWithFallback(env, item.file, folderName, filename, mimeType);
+      fileUrl = await uploadFileWithFallback(env, item.file, folderName, filename, mimeType, {
+        category: "expense_photo",
+        expenseCode: expenseCode,
+        travelName: item.billType,
+        employeeId: user.user_id || user.id,
+        tripDate: date,
+        uploadedBy: user.user_id || user.name
+      });
     } catch (err) {
       console.error(`Failed to upload ${item.fileKey}:`, err);
       // FIX #1: Explicit HTTP 400/500 response — NO SILENT RETURN

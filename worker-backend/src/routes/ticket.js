@@ -1,6 +1,7 @@
 import { getDrizzleDb } from "../db/client.js";
 import { supportTickets, users } from "../db/schema.js";
 import { eq, and, or, desc, isNotNull, lt, like, sql } from "drizzle-orm";
+import { sendEmail } from "../email/sender.js";
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -221,23 +222,10 @@ export async function handleCreateTicket(request, env, params, query, user) {
 }
 
 /**
- * Helper to dispatch ticket email notifications via GAS Web Apps
+ * Helper to dispatch ticket email notifications strictly via Cloudflare Mail
  */
 async function sendTicketNotificationEmail(toEmail, recipientName, ticketCode, subject, bodyText, env) {
   if (!toEmail || !toEmail.includes("@")) return;
-
-  const DEFAULT_GAS_URLS = [
-    "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec",
-    "https://script.google.com/macros/s/AKfycbwrK97nxv0aXpL5whXzn6CBiXschDpVju6smu4_Wx7-qrF7ljbU6Qom9lVKHr5veNCh/exec",
-    "https://script.google.com/macros/s/AKfycbyFRbkKZfvXBEAzB1BVyKSER_n99ONSyLSpygFVkrpyhjQnYzJAM0HdbIgH02_BAY9DSQ/exec"
-  ];
-
-  let urls = DEFAULT_GAS_URLS;
-  if (env && env.GAS_WEB_APP_URLS) {
-    urls = env.GAS_WEB_APP_URLS.split(",").map(u => u.trim()).filter(Boolean);
-  } else if (env && env.GAS_WEB_APP_URL) {
-    urls = [env.GAS_WEB_APP_URL.trim()];
-  }
 
   const htmlBody = `
     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 24px; color: #1e293b; max-width: 620px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 12px; background-color: #ffffff;">
@@ -259,24 +247,19 @@ async function sendTicketNotificationEmail(toEmail, recipientName, ticketCode, s
     </div>
   `;
 
-  for (const url of urls) {
-    try {
-      await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: toEmail,
-          subject: subject,
-          htmlBody: htmlBody,
-          body: bodyText.replace(/<[^>]*>/g, ""),
-          correlationId: `ticket_mail_${Date.now()}`
-        })
-      });
-      console.log(`[Ticket Email Sent] to ${toEmail} for ${ticketCode}`);
-      break;
-    } catch (e) {
-      console.error("[Ticket Email Error]", e);
-    }
+  try {
+    await sendEmail(env, {
+      to: toEmail,
+      toName: recipientName || "Cyrix User",
+      subject: subject,
+      html: htmlBody,
+      text: bodyText.replace(/<[^>]*>/g, ""),
+      templateName: "support_ticket",
+      priority: 3
+    });
+    console.log(`[Ticket Email Sent via Cloudflare] to ${toEmail} for ${ticketCode}`);
+  } catch (e) {
+    console.error("[Ticket Email Error via Cloudflare]", e);
   }
 }
 

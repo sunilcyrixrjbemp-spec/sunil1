@@ -73,7 +73,7 @@ import {
 
 // Upload handlers
 import {
-  handleUploadImage, handleUploadDocument, handleServeFile, handleGDriveProxy
+  handleUploadImage, handleUploadDocument, handleServeFile
 } from "./routes/upload.js";
 
 // Reports handlers
@@ -128,7 +128,6 @@ import {
 
 // ─── Enterprise Route Handlers (Direct Imports) ───────────────────────────────
 import {
-  handleMigrateGdrive, handleMigrationStatus,
   handleAnalyticsDashboard, handleAnalyticsBilling,
   handleFileHealth, handleStorageReport, handleRunMigrationsV2,
 } from "./routes/adminEnterprise.js";
@@ -345,16 +344,6 @@ router.post("/api/admin/run-migrations", async (req, env, params, query, user) =
 }, true, ["Admin"]);
 
 // Enterprise admin routes (Sprint 2+)
-router.post("/api/admin/migrate-gdrive", async (req, env, params, query, user) => {
-  if (!handleMigrateGdrive) return errorResponse("Migration engine not yet available", 503);
-  return handleMigrateGdrive(req, env, params, query, user);
-}, true, ["Admin"]);
-
-router.get("/api/admin/migration-status", async (req, env, params, query, user) => {
-  if (!handleMigrationStatus) return errorResponse("Migration engine not yet available", 503);
-  return handleMigrationStatus(req, env, params, query, user);
-}, true, ["Admin"]);
-
 router.get("/api/admin/analytics/dashboard", async (req, env, params, query, user) => {
   if (!handleAnalyticsDashboard) return errorResponse("Analytics dashboard not yet available", 503);
   return handleAnalyticsDashboard(req, env, params, query, user);
@@ -454,7 +443,6 @@ router.post("/api/tickets/:ticket_id/reopen", handleReopenTicket, true);
 router.post("/api/tickets/:ticket_id/followup", handleToggleFollowup, true);
 
 // ─── Upload Endpoints ─────────────────────────────────────────────────────────
-router.get("/api/r2/gdrive-proxy", handleGDriveProxy, false);
 router.post("/api/upload/image", handleUploadImage, true);
 router.post("/api/upload/document", handleUploadDocument, true);
 // R2 file serving (primary path & aliases)
@@ -472,10 +460,6 @@ router.get("/uploads/*", handleServeFile, false);
 router.get("/uploads/:key", handleServeFile, false);
 router.get("/expenses/*", handleServeFile, false);
 router.get("/expenses/:key", handleServeFile, false);
-router.get("/gdrive/*", handleServeFile, false);
-router.get("/gdrive/:key", handleServeFile, false);
-router.get("/api/upload/file/gdrive/*", handleServeFile, false);
-router.get("/api/upload/file/gdrive/:key", handleServeFile, false);
 router.get("/profiles/*", handleServeFile, false);
 router.get("/profiles/:key", handleServeFile, false);
 

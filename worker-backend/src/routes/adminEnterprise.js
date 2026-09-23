@@ -16,10 +16,7 @@
 import { jsonResponse, errorResponse } from "../utils/http.js";
 import { nowISO } from "../utils/timestamp.js";
 import { staticLog } from "../utils/logger.js";
-import { handleMigrateGdrive, handleMigrationStatus } from "../utils/gdriveMigration.js";
 import { runMigrationsV2, checkV2TableStatus } from "../utils/db-migrate-v2.js";
-
-export { handleMigrateGdrive, handleMigrationStatus };
 
 /**
  * GET /api/admin/analytics/dashboard

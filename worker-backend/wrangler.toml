@@ -89,9 +89,6 @@ CF_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
 EMAIL_FROM_ADDRESS = "noreply@indrae.in"
 EMAIL_FROM_NAME = "Cyrix Field Connect"
 
-# Google Drive — ONLY used by NewDashboard page (legacy data source)
-# All other GAS calls removed
-GAS_DASHBOARD_URL = "https://script.google.com/macros/s/AKfycbwxh5LQLCGtwGflfF7V5HKyL7viFNlAkAbsgz5xEDQo8Eg_f1kw47EjxrzSAC891sm1/exec"
 
 # Storage
 R2_BUCKET_NAME = "cyrixapp"

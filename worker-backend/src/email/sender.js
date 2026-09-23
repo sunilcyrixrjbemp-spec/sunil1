@@ -159,28 +159,11 @@ async function sendViaCloudflareMail(env, opts) {
     }
   }
 
-  // ── Tertiary Fallback: Google Apps Script Webhook ─────────────────────────
-  if (env.GAS_DASHBOARD_URL) {
-    try {
-      const gasRes = await fetch(env.GAS_DASHBOARD_URL, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "send_email", to, subject, html, text: textBody })
-      });
-      if (gasRes.ok) {
-        const msgId = `gas_${Date.now()}`;
-        staticLog.info("Email sent via GAS Webhook fallback", { to, subject: subject.slice(0, 50) });
-        return { success: true, messageId: msgId };
-      }
-    } catch (gasErr) {
-      staticLog.warn("GAS Webhook send failed", { error: gasErr.message });
-    }
-  }
-
-  staticLog.error("All email providers failed", { to });
+  // ── STRICT CLOUDFLARE ONLY: No Gmail / Google Apps Script fallback allowed ──
+  staticLog.error("Strict Cloudflare email dispatch failed on all CF channels", { to, subject: subject.slice(0, 50) });
   return {
     success: false,
-    error: "All email delivery methods (CF Email Workers, MailChannels API, GAS Webhook) failed.",
+    error: "Strict Cloudflare email delivery failed: MailChannels and Cloudflare Email Workers were unable to send the email.",
   };
 }
 

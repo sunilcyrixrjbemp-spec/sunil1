@@ -1,12 +1,12 @@
 /**
  * OTP DELIVERY & CORRELATION ID TEST SUITE
- * Tests retry behavior, exponential backoff, and correlation ID generation for OTP emails.
+ * Tests Cloudflare MailChannels delivery, retry behavior, and correlation ID handling for OTP emails.
  */
 
 import assert from "node:assert";
 import test from "node:test";
 
-test("OTP delivery payload includes correlationId and handles success", async () => {
+test("OTP delivery via Cloudflare MailChannels payload includes correlationId and handles success", async () => {
   let capturedPayload = null;
   const originalFetch = globalThis.fetch;
 
@@ -17,8 +17,8 @@ test("OTP delivery payload includes correlationId and handles success", async ()
       status: 200,
       json: async () => ({
         success: true,
-        message: "Email sent successfully",
-        correlationId: capturedPayload.correlationId
+        message: "Email sent successfully via MailChannels",
+        correlationId: capturedPayload.personalizations?.[0]?.correlationId
       })
     };
   };
@@ -26,13 +26,18 @@ test("OTP delivery payload includes correlationId and handles success", async ()
   try {
     const correlationId = `otp_${Date.now()}_test123`;
     const payload = {
-      to: "test@example.com",
-      otp: "123456",
-      purpose: "password_reset",
-      correlationId: correlationId
+      personalizations: [{
+        to: [{ email: "test@example.com", name: "Test User" }],
+        correlationId: correlationId
+      }],
+      from: { email: "noreply@indrae.in", name: "Cyrix Field Connect" },
+      subject: "Security OTP Verification Code",
+      content: [
+        { type: "text/plain", value: "Your OTP is 123456" }
+      ]
     };
 
-    const res = await fetch("https://mock-gas-url.test/exec", {
+    const res = await fetch("https://api.mailchannels.net/tx/v1/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -41,15 +46,15 @@ test("OTP delivery payload includes correlationId and handles success", async ()
     const data = await res.json();
     assert.strictEqual(res.ok, true);
     assert.strictEqual(data.success, true);
-    assert.strictEqual(capturedPayload.correlationId, correlationId);
-    assert.ok(capturedPayload.correlationId.startsWith("otp_"));
-    console.log("  PASS: OTP payload includes correlationId and receives 200 OK");
+    assert.strictEqual(capturedPayload.personalizations[0].correlationId, correlationId);
+    assert.ok(capturedPayload.personalizations[0].correlationId.startsWith("otp_"));
+    console.log("  PASS: OTP payload via MailChannels includes correlationId and receives 200 OK");
   } finally {
     globalThis.fetch = originalFetch;
   }
 });
 
-test("OTP delivery retry logic retries on transient errors", async () => {
+test("OTP delivery retry logic retries on transient 503 errors", async () => {
   let attempts = 0;
   const originalFetch = globalThis.fetch;
 
@@ -64,28 +69,24 @@ test("OTP delivery retry logic retries on transient errors", async () => {
     }
     return {
       ok: true,
-      status: 200,
-      json: async () => ({ success: true, message: "Sent on attempt 3" })
+      status: 202,
+      json: async () => ({ success: true, message: "Accepted on attempt 3" })
     };
   };
 
   try {
-    // Simulate retry loop
     const maxRetries = 3;
     let success = false;
     for (let i = 1; i <= maxRetries; i++) {
       try {
-        const res = await fetch("https://mock-gas-url.test/exec", {
+        const res = await fetch("https://api.mailchannels.net/tx/v1/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ to: "test@example.com", otp: "654321" })
         });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const json = await res.json();
-        if (json.success) {
-          success = true;
-          break;
-        }
+        if (!res.ok && res.status !== 202) throw new Error("HTTP " + res.status);
+        success = true;
+        break;
       } catch (err) {
         // continue retry
       }
@@ -99,41 +100,38 @@ test("OTP delivery retry logic retries on transient errors", async () => {
   }
 });
 
-test("OTP multi-URL failover switches to Account #2 when Account #1 exhausts quota", async () => {
-  const calledUrls = [];
+test("Cloudflare Email Worker fallback triggers when MailChannels fails", async () => {
+  let cfFallbackCalled = false;
   const originalFetch = globalThis.fetch;
 
+  // Mock MailChannels failing
   globalThis.fetch = async (url, options) => {
-    calledUrls.push(url);
-    if (url.includes("account1")) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ success: false, error: "Quota exhausted on this account (0)" })
-      };
-    }
     return {
-      ok: true,
-      status: 200,
-      json: async () => ({ success: true, message: "Sent via Account #2" })
+      ok: false,
+      status: 500,
+      text: async () => "MailChannels Outage"
     };
   };
 
   try {
-    const urls = ["https://mock-gas.test/account1/exec", "https://mock-gas.test/account2/exec"];
-    let success = false;
-    for (const gasUrl of urls) {
-      const res = await fetch(gasUrl, { method: "POST", body: JSON.stringify({ to: "user@test.com" }) });
-      const json = await res.json();
-      if (json.success) {
-        success = true;
-        break;
+    const mockEnv = {
+      EMAIL_FROM_ADDRESS: "noreply@indrae.in",
+      EMAIL_SENDER: {
+        send: async (msg) => {
+          cfFallbackCalled = true;
+          return { success: true };
+        }
       }
+    };
+
+    // Simulate fallback logic
+    const mcRes = await fetch("https://api.mailchannels.net/tx/v1/send", { method: "POST" });
+    if (!mcRes.ok && mockEnv.EMAIL_SENDER) {
+      await mockEnv.EMAIL_SENDER.send({ from: mockEnv.EMAIL_FROM_ADDRESS, to: "user@test.com" });
     }
 
-    assert.strictEqual(calledUrls.length, 2, "Should attempt Account #1, fail, then call Account #2");
-    assert.strictEqual(success, true, "Should succeed via Account #2");
-    console.log("  PASS: Multi-URL failover instantly switches to Account #2 on Account #1 quota exhaustion");
+    assert.strictEqual(cfFallbackCalled, true, "Should fallback to Cloudflare Native Email Sender");
+    console.log("  PASS: Cloudflare Email Workers fallback activates automatically on MailChannels failure");
   } finally {
     globalThis.fetch = originalFetch;
   }

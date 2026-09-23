@@ -323,137 +323,13 @@ export async function handleServeFile(request, env, params, query) {
             } catch (_) {}
           }
         }
-        if (meta.gdrive_file_id) {
-          let gdriveRes = await fetch(`https://lh3.googleusercontent.com/d/${meta.gdrive_file_id}`);
-          if (!gdriveRes.ok) {
-            gdriveRes = await fetch(`https://drive.google.com/uc?export=view&id=${meta.gdrive_file_id}`, {
-              headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
-            });
-          }
-          if (gdriveRes.ok) {
-            const cType = meta.content_type || gdriveRes.headers.get("content-type") || "image/jpeg";
-            return new Response(gdriveRes.body, {
-              status: 200,
-              headers: {
-                "Content-Type": cType,
-                "Cache-Control": "public, max-age=86400",
-                "Access-Control-Allow-Origin": "*",
-                "X-Source": "gdrive-d1-stream"
-              }
-            });
-          }
-        }
       }
     } catch (err) {
-      console.warn("D1 metadata fallback lookup error:", err.message);
-    }
-  }
-
-  // Fallback 2: Direct Google Drive ID stream (25-50 chars)
-  const gdriveCandidate = bareId || fileKeyDecoded.replace(/^gdrive\//, "");
-  if (/^[a-zA-Z0-9_-]{25,50}$/.test(gdriveCandidate)) {
-    let gdriveRes = await fetch(`https://lh3.googleusercontent.com/d/${gdriveCandidate}`);
-    if (!gdriveRes.ok) {
-      gdriveRes = await fetch(`https://drive.google.com/uc?export=view&id=${gdriveCandidate}`, {
-        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
-      });
-    }
-    if (gdriveRes.ok) {
-      return new Response(gdriveRes.body, {
-        status: 200,
-        headers: {
-          "Content-Type": gdriveRes.headers.get("content-type") || "image/jpeg",
-          "Cache-Control": "public, max-age=86400",
-          "Access-Control-Allow-Origin": "*",
-          "X-Source": "gdrive-direct-stream"
-        }
-      });
+      console.warn("D1 metadata lookup error:", err.message);
     }
   }
 
   return new Response("File not found", { status: 404 });
-}
-
-// ─── GET /api/r2/gdrive-proxy ───────────────────────────────────────────────
-export async function handleGDriveProxy(request, env, params, query) {
-  let fileId = query?.get("id") || params?.id || params?.key;
-  if (!fileId) return errorResponse("Missing Google Drive file ID", 400);
-
-  let cleanId = String(fileId).trim();
-  if (cleanId.includes("drive.google.com") || cleanId.includes("docs.google.com")) {
-    const matchD = cleanId.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    const matchId = cleanId.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    cleanId = matchD ? matchD[1] : (matchId ? matchId[1] : cleanId);
-  }
-  cleanId = cleanId.replace(/^gdrive\//, "").replace(/\.(jpg|jpeg|png|webp|gif|pdf)$/i, "");
-  const r2Key = `gdrive/${cleanId}.jpg`;
-
-  const bucket = env.R2_BUCKET || env.CYRIXAPP_BUCKET;
-
-  // 1. Check if already stored in Cloudflare R2 Bucket
-  if (bucket) {
-    try {
-      const existingObj = await bucket.get(r2Key);
-      if (existingObj) {
-        const headers = new Headers();
-        existingObj.writeHttpMetadata(headers);
-        headers.set("Content-Type", "image/jpeg");
-        headers.set("Cache-Control", "public, max-age=31536000");
-        headers.set("Access-Control-Allow-Origin", "*");
-        headers.set("X-Storage-Source", "R2-Bucket");
-        return new Response(existingObj.body, { headers });
-      }
-    } catch (e) {}
-  }
-
-  // 2. Auto-fetch from Google Drive CDN stream
-  const gdriveUrlsToTry = [
-    `https://lh3.googleusercontent.com/d/${cleanId}`,
-    `https://drive.google.com/uc?export=download&id=${cleanId}`,
-    `https://docs.google.com/uc?export=download&id=${cleanId}`
-  ];
-
-  for (const url of gdriveUrlsToTry) {
-    try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
-      });
-      if (res.ok) {
-        const arrayBuffer = await res.arrayBuffer();
-        if (arrayBuffer.byteLength > 0) {
-          // Save to R2 permanently in background
-          if (bucket) {
-            try {
-              await bucket.put(r2Key, arrayBuffer, {
-                httpMetadata: { contentType: "image/jpeg" }
-              });
-
-              if (env.DB) {
-                const r2PublicPath = `/uploads/${r2Key}`;
-                env.DB.prepare(`
-                  UPDATE expense_attachments 
-                  SET file_url = ? 
-                  WHERE file_url LIKE ? OR file_url LIKE ?
-                `).bind(r2PublicPath, `%${cleanId}%`, `%gdrive%`).run().catch(() => {});
-              }
-            } catch (err) {}
-          }
-
-          return new Response(arrayBuffer, {
-            status: 200,
-            headers: {
-              "Content-Type": "image/jpeg",
-              "Cache-Control": "public, max-age=31536000",
-              "Access-Control-Allow-Origin": "*",
-              "X-Storage-Source": "GDrive-R2-AutoMigrated"
-            }
-          });
-        }
-      }
-    } catch (e) {}
-  }
-
-  return errorResponse("Unable to retrieve Google Drive image", 404);
 }
 
 // ─── DELETE /api/files/:key — Delete from R2 (Admin only) ────────────────────
@@ -511,16 +387,20 @@ export async function handleListFiles(request, env, params, query, user) {
  * @deprecated Use enterpriseUpload() from r2Storage.js directly.
  * Kept for backward compat with existing expense upload references.
  */
-export async function uploadFileWithFallback(env, fileOrBuffer, subfolder, filename, mimeType) {
+export async function uploadFileWithFallback(env, fileOrBuffer, subfolder, filename, mimeType, extraContext = {}) {
   const buffer = fileOrBuffer instanceof ArrayBuffer
     ? fileOrBuffer
     : await fileOrBuffer.arrayBuffer();
 
   const result = await enterpriseUpload(env, buffer, {
-    category: "expense_photo",
+    category: extraContext.category || "expense_photo",
+    expenseCode: extraContext.expenseCode,
+    travelName: extraContext.travelName || extraContext.billType,
+    employeeId: extraContext.employeeId,
+    tripDate: extraContext.tripDate,
     originalFilename: filename || "upload.jpg",
     contentType: mimeType || "application/octet-stream",
-    uploadedBy: "legacy_call",
+    uploadedBy: extraContext.uploadedBy || "expense_submit",
   });
 
   if (result.success) return result.url;
