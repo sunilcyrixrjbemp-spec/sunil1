@@ -335,10 +335,10 @@ export async function handleLogin(request, env) {
     await resetRateLimit(env.OTPS_KV, "ip_login", ipAddress);
   }
 
-  const secretKey = env.API_SECRET;
+  const secretKey = env?.API_SECRET || env?.JWT_SECRET;
   const now = Math.floor(Date.now() / 1000);
-  const accessToken  = await signJwt({ sub: user.user_id, sid: sessionId, exp: now + 30*24*3600,  type: "access"  }, secretKey);
-  const refreshToken = await signJwt({ sub: user.user_id, sid: sessionId, exp: now + 365*24*3600, type: "refresh" }, secretKey);
+  const accessToken  = await signJwt({ sub: user.user_id, sid: sessionId, exp: now + 30*24*3600,  type: "access"  }, secretKey, env);
+  const refreshToken = await signJwt({ sub: user.user_id, sid: sessionId, exp: now + 365*24*3600, type: "refresh" }, secretKey, env);
 
   const profile = { ...user };
   delete profile.hashed_password;
@@ -360,7 +360,8 @@ export async function handleRefresh(request, env) {
   const { refresh_token } = body;
   if (!refresh_token) return jsonResponse({ error: "refresh_token required" }, 400);
 
-  const payload = await verifyJwt(refresh_token, env.API_SECRET);
+  const secretKey = env?.API_SECRET || env?.JWT_SECRET;
+  const payload = await verifyJwt(refresh_token, secretKey, env);
   if (!payload || payload.type !== "refresh")
     return jsonResponse({ error: "Invalid or expired refresh token" }, 401);
 
@@ -384,8 +385,8 @@ export async function handleRefresh(request, env) {
     .bind(sessionId, payload.sub).run();
 
   const now = Math.floor(Date.now() / 1000);
-  const accessToken      = await signJwt({ sub: user.user_id, sid: sessionId, exp: now + 30*24*3600,  type: "access"  }, env.API_SECRET);
-  const newRefreshToken  = await signJwt({ sub: user.user_id, sid: sessionId, exp: now + 365*24*3600, type: "refresh" }, env.API_SECRET);
+  const accessToken      = await signJwt({ sub: user.user_id, sid: sessionId, exp: now + 30*24*3600,  type: "access"  }, secretKey, env);
+  const newRefreshToken  = await signJwt({ sub: user.user_id, sid: sessionId, exp: now + 365*24*3600, type: "refresh" }, secretKey, env);
 
   return jsonResponse({ access_token: accessToken, refresh_token: newRefreshToken, token_type: "bearer" });
 }

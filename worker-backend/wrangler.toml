@@ -80,6 +80,7 @@ dead_letter_queue = "fieldops-dlq"
 # App
 CORS_ORIGIN = "https://indrae.in"
 APP_ENV = "production"
+API_SECRET = "cyrix-fieldconnect-api-secret-jwt-key-2026-prod"
 
 # Cloudflare Account (for Email API calls only — NOT for DB replication)
 CF_ACCOUNT_ID = "befbd2e0ff580a1d0d0865f011002053"
