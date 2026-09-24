@@ -421,16 +421,17 @@ const LegDetailCard = ({
   // Per-Leg Current Net Amounts
   const taAmt = parseFloat(leg.amount ?? leg.travel_amount ?? 0);
   const origTa = parseFloat(leg.original_amount ?? leg.original_travel_amount ?? 0);
+  const subAmt = parseFloat(leg.sub_amount ?? 0);
+  const origSub = parseFloat(leg.original_sub_amount ?? leg.sub_amount ?? 0);
   const daAmt = parseFloat(leg.da ?? leg.da_amount ?? 0);
   const origDa = parseFloat(leg.original_da ?? leg.original_da_amount ?? 0);
   const hotelAmt = parseFloat(leg.hotel ?? leg.hotel_amount ?? 0);
   const localPur = parseFloat(leg.local_purchase ?? leg.local_purchase_amount ?? 0);
   const localPurRemark = leg.local_purchase_remark || leg.local_purchase_reason || "";
-  const othAmt = parseFloat(leg.oth_amount ?? leg.other_amount ?? leg.sub_amount ?? leg.parcel_amount ?? 0);
+  const othAmt = parseFloat(leg.oth_amount ?? leg.other_amount ?? leg.parcel_amount ?? 0);
   
   // ROBUST OTHER EXPENSE REMARK / REASON RESOLVER
   const othDesc = isValidText(leg.parcel_desc) ? leg.parcel_desc
-    : (isValidText(leg.sub_mode_desc) ? leg.sub_mode_desc
     : (isValidText(leg.other_desc) ? leg.other_desc
     : (isValidText(leg.other_expense_remark) ? leg.other_expense_remark
     : (isValidText(leg.other_expense_reason) ? leg.other_expense_reason
@@ -438,9 +439,9 @@ const LegDetailCard = ({
     : (isValidText(leg.oth_remark) ? leg.oth_remark
     : (isValidText(leg.oth_desc) ? leg.oth_desc
     : (isValidText(act.otherDesc) ? act.otherDesc
-    : (isValidText(leg.remark) ? leg.remark : "")))))))));
+    : (isValidText(leg.remark) ? leg.remark : ""))))))));
   
-  const netLegAmt = taAmt + (isFirstLeg ? daAmt : 0) + hotelAmt + localPur + othAmt;
+  const netLegAmt = taAmt + subAmt + (isFirstLeg ? daAmt : 0) + hotelAmt + localPur + othAmt;
 
   const estimatedSubmittedTa = origTa > 0 ? origTa : ((km > 0 && taAmt === 0) ? (km * ratePerKm) : taAmt);
 
@@ -456,7 +457,7 @@ const LegDetailCard = ({
 
   const submittedLegAmt = (leg.claimed_amount || leg.original_total)
     ? parseFloat(leg.claimed_amount || leg.original_total)
-    : (estimatedSubmittedTa + estimatedSubmittedDa + hotelAmt + localPur + othAmt);
+    : (estimatedSubmittedTa + origSub + estimatedSubmittedDa + hotelAmt + localPur + othAmt);
 
   // Leg Deductions & Reasons
   const legDeductionAmt = parseFloat(leg.deduction_amount ?? leg.deduction_amt ?? 0);
@@ -594,6 +595,33 @@ const LegDetailCard = ({
   };
 
   const travelTaBillUrl = getLegTravelBillUrl();
+
+  // 1b. Sub-Travel / Local Conveyance Specific Bill URL FOR THIS LEG ONLY
+  const getLegSubBillUrl = (): string => {
+    if (subAmt <= 0) return "";
+    const directUrl = toFullUrl(leg.sub_bill || leg.sub_photo || leg.sub_mode_photo || leg.sub_mode_bill || leg.local_conveyance_bill || leg.sub_travel_bill);
+    if (directUrl) return directUrl;
+
+    if (allAttachments && allAttachments.length > 0) {
+      for (const att of allAttachments) {
+        if (!att) continue;
+        const attLegIdx = typeof att === "object" ? (att.leg_index ?? att.leg_idx ?? att.legIndex) : undefined;
+        const attLegNum = typeof att === "object"
+          ? (att.leg_number ?? att.leg_num ?? att.legNum ?? att.leg ?? (att.itinerary_id ? parseInt(String(att.itinerary_id).split("-").pop() || "", 10) : undefined))
+          : undefined;
+        const urlStr = typeof att === "string" ? att : (att.file_url || att.url || att.path || "");
+        if (!urlStr) continue;
+        const lowerUrl = urlStr.toLowerCase();
+        const billType = typeof att === "object" ? String(att.bill_type || att.category || att.mode || "").toLowerCase() : "";
+
+        if (attLegNum !== undefined && parseInt(attLegNum, 10) === legNum && (billType.includes("sub") || billType.includes("conveyance") || lowerUrl.includes("sub") || lowerUrl.includes("conveyance"))) return toFullUrl(urlStr);
+        if (attLegIdx !== undefined && parseInt(attLegIdx, 10) === index && (billType.includes("sub") || billType.includes("conveyance") || lowerUrl.includes("sub") || lowerUrl.includes("conveyance"))) return toFullUrl(urlStr);
+        if (billType.includes("sub") || billType.includes("conveyance") || lowerUrl.includes("sub") || lowerUrl.includes("conveyance")) return toFullUrl(urlStr);
+      }
+    }
+    return "";
+  };
+  const subBillUrl = getLegSubBillUrl();
 
   // 2. Hotel / Stay Specific Bill URL FOR THIS LEG ONLY
   const getLegHotelBillUrl = (): string => {
@@ -760,6 +788,23 @@ const LegDetailCard = ({
               </button>
             )}
           </div>
+
+          {/* 1b. SUB-TRAVEL / LOCAL CONVEYANCE (SUB TA) & ITS BILL (STRICTLY FOR THIS LEG ONLY) */}
+          {subAmt > 0 && (
+            <div className="flex items-center gap-1 border-l border-slate-200 pl-2 flex-wrap">
+              <span className="text-indigo-600 font-bold uppercase text-[8.5px]">Sub TA{subMode ? ` (${subMode})` : ""}:</span>
+              <b className="text-indigo-900">{rupee(subAmt)}</b>
+              {subBillUrl && (
+                <button
+                  onClick={() => setLightboxImage(subBillUrl)}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[8.5px] font-bold hover:bg-indigo-700 transition-colors cursor-pointer ml-0.5"
+                  title="View Sub Travel Bill for Leg #"
+                >
+                  <Eye size={10} /> View Bill
+                </button>
+              )}
+            </div>
+          )}
 
           {/* 2. DAILY DA (STRICTLY RESTRICTED TO LEG #1 ONLY - COMPLETELY HIDDEN ON LEG #2, #3, #4...) */}
           {isFirstLeg && (
@@ -1244,7 +1289,7 @@ const LegDetailCard = ({
                 Leg Net: ₹{(
                   parseFloat(String(editedLeg?.travel_amount ?? taAmt)) +
                   (isFirstLeg ? parseFloat(String(editedLeg?.da ?? daAmt)) : 0) +
-                  parseFloat(String(editedLeg?.sub_amount ?? 0)) +
+                  parseFloat(String(editedLeg?.sub_amount ?? subAmt)) +
                   parseFloat(String(editedLeg?.hotel_amount ?? hotelAmt)) +
                   parseFloat(String(editedLeg?.local_purchase ?? localPur)) +
                   parseFloat(String(editedLeg?.other_amount ?? othAmt))
@@ -1258,7 +1303,7 @@ const LegDetailCard = ({
               {netLegAmt > (
                 parseFloat(String(editedLeg?.travel_amount ?? taAmt)) +
                 (isFirstLeg ? parseFloat(String(editedLeg?.da ?? daAmt)) : 0) +
-                parseFloat(String(editedLeg?.sub_amount ?? 0)) +
+                parseFloat(String(editedLeg?.sub_amount ?? subAmt)) +
                 parseFloat(String(editedLeg?.hotel_amount ?? hotelAmt)) +
                 parseFloat(String(editedLeg?.local_purchase ?? localPur)) +
                 parseFloat(String(editedLeg?.other_amount ?? othAmt))
@@ -1267,7 +1312,7 @@ const LegDetailCard = ({
                   ✏️ Manager: -₹{Math.round(netLegAmt - (
                     parseFloat(String(editedLeg?.travel_amount ?? taAmt)) +
                     (isFirstLeg ? parseFloat(String(editedLeg?.da ?? daAmt)) : 0) +
-                    parseFloat(String(editedLeg?.sub_amount ?? 0)) +
+                    parseFloat(String(editedLeg?.sub_amount ?? subAmt)) +
                     parseFloat(String(editedLeg?.hotel_amount ?? hotelAmt)) +
                     parseFloat(String(editedLeg?.local_purchase ?? localPur)) +
                     parseFloat(String(editedLeg?.other_amount ?? othAmt))
@@ -1384,11 +1429,11 @@ const LegDetailCard = ({
                 placeholder="0"
                 onFocus={(e) => e.target.select()}
                 disabled={!canEditAmounts}
-                value={(editedLeg?.sub_amount ?? 0) === 0 ? "" : (editedLeg?.sub_amount ?? 0)}
+                value={(editedLeg?.sub_amount ?? subAmt) === 0 ? "" : (editedLeg?.sub_amount ?? subAmt)}
                 onChange={(e) => onLegAmountChange(index, "sub_amount", e.target.value)}
                 className="w-full text-xs font-mono font-bold p-1 border border-slate-300 rounded bg-white focus:border-[#4A6A8A] focus:outline-none text-indigo-800"
               />
-              {editedLeg && parseFloat(String(editedLeg.sub_amount)) !== parseFloat(String(leg.sub_amount || 0)) && (
+              {editedLeg && parseFloat(String(editedLeg.sub_amount)) !== parseFloat(String(subAmt)) && (
                 <input
                   type="text"
                   placeholder="Reason for Conveyance edit *"
@@ -1950,8 +1995,9 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
     
     const hotel = parseFloat(leg.hotel ?? leg.hotel_amount ?? 0);
     const local = parseFloat(leg.local_purchase ?? leg.local_purchase_amount ?? 0);
-    const oth = parseFloat(leg.oth_amount ?? leg.other_amount ?? leg.sub_amount ?? 0);
-    return sum + estimatedTa + estimatedDa + hotel + local + oth;
+    const sub = parseFloat(leg.sub_amount ?? 0);
+    const oth = parseFloat(leg.oth_amount ?? leg.other_amount ?? leg.parcel_amount ?? 0);
+    return sum + estimatedTa + estimatedDa + hotel + local + sub + oth;
   }, 0);
 
   const rawClaimedTotal = c.original_amount ?? c.original_total ?? c.claimed_amount ?? c.total_claimed ?? c.amount ?? c.total_amount ?? 0;
@@ -1962,6 +2008,9 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const totalTaSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.travel_amount || i.amount || 0), 0);
   const totalTa = c.total_ta ?? c.ta_amount ?? c.travel_amount ?? (totalTaSum > 0 ? totalTaSum : 0);
 
+  const totalSubSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.sub_amount || 0), 0);
+  const totalSub = c.total_sub ?? c.sub_amount ?? (totalSubSum > 0 ? totalSubSum : 0);
+
   const totalDaSum = itineraries.length > 0 ? parseFloat(itineraries[0].da_amount || itineraries[0].da || 0) : 0;
   const totalDa = c.total_da ?? c.da_amount ?? (totalDaSum > 0 ? totalDaSum : 0);
 
@@ -1971,20 +2020,19 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
   const localPurchaseSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.local_purchase || 0), 0);
   const localPurchase = c.local_purchase_amount ?? c.local_purchase ?? (localPurchaseSum > 0 ? localPurchaseSum : 0);
 
-  const otherAmountSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.other_amount || i.oth_amount || i.sub_amount || 0), 0);
-  const otherAmount = c.other_expense_amount ?? c.other_amount ?? c.sub_amount ?? (otherAmountSum > 0 ? otherAmountSum : 0);
+  const otherAmountSum = itineraries.reduce((sum: number, i: any) => sum + parseFloat(i.other_amount || i.oth_amount || i.parcel_amount || 0), 0);
+  const otherAmount = c.other_expense_amount ?? c.other_amount ?? (otherAmountSum > 0 ? otherAmountSum : 0);
 
   // Extract all other expense remarks across legs
   const allOtherRemarks = itineraries.map((leg: any) => {
     const act = parseActivityDetails(leg.activity_details || leg.activity || leg.meta);
     return isValidText(leg.parcel_desc) ? leg.parcel_desc
-      : (isValidText(leg.sub_mode_desc) ? leg.sub_mode_desc
       : (isValidText(leg.other_desc) ? leg.other_desc
       : (isValidText(leg.other_expense_remark) ? leg.other_expense_remark
       : (isValidText(leg.other_expense_reason) ? leg.other_expense_reason
       : (isValidText(leg.other_reason) ? leg.other_reason
       : (isValidText(leg.oth_remark) ? leg.oth_remark
-      : (isValidText(act.otherDesc) ? act.otherDesc : "")))))));
+      : (isValidText(act.otherDesc) ? act.otherDesc : ""))))));
   }).filter(Boolean).join(", ");
 
   const liveEditedTotalSum = (Array.isArray(editedLegs) && editedLegs.length > 0)
@@ -2407,6 +2455,7 @@ const ClaimDetailsModal: React.FC<ClaimDetailsModalProps> = ({
                 color={isApproved ? "#10b981" : (isClaimRejected ? "#dc2626" : "#059669")}
               />
               <MiniAmountBox label="Travel TA" value={rupee(totalTa)} subtext={c.total_km ? `${c.total_km} km` : undefined} color="#0284c7" />
+              {totalSub > 0 && <MiniAmountBox label="Sub Travel" value={rupee(totalSub)} color="#4f46e5" />}
               <MiniAmountBox label="Daily DA" value={rupee(totalDa)} color="#059669" />
               {otherAmount > 0 && <MiniAmountBox label="Other Exp." value={rupee(otherAmount)} color="#d97706" />}
               {localPurchase > 0 && <MiniAmountBox label="Local Purchase" value={rupee(localPurchase)} color="#b45309" />}
