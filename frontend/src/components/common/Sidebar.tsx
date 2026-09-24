@@ -4,16 +4,10 @@ import {
   FilePlus,
   BarChart3,
   Calendar,
-  HelpCircle,
   User,
   LogOut,
   Settings,
-  FileSpreadsheet,
-  Gauge,
-  ShieldAlert,
-  Package,
   ClipboardList,
-  TrendingUp,
   ChevronLeft,
   ChevronRight,
   Zap,
@@ -36,31 +30,23 @@ export interface MenuItem {
 
 export const MENU_ITEMS: MenuItem[] = [
   { id: "home",               name: "Overview",             path: "/home",               icon: Home,          roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","Travel Desk","MIS","VP"], gradientFrom: "from-blue-500",    gradientTo: "to-indigo-600", shadowColor: "rgba(37,99,235,0.35)" },
-  { id: "new_dashboard",      name: "Executive Dashboard",  path: "/new-dashboard",      icon: TrendingUp,    roles: ["Admin","Manager","Division Manager","Coordinator","MIS","VP","Accountant","Travel Desk"],                                  gradientFrom: "from-violet-500",  gradientTo: "to-purple-600", shadowColor: "rgba(124,58,237,0.35)" },
   { id: "expense",            name: "Expense Claims",       path: "/submit-expense",     icon: FilePlus,      roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Project Head","Travel Desk","VP","Accountant","MIS"],         gradientFrom: "from-emerald-500", gradientTo: "to-teal-600",   shadowColor: "rgba(16,185,129,0.35)" },
   { id: "approval",           name: "Approval Center",      path: "/approval-center",    icon: CheckSquare,   roles: ["Admin","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","VP","Travel Desk","MIS"],              gradientFrom: "from-amber-500",   gradientTo: "to-orange-600", shadowColor: "rgba(245,158,11,0.35)" },
-  { id: "mis_report",         name: "MIS Reports",          path: "/mis-report",         icon: FileSpreadsheet, roles: ["Admin","Manager","Division Manager","MIS","VP","Accountant","Travel Desk"],                                             gradientFrom: "from-cyan-500",    gradientTo: "to-blue-600",   shadowColor: "rgba(6,182,212,0.35)" },
-  { id: "kpi",                name: "KPI Metrics",          path: "/kpi-dashboard",      icon: Gauge,         roles: ["Admin","Manager","Division Manager","Engineer","Coordinator","Project Head","MIS","VP","Accountant","Travel Desk"],         gradientFrom: "from-rose-500",    gradientTo: "to-red-600",    shadowColor: "rgba(244,63,94,0.35)" },
   { id: "analysis",           name: "Deep Analytics",       path: "/analysis",           icon: BarChart3,     roles: ["Admin","Manager","Division Manager","MIS","VP","Project Head","Travel Desk","Accountant","HR"],                            gradientFrom: "from-indigo-500",  gradientTo: "to-blue-700",   shadowColor: "rgba(99,102,241,0.35)" },
   { id: "report",             name: "Month Summary",        path: "/month-report",       icon: Calendar,      roles: ["Admin","Manager","Division Manager","Accountant","HR","MIS","VP","Project Head","Travel Desk"],                            gradientFrom: "from-teal-500",    gradientTo: "to-emerald-600", shadowColor: "rgba(20,184,166,0.35)" },
   { id: "consolidated_report",name: "Consolidated Reports", path: "/consolidated-report",icon: ClipboardList, roles: ["Admin","Manager","Division Manager","Coordinator","Accountant","HR","MIS","VP","Project Head","Travel Desk"],              gradientFrom: "from-sky-500",     gradientTo: "to-blue-600",   shadowColor: "rgba(14,165,233,0.35)" },
-  { id: "penalty_report",     name: "Penalty Audit",        path: "/penalty-report",     icon: ShieldAlert,   roles: ["Admin","Manager","Division Manager","Accountant","MIS","VP","Travel Desk"],                                               gradientFrom: "from-red-500",     gradientTo: "to-rose-700",   shadowColor: "rgba(239,68,68,0.35)" },
-  { id: "penalty_module",     name: "Penalty Module",       path: "/penalty-module",     icon: ShieldAlert,   roles: ["Admin","Manager","Division Manager","Accountant","MIS","VP","Travel Desk"],                                               gradientFrom: "from-rose-600",    gradientTo: "to-red-800",    shadowColor: "rgba(225,29,72,0.35)" },
-  { id: "attendance",         name: "Attendance Roster",    path: "/attendance",         icon: Calendar,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-indigo-500",  gradientTo: "to-cyan-600",   shadowColor: "rgba(99,102,241,0.35)" },
   { id: "admin",              name: "Admin Console",        path: "/admin",              icon: Settings,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-slate-600",   gradientTo: "to-slate-800",  shadowColor: "rgba(100,116,139,0.35)" },
   { id: "admin_enterprise",   name: "Enterprise Panel",     path: "/admin/enterprise",   icon: Zap,           roles: ["Admin"],                                                                                                                  gradientFrom: "from-violet-600",  gradientTo: "to-purple-800", shadowColor: "rgba(139,92,246,0.35)" },
   { id: "admin_analytics",    name: "CF Analytics",         path: "/admin/analytics",    icon: Activity,      roles: ["Admin"],                                                                                                                  gradientFrom: "from-orange-500",  gradientTo: "to-amber-600",  shadowColor: "rgba(249,115,22,0.35)" },
-  { id: "asset_upload",       name: "Asset Master",         path: "/asset-upload",       icon: Package,       roles: ["Admin","Coordinator","MIS","Engineer"],                                                                                   gradientFrom: "from-pink-500",    gradientTo: "to-rose-600",   shadowColor: "rgba(236,72,153,0.35)" },
   { id: "profile",            name: "My Profile",           path: "/profile",            icon: User,          roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","Travel Desk","MIS","VP"], gradientFrom: "from-blue-500",    gradientTo: "to-indigo-600", shadowColor: "rgba(96,165,250,0.35)" },
-  { id: "help",               name: "Support & Help",       path: "/help-center",        icon: HelpCircle,    roles: ["Admin","Engineer","Manager","Division Manager","Coordinator","Accountant","HR","Project Head","Travel Desk","MIS","VP"], gradientFrom: "from-purple-500",  gradientTo: "to-violet-600", shadowColor: "rgba(167,139,250,0.35)" },
 ];
 
 const NAV_GROUPS = [
-  { label: "Workspace",          ids: ["home", "new_dashboard"] },
+  { label: "Workspace",          ids: ["home"] },
   { label: "Claims & Approvals", ids: ["expense", "approval"] },
-  { label: "Reports & Analytics",ids: ["attendance", "mis_report", "kpi", "analysis", "report", "consolidated_report", "penalty_report", "penalty_module"] },
-  { label: "Management & Config",ids: ["admin", "admin_enterprise", "admin_analytics", "asset_upload"] },
-  { label: "Account",            ids: ["profile", "help"] },
+  { label: "Reports & Analytics",ids: ["analysis", "report", "consolidated_report"] },
+  { label: "Management & Config",ids: ["admin", "admin_enterprise", "admin_analytics"] },
+  { label: "Account",            ids: ["profile"] },
 ];
 
 // iOS / Meta AI style gradient icon tile — matches HomePage IconTile component 1:1
@@ -108,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const roleLower = (currentUser?.role || userRole || "").trim().toLowerCase();
   const isAdmin = roleLower === "admin";
 
-  let allowedWindows: string[] = ["home", "expense", "help", "profile"];
+  let allowedWindows: string[] = ["home", "expense", "profile"];
   if (currentUser?.allowed_windows !== undefined && currentUser?.allowed_windows !== null) {
     if (Array.isArray(currentUser.allowed_windows)) {
       allowedWindows = currentUser.allowed_windows.map((w: any) => String(w).trim().toLowerCase()).filter(Boolean);
