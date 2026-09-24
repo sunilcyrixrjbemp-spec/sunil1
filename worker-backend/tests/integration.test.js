@@ -120,3 +120,106 @@ test("Integration Test: handleSubmitExpense overrides client amount 5000 with ca
   assert.strictEqual(insertedAmount, 2000, "Database INSERT query MUST receive 2000 as the amount parameter");
   assert.notStrictEqual(insertedAmount, 5000, "Client manipulated amount 5000 MUST be overridden by server");
 });
+
+test("Integration Test: handleSubmitExpense safely handles empty string amounts without producing NaN or NULL", async () => {
+  const recordedWrites = [];
+
+  const mockDB = {
+    prepare(sql) {
+      const sqlLower = sql.toLowerCase();
+      const bindFunc = (...args) => {
+        return {
+          async first() {
+            if (sqlLower.includes("allowance_master")) return { max_km_per_month: 2000 };
+            return null;
+          },
+          async all() { return { results: [] }; },
+          async run() {
+            recordedWrites.push({ sql, args });
+            return { meta: { last_row_id: 102, changes: 1 } };
+          }
+        };
+      };
+
+      return {
+        bind: bindFunc,
+        async first() { return null; },
+        async all() { return { results: [] }; },
+        async run() {
+          recordedWrites.push({ sql, args: [] });
+          return { meta: { last_row_id: 102, changes: 1 } };
+        }
+      };
+    },
+    async batch(stmts) {
+      const results = [];
+      for (const s of stmts) {
+        if (s && typeof s.run === "function") {
+          results.push(await s.run());
+        }
+      }
+      return results;
+    }
+  };
+
+  const env = { DB: mockDB };
+
+  const formData = new FormData();
+  const payloadStr = JSON.stringify({
+    date: "2026-07-21",
+    amount: "",
+    claim_month: "July",
+    claim_year: 2026,
+    description: "Empty string amount test claim",
+    itineraries: [
+      {
+        travel_type: "Outdoor",
+        travel_mode: "BIKE",
+        distance_km: "50",
+        amount: "500",
+        da_amount: "200",
+        hotel_amount: "",
+        local_purchase: "",
+        other_amount: ""
+      },
+      {
+        travel_type: "Outdoor",
+        travel_mode: "BIKE",
+        distance_km: "50",
+        amount: "500",
+        da_amount: "0",
+        hotel_amount: "",
+        local_purchase: "",
+        other_amount: ""
+      }
+    ]
+  });
+
+  formData.append("payload", payloadStr);
+
+  const request = new Request("http://localhost/api/expense", {
+    method: "POST",
+    body: formData
+  });
+
+  const user = {
+    id: 42,
+    user_id: "ENG42",
+    role: "Admin",
+    base_reporting_location: "Office Base"
+  };
+
+  const response = await handleSubmitExpense(request, env, {}, new URLSearchParams(), user);
+  const resJson = await response.json();
+
+  assert.strictEqual(response.status, 200, `API should return 200 OK, got: ${JSON.stringify(resJson)}`);
+  assert.strictEqual(resJson.status, "success");
+
+  const expenseInsert = recordedWrites.find(w => w.sql.includes("INSERT INTO expenses"));
+  assert.ok(expenseInsert, "INSERT INTO expenses SQL query must be executed");
+
+  const insertedAmount = expenseInsert.args[3];
+  assert.strictEqual(insertedAmount, 1200, "Calculated amount should be exactly 1200 (500 + 200 + 500), not NaN or NULL");
+  assert.strictEqual(isNaN(insertedAmount), false, "Amount must not be NaN");
+});
+

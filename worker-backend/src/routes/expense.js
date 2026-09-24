@@ -24,6 +24,13 @@ function hasFullAccess(roleString) {
   return FULL_ACCESS_ROLES.includes((roleString || "").trim().toLowerCase());
 }
 
+// Helper: safely parses a number, returning fallback if null, undefined, empty string, or NaN.
+function safeNum(val, fallback = 0.0) {
+  if (val === null || val === undefined || val === "") return fallback;
+  const n = parseFloat(val);
+  return isNaN(n) ? fallback : n;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 🔒 Validation Schemas for Expense Submission
 // ═══════════════════════════════════════════════════════════════════════════
@@ -831,6 +838,14 @@ export async function serializeExpenses(env, expenses, submittersMap) {
     const expAtts = attachmentsByCode[exp.expense_code] || [];
     const expAttUrls = expAtts.map(a => a.file_url).filter(Boolean);
 
+    const legAmountSum = legs.reduce((sum, l) => {
+      return sum + (safeNum(l.travel_amount)) + (safeNum(l.sub_amount)) + (safeNum(l.da_amount)) + (safeNum(l.hotel_amount)) + (safeNum(l.other_amount)) + (safeNum(l.local_purchase));
+    }, 0);
+    const expAmountNum = parseFloat(exp.amount);
+    const finalAmount = (!isNaN(expAmountNum) && expAmountNum > 0) ? expAmountNum : (legAmountSum > 0 ? legAmountSum : (isNaN(expAmountNum) ? 0 : expAmountNum));
+    const expOrigNum = parseFloat(exp.original_amount);
+    const finalOrigAmount = (!isNaN(expOrigNum) && expOrigNum > 0) ? expOrigNum : finalAmount;
+
     result.push({
       id: exp.id,
       expense_code: exp.expense_code,
@@ -839,7 +854,8 @@ export async function serializeExpenses(env, expenses, submittersMap) {
       hasMismatch,
       month: exp.month,
       year: exp.year,
-      amount: parseFloat(exp.amount || 0),
+      amount: finalAmount,
+      original_amount: finalOrigAmount,
       status: exp.status,
       travel_mode: exp.travel_mode,
       itinerary: exp.itinerary,
@@ -1512,6 +1528,12 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         }
       }
 
+      const legAmountSum = legs.reduce((sum, l) => {
+        return sum + (safeNum(l.travel_amount)) + (safeNum(l.sub_amount)) + (safeNum(l.da_amount)) + (safeNum(l.hotel_amount)) + (safeNum(l.other_amount)) + (safeNum(l.local_purchase));
+      }, 0);
+      const expAmountNum = parseFloat(exp.amount);
+      const finalAmount = (!isNaN(expAmountNum) && expAmountNum > 0) ? expAmountNum : (legAmountSum > 0 ? legAmountSum : (isNaN(expAmountNum) ? 0 : expAmountNum));
+
       result.push({
         id: exp.id,
         expense_code: exp.expense_code,
@@ -1520,7 +1542,7 @@ export async function handleGetTeamExpenses(request, env, params, query, user) {
         submitter_designation: sDesignation,
         month: exp.month,
         year: exp.year,
-        amount: parseFloat(exp.amount || 0),
+        amount: finalAmount,
         status: exp.status,
         category: exp.travel_mode,
         date: exp.itinerary,
@@ -2569,6 +2591,14 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
   const districtTypeStandard = expense.district_type || distInfoStandard.districtType;
   const hasMismatchStandard = (districtTypeStandard === "OUT_DISTRICT") && distInfoStandard.allLegsBaseDistrict;
 
+  const legTotal = (itineraryRows || []).reduce((sum, i) => {
+    return sum + (safeNum(i.travel_amount)) + (safeNum(i.sub_amount)) + (safeNum(i.da_amount)) + (safeNum(i.hotel_amount)) + (safeNum(i.other_amount)) + (safeNum(i.local_purchase));
+  }, 0);
+  const rawAmt = parseFloat(expense.amount);
+  const finalAmt = (!isNaN(rawAmt) && rawAmt > 0) ? rawAmt : (legTotal > 0 ? legTotal : (isNaN(rawAmt) ? 0 : rawAmt));
+  const rawOrigAmt = parseFloat(expense.original_amount);
+  const finalOrigAmt = (!isNaN(rawOrigAmt) && rawOrigAmt > 0) ? rawOrigAmt : finalAmt;
+
   return jsonResponse({
     id: expense.id,
     expense_code: expense.expense_code,
@@ -2579,7 +2609,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     submitter_code: submitter?.user_id || "",
     month: expense.month,
     year: expense.year,
-    amount: parseFloat(expense.amount || 0.0),
+    amount: finalAmt,
     status: expense.status,
     category: expense.travel_mode,
     date: expense.itinerary,
@@ -2588,7 +2618,7 @@ export async function handleGetExpenseDetails(request, env, params, query, user)
     policy_rule_name: expense.policy_rule_name || null,
     ai_analysis: expense.ai_analysis || null,
     is_anomaly: expense.is_anomaly || 0,
-    original_amount: parseFloat(expense.original_amount || expense.amount || 0.0),
+    original_amount: finalOrigAmt,
     original_da_amount: parseFloat(expense.original_da_amount || expense.da_amount || 0.0),
     original_hotel_amount: parseFloat(expense.original_hotel_amount || expense.hotel_amount || 0.0),
     original_other_expense_amount: parseFloat(expense.original_other_expense_amount || expense.other_expense_amount || 0.0),
@@ -3118,12 +3148,12 @@ export async function handleSubmitExpense(request, env, params, query, user) {
     const iti = itineraries[idx];
     const legNum = idx + 1;
     const isCommute = !hasActualOutDistrictTravel && checkIsCommuteLeg(iti, baseLocations, idx, itineraries.length);
-    const travelAmt = isCommute ? 0.0 : parseFloat(iti.amount ?? iti.travel_amount ?? "0.0");
-    const subAmt    = isCommute ? 0.0 : parseFloat(iti.sub_amount ?? "0.0");
-    const daAmt     = isDaAllowed ? parseFloat(iti.da ?? iti.da_amount ?? "0.0") : 0.0;
-    const hotelAmt = parseFloat(iti.hotel ?? iti.hotel_amount ?? "0.0");
-    const otherAmt = parseFloat(iti.oth_amount ?? iti.other_amount ?? "0.0");
-    const lpAmt = parseFloat(iti.local_purchase ?? iti.local_purchase_amount ?? "0.0");
+    const travelAmt = isCommute ? 0.0 : safeNum(iti.amount != null && iti.amount !== "" ? iti.amount : iti.travel_amount);
+    const subAmt    = isCommute ? 0.0 : safeNum(iti.sub_amount);
+    const daAmt     = isDaAllowed ? safeNum(iti.da != null && iti.da !== "" ? iti.da : iti.da_amount) : 0.0;
+    const hotelAmt  = safeNum(iti.hotel != null && iti.hotel !== "" ? iti.hotel : iti.hotel_amount);
+    const otherAmt  = safeNum(iti.oth_amount != null && iti.oth_amount !== "" ? iti.oth_amount : iti.other_amount);
+    const lpAmt     = safeNum(iti.local_purchase != null && iti.local_purchase !== "" ? iti.local_purchase : iti.local_purchase_amount);
 
     // ── Server-side mandatory bill attachment validations ──
     const modeLower = (iti.mode || iti.travel_mode || "").trim().toLowerCase();
@@ -3238,7 +3268,7 @@ export async function handleSubmitExpense(request, env, params, query, user) {
 
     const mode = (iti.mode || iti.travel_mode || "").trim().toLowerCase();
     if (["bike", "car"].includes(mode)) {
-      newKm += parseFloat(iti.km ?? iti.distance_km ?? "0.0");
+      newKm += safeNum(iti.km != null && iti.km !== "" ? iti.km : iti.distance_km);
     } else if (mode === "auto") {
       newAuto += travelAmt;
     }
@@ -3334,7 +3364,11 @@ export async function handleSubmitExpense(request, env, params, query, user) {
   }
 
   // ₹0 expenses are allowed (e.g. base-location-only travel where all TA/DA was waived on frontend)
-  amount = calculatedTotal;
+  amount = isNaN(calculatedTotal) || calculatedTotal < 0 ? 0.0 : calculatedTotal;
+  totalDa = isNaN(totalDa) ? 0.0 : totalDa;
+  totalHotel = isNaN(totalHotel) ? 0.0 : totalHotel;
+  totalOther = isNaN(totalOther) ? 0.0 : totalOther;
+  totalLocalPurchase = isNaN(totalLocalPurchase) ? 0.0 : totalLocalPurchase;
 
   // Backend Limit Validation
   const gradeToLookup = (user.designation || "").toLowerCase().includes("specialist") ? "O1" : user.grade;
@@ -3628,22 +3662,29 @@ export async function handleSubmitExpense(request, env, params, query, user) {
       `,
       params: [
         itiId, expenseCode, legNum, fromDist, toDist, fromSt, toSt, fromSt, toSt, fromLoc, toLoc,
-        iti.mode || "Bike", parseFloat(iti.km || "0.0"),
-        isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
+        iti.mode || "Bike", safeNum(iti.km != null && iti.km !== "" ? iti.km : iti.distance_km),
+        isCommute ? 0.0 : safeNum(iti.amount != null && iti.amount !== "" ? iti.amount : iti.travel_amount),
         iti.sub_mode || null,
-        isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
-        isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0,
-        parseFloat(iti.hotel || "0.0"), parseFloat(iti.local_purchase || "0.0"), iti.local_purchase_remark || iti.local_purchase_desc || null, iti.oth_desc || null, parseFloat(iti.oth_amount || "0.0"),
+        isCommute ? 0.0 : safeNum(iti.sub_amount),
+        isDaAllowed ? safeNum(iti.da != null && iti.da !== "" ? iti.da : iti.da_amount) : 0.0,
+        safeNum(iti.hotel != null && iti.hotel !== "" ? iti.hotel : iti.hotel_amount),
+        safeNum(iti.local_purchase != null && iti.local_purchase !== "" ? iti.local_purchase : iti.local_purchase_amount),
+        iti.local_purchase_remark || iti.local_purchase_desc || null,
+        iti.oth_desc || null,
+        safeNum(iti.oth_amount != null && iti.oth_amount !== "" ? iti.oth_amount : iti.other_amount),
         itiAssigned, itiCompleted,
         itiPms, itiAsset,
         cleanPurpose,
         typeof iti.activity_details === "string" ? iti.activity_details : JSON.stringify(iti.activity_details || {}),
-        parseFloat(iti.km || "0.0"),
-        isCommute ? 0.0 : parseFloat(iti.amount || "0.0"),
-        isCommute ? 0.0 : parseFloat(iti.sub_amount || "0.0"),
-        isDaAllowed ? parseFloat(iti.da || "0.0") : 0.0, parseFloat(iti.hotel || "0.0"), parseFloat(iti.oth_amount || "0.0"),
-        parseFloat(iti.local_purchase || "0.0"), parseInt(iti.calibration_count || "0", 10),
-        parseInt(iti.mobilise_asset_count || "0", 10)
+        safeNum(iti.km != null && iti.km !== "" ? iti.km : iti.distance_km),
+        isCommute ? 0.0 : safeNum(iti.amount != null && iti.amount !== "" ? iti.amount : iti.travel_amount),
+        isCommute ? 0.0 : safeNum(iti.sub_amount),
+        isDaAllowed ? safeNum(iti.da != null && iti.da !== "" ? iti.da : iti.da_amount) : 0.0,
+        safeNum(iti.hotel != null && iti.hotel !== "" ? iti.hotel : iti.hotel_amount),
+        safeNum(iti.oth_amount != null && iti.oth_amount !== "" ? iti.oth_amount : iti.other_amount),
+        safeNum(iti.local_purchase != null && iti.local_purchase !== "" ? iti.local_purchase : iti.local_purchase_amount),
+        parseInt(iti.calibration_count || "0", 10) || 0,
+        parseInt(iti.mobilise_asset_count || "0", 10) || 0
       ]
     });
 
@@ -4935,10 +4976,16 @@ export async function handleGetEngineerMonthClaims(request, env, params, query, 
         });
       }
 
+      const legAmountSum = legData.reduce((sum, l) => {
+        return sum + (safeNum(l.bike_amount)) + (safeNum(l.car_amount)) + (safeNum(l.auto_amount)) + (safeNum(l.ta_amount)) + (safeNum(l.sub_amount)) + (safeNum(l.da_amount)) + (safeNum(l.hotel_amount)) + (safeNum(l.other_amount)) + (safeNum(l.local_purchase));
+      }, 0);
+      const rawAmt = parseFloat(exp.amount);
+      const finalAmt = (!isNaN(rawAmt) && rawAmt > 0) ? rawAmt : (legAmountSum > 0 ? legAmountSum : (isNaN(rawAmt) ? 0 : rawAmt));
+
       claims.push({
         expense_code: exp.expense_code,
         date: exp.itinerary,
-        amount: parseFloat(exp.amount || 0.0),
+        amount: finalAmt,
         da_amount: parseFloat(exp.da_amount || 0.0),
         hotel_amount: parseFloat(exp.hotel_amount || 0.0),
         other_amount: parseFloat(exp.other_expense_amount || 0.0),
